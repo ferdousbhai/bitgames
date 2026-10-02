@@ -13,7 +13,7 @@ export const Route = createFileRoute('/play/$gameId/$')({
           .bind(params.gameId)
           .first()
         if (!game) return new Response('Not found', { status: 404 })
-        return serveGameFile(params.gameId, params._splat || 'index.html', request, 300)
+        return serveGameFile(params.gameId, params._splat || 'index.html', request, `/play/${params.gameId}/`, 300)
       },
     },
   },

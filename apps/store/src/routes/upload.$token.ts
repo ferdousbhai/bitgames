@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
 import { sha256Hex } from '#/server/crypto'
 import { MAX_FILE_BYTES, objectKey } from '#/server/limits'
-import { checkGameQuota } from '#/server/games-store'
+import { checkGameQuota, recordGameBytes } from '#/server/games-store'
 import { CONTENT_TYPES, extensionOf } from '#/server/limits'
 
 const text = (status: number, body: string) =>
@@ -49,7 +49,7 @@ export const Route = createFileRoute('/upload/$token')({
             httpMetadata: { contentType: CONTENT_TYPES[extensionOf(upload.path)] },
           }),
         ])
-        await env.DB.prepare('UPDATE games SET updated_at = ? WHERE id = ?').bind(Date.now(), upload.game_id).run()
+        await recordGameBytes(upload.game_id)
         return text(200, `Uploaded ${upload.path} (${object.size} bytes).`)
       },
     },

@@ -1,4 +1,4 @@
-import { createCollection } from '@tanstack/react-db'
+import { BasicIndex, createCollection } from '@tanstack/react-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import { QueryClient } from '@tanstack/react-query'
 import { addLike, listGames, recordPlay } from '#/server/games'
@@ -16,6 +16,9 @@ export const gamesCollection = createCollection(
     queryClient,
     schema: gameSchema,
     getKey: (game) => game.id,
+    // Index the fields the shelves sort and filter on, so ordered, limited queries stay incremental.
+    autoIndex: 'eager',
+    defaultIndexType: BasicIndex,
     // Likes and plays are counters: send the increment and write back the
     // server's count, skipping a full refetch of the catalog.
     onUpdate: async ({ transaction }) => {

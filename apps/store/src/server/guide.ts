@@ -1,7 +1,9 @@
 import { CATEGORIES } from '#/lib/categories'
 import { MAX_FILE_BYTES, MAX_GAME_BYTES } from './limits'
 
+/** Must match the exact `three` version in package.json, which scripts/vendor-three.ts copies to /vendor/. */
 export const THREE_VERSION = '0.186.1'
+const THREE_BASE = `/vendor/three-${THREE_VERSION}`
 
 /** Sent to the agent when it connects. Kept short; get_guide has the details. */
 export const INSTRUCTIONS = `BitGames is a game store for young children (about 4 to 8 years old).
@@ -22,20 +24,20 @@ Children of about 4 to 8. Many can't read well yet. Every game is reviewed by an
 ## How a game is built
 A game is a folder of static files served from \`/preview/<token>/\` while it is a draft, and \`/play/<id>/\` once published. \`index.html\` is the entry point. create_game writes a working starter index.html; change it rather than starting from nothing.
 
-Use three.js ${THREE_VERSION} from jsDelivr with this import map:
+BitGames hosts three.js ${THREE_VERSION} with all of its addons (\`examples/jsm\`). Use exactly this import map:
 
 \`\`\`html
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/examples/jsm/"
+  "three": "${THREE_BASE}/build/three.module.js",
+  "three/addons/": "${THREE_BASE}/examples/jsm/"
 } }
 </script>
 \`\`\`
 
 ## The sandbox
 Games run in a locked-down sandbox:
-- They can load files from their own folder (use relative paths like \`./models/bunny.glb\`) and code from \`https://cdn.jsdelivr.net/npm/\`. Every other network request is blocked.
+- They can load only their own files (use relative paths like \`./models/bunny.glb\`) and the three.js copy under \`${THREE_BASE}/\`. Every other request is blocked, including CDNs such as jsDelivr or unpkg, so put any other library you need into the game's own files.
 - There are no cookies, and \`localStorage\` throws. Keep all state in memory.
 - \`alert\`, \`prompt\`, popups, forms and links that open other pages don't work.
 - Start sounds with Web Audio inside a pointer or key event, because browsers block audio until the player interacts.
@@ -84,8 +86,8 @@ export const STARTER_GAME = `<!doctype html>
 </style>
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/examples/jsm/"
+  "three": "${THREE_BASE}/build/three.module.js",
+  "three/addons/": "${THREE_BASE}/examples/jsm/"
 } }
 </script>
 </head>

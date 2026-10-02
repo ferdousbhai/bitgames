@@ -29,7 +29,7 @@ Each starter game is a folder in `apps/store/games/` holding a `manifest.json` a
 To deploy, log in once with `pnpm exec cf auth login`, then:
 
 ```sh
-pnpm run deploy --secrets-file .dev.vars.production   # file containing ADMIN_KEY=...
+pnpm run deploy --secrets-file secrets.production.env   # ADMIN_KEY=... and TURNSTILE_SECRET=...
 pnpm db:migrate:remote
 pnpm seed:remote
 ```

@@ -21,6 +21,8 @@ export default defineConfig({
 		env: {
 			// Admin key for /admin. Locally it comes from .dev.vars.
 			ADMIN_KEY: bindings.secret(),
+			// Turnstile secret for the creator-key form. Locally it's Cloudflare's always-pass test secret.
+			TURNSTILE_SECRET: bindings.secret(),
 			// Game catalog.
 			DB: bindings.d1({
 				id: "34eb131f-ba97-412e-ba81-8d1aa5c2c808",
@@ -54,6 +56,13 @@ export default defineConfig({
 			}),
 			ADMIN_LIMITER: bindings.rateLimit({
 				namespace: "4104",
+				simple: {
+					limit: 30,
+					period: 60,
+				},
+			}),
+			LIKE_LIMITER: bindings.rateLimit({
+				namespace: "4105",
 				simple: {
 					limit: 30,
 					period: 60,

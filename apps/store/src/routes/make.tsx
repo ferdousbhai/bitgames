@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
+import { Turnstile } from '#/components/Turnstile'
 import { createCreatorKey } from '#/server/keys'
 
 export const Route = createFileRoute('/make')({
@@ -53,6 +54,8 @@ function GrownUps() {
   const [key, setKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const origin = typeof window === 'undefined' ? '' : window.location.origin
   const command = key
     ? `claude mcp add --transport http bitgames ${origin}/mcp --header "Authorization: Bearer ${key}"`
@@ -94,14 +97,18 @@ function GrownUps() {
           </label>
           <button
             type="button"
-            disabled={!grownUp || busy}
+            disabled={!grownUp || !token || busy}
             onClick={async () => {
+              if (!token) return
               setBusy(true)
               setError(null)
               try {
-                setKey((await create({ data: { grownUp: true } })).key)
+                setKey((await create({ data: { grownUp: true, turnstileToken: token } })).key)
               } catch (e) {
                 setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
+                // A Turnstile token works once, so get a fresh one.
+                setToken(null)
+                setAttempt((n) => n + 1)
               } finally {
                 setBusy(false)
               }
@@ -110,6 +117,11 @@ function GrownUps() {
           >
             🔑 Get a creator key
           </button>
+          {grownUp && (
+            <div className="w-full">
+              <Turnstile action="creator-key" onToken={setToken} resetKey={attempt} />
+            </div>
+          )}
           {error && <p className="w-full text-lg text-berry">{error}</p>}
         </div>
       )}

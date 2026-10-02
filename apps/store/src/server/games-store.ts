@@ -3,6 +3,7 @@ import { CATEGORIES } from '#/lib/categories'
 import { randomToken, sha256Hex } from './crypto'
 import {
   CONTENT_TYPES,
+  MAX_CREATOR_BYTES,
   MAX_FILES_PER_GAME,
   MAX_GAMES_PER_CREATOR,
   MAX_GAME_BYTES,
@@ -87,10 +88,6 @@ async function editableGame(creatorId: string, gameId: string) {
   return game
 }
 
-async function touch(gameId: string) {
-  await env.DB.prepare('UPDATE games SET updated_at = ? WHERE id = ?').bind(Date.now(), gameId).run()
-}
-
 export async function createGame(creatorId: string, info: GameInfo) {
   validateInfo(info)
   const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM games WHERE creator_id = ?')
@@ -118,6 +115,7 @@ export async function createGame(creatorId: string, info: GameInfo) {
       await env.GAMES.put(objectKey(id, 'index.html'), STARTER_GAME, {
         httpMetadata: { contentType: CONTENT_TYPES.html },
       })
+      await recordGameBytes(id)
       return { id, previewToken }
     }
   }
@@ -156,22 +154,44 @@ export async function listOwned(creatorId: string) {
 
 export async function listFiles(creatorId: string, gameId: string) {
   await ownedGame(creatorId, gameId)
+  return listGameObjects(gameId)
+}
+
+async function listGameObjects(gameId: string) {
   const prefix = objectKey(gameId, '')
   const listed = await env.GAMES.list({ prefix, limit: 1000 })
   return listed.objects.map((o) => ({ path: o.key.slice(prefix.length), bytes: o.size }))
 }
 
-/** Returns an error message when adding `bytes` at `path` would break a per-game limit. */
+/**
+ * Returns an error message when putting `bytes` at `path` would break the
+ * per-game file and size limits or the creator's total storage cap.
+ */
 export async function checkGameQuota(gameId: string, path: string, bytes: number): Promise<string | null> {
-  const prefix = objectKey(gameId, '')
-  const listed = await env.GAMES.list({ prefix, limit: 1000 })
-  const others = listed.objects.filter((o) => o.key !== prefix + path)
+  const others = (await listGameObjects(gameId)).filter((o) => o.path !== path)
   if (others.length + 1 > MAX_FILES_PER_GAME) return `A game can have at most ${MAX_FILES_PER_GAME} files.`
-  const total = others.reduce((sum, o) => sum + o.size, 0) + bytes
-  if (total > MAX_GAME_BYTES) {
-    return `This would make the game ${(total / 1024 / 1024).toFixed(1)} MB. A game can be at most ${MAX_GAME_BYTES / 1024 / 1024} MB.`
+  const gameTotal = others.reduce((sum, o) => sum + o.bytes, 0) + bytes
+  const mb = (n: number) => (n / 1024 / 1024).toFixed(1)
+  if (gameTotal > MAX_GAME_BYTES) {
+    return `This would make the game ${mb(gameTotal)} MB. A game can be at most ${MAX_GAME_BYTES / 1024 / 1024} MB.`
+  }
+  const row = await env.DB.prepare(
+    `SELECT COALESCE(SUM(bytes), 0) AS other FROM games
+      WHERE creator_id = (SELECT creator_id FROM games WHERE id = ?) AND id != ?`,
+  )
+    .bind(gameId, gameId)
+    .first<{ other: number }>()
+  const creatorTotal = (row?.other ?? 0) + gameTotal
+  if (creatorTotal > MAX_CREATOR_BYTES) {
+    return `This would bring all your games to ${mb(creatorTotal)} MB. Each creator can store up to ${MAX_CREATOR_BYTES / 1024 / 1024} MB; delete files or games you don't need.`
   }
   return null
+}
+
+/** Recomputes a game's stored size after its files change. */
+export async function recordGameBytes(gameId: string) {
+  const total = (await listGameObjects(gameId)).reduce((sum, o) => sum + o.bytes, 0)
+  await env.DB.prepare('UPDATE games SET bytes = ?, updated_at = ? WHERE id = ?').bind(total, Date.now(), gameId).run()
 }
 
 export async function writeTextFile(creatorId: string, gameId: string, path: string, content: string) {
@@ -190,7 +210,7 @@ export async function writeTextFile(creatorId: string, gameId: string, path: str
   await env.GAMES.put(objectKey(gameId, path), bytes, {
     httpMetadata: { contentType: CONTENT_TYPES[extensionOf(path)] },
   })
-  await touch(gameId)
+  await recordGameBytes(gameId)
   return bytes.length
 }
 
@@ -209,7 +229,7 @@ export async function deleteFile(creatorId: string, gameId: string, path: string
   if (pathError) throw new CreatorError(pathError)
   await editableGame(creatorId, gameId)
   await env.GAMES.delete(objectKey(gameId, path))
-  await touch(gameId)
+  await recordGameBytes(gameId)
 }
 
 export async function createUploadUrl(creatorId: string, gameId: string, path: string, origin: string) {

@@ -4,6 +4,9 @@ export const MAX_TEXT_FILE_BYTES = 1024 * 1024
 export const MAX_GAME_BYTES = 50 * 1024 * 1024
 export const MAX_FILES_PER_GAME = 200
 export const MAX_GAMES_PER_CREATOR = 30
+export const MAX_CREATOR_BYTES = 200 * 1024 * 1024
+/** Draft previews stop working this long after the game last changed, so drafts can't serve as file hosting. */
+export const DRAFT_PREVIEW_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const UPLOAD_URL_TTL_MS = 15 * 60 * 1000
 
 /** The content type is always chosen by extension, never by the uploader. */

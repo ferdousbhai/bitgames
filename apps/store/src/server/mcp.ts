@@ -47,7 +47,7 @@ const info = {
 }
 
 const STATUS_HELP: Record<string, string> = {
-  draft: 'draft (only you can see it)',
+  draft: 'draft (only you can see it; the preview link pauses after 7 days without changes)',
   review: 'waiting for an adult to review it',
   public: 'published for everyone',
   rejected: 'not approved; see the note, fix it and submit again',
@@ -161,7 +161,10 @@ export function createMcpServer(creatorId: string, origin: string) {
     ({ gameId: id, path, content }) =>
       run(async () => {
         const bytes = await writeTextFile(creatorId, id, path, content)
-        return `Wrote ${path} (${bytes} bytes).`
+        const external = [...new Set(content.match(/https?:\/\/[^\s'"`)<>]+/g) ?? [])].slice(0, 5)
+        return external.length
+          ? `Wrote ${path} (${bytes} bytes).\nWarning: games can't load anything from other websites, so these URLs will be blocked: ${external.join(', ')}. Use the /vendor/ three.js from the guide, and put other files in the game itself.`
+          : `Wrote ${path} (${bytes} bytes).`
       }),
   )
 

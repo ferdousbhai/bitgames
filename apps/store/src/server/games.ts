@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import type { Game } from '#/lib/types'
@@ -48,8 +49,10 @@ export const listGames = createServerFn({ method: 'GET' }).handler(async () => {
 
 const gameId = z.object({ id: z.string().regex(/^[a-z0-9-]{1,64}$/) })
 
-/** Increments a counter and returns its new value, or null if the game isn't public. */
+/** Increments a counter and returns its new value, or null if the game isn't public or the caller is rate-limited. */
 async function increment(id: string, column: 'plays' | 'likes') {
+  const ip = getRequestHeader('cf-connecting-ip') ?? 'unknown'
+  if (!(await env.LIKE_LIMITER.limit({ key: ip })).success) return null
   const row = await env.DB.prepare(
     `UPDATE games SET ${column} = ${column} + 1 WHERE id = ? AND status = 'public' RETURNING ${column} AS value`,
   )

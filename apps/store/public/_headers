@@ -1,0 +1,5 @@
+# Games run in a sandbox with an opaque origin, so loading these modules is a CORS request.
+/vendor/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff

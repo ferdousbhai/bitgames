@@ -4,34 +4,44 @@ import { CONTENT_TYPES, checkPath, extensionOf, objectKey } from './limits'
 /**
  * Every game response is sandboxed: the page gets an opaque origin, so it
  * can't read the store's cookies or storage even when opened directly.
- * Games may load code only from their own files and pinned npm packages on
- * jsDelivr, and can't send data anywhere else.
+ *
+ * A game may load only its own files (under `base`) and the three.js copy
+ * BitGames hosts under /vendor/. It can't load code or data from anywhere
+ * else, not even another game's folder or a draft preview. That way, what a
+ * reviewer plays is everything the game can ever run or show.
  */
-const SANDBOX_CSP = [
-  'sandbox allow-scripts allow-pointer-lock',
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/npm/",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "media-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "connect-src 'self' data: blob: https://cdn.jsdelivr.net/npm/",
-  "worker-src 'self' blob:",
-  "form-action 'none'",
-  "frame-ancestors 'self'",
-].join('; ')
+function sandboxCsp(base: string, vendor: string) {
+  return [
+    'sandbox allow-scripts allow-pointer-lock',
+    "default-src 'none'",
+    `script-src ${base} ${vendor} 'unsafe-inline'`,
+    `style-src ${base} 'unsafe-inline'`,
+    `img-src ${base} data: blob:`,
+    `media-src ${base} data: blob:`,
+    `font-src ${base} data:`,
+    `connect-src ${base} ${vendor} data: blob:`,
+    `worker-src ${base} blob:`,
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'self'",
+  ].join('; ')
+}
 
 const notFound = () => new Response('Not found', { status: 404 })
 
-/** Serves one file of a game from R2. The caller has already checked who may see it. */
-export async function serveGameFile(gameId: string, path: string, request: Request, cacheSeconds: number) {
+/**
+ * Serves one file of a game from R2. The caller has already checked who may
+ * see it. `basePath` is the URL folder the game is served from, e.g. "/play/<id>/".
+ */
+export async function serveGameFile(gameId: string, path: string, request: Request, basePath: string, cacheSeconds: number) {
   if (checkPath(path)) return notFound()
+  const { origin } = new URL(request.url)
   const object = await env.GAMES.get(objectKey(gameId, path), { onlyIf: request.headers })
   if (!object) return notFound()
 
   const headers = new Headers({
     'content-type': CONTENT_TYPES[extensionOf(path)]!,
-    'content-security-policy': SANDBOX_CSP,
+    'content-security-policy': sandboxCsp(origin + basePath, `${origin}/vendor/`),
     // Module scripts and fetches from the sandbox's opaque origin are CORS requests.
     'access-control-allow-origin': '*',
     'x-content-type-options': 'nosniff',
