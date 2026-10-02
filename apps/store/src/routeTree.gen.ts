@@ -10,20 +10,34 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as MakeRouteImport } from './routes/make'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as GameIdRouteImport } from './routes/game.$id'
+import { Route as UploadTokenRouteImport } from './routes/upload.$token'
 import { Route as PlayGameIdSplatRouteImport } from './routes/play.$gameId.$'
+import { Route as PreviewTokenSplatRouteImport } from './routes/preview.$token.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MakeRoute = MakeRouteImport.update({
   id: '/make',
   path: '/make',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -41,71 +55,109 @@ const GameIdRoute = GameIdRouteImport.update({
   path: '/game/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UploadTokenRoute = UploadTokenRouteImport.update({
+  id: '/upload/$token',
+  path: '/upload/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayGameIdSplatRoute = PlayGameIdSplatRouteImport.update({
   id: '/play/$gameId/$',
   path: '/play/$gameId/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PreviewTokenSplatRoute = PreviewTokenSplatRouteImport.update({
+  id: '/preview/$token/$',
+  path: '/preview/$token/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/make': typeof MakeRoute
+  '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/upload/$token': typeof UploadTokenRoute
   '/play/$gameId/$': typeof PlayGameIdSplatRoute
+  '/preview/$token/$': typeof PreviewTokenSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/make': typeof MakeRoute
+  '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/upload/$token': typeof UploadTokenRoute
   '/play/$gameId/$': typeof PlayGameIdSplatRoute
+  '/preview/$token/$': typeof PreviewTokenSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/make': typeof MakeRoute
+  '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/upload/$token': typeof UploadTokenRoute
   '/play/$gameId/$': typeof PlayGameIdSplatRoute
+  '/preview/$token/$': typeof PreviewTokenSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/make'
+    | '/mcp'
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/upload/$token'
     | '/play/$gameId/$'
+    | '/preview/$token/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/make'
+    | '/mcp'
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/upload/$token'
     | '/play/$gameId/$'
+    | '/preview/$token/$'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/make'
+    | '/mcp'
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/upload/$token'
     | '/play/$gameId/$'
+    | '/preview/$token/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   MakeRoute: typeof MakeRoute
+  McpRoute: typeof McpRoute
   SearchRoute: typeof SearchRoute
   CategorySlugRoute: typeof CategorySlugRoute
   GameIdRoute: typeof GameIdRoute
+  UploadTokenRoute: typeof UploadTokenRoute
   PlayGameIdSplatRoute: typeof PlayGameIdSplatRoute
+  PreviewTokenSplatRoute: typeof PreviewTokenSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -117,11 +169,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/make': {
       id: '/make'
       path: '/make'
       fullPath: '/make'
       preLoaderRoute: typeof MakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -145,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GameIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upload/$token': {
+      id: '/upload/$token'
+      path: '/upload/$token'
+      fullPath: '/upload/$token'
+      preLoaderRoute: typeof UploadTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/play/$gameId/$': {
       id: '/play/$gameId/$'
       path: '/play/$gameId/$'
@@ -152,16 +225,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayGameIdSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/preview/$token/$': {
+      id: '/preview/$token/$'
+      path: '/preview/$token/$'
+      fullPath: '/preview/$token/$'
+      preLoaderRoute: typeof PreviewTokenSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   MakeRoute: MakeRoute,
+  McpRoute: McpRoute,
   SearchRoute: SearchRoute,
   CategorySlugRoute: CategorySlugRoute,
   GameIdRoute: GameIdRoute,
+  UploadTokenRoute: UploadTokenRoute,
   PlayGameIdSplatRoute: PlayGameIdSplatRoute,
+  PreviewTokenSplatRoute: PreviewTokenSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

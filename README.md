@@ -14,14 +14,41 @@ A web game store built on BitChat's technology. Games are made with Blender and 
 
 ## Running the store
 
+The store deploys with the [`cf` CLI](https://developers.cloudflare.com/) using `apps/store/cloudflare.config.ts`.
+
 ```sh
 cd apps/store
-pnpm db:migrate   # create the local D1 tables
-pnpm seed         # publish the starter games in games/ to local D1 and R2
-pnpm dev          # http://localhost:3030
+echo 'ADMIN_KEY=pick-a-long-random-string' > .dev.vars
+pnpm dev          # http://localhost:3030, keep it running
+pnpm db:migrate   # create the local tables
+pnpm seed         # publish the starter games in games/
 ```
 
-Each starter game is a folder in `apps/store/games/` holding a `manifest.json` and its files. To deploy, run `pnpm deploy`, then `pnpm db:migrate:remote` and `pnpm seed:remote`.
+Each starter game is a folder in `apps/store/games/` holding a `manifest.json` and its files.
+
+To deploy, log in once with `pnpm exec cf auth login`, then:
+
+```sh
+pnpm run deploy --secrets-file .dev.vars.production   # file containing ADMIN_KEY=...
+pnpm db:migrate:remote
+pnpm seed:remote
+```
+
+## Making games with an AI agent
+
+Anyone can build games for the store with a local agent such as Claude Code:
+
+1. A grown-up opens `/make`, ticks "I'm a grown-up", and gets a creator key. The page shows a `claude mcp add` command with the key filled in.
+2. Optionally connect the [Blender MCP server](https://github.com/ahujasid/blender-mcp) too, so the agent can model in Blender.
+3. Ask the agent for a game. It reads the guide with `get_guide`, then:
+   - creates the game with `create_game`;
+   - writes three.js code with `write_file`;
+   - exports models from Blender as `.glb` and uploads them with `get_upload_url` plus `curl`;
+   - checks the private preview URL;
+   - calls `submit_for_review`.
+4. An adult approves it at `/admin` (sign in with `ADMIN_KEY`). Only then does it appear in the store. Published games can be taken down there too.
+
+The MCP endpoint is `/mcp` (streamable HTTP, stateless, `Authorization: Bearer bg_...`). Its code is in `apps/store/src/server/mcp.ts`.
 
 ## Running the WebRTC lab
 
