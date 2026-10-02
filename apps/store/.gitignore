@@ -19,7 +19,7 @@ todos.json
 # cf build output and generated types (regenerate with pnpm cf-typegen)
 .cloudflare
 
-# three.js copied from node_modules by scripts/vendor-three.ts
+# three.js copied from node_modules by scripts/vendor.ts
 public/vendor
 
 # Production secrets for `cf deploy --secrets-file` (never loaded by local dev or preview)

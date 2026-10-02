@@ -1,0 +1,20 @@
+{
+  "name": "@bitgames/game-sdk",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./multiplayer": "./src/multiplayer.ts",
+    "./bridge": "./src/bridge.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bitgames/protocol": "workspace:*",
+    "@bitgames/webrtc": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

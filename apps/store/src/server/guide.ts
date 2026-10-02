@@ -1,7 +1,7 @@
 import { CATEGORIES } from '#/lib/categories'
 import { MAX_FILE_BYTES, MAX_GAME_BYTES } from './limits'
 
-/** Must match the exact `three` version in package.json, which scripts/vendor-three.ts copies to /vendor/. */
+/** Must match the exact `three` version in package.json, which scripts/vendor.ts copies to /vendor/. */
 export const THREE_VERSION = '0.186.1'
 const THREE_BASE = `/vendor/three-${THREE_VERSION}`
 
@@ -47,6 +47,28 @@ Games run in a locked-down sandbox:
 - Text files (.html .js .css .json) are written with write_file.
 - Binary files (.glb .png .jpg .webp .mp3 .ogg .wav) are uploaded with get_upload_url.
 
+## Playing together (multiplayer)
+Games can let up to 8 people in the same home play together, each on their own device. BitGames shows the lobby: one device taps "Start a family game" and gets a code made of three animals, and the others tap "Join" and pick the same animals. Game data then goes directly between the devices over WebRTC.
+
+\`\`\`js
+import { joinRoom } from '/vendor/bitgames/multiplayer-1.js'
+
+const room = await joinRoom({ maxPlayers: 4 })   // shows the lobby; resolves when ready
+if (room.solo) { /* playing alone: add computer players */ }
+room.isHost                       // true on the device that started the room; run shared logic (start, laps, bots) there
+room.selfId                       // this device's player id
+room.peers                        // ids of the other connected players
+room.on('join', (id) => {})       // a player connected (also fires for players already in the room)
+room.on('leave', (id) => {})
+room.on('message', (msg, from) => {})
+room.send({ type: 'start' })                     // reliable, to everyone
+room.send({ type: 'pos', x, y }, { fast: true }) // may drop; for frequent updates like positions (20-30 per second)
+room.send(msg, { to: id })                       // one player only
+\`\`\`
+
+Messages are any JSON value. Keep fast messages small (under about 1 KB). The lobby needs the BitGames page around the game, so test multiplayer on the preview page (/try/...) in two browser windows; opened on its own, joinRoom returns a solo room.
+Set together=true in the game info for multiplayer games.
+
 ## Making 3D models in Blender
 If the Blender MCP server is connected, model things there, then export them as glTF binary:
 1. Build or import the model. Keep it low-poly (under about 20k triangles per model), and use simple materials with a Principled BSDF and base colour or image textures.
@@ -66,7 +88,7 @@ If the Blender MCP server is connected, model things there, then export them as 
 Don't use Draco or meshopt compression: their decoders need extra permissions the sandbox doesn't give.
 
 ## Checking your work
-Open the preview URL in a browser, or have the user open it, and play the game. Fix every console error. When it is fun and follows the rules above, call submit_for_review. Use list_my_games to see review results and notes.
+Open the preview URL (/try/<token>) in a browser, or have the user open it, and play the game. The raw files are under /preview/<token>/ if you need to load them directly. Fix every console error. When it is fun and follows the rules above, call submit_for_review. Use list_my_games to see review results and notes.
 
 ## Categories
 ${CATEGORIES.map((c) => `- ${c.slug}: ${c.name} ${c.emoji}`).join('\n')}

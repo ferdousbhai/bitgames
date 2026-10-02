@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { useEffect, useState } from 'react'
+import { GameFrame } from '#/components/GameFrame'
 import { type AdminGame, listForAdmin, reviewGame } from '#/server/admin'
 
 export const Route = createFileRoute('/admin')({
@@ -86,11 +87,11 @@ function AdminPage() {
           {waiting.map((game) => (
             <article key={game.id} className="rounded-[28px] border-4 border-white bg-cloud p-5">
               <GameHeader game={game} />
-              <iframe
+              <GameFrame
+                gameId={game.id}
                 title={game.title}
                 src={`/preview/${game.preview_token}/index.html`}
-                sandbox="allow-scripts allow-pointer-lock"
-                className="mt-4 aspect-video w-full rounded-2xl bg-ink"
+                className="mt-4 aspect-video w-full overflow-hidden rounded-2xl bg-ink"
               />
               <p className="mt-3 text-sm text-ink-soft">
                 Check: gentle and happy, playable without reading, no losing that feels bad, no links, text input or

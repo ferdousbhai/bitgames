@@ -1,6 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { and, eq, not, useLiveQuery } from '@tanstack/react-db'
 import { useEffect, useRef, useState } from 'react'
+import { GameFrame } from '#/components/GameFrame'
 import { GameShelf, Loading } from '#/components/GameShelf'
 import { findCategory } from '#/lib/categories'
 import { countPlay, gamesCollection, likeGame } from '#/lib/collections'
@@ -95,15 +96,7 @@ function Player({ game }: { game: Game }) {
     >
       {started ? (
         <>
-          <iframe
-            title={game.title}
-            src={`/play/${game.id}/${game.entry}`}
-            // Games are untrusted: scripts only, no same-origin access to the store.
-            sandbox="allow-scripts allow-pointer-lock"
-            allow="autoplay; gamepad"
-            className="h-full w-full"
-            ref={(el) => el?.focus()}
-          />
+          <GameFrame gameId={game.id} title={game.title} src={`/play/${game.id}/${game.entry}`} className="h-full w-full" />
           <button
             type="button"
             onClick={() => void frameRef.current?.requestFullscreen?.()}

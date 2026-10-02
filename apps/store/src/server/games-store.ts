@@ -42,8 +42,9 @@ interface OwnedGameRow {
 
 const EDITABLE: GameStatus[] = ['draft', 'rejected']
 
+/** The creator's private play page: the game inside BitGames, so "play together" works too. */
 export function previewUrl(origin: string, token: string) {
-  return `${origin}/preview/${token}/index.html`
+  return `${origin}/try/${token}`
 }
 
 function slugify(title: string) {

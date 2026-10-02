@@ -17,6 +17,8 @@
     "seed:remote": "node scripts/db.ts seed --remote"
   },
   "dependencies": {
+    "@bitgames/game-sdk": "workspace:*",
+    "@bitgames/webrtc": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.31.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/query-db-collection": "^1.3.1",
@@ -37,6 +39,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "cf": "^1.0.0-beta.12",
+    "esbuild": "0.28.1",
     "typescript": "^6.0.2",
     "vite": "^8.0.0"
   }

@@ -16,6 +16,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as GameIdRouteImport } from './routes/game.$id'
+import { Route as TryTokenRouteImport } from './routes/try.$token'
 import { Route as UploadTokenRouteImport } from './routes/upload.$token'
 import { Route as PlayGameIdSplatRouteImport } from './routes/play.$gameId.$'
 import { Route as PreviewTokenSplatRouteImport } from './routes/preview.$token.$'
@@ -55,6 +56,11 @@ const GameIdRoute = GameIdRouteImport.update({
   path: '/game/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TryTokenRoute = TryTokenRouteImport.update({
+  id: '/try/$token',
+  path: '/try/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UploadTokenRoute = UploadTokenRouteImport.update({
   id: '/upload/$token',
   path: '/upload/$token',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/try/$token': typeof TryTokenRoute
   '/upload/$token': typeof UploadTokenRoute
   '/play/$gameId/$': typeof PlayGameIdSplatRoute
   '/preview/$token/$': typeof PreviewTokenSplatRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/try/$token': typeof TryTokenRoute
   '/upload/$token': typeof UploadTokenRoute
   '/play/$gameId/$': typeof PlayGameIdSplatRoute
   '/preview/$token/$': typeof PreviewTokenSplatRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/try/$token': typeof TryTokenRoute
   '/upload/$token': typeof UploadTokenRoute
   '/play/$gameId/$': typeof PlayGameIdSplatRoute
   '/preview/$token/$': typeof PreviewTokenSplatRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/try/$token'
     | '/upload/$token'
     | '/play/$gameId/$'
     | '/preview/$token/$'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/try/$token'
     | '/upload/$token'
     | '/play/$gameId/$'
     | '/preview/$token/$'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/try/$token'
     | '/upload/$token'
     | '/play/$gameId/$'
     | '/preview/$token/$'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   CategorySlugRoute: typeof CategorySlugRoute
   GameIdRoute: typeof GameIdRoute
+  TryTokenRoute: typeof TryTokenRoute
   UploadTokenRoute: typeof UploadTokenRoute
   PlayGameIdSplatRoute: typeof PlayGameIdSplatRoute
   PreviewTokenSplatRoute: typeof PreviewTokenSplatRoute
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GameIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/try/$token': {
+      id: '/try/$token'
+      path: '/try/$token'
+      fullPath: '/try/$token'
+      preLoaderRoute: typeof TryTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upload/$token': {
       id: '/upload/$token'
       path: '/upload/$token'
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   CategorySlugRoute: CategorySlugRoute,
   GameIdRoute: GameIdRoute,
+  TryTokenRoute: TryTokenRoute,
   UploadTokenRoute: UploadTokenRoute,
   PlayGameIdSplatRoute: PlayGameIdSplatRoute,
   PreviewTokenSplatRoute: PreviewTokenSplatRoute,

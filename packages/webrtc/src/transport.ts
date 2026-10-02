@@ -18,7 +18,7 @@ import {
   fragmentPacket,
   fromHex,
 } from "@bitgames/protocol";
-import type { SignalData, WebSocketSignaling } from "./signaling.js";
+import type { SignalData, Signaling } from "./signaling.js";
 
 export type Channel = "reliable" | "fast";
 
@@ -55,7 +55,7 @@ export class WebRTCTransport {
   private readonly selfBytes: Uint8Array;
 
   constructor(
-    private readonly signaling: WebSocketSignaling,
+    private readonly signaling: Signaling,
     private readonly iceServers: RTCIceServer[] = DEFAULT_ICE_SERVERS,
   ) {
     this.selfID = signaling.selfID;

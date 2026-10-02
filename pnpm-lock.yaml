@@ -42,6 +42,12 @@ importers:
 
   apps/store:
     dependencies:
+      '@bitgames/game-sdk':
+        specifier: workspace:*
+        version: link:../../packages/game-sdk
+      '@bitgames/webrtc':
+        specifier: workspace:*
+        version: link:../../packages/webrtc
       '@modelcontextprotocol/sdk':
         specifier: ^1.31.0
         version: 1.31.0(supports-color@10.2.2)(zod@4.6.5)
@@ -97,12 +103,28 @@ importers:
       cf:
         specifier: ^1.0.0-beta.12
         version: 1.0.0-beta.12(@types/node@22.20.5)
+      esbuild:
+        specifier: 0.28.1
+        version: 0.28.1
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
       vite:
         specifier: ^8.0.0
         version: 8.3.2(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)
+
+  packages/game-sdk:
+    dependencies:
+      '@bitgames/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@bitgames/webrtc':
+        specifier: workspace:*
+        version: link:../webrtc
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
 
   packages/protocol:
     dependencies:
@@ -3482,7 +3504,6 @@ snapshots:
       '@esbuild/win32-arm64': 0.28.1
       '@esbuild/win32-ia32': 0.28.1
       '@esbuild/win32-x64': 0.28.1
-    optional: true
 
   escalade@3.2.0: {}
 

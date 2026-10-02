@@ -14,7 +14,15 @@ export interface SignalingEvents {
   error(message: string): void;
 }
 
-export class WebSocketSignaling {
+/** How peers find each other: room membership plus relaying SDP and ICE messages. */
+export interface Signaling {
+  readonly selfID: string;
+  on<K extends keyof SignalingEvents>(event: K, handler: SignalingEvents[K]): void;
+  send(to: string, data: SignalData): void;
+  close(): void;
+}
+
+export class WebSocketSignaling implements Signaling {
   private socket: WebSocket | null = null;
   private handlers: Partial<SignalingEvents> = {};
 
