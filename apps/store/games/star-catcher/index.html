@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Star Catcher</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1446; font-family: system-ui, sans-serif; touch-action: none; user-select: none; }
+  #hud { position: fixed; top: 16px; left: 0; right: 0; text-align: center; font-size: 40px; font-weight: 800; color: #ffd23f; text-shadow: 0 4px 12px rgba(0,0,0,.4); pointer-events: none; }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js" } }</script>
+</head>
+<body>
+<div id="hud">⭐ 0</div>
+<script type="module">
+import * as THREE from 'three'
+
+const renderer = new THREE.WebGLRenderer({ antialias: true })
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+document.body.appendChild(renderer.domElement)
+const scene = new THREE.Scene()
+scene.background = new THREE.Color('#1b1446')
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100)
+camera.position.set(0, 0, 16)
+scene.add(new THREE.AmbientLight('#ffffff', 1.2))
+const light = new THREE.DirectionalLight('#ffffff', 2)
+light.position.set(2, 4, 10)
+scene.add(light)
+
+// Twinkly background stars
+const dots = new THREE.BufferGeometry()
+const pts = []
+for (let i = 0; i < 400; i++) pts.push((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 40, -10 - Math.random() * 10)
+dots.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
+const sky = new THREE.Points(dots, new THREE.PointsMaterial({ color: '#ffffff', size: 0.12 }))
+scene.add(sky)
+
+// A friendly planet
+const planet = new THREE.Mesh(new THREE.SphereGeometry(3, 32, 24), new THREE.MeshStandardMaterial({ color: '#ff9f1c', roughness: 0.8 }))
+planet.position.set(-9, 6, -8)
+scene.add(planet)
+const ring = new THREE.Mesh(new THREE.TorusGeometry(4.5, 0.25, 8, 48), new THREE.MeshStandardMaterial({ color: '#ffd6a5' }))
+ring.rotation.x = 1.2
+planet.add(ring)
+
+// Rocket
+const rocket = new THREE.Group()
+const white = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 })
+const red = new THREE.MeshStandardMaterial({ color: '#ff595e', roughness: 0.4 })
+const bodyMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 2, 24), white)
+rocket.add(bodyMesh)
+const nose = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1, 24), red)
+nose.position.y = 1.5
+rocket.add(nose)
+const window_ = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), new THREE.MeshStandardMaterial({ color: '#2ec4b6', metalness: 0.3 }))
+window_.position.set(0, 0.3, 0.6)
+rocket.add(window_)
+for (const side of [-1, 1]) {
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 0.7), red)
+  fin.position.set(side * 0.75, -0.8, 0)
+  fin.rotation.z = side * -0.4
+  rocket.add(fin)
+}
+const flame = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1, 16), new THREE.MeshBasicMaterial({ color: '#ffbe0b' }))
+flame.position.y = -1.5
+flame.rotation.x = Math.PI
+rocket.add(flame)
+scene.add(rocket)
+
+function starShape() {
+  const shape = new THREE.Shape()
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? 0.7 : 0.3
+    const a = (i / 10) * Math.PI * 2 + Math.PI / 2
+    const x = Math.cos(a) * r
+    const y = Math.sin(a) * r
+    i === 0 ? shape.moveTo(x, y) : shape.lineTo(x, y)
+  }
+  return new THREE.ExtrudeGeometry(shape, { depth: 0.25, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 2 })
+}
+const STAR = starShape()
+const stars = []
+const sparkles = []
+let score = 0
+let spawn = 0
+const hud = document.getElementById('hud')
+
+function halfSize() {
+  const h = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
+  return { w: h * camera.aspect, h }
+}
+
+function spawnStar() {
+  const rainbow = Math.random() < 0.1
+  const material = new THREE.MeshStandardMaterial({ color: rainbow ? '#ff6b9d' : '#ffd23f', emissive: rainbow ? '#6c63ff' : '#ff9f1c', emissiveIntensity: 0.4 })
+  const star = new THREE.Mesh(STAR, material)
+  const { w, h } = halfSize()
+  star.position.set((Math.random() * 2 - 1) * (w - 1), h + 1, 0)
+  star.userData = { speed: 3 + Math.random() * 2 + Math.min(score * 0.03, 4), spin: (Math.random() - 0.5) * 4, points: rainbow ? 5 : 1, rainbow }
+  scene.add(star)
+  stars.push(star)
+}
+
+let audio
+function ding(points) {
+  try {
+    audio ??= new AudioContext()
+    const notes = points > 1 ? [784, 988, 1175, 1568] : [880 + Math.random() * 200]
+    notes.forEach((f, i) => {
+      const osc = audio.createOscillator()
+      const gain = audio.createGain()
+      osc.type = 'sine'
+      osc.frequency.value = f
+      const t = audio.currentTime + i * 0.07
+      gain.gain.setValueAtTime(0.2, t)
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+      osc.connect(gain).connect(audio.destination)
+      osc.start(t)
+      osc.stop(t + 0.25)
+    })
+  } catch {}
+}
+
+let targetX = 0
+const keys = new Set()
+addEventListener('pointermove', (e) => { targetX = ((e.clientX / innerWidth) * 2 - 1) * halfSize().w })
+addEventListener('pointerdown', (e) => { targetX = ((e.clientX / innerWidth) * 2 - 1) * halfSize().w })
+addEventListener('keydown', (e) => keys.add(e.key))
+addEventListener('keyup', (e) => keys.delete(e.key))
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight)
+  camera.aspect = innerWidth / innerHeight
+  camera.updateProjectionMatrix()
+}
+addEventListener('resize', resize)
+resize()
+
+const clock = new THREE.Clock()
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05)
+  const t = clock.elapsedTime
+  const { w, h } = halfSize()
+  if (keys.has('ArrowLeft') || keys.has('a')) targetX -= 14 * dt
+  if (keys.has('ArrowRight') || keys.has('d')) targetX += 14 * dt
+  targetX = Math.max(-w + 1, Math.min(w - 1, targetX))
+  const dx = targetX - rocket.position.x
+  rocket.position.x += dx * Math.min(1, dt * 10)
+  rocket.position.y = -h + 2.2 + Math.sin(t * 3) * 0.1
+  rocket.rotation.z = THREE.MathUtils.clamp(-dx * 0.15, -0.5, 0.5)
+  flame.scale.y = 0.8 + Math.sin(t * 30) * 0.2
+  planet.rotation.y += dt * 0.2
+  sky.rotation.z += dt * 0.01
+
+  spawn -= dt
+  if (spawn <= 0) { spawnStar(); spawn = Math.max(0.4, 1 - score * 0.01) }
+
+  for (let i = stars.length - 1; i >= 0; i--) {
+    const s = stars[i]
+    s.position.y -= s.userData.speed * dt
+    s.rotation.z += s.userData.spin * dt
+    if (s.userData.rainbow) s.material.color.setHSL((t * 0.5) % 1, 0.9, 0.6)
+    if (s.position.distanceTo(rocket.position) < 1.5) {
+      score += s.userData.points
+      hud.textContent = `⭐ ${score}`
+      ding(s.userData.points)
+      for (let k = 0; k < 10; k++) {
+        const sp = new THREE.Mesh(new THREE.OctahedronGeometry(0.12), new THREE.MeshBasicMaterial({ color: '#fff3b0' }))
+        sp.position.copy(s.position)
+        sp.userData = { v: new THREE.Vector3((Math.random() - 0.5) * 8, Math.random() * 6, 0), life: 0.5 }
+        scene.add(sp)
+        sparkles.push(sp)
+      }
+      scene.remove(s)
+      s.material.dispose()
+      stars.splice(i, 1)
+    } else if (s.position.y < -h - 2) {
+      scene.remove(s)
+      s.material.dispose()
+      stars.splice(i, 1)
+    }
+  }
+  for (let i = sparkles.length - 1; i >= 0; i--) {
+    const sp = sparkles[i]
+    sp.userData.life -= dt
+    sp.position.addScaledVector(sp.userData.v, dt)
+    sp.scale.setScalar(Math.max(sp.userData.life * 2, 0.01))
+    if (sp.userData.life <= 0) { scene.remove(sp); sparkles.splice(i, 1) }
+  }
+  renderer.render(scene, camera)
+})
+</script>
+</body>
+</html>

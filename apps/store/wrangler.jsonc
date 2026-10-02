@@ -1,0 +1,20 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bitgames-store",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "@tanstack/react-start/server-entry",
+	"observability": {
+		"enabled": true,
+		"traces": { "enabled": true }
+	},
+	"upload_source_maps": true,
+	// Game catalog. Wrangler creates the database on first deploy.
+	"d1_databases": [
+		{ "binding": "DB", "database_name": "bitgames", "migrations_dir": "migrations" }
+	],
+	// Game files (HTML, JS, .glb models), stored under games/<id>/<path>.
+	"r2_buckets": [
+		{ "binding": "GAMES", "bucket_name": "bitgames-games" }
+	]
+}

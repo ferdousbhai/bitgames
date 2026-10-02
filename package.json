@@ -1,0 +1,12 @@
+{
+  "name": "bitgames",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "signal": "pnpm --filter @bitgames/signal start",
+    "lab": "pnpm --filter @bitgames/lab dev"
+  },
+  "packageManager": "pnpm@11.28.2"
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BitGames WebRTC Lab</title>
+    <style>
+      :root {
+        --bg: #f7f7f5; --fg: #1b1b1a; --muted: #6b6b66; --line: #dcdcd6; --accent: #2f6fdb; --good: #1f8a4c; --warn: #b7791f; --bad: #c53030;
+        font-family: ui-sans-serif, system-ui, sans-serif; color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #151514; --fg: #ececea; --muted: #9a9a94; --line: #2e2e2b; --accent: #6b9cf0; }
+      }
+      body { margin: 0; background: var(--bg); color: var(--fg); }
+      main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      p.sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+      input, button { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; }
+      button { cursor: pointer; }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      #status { color: var(--muted); font-size: 14px; }
+      .table-wrap { overflow-x: auto; }
+      table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+      th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+      th:first-child, td:first-child { text-align: left; }
+      th { color: var(--muted); font-weight: 500; }
+      .good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+      #log { margin-top: 20px; font: 12px ui-monospace, monospace; color: var(--muted); white-space: pre-wrap; max-height: 240px; overflow-y: auto; }
+      .hint { font-size: 13px; color: var(--muted); margin-top: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>WebRTC Lab</h1>
+      <p class="sub">Measures BitChat-format packets over peer-to-peer data channels. Open this page on two or more devices with the same room.</p>
+      <div class="row">
+        <label>Room <input id="room" size="12" /></label>
+        <label>Signaling <input id="signal" size="28" /></label>
+        <button id="join" class="primary">Join</button>
+        <span id="status">Not connected</span>
+      </div>
+      <div class="row">
+        <label>Ping rate <input id="rate" type="number" min="1" max="120" value="20" style="width: 64px" /> Hz</label>
+        <button id="reset" disabled>Reset stats</button>
+        <button id="bulk" disabled>Throughput test (5 MB)</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Peer</th><th>Path</th><th>ICE RTT</th>
+              <th>Reliable p50</th><th>p95</th>
+              <th>Fast p50</th><th>p95</th><th>Fast loss</th><th>Jitter</th><th>Throughput</th>
+            </tr>
+          </thead>
+          <tbody id="peers"><tr><td colspan="10" style="text-align:left;color:var(--muted)">No peers yet</td></tr></tbody>
+        </table>
+      </div>
+      <p class="hint">Path "host" means a direct connection on the local network, "srflx" means through NAT, and "relay" means through a TURN server.</p>
+      <div id="log"></div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

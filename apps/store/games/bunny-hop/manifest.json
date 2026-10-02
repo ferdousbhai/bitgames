@@ -1,0 +1,11 @@
+{
+  "id": "bunny-hop",
+  "title": "Bunny Hop",
+  "tagline": "Help the bunny hop over logs and munch carrots!",
+  "howToPlay": "Tap the screen or press the space bar to jump. Collect carrots and hop over the logs!",
+  "emoji": "🐰",
+  "color": "#8ac926",
+  "category": "jump",
+  "together": false,
+  "featured": false
+}
