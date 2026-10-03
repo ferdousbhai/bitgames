@@ -29,7 +29,9 @@ function TryPage() {
   return (
     <>
       <p className="mt-2 rounded-2xl bg-sun/30 px-4 py-2 text-center font-semibold">
-        🔒 Private preview ({game.status}). Only people with this link can play it.
+        {game.live
+          ? `🌍 This game is in the store. This link plays its newest version${game.status === 'review' ? ', which is waiting for a grown-up to review it for the store' : ''}.`
+          : `🔗 This game's own link: anyone who has it can play. ${game.status === 'review' ? 'A grown-up will review it for the store, so other families can find it too.' : 'It is not in the store.'}`}
       </p>
       <h1 className="mb-3 mt-4 flex items-center gap-3 text-3xl font-bold">
         <span aria-hidden>{game.emoji}</span>
@@ -57,7 +59,7 @@ function TryPage() {
         </>
       ) : (
         <p className="rounded-[32px] border-4 border-white bg-cloud p-8 text-center text-xl">
-          Nothing to play yet: deploy the game and submit its version with submit_version. 🛠️
+          Nothing to play yet: deploy the game and ship its version with ship_version. 🛠️
         </p>
       )}
       <p className="mt-3 text-lg text-ink-soft">🕹️ {game.howToPlay}</p>

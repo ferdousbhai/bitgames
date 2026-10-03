@@ -10,13 +10,13 @@ const THREE_BASE = `${VENDOR_BASE}/three`
 
 /** Sent to the agent when it connects. Kept short; get_guide has the details. */
 export const INSTRUCTIONS = `BitGames is a game store for young children (about 4 to 8 years old).
-Games run on the creator's own Cloudflare account; BitGames lists them in one place, and an adult reviews every version before children see it.
-Call get_guide once before building. The workflow is: create_game, get_starter_project, build the game in public/, deploy it to Cloudflare, then submit_version with the version preview URL.`
+Games run on the creator's own Cloudflare account. Once shipped, a game plays right away at its own link on BitGames, and an adult reviews it before it is listed in the store for other families.
+Call get_guide once before building. The workflow is: create_game, get_starter_project, build the game in public/, deploy it to Cloudflare, then ship_version with the version preview URL and give the user the play link it returns.`
 
 export const GUIDE = `# Making a BitGames game
 
 ## Who plays
-Children of about 4 to 8. Many can't read well yet. Every version is reviewed by an adult before it is published, and games that break these rules are rejected:
+Children of about 4 to 8. Many can't read well yet. An adult reviews every version before it is listed in the store, and games that break these rules aren't listed:
 - Gentle and happy. No violence, weapons, blood, scary themes, or mean words.
 - No losing that feels bad: no "Game over" screens, no lives that run out. Slow down or let them try again.
 - Playable without reading: big pictures, emoji, sounds, and one-sentence instructions.
@@ -31,7 +31,7 @@ Each game is a folder of static files deployed as a Worker on the creator's own 
 3. Build the game in \`public/\`. \`index.html\` is the entry point.
 4. Deploy with \`npm install\` then \`npm run deploy\`. It runs \`node bitgames.mjs\`, which lists every file in \`public/\` with its SHA-256 in \`public/${MANIFEST_FILE}\`, then \`cf deploy\`. The creator logs in once with \`npx cf auth login\`.
 5. Every deploy is a new version with its own preview URL that never changes: \`https://<first 8 characters of the "Current Version ID">-${workerName('<id>')}.<account>.workers.dev/\`. Open it to check the game.
-6. submit_version with that URL. BitGames downloads every file, checks it against ${MANIFEST_FILE}, and sends the version to a reviewer. Once approved, exactly that version is what children play. To update a game, deploy again and submit the new version; the store keeps the current one until the update is approved. BitGames re-checks published versions and takes down a game whose files change.
+6. ship_version with that URL. BitGames downloads every file and checks it against ${MANIFEST_FILE}. The game then plays right away at its own link (/try/<token>), which the user can share with anyone, and the version goes to a reviewer to be listed in the store. Once approved, exactly that version is what the store shows. To update a game, deploy again and ship the new version: the link plays it at once, while the store keeps its current version until the update is approved. BitGames re-checks listed versions and takes a game out of the store if its files change.
 
 BitGames hosts three.js ${THREE_VERSION} with all of its addons (\`examples/jsm\`). Use exactly this import map:
 
@@ -74,7 +74,7 @@ room.send({ type: 'pos', x, y }, { fast: true }) // may drop; for frequent updat
 room.send(msg, { to: id })                       // one player only
 \`\`\`
 
-Messages are any JSON value. Keep fast messages small (under about 1 KB). The lobby needs the BitGames page around the game, so test multiplayer on the preview page (/try/...) in two browser windows after submitting; opened on its own, joinRoom returns a solo room.
+Messages are any JSON value. Keep fast messages small (under about 1 KB). The lobby needs the BitGames page around the game, so test multiplayer at the game's link (/try/...) in two browser windows after shipping; opened on its own, joinRoom returns a solo room.
 Set together=true in the game info for multiplayer games.
 
 ## Full screen
@@ -105,7 +105,7 @@ Don't use Draco or meshopt compression: their decoders need extra permissions th
 Add a cover so children can recognise the game: a 1280x720 screenshot of an exciting moment, saved as \`public/cover.jpg\`, \`cover.webp\` or \`cover.png\`. Without one, the tile shows the game's emoji.
 
 ## Checking your work
-Open the version URL from the deploy, or have the user open it, and play the game; fix every console error. After submit_version, the preview page (/try/<token>, from list_my_games) plays the submitted version inside BitGames with the real sandbox and the multiplayer lobby. Query parameters on the preview page are passed to the game, so /try/<token>?debug reaches your game as location.search. Use list_my_games to see review results and notes.
+Open the version URL from the deploy, or have the user open it, and play the game; fix every console error. After ship_version, the game's link (/try/<token>, also in list_my_games) plays the shipped version inside BitGames with the real sandbox and the multiplayer lobby. Query parameters on the link are passed to the game, so /try/<token>?debug reaches your game as location.search. Use list_my_games to see whether it is listed in the store, and any review notes.
 
 ## Categories
 ${CATEGORIES.map((c) => `- ${c.slug}: ${c.name} ${c.emoji}`).join('\n')}
