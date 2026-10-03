@@ -221,11 +221,13 @@ function makeConeGeometry() {
     geo.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: geo.attributes.position.count }, () => [c.r, c.g, c.b]).flat(), 3))
     return geo
   }
-  return mergeGeometries([
+  const geometry = mergeGeometries([
     part(new THREE.ConeGeometry(0.28, 0.75, 12), 0, '#ff6a00'),
     part(new THREE.CylinderGeometry(0.16, 0.2, 0.12, 12), 0.05, '#ffffff'),
     part(new THREE.BoxGeometry(0.6, 0.06, 0.6), -0.36, '#ff6a00'),
   ])
+  geometry.userData.shared = true
+  return geometry
 }
 function cone(track, position) {
   coneGeometry ??= makeConeGeometry()

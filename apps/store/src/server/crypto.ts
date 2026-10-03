@@ -1,4 +1,4 @@
-export function randomToken(bytes = 32): string {
+export function randomToken(bytes: number): string {
   const data = crypto.getRandomValues(new Uint8Array(bytes))
   return btoa(String.fromCharCode(...data)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
 }

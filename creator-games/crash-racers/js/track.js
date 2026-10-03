@@ -300,7 +300,8 @@ export class Track {
 
   /**
    * Removes the city from the world and frees its geometry (a new race builds
-   * a fresh one). Materials and textures are shared across races, so they stay.
+   * a fresh one). Materials, textures and geometry marked `userData.shared`
+   * are reused across races, so they stay.
    */
   dispose() {
     for (const b of this.bodies) this.world.removeBody(b)
@@ -309,7 +310,7 @@ export class Track {
       p.mesh.removeFromParent()
     }
     this.group.removeFromParent()
-    const free = (o) => o.isMesh && o.geometry.dispose()
+    const free = (o) => o.isMesh && !o.geometry.userData.shared && o.geometry.dispose()
     this.group.traverse(free)
     for (const p of this.props) p.mesh.traverse(free)
   }

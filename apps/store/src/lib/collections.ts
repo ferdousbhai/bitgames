@@ -4,7 +4,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { addLike, listGames, recordPlay } from '#/server/games'
 import { gameSchema } from './types'
 
-export const queryClient = new QueryClient({
+const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000 } },
 })
 

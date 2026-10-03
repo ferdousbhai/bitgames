@@ -115,9 +115,6 @@ importers:
 
   packages/game-sdk:
     dependencies:
-      '@bitgames/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@bitgames/webrtc':
         specifier: workspace:*
         version: link:../webrtc

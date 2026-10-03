@@ -107,12 +107,14 @@ async function editableGame(creatorId: string, gameId: string) {
 }
 
 /**
- * The one place a draft change is recorded: bumps updated_at, optionally stores
- * the draft's new size or details, and sends a published game's draft back to "changed".
+ * The one place a draft change is recorded: bumps updated_at, optionally
+ * adjusts the draft's size or details, and sends a published game's draft back
+ * to "changed". Sizes change by a difference, applied atomically, so parallel
+ * writes can't overwrite each other's totals.
  */
 export async function markDraftChanged(
   gameId: string,
-  { bytes, pendingInfo, info }: { bytes?: number; pendingInfo?: string; info?: Partial<GameInfo> } = {},
+  { addBytes, pendingInfo, info }: { addBytes?: number; pendingInfo?: string; info?: Partial<GameInfo> } = {},
 ) {
   const sets = [`updated_at = ?`, `status = CASE WHEN status = 'public' THEN 'draft' ELSE status END`]
   const values: (string | number)[] = [Date.now()]
@@ -121,9 +123,9 @@ export async function markDraftChanged(
     sets.push(...changes.sets)
     values.push(...changes.values)
   }
-  if (bytes !== undefined) {
-    sets.push('bytes = ?')
-    values.push(bytes)
+  if (addBytes) {
+    sets.push('bytes = MAX(0, bytes + ?)')
+    values.push(addBytes)
   }
   if (pendingInfo !== undefined) {
     sets.push('pending_info = ?')
@@ -189,11 +191,11 @@ export async function listFiles(creatorId: string, gameId: string) {
 
 /** Every object under a prefix (paged), with paths relative to the prefix. */
 async function listObjects(prefix: string) {
-  const out: { path: string; bytes: number }[] = []
+  const out: { path: string; bytes: number; etag: string }[] = []
   let cursor: string | undefined
   do {
     const listed = await env.GAMES.list({ prefix, cursor, limit: 1000 })
-    for (const o of listed.objects) out.push({ path: o.key.slice(prefix.length), bytes: o.size })
+    for (const o of listed.objects) out.push({ path: o.key.slice(prefix.length), bytes: o.size, etag: o.etag })
     cursor = listed.truncated ? listed.cursor : undefined
   } while (cursor)
   return out
@@ -201,7 +203,7 @@ async function listObjects(prefix: string) {
 
 /**
  * Checks that putting `bytes` at `path` keeps the game and its creator within
- * their limits, and returns the game's new total size.
+ * their limits, and returns how much that grows the game (negative if it shrinks).
  */
 export async function checkGameQuota(gameId: string, path: string, bytes: number): Promise<number> {
   const [objects, row] = await Promise.all([
@@ -214,6 +216,7 @@ export async function checkGameQuota(gameId: string, path: string, bytes: number
       .first<{ other: number }>(),
   ])
   const others = objects.filter((o) => o.path !== path)
+  const previous = objects.find((o) => o.path === path)?.bytes ?? 0
   if (others.length + 1 > MAX_FILES_PER_GAME) throw new CreatorError(`A game can have at most ${MAX_FILES_PER_GAME} files.`)
   const gameTotal = others.reduce((sum, o) => sum + o.bytes, 0) + bytes
   if (gameTotal > MAX_GAME_BYTES) {
@@ -225,7 +228,7 @@ export async function checkGameQuota(gameId: string, path: string, bytes: number
       `This would bring all your games to ${mb(creatorTotal)}. Each creator can store up to ${mb(MAX_CREATOR_BYTES)}; delete files or games you don't need.`,
     )
   }
-  return gameTotal
+  return bytes - previous
 }
 
 async function deletePrefix(prefix: string) {
@@ -252,7 +255,10 @@ export async function publishDraft(gameId: string) {
     listObjects(liveKey(gameId, '')),
     env.DB.prepare('SELECT pending_info FROM games WHERE id = ?').bind(gameId).first<{ pending_info: string | null }>(),
   ])
-  await inPool(draft, 8, async ({ path }) => {
+  // R2 etags are content hashes, so files the live copy already has are skipped.
+  const liveEtags = new Map(live.map((o) => [o.path, o.etag]))
+  const changed = draft.filter((o) => liveEtags.get(o.path) !== o.etag)
+  await inPool(changed, 8, async ({ path }) => {
     const object = await env.GAMES.get(objectKey(gameId, path))
     // Buffered: R2 needs a known length, and files are capped at 10 MB.
     if (object) await env.GAMES.put(liveKey(gameId, path), await object.arrayBuffer(), { httpMetadata: object.httpMetadata })
@@ -289,9 +295,9 @@ export async function writeTextFile(creatorId: string, gameId: string, path: str
     throw new CreatorError(`Text files can be at most ${mb(MAX_TEXT_FILE_BYTES)}. Split the code into modules.`)
   }
   await editableGame(creatorId, gameId)
-  const total = await checkGameQuota(gameId, path, bytes.length)
+  const growth = await checkGameQuota(gameId, path, bytes.length)
   await env.GAMES.put(objectKey(gameId, path), bytes, { httpMetadata: { contentType: CONTENT_TYPES[extensionOf(path)] } })
-  await markDraftChanged(gameId, { bytes: total })
+  await markDraftChanged(gameId, { addBytes: growth })
   return bytes.length
 }
 
@@ -307,9 +313,10 @@ export async function readTextFile(creatorId: string, gameId: string, path: stri
 export async function deleteFile(creatorId: string, gameId: string, path: string) {
   assertPath(path)
   await editableGame(creatorId, gameId)
-  await env.GAMES.delete(objectKey(gameId, path))
-  const total = (await listObjects(objectKey(gameId, ''))).reduce((sum, o) => sum + o.bytes, 0)
-  await markDraftChanged(gameId, { bytes: total })
+  const key = objectKey(gameId, path)
+  const existing = await env.GAMES.head(key)
+  await env.GAMES.delete(key)
+  await markDraftChanged(gameId, { addBytes: -(existing?.size ?? 0) })
 }
 
 export async function createUploadUrl(creatorId: string, gameId: string, path: string, origin: string) {

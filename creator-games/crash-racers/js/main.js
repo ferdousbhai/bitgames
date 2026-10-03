@@ -228,7 +228,7 @@ function setupRoom(room) {
   room.on('join', (id) => {
     if (!game.players.has(id)) game.players.set(id, { id, emoji: PLAYER_EMOJI[game.players.size % PLAYER_EMOJI.length] })
     renderPlayers()
-    if (room.isHost) send({ t: 'players', host: true, players: [...game.players.values()] })
+    if (room.isHost) send({ t: 'players', players: [...game.players.values()] })
   })
   room.on('leave', (id) => {
     game.players.delete(id)
@@ -243,7 +243,7 @@ function onMessage(msg, from) {
   switch (msg.t) {
     case 'players':
       // Only the host's list counts, so everyone shows the same animal for each player.
-      if (msg.host && !game.room.isHost) {
+      if (!game.room.isHost) {
         game.players = new Map(msg.players.map((p) => [p.id, p]))
         renderPlayers()
       }
@@ -429,8 +429,11 @@ function banner(text, ms = 1300) {
   bannerTimer = setTimeout(() => el.classList.remove('show'), ms)
 }
 
+/** Where a car is on the road: from progress tracking, or measured now if not tracked yet. */
+const projOf = (car) => game.progress.get(car.id)?.proj ?? game.track.project(car.body.position)
+
 function respawn(car, ahead = 0) {
-  const proj = game.progress.get(car.id)?.proj ?? game.track.project(car.body.position)
+  const proj = projOf(car)
   const s = game.track.sampleAt(proj.dist + ahead)
   car.place(s.p, game.track.headingAt(s))
   car.upsideDownTime = 0
@@ -582,7 +585,7 @@ const humanController = {
 function botController(bot) {
   return {
     update(car, dt) {
-      const proj = game.progress.get(car.id)?.proj ?? game.track.project(car.body.position)
+      const proj = projOf(car)
       bot.update(dt, proj, game.mode === 'smash' ? Bot.nearest(car, game.cars.values()) : null)
     },
   }

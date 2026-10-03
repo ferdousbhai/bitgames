@@ -103,7 +103,7 @@ export class Car {
         rest: object.position.clone(),
         center: object.position.clone(),
         front: name.includes('f'),
-        health: 1, bent: 0, state: 'ok', spin: 0, debris: null,
+        health: 1, bent: 0, state: 'ok', spin: 0,
       }
     })
 
@@ -167,7 +167,7 @@ export class Car {
     this.body.quaternion.setFromEuler(0, yaw, 0)
     this.body.velocity.setZero()
     this.body.angularVelocity.setZero()
-    this.body.wakeUp?.()
+    this.body.wakeUp()
     this.syncVisual()
   }
 
@@ -247,7 +247,7 @@ export class Car {
     const r = isI ? contact.ri : contact.rj
     const n = isI ? contact.ni.negate() : contact.ni.clone()
     const world = new THREE.Vector3(this.body.position.x + r.x, this.body.position.y + r.y, this.body.position.z + r.z)
-    const bodyLocal = this.body.pointToLocalFrame(new CANNON.Vec3(world.x, world.y, world.z))
+    const bodyLocal = this.body.vectorToLocalFrame(r)
     const dir = this.body.vectorToLocalFrame(n)
     this.hitAccumulator = {
       speed,

@@ -159,7 +159,7 @@ export function createMcpServer(creatorId: string, origin: string) {
     },
     ({ gameId: id }) =>
       run(async () => {
-        const files = await listFiles(creatorId, id)
+        const files = (await listFiles(creatorId, id)).map(({ path, bytes }) => ({ path, bytes }))
         const text = files.length ? files.map((f) => `${f.path}  ${f.bytes} bytes`).join('\n') : 'No files yet.'
         return { text, structured: { files } }
       }),

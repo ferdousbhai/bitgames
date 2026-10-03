@@ -104,7 +104,7 @@ export class Damage {
           name, kind, object: child, health: 1, state: 'ok',
           rest: { position: child.position.clone(), quaternion: child.quaternion.clone() },
           center, radius: box.getSize(new THREE.Vector3()).length() / 2,
-          swing: 0, swingVel: 0, angle: 0, side: name.endsWith('_l') ? -1 : 1, body: null,
+          swing: 0, swingVel: 0, angle: 0, side: name.endsWith('_l') ? -1 : 1,
         })
       } else if (name.startsWith('glass')) {
         this.glass.push({ ...piece(child, rootInv), state: 'ok' })
@@ -259,7 +259,7 @@ export class Damage {
       .multiplyScalar(0.8)
       .addScaledVector(pushOut, 1.5 + speed * 0.12)
       .add(new THREE.Vector3((r() - 0.5) * 3, 1.5 + r() * 3, (r() - 0.5) * 3))
-    part.body = this.env.debris.throw(part.object, vel, new THREE.Vector3(angularVelocity.x + (r() - 0.5) * 12, (r() - 0.5) * 12, (r() - 0.5) * 12))
+    this.env.debris.throw(part.object, vel, new THREE.Vector3(angularVelocity.x + (r() - 0.5) * 12, (r() - 0.5) * 12, (r() - 0.5) * 12))
     this.env.audio.clunk(1)
   }
 
@@ -271,7 +271,7 @@ export class Damage {
     const { velocity } = this.car.body
     const pushOut = this.outward(dir)
     const vel = new THREE.Vector3(velocity.x, velocity.y, velocity.z).addScaledVector(pushOut, 2 + speed * 0.15).add(new THREE.Vector3(0, 2, 0))
-    wheel.debris = this.env.debris.throw(wheel.object, vel, new THREE.Vector3((Math.random() - 0.5) * 20, 0, 0), { wheel: wheel.radius })
+    this.env.debris.throw(wheel.object, vel, new THREE.Vector3((Math.random() - 0.5) * 20, 0, 0), { wheel: wheel.radius })
     this.env.audio.clunk(1)
   }
 
@@ -337,12 +337,11 @@ export class Damage {
       def.mesh.geometry.computeVertexNormals()
     }
     for (const part of this.parts) {
-      if (part.state === 'gone') this.env.debris.recall(part.object, part.body, this.root)
+      if (part.state === 'gone') this.env.debris.recall(part.object, this.root)
       part.state = 'ok'
       part.health = 1
       part.angle = 0
       part.swingVel = 0
-      part.body = null
       part.object.position.copy(part.rest.position)
       part.object.quaternion.copy(part.rest.quaternion)
     }
@@ -359,11 +358,10 @@ export class Damage {
       l.broken = false
     }
     this.car.wheels.forEach((wheel, i) => {
-      if (wheel.state === 'gone') this.env.debris.recall(wheel.object, wheel.debris, this.root)
+      if (wheel.state === 'gone') this.env.debris.recall(wheel.object, this.root)
       wheel.state = 'ok'
       wheel.health = 1
       wheel.bent = 0
-      wheel.debris = null
       this.car.restoreWheel(i)
     })
   }
@@ -411,24 +409,25 @@ export class Debris {
     this.world.addBody(body)
     this.items.push({ object, body, age: 0 })
     if (this.items.length > this.max) this.remove(this.items[0])
-    return body
   }
 
   /** Puts a part back on its car (used by repair). */
-  recall(object, body, root) {
+  recall(object, root) {
     const item = this.items.find((it) => it.object === object)
     if (item) {
       this.world.removeBody(item.body)
       this.items.splice(this.items.indexOf(item), 1)
-    } else if (body) this.world.removeBody(body)
+    }
     object.visible = true
     object.scale.setScalar(1)
     root.add(object)
   }
 
+  /** Drops a piece for good. Its geometry is the car's own clone, and the car no longer holds it. */
   remove(item) {
     this.world.removeBody(item.body)
     item.object.removeFromParent()
+    item.object.traverse((o) => o.isMesh && o.geometry.dispose())
     this.items.splice(this.items.indexOf(item), 1)
   }
 
