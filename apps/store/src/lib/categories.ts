@@ -6,6 +6,7 @@ export interface Category {
 }
 
 export const CATEGORIES: Category[] = [
+  { slug: 'race', name: 'Racing', emoji: '🏁', color: '#ff595e' },
   { slug: 'pop', name: 'Tap & Pop', emoji: '🎈', color: '#ff6b9d' },
   { slug: 'jump', name: 'Run & Jump', emoji: '🏃', color: '#ff9f1c' },
   { slug: 'space', name: 'Space', emoji: '🚀', color: '#6c63ff' },

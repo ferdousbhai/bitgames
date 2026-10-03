@@ -27,7 +27,8 @@ function sandboxCsp(base: string, vendor: string) {
   ].join('; ')
 }
 
-const notFound = () => new Response('Not found', { status: 404 })
+// CORS on 404s too, so a missing optional file shows up in the game as a plain 404, not a CORS error.
+const notFound = () => new Response('Not found', { status: 404, headers: { 'access-control-allow-origin': '*' } })
 
 /**
  * Serves one file of a game from R2. The caller has already checked who may

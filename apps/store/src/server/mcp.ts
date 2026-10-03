@@ -19,6 +19,25 @@ import {
 import { GUIDE, INSTRUCTIONS } from './guide'
 import { MAX_FILE_BYTES } from './limits'
 
+/**
+ * Outside URLs the code would actually try to load: imports, fetch, src/href,
+ * CSS url() and import-map entries. URLs in comments or plain text are fine.
+ */
+function loadedUrls(content: string): string[] {
+  const patterns = [
+    /\bfrom\s*['"](https?:\/\/[^'"]+)/g,
+    /\bimport\s*\(?\s*['"](https?:\/\/[^'"]+)/g,
+    /\bfetch\s*\(\s*['"`](https?:\/\/[^'"`]+)/g,
+    /\b(?:src|href)\s*=\s*['"](https?:\/\/[^'"]+)/g,
+    /url\(\s*['"]?(https?:\/\/[^'")]+)/g,
+    /"[\w@/.-]+"\s*:\s*"(https?:\/\/[^"]+)"/g,
+    /\.loadAsync\s*\(\s*['"`](https?:\/\/[^'"`]+)/g,
+  ]
+  const found = new Set<string>()
+  for (const re of patterns) for (const m of content.matchAll(re)) found.add(m[1]!)
+  return [...found].slice(0, 5)
+}
+
 type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean }
 
 const ok = (text: string): ToolResult => ({ content: [{ type: 'text', text }] })
@@ -161,7 +180,7 @@ export function createMcpServer(creatorId: string, origin: string) {
     ({ gameId: id, path, content }) =>
       run(async () => {
         const bytes = await writeTextFile(creatorId, id, path, content)
-        const external = [...new Set(content.match(/https?:\/\/[^\s'"`)<>]+/g) ?? [])].slice(0, 5)
+        const external = loadedUrls(content)
         return external.length
           ? `Wrote ${path} (${bytes} bytes).\nWarning: games can't load anything from other websites, so these URLs will be blocked: ${external.join(', ')}. Use the /vendor/ three.js from the guide, and put other files in the game itself.`
           : `Wrote ${path} (${bytes} bytes).`

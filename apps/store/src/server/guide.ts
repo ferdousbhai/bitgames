@@ -88,7 +88,7 @@ If the Blender MCP server is connected, model things there, then export them as 
 Don't use Draco or meshopt compression: their decoders need extra permissions the sandbox doesn't give.
 
 ## Checking your work
-Open the preview URL (/try/<token>) in a browser, or have the user open it, and play the game. The raw files are under /preview/<token>/ if you need to load them directly. Fix every console error. When it is fun and follows the rules above, call submit_for_review. Use list_my_games to see review results and notes.
+Open the preview URL (/try/<token>) in a browser, or have the user open it, and play the game. The raw files are under /preview/<token>/ if you need to load them directly. Query parameters on the preview page are passed to the game, so /try/<token>?debug reaches your game as location.search. Fix every console error. When it is fun and follows the rules above, call submit_for_review. Use list_my_games to see review results and notes.
 
 ## Categories
 ${CATEGORIES.map((c) => `- ${c.slug}: ${c.name} ${c.emoji}`).join('\n')}

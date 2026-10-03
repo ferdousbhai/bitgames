@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Crash Racers</title>
+<script type="importmap">
+{ "imports": {
+  "three": "/vendor/three-0.186.1/build/three.module.js",
+  "three/addons/": "/vendor/three-0.186.1/examples/jsm/",
+  "cannon": "./lib/cannon-es.js"
+} }
+</script>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="loading" class="screen">
+  <div class="logo"><span>C</span><span>R</span><span>A</span><span>S</span><span>H</span> <span>R</span><span>A</span><span>C</span><span>E</span><span>R</span><span>S</span></div>
+  <div class="car-spinner">🏎️💨</div>
+  <div id="loading-text">Warming up the engines…</div>
+</div>
+
+<div id="menu" class="screen hidden">
+  <div class="logo small"><span>C</span><span>R</span><span>A</span><span>S</span><span>H</span> <span>R</span><span>A</span><span>C</span><span>E</span><span>R</span><span>S</span></div>
+  <div id="players" class="players"></div>
+  <h2>Where do we race? 🗺️</h2>
+  <div id="cities" class="cities"></div>
+  <div class="options">
+    <div class="laps">Laps <button data-laps="1">1</button><button data-laps="2" class="on">2</button><button data-laps="3">3</button></div>
+    <button id="easy-gas" class="chip on">🦶 Easy gas</button>
+  </div>
+  <button id="go" class="big-go">🚦 GO!</button>
+</div>
+
+<div id="waiting" class="screen hidden">
+  <div class="car-spinner">🚗💨</div>
+  <h2>Waiting for the race to start…</h2>
+  <div id="players-waiting" class="players"></div>
+  <p class="hint">The player who started the game picks the city.</p>
+</div>
+
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div id="position" class="pill big">1st</div>
+    <div id="lap" class="pill">Lap 1/2</div>
+    <div id="crashes" class="pill">💥 0</div>
+  </div>
+  <canvas id="minimap" width="160" height="160"></canvas>
+  <div id="speed" class="speed">0<small>km/h</small></div>
+  <div id="banner" class="banner"></div>
+  <div class="hud-buttons">
+    <button data-touch="fix" title="Fix my car (F)">🔧</button>
+    <button data-touch="reset" title="Back on the road (R)">🔄</button>
+    <button data-touch="horn" title="Horn (H)">📯</button>
+    <button data-touch="camera" title="Camera (C)">🎥</button>
+  </div>
+  <div id="touch" class="touch">
+    <div class="steer">
+      <button data-touch="left">◀</button>
+      <button data-touch="right">▶</button>
+    </div>
+    <div class="pedals">
+      <button data-touch="brake" class="brake">🐢</button>
+      <button data-touch="gas" class="gas">🚀</button>
+    </div>
+  </div>
+</div>
+
+<div id="countdown" class="countdown hidden"></div>
+
+<div id="results" class="screen hidden">
+  <h1>🏁 Finish!</h1>
+  <div id="podium" class="podium"></div>
+  <div class="row">
+    <button id="again" class="big-go">🔁 Race again</button>
+    <button id="change-city" class="big-go alt">🗺️ New city</button>
+  </div>
+  <p id="results-wait" class="hint hidden">Waiting for the host to start the next race…</p>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

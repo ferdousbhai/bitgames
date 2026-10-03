@@ -33,7 +33,8 @@ function TryPage() {
       <GameFrame
         gameId={game.id}
         title={game.title}
-        src={`/preview/${token}/${game.entry}`}
+        // Query parameters on the preview page (e.g. ?debug) are passed to the game for testing.
+        src={`/preview/${token}/${game.entry}${typeof window === 'undefined' ? '' : window.location.search}`}
         className="aspect-video w-full overflow-hidden rounded-[32px] border-4 border-white bg-ink"
       />
       <p className="mt-3 text-lg text-ink-soft">🕹️ {game.howToPlay}</p>

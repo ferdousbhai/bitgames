@@ -67,6 +67,8 @@ export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: st
             toGame({ type: 'ready', selfId, isHost, code: emojiCode(code) })
             toGame({ type: 'peers', peers: msg.peers ?? [] })
             setLobby({ step: 'in-room', code, isHost, showCode: isHost })
+            // Collapse the hint to just the animals after a few seconds.
+            setTimeout(() => setLobby((l) => (l.step === 'in-room' ? { ...l, showCode: false } : l)), 8000)
           } else if (msg.t === 'joined' && msg.peer) {
             toGame({ type: 'joined', peer: msg.peer })
           } else if (msg.t === 'left' && msg.peer) {
@@ -140,16 +142,17 @@ export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: st
           <button
             type="button"
             onClick={() => setLobby({ ...lobby, showCode: !lobby.showCode })}
-            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/90 px-4 py-1.5 text-lg font-semibold text-ink shadow-lg"
+            // Bottom centre: the space games usually leave free between their touch controls.
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/85 px-3 py-1 text-base font-semibold text-ink shadow-lg"
             title="Room code"
           >
             {lobby.showCode ? (
               <>
-                Room <span className="text-2xl">{emojiCode(lobby.code)}</span>
+                Room <span className="text-xl">{emojiCode(lobby.code)}</span>
                 <span className="ml-2 hidden text-sm text-ink-soft sm:inline">Tap “Join” on another device and pick these</span>
               </>
             ) : (
-              <span className="text-2xl">{emojiCode(lobby.code)}</span>
+              <span className="text-xl">{emojiCode(lobby.code)}</span>
             )}
           </button>
         )}
