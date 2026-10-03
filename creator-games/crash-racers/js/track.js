@@ -203,8 +203,23 @@ export class Track {
     })
   }
 
-  /** A slanted ramp on the road; drive over it to fly. */
-  addRamp(dist, { length = 7, width = 4, height = 1.4, lateral = 0, material }) {
+  /** How much the road turns over `span` metres either side of `dist` (0 = straight). */
+  bendAt(dist, span = 30) {
+    const a = this.sampleAt(dist - span).t, b = this.sampleAt(dist + span).t
+    return 1 - (a.x * b.x + a.z * b.z)
+  }
+
+  /** A slanted ramp on the road; drive over it to fly. Moved to the straightest road nearby. */
+  addRamp(dist, { length = 7, width = 5, height = 1.4, lateral = 0, material }) {
+    let best = dist, bestBend = Infinity
+    for (let d = dist - 90; d <= dist + 90; d += 5) {
+      const bend = this.bendAt(d)
+      if (bend < bestBend) {
+        bestBend = bend
+        best = d
+      }
+    }
+    dist = (best + this.length) % this.length
     const s = this.sampleAt(dist)
     const yaw = Math.atan2(s.t.x, s.t.z)
     const angle = Math.atan2(height, length)

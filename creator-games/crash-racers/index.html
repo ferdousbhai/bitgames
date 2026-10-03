@@ -25,7 +25,11 @@
 <div id="menu" class="screen hidden">
   <div class="logo small"><span>C</span><span>R</span><span>A</span><span>S</span><span>H</span> <span>R</span><span>A</span><span>C</span><span>E</span><span>R</span><span>S</span></div>
   <div id="players" class="players"></div>
-  <h2>Where do we race? 🗺️</h2>
+  <div class="modes">
+    <button data-mode="race" class="mode on"><span>🏁</span>Race</button>
+    <button data-mode="smash" class="mode"><span>💥</span>Smash!</button>
+  </div>
+  <h2>Where do we go? 🗺️</h2>
   <div id="cities" class="cities"></div>
   <div class="options">
     <div class="laps">Laps <button data-laps="1">1</button><button data-laps="2" class="on">2</button><button data-laps="3">3</button></div>
@@ -46,11 +50,13 @@
     <div id="position" class="pill big">1st</div>
     <div id="lap" class="pill">Lap 1/2</div>
     <div id="crashes" class="pill">💥 0</div>
+    <div id="timer" class="pill hidden">⏱️ 2:00</div>
   </div>
   <canvas id="minimap" width="160" height="160"></canvas>
   <div id="speed" class="speed">0<small>km/h</small></div>
   <div id="banner" class="banner"></div>
   <div class="hud-buttons">
+    <button data-touch="turbo" title="Turbo (Shift)" id="turbo-btn">🔥</button>
     <button data-touch="fix" title="Fix my car (F)">🔧</button>
     <button data-touch="reset" title="Back on the road (R)">🔄</button>
     <button data-touch="horn" title="Horn (H)">📯</button>

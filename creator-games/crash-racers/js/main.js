@@ -16,6 +16,7 @@ const params = new URLSearchParams(location.search)
 const DEBUG = params.has('debug')
 const $ = (id) => document.getElementById(id)
 const FIXED_DT = 1 / 60
+const SMASH_SECONDS = 120
 const PLAYER_EMOJI = ['🦊', '🐼', '🐸', '🐯', '🐵', '🐰', '🐶', '🐨']
 const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']
 const MEDAL = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅', '🏅', '🏅']
@@ -113,6 +114,8 @@ const game = {
   props: {},
   state: 'loading', // loading | menu | waiting | countdown | race | results
   city: 'ubud',
+  mode: 'race', // race | smash
+  scores: new Map(), // id -> smash points
   laps: 2,
   players: new Map(), // id -> { id, emoji }
   cars: new Map(), // id -> Car
@@ -186,6 +189,14 @@ function buildMenu() {
       document.querySelectorAll('[data-laps]').forEach((b) => b.classList.toggle('on', b === el))
     }
   }
+  for (const el of document.querySelectorAll('[data-mode]')) {
+    el.onclick = () => {
+      game.mode = el.dataset.mode
+      document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b === el))
+      document.querySelector('.laps').classList.toggle('hidden', game.mode === 'smash')
+      audio.beep()
+    }
+  }
   $('easy-gas').onclick = () => {
     input.easyGas = !input.easyGas
     $('easy-gas').classList.toggle('on', input.easyGas)
@@ -256,7 +267,10 @@ function onMessage(msg, from) {
       break
     case 's': {
       const car = game.cars.get(msg.id)
-      if (car?.remote) car.pushSnapshot(msg)
+      if (car?.remote) {
+        car.pushSnapshot(msg)
+        car.remoteTurbo = msg.b === 1
+      }
       break
     }
     case 'hit': {
@@ -269,6 +283,12 @@ function onMessage(msg, from) {
       }
       break
     }
+    case 'score':
+      game.scores.set(msg.id, Math.max(game.scores.get(msg.id) ?? 0, msg.n))
+      break
+    case 'end':
+      endSmash()
+      break
     case 'fix':
       game.cars.get(msg.id)?.damage.repair()
       break
@@ -291,7 +311,7 @@ function hostStartRace() {
   const humans = [...game.players.keys()]
   const entries = humans.map((id, i) => ({ id, model: models[i % models.length], bot: false, emoji: game.players.get(id).emoji }))
   for (let i = entries.length; i < 4; i++) entries.push({ id: `bot${i}`, model: models[i % models.length], bot: true, emoji: '🤖' })
-  const setup = { t: 'setup', city: game.city, laps: game.laps, seed, entries, host: game.room.selfId }
+  const setup = { t: 'setup', city: game.city, laps: game.laps, mode: game.mode, seed, entries, host: game.room.selfId }
   send(setup)
   startRace(setup)
 }
@@ -300,6 +320,10 @@ function startRace(setup) {
   game.setup = setup
   game.city = setup.city
   game.laps = setup.laps
+  game.mode = setup.mode ?? 'race'
+  game.scores = new Map(setup.entries.map((e) => [e.id, 0]))
+  $('lap').classList.toggle('hidden', game.mode === 'smash')
+  $('timer').classList.toggle('hidden', game.mode !== 'smash')
   // Tear down the previous race
   for (const car of game.cars.values()) car.dispose()
   game.cars.clear()
@@ -324,6 +348,12 @@ function startRace(setup) {
     car.isPlayer = entry.id === game.room.selfId
     if (local) car.onHit = (hit) => onLocalHit(car, hit)
     game.cars.set(entry.id, car)
+    // Tags on everyone else's car; your own would only block your view.
+    if (entry.id !== game.room.selfId) {
+      const tag = nameTag(entry.emoji, false)
+      tag.position.set(0, car.dims.top + 0.9, 0)
+      car.root.add(tag)
+    }
     if (entry.bot && isHost) game.bots.set(entry.id, new Bot(car, game.track, 0.72 + i * 0.05, i + 1))
     game.progress.set(entry.id, { lap: 0, sector: 0, hint: -1, total: 0, finished: false, time: 0 })
   })
@@ -337,9 +367,33 @@ function startRace(setup) {
   runCountdown()
 }
 
+/** A floating emoji tag above each car so little players can tell who is who. */
+function nameTag(text, mine = false) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 128
+  const g = canvas.getContext('2d')
+  g.fillStyle = mine ? 'rgba(255,190,11,0.95)' : 'rgba(255,255,255,0.9)'
+  g.beginPath()
+  g.roundRect(8, 8, 240, 112, 56)
+  g.fill()
+  g.font = '80px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif'
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  g.fillText(text, 128, 70)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }))
+  sprite.scale.set(1.6, 0.8, 1)
+  sprite.renderOrder = 10
+  return sprite
+}
+
 function runCountdown() {
   const el = $('countdown')
   el.classList.remove('hidden')
+  const mine = game.setup.entries.find((e) => e.id === game.room.selfId)
+  if (mine) banner(`You drive ${CAR_MODELS[mine.model].emoji} ${CAR_MODELS[mine.model].name}!`, 2600)
   const steps = ['3', '2', '1', 'GO!']
   steps.forEach((text, i) =>
     setTimeout(() => {
@@ -357,6 +411,19 @@ function runCountdown() {
 
 function onLocalHit(car, hit) {
   send({ t: 'hit', id: car.id, l: hit.local.toArray().map((n) => +n.toFixed(3)), d: hit.dir.toArray().map((n) => +n.toFixed(3)), s: +hit.speed.toFixed(1), seed: hit.seed })
+  if (game.mode === 'smash' && game.state === 'race' && hit.speed > 7) {
+    const points = (game.scores.get(car.id) ?? 0) + (hit.otherCar ? 2 : 1)
+    game.scores.set(car.id, points)
+    send({ t: 'score', id: car.id, n: points })
+    // The car that got hit scores too: a smash takes two.
+    if (hit.otherCar) {
+      const other = hit.otherCar.id
+      if (!hit.otherCar.remote) {
+        game.scores.set(other, (game.scores.get(other) ?? 0) + 1)
+        send({ t: 'score', id: other, n: game.scores.get(other) })
+      }
+    }
+  }
   if (!car.isPlayer) return
   if (hit.speed > 7) game.crashes++
   if (hit.speed > 14) {
@@ -405,6 +472,7 @@ input.on('key', (k) => {
     send({ t: 'horn', id: game.room.selfId })
   }
   if (k === 'c') game.cameraMode = (game.cameraMode + 1) % 3
+  if (k === 'shift') turbo()
 })
 input.on('button', (name) => {
   audio.unlock()
@@ -416,7 +484,15 @@ input.on('button', (name) => {
     send({ t: 'horn', id: game.room.selfId })
   }
   if (name === 'camera') game.cameraMode = (game.cameraMode + 1) % 3
+  if (name === 'turbo') turbo()
 })
+
+function turbo() {
+  if (game.player?.boost()) {
+    audio.whoosh()
+    banner('🔥 TURBO!', 700)
+  }
+}
 addEventListener('pointerdown', () => audio.unlock())
 
 // --- Race progress ----------------------------------------------------------------------------
@@ -427,6 +503,8 @@ function updateProgress(id, car) {
   if (!prog || prog.finished) return
   const proj = game.track.project(car.body.position, prog.hint)
   prog.hint = proj.index
+  prog.proj = proj
+  if (game.mode === 'smash') return
   const sector = Math.floor((proj.dist / game.track.length) * SECTORS)
   // Sectors must come in order; crossing from the last sector to the first completes a lap.
   if (sector === (prog.sector + 1) % SECTORS) {
@@ -462,7 +540,8 @@ function finishCar(id, car) {
 }
 
 function standings() {
-  const entries = game.setup.entries.map((e) => ({ ...e, prog: game.progress.get(e.id), time: game.finishTimes.get(e.id) }))
+  const entries = game.setup.entries.map((e) => ({ ...e, prog: game.progress.get(e.id), time: game.finishTimes.get(e.id), score: game.scores.get(e.id) ?? 0 }))
+  if (game.mode === 'smash') return entries.sort((a, b) => b.score - a.score)
   return entries.sort((a, b) => {
     if (a.time != null && b.time != null) return a.time - b.time
     if (a.time != null) return -1
@@ -476,12 +555,24 @@ function renderResults() {
   $('podium').innerHTML = standings()
     .map((e, i) => `<div class="place ${e.id === game.room.selfId ? 'me' : ''}"><span class="medal">${MEDAL[i]}</span>
       <span>${e.emoji} ${CAR_MODELS[e.model].emoji} ${CAR_MODELS[e.model].name}</span>
-      <span class="extra">${e.time != null ? e.time.toFixed(1) + 's' : '🏎️ still racing'}</span></div>`)
+      <span class="extra">${game.mode === 'smash' ? `💥 ${e.score}` : e.time != null ? e.time.toFixed(1) + 's' : '🏎️ still racing'}</span></div>`)
     .join('')
   $('again').classList.toggle('hidden', !isHost)
   $('change-city').classList.toggle('hidden', !isHost)
   $('results-wait').classList.toggle('hidden', isHost)
   confetti()
+}
+
+function endSmash() {
+  if (game.state !== 'race') return
+  game.state = 'results'
+  if (game.setup.host === game.room.selfId) send({ t: 'end' })
+  audio.cheer()
+  banner('⏱️ TIME!', 1800)
+  setTimeout(() => {
+    renderResults()
+    show('results')
+  }, 1800)
 }
 
 function confetti() {
@@ -517,7 +608,9 @@ function step(dt) {
         game.autopilot.think(dt)
       } else car.controls = game.progress.get(id)?.finished ? { steer: 0, throttle: 0, brake: 0.3 } : input.read()
     } else {
-      game.bots.get(id)?.think(dt)
+      const bot = game.bots.get(id)
+      if (game.mode === 'smash') bot?.hunt(dt, [...game.cars.values()])
+      else bot?.think(dt)
     }
     car.drive(dt)
   }
@@ -643,6 +736,13 @@ function updateCamera(dt) {
   sky.position.copy(camera.position)
 }
 
+function exhaustFlames(car) {
+  for (const side of [-0.4, 0.4]) {
+    const p = new THREE.Vector3(side, 0.35, car.dims.length / 2 + 0.1).applyMatrix4(car.root.matrixWorld)
+    effects.flame(p)
+  }
+}
+
 function updateHud() {
   const p = game.player
   if (!p || !game.setup) return
@@ -651,7 +751,12 @@ function updateHud() {
   $('position').textContent = `${MEDAL[place]} ${ORDINAL[place]}`
   const prog = game.progress.get(p.id)
   $('lap').textContent = `Lap ${Math.min(game.laps, (prog?.lap ?? 0) + 1)}/${game.laps}`
-  $('crashes').textContent = `💥 ${game.crashes}`
+  if (game.mode === 'smash') {
+    $('crashes').textContent = `💥 ${game.scores.get(p.id) ?? 0}`
+    const left = Math.max(0, SMASH_SECONDS - game.raceTime)
+    $('timer').textContent = `⏱️ ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`
+  } else $('crashes').textContent = `💥 ${game.crashes}`
+  $('turbo-btn').classList.toggle('cooling', (p.turboCooldown ?? 0) > performance.now())
   $('speed').innerHTML = `${Math.round(p.speed * 3.6)}<small>km/h</small>`
   drawMinimap()
 }
@@ -702,7 +807,11 @@ function frame(now) {
       steps++
     }
     if (steps === 4) accumulator = 0
-    if (game.state === 'race') game.raceTime += dt
+    if (game.state === 'race') {
+      game.raceTime += dt
+      if (game.mode === 'smash' && game.raceTime >= SMASH_SECONDS) endSmash()
+    }
+    for (const car of game.cars.values()) if (car.turboTime > 0 || car.remoteTurbo) exhaustFlames(car)
     game.fixCooldown = Math.max(0, game.fixCooldown - realDt)
     for (const [id, car] of game.cars) {
       car.syncVisual(dt)
@@ -719,7 +828,7 @@ function frame(now) {
     // Send our cars ~20 times a second; bots too if we run them.
     if (now - game.lastSend > 50 && !game.room.solo) {
       game.lastSend = now
-      for (const car of game.cars.values()) if (!car.remote) send({ t: 's', id: car.id, ...car.snapshot() }, { fast: true })
+      for (const car of game.cars.values()) if (!car.remote) send({ t: 's', id: car.id, ...car.snapshot(), b: car.turboTime > 0 ? 1 : 0 }, { fast: true })
     }
   }
   effects.update(realDt, camera)
@@ -739,6 +848,7 @@ async function boot() {
   if (DEBUG && params.get('city')) {
     game.city = params.get('city')
     game.laps = Number(params.get('laps') ?? 2)
+    game.mode = params.get('mode') ?? 'race'
     hostStartRace()
   } else enterLobbyScreen()
   requestAnimationFrame(frame)
@@ -775,6 +885,7 @@ if (DEBUG) {
     },
     race: () => ({
       time: game.raceTime,
+      scores: Object.fromEntries(game.scores),
       state: game.state,
       cars: [...game.cars.values()].map((c) => {
         const p = game.progress.get(c.id)

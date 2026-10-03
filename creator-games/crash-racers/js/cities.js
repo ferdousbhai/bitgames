@@ -452,7 +452,8 @@ function buildMontreal(env, props) {
     track.addGeometry(top, roofMat)
     // The famous outside staircases, out on the sidewalk.
     if (r() < 0.75) {
-      const front = center.clone().addScaledVector(sample.side, -sign * (6 + 1.6))
+      // Balcony against the facade, the flight running out over the sidewalk.
+      const front = center.clone().addScaledVector(sample.side, -sign * (6 + 0.5))
       // Face the foot of the stairs (the prop's -Z) towards the street.
       const toStreet = sample.side.clone().multiplyScalar(-sign)
       if (props.staircase) track.addObject(props.staircase, front, Math.atan2(-toStreet.x, -toStreet.z), 1)

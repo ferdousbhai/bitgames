@@ -161,7 +161,10 @@ export class Car {
     const fwdSpeed = this.forwardSpeed
     const speed = Math.abs(fwdSpeed)
     const damageLoss = 1 - this.damage.level * 0.3
-    const enginePower = 7000 * this.spec.power * damageLoss
+    this.turboTime = Math.max(0, (this.turboTime ?? 0) - dt)
+    const turbo = this.turboTime > 0
+    const enginePower = 7000 * this.spec.power * damageLoss * (turbo ? 2.2 : 1)
+    const topSpeed = turbo ? 40 : 30
 
     // Steering: generous at low speed, gentle at high speed.
     const maxSteer = clamp(0.55 - speed * 0.011, 0.2, 0.55)
@@ -175,7 +178,7 @@ export class Car {
     }
     if (throttle > 0) {
       if (fwdSpeed < -1) braking = 45 * throttle
-      else force = enginePower * throttle * (speed > 30 ? 0.05 : 1)
+      else force = enginePower * (turbo ? 1 : throttle) * (speed > topSpeed ? 0.05 : 1)
     }
     this.wheels.forEach((w, i) => {
       if (w.state === 'gone') {
@@ -252,7 +255,15 @@ export class Car {
     this.env.effects.sparkBurst(world, normal.clone().negate(), effective)
     this.env.effects.addShake(this.isPlayer ? Math.min(1, effective / 25) : 0)
     this.env.audio?.crash(effective, this.isPlayer)
-    this.onHit?.({ local, dir, speed: effective, seed, world })
+    this.onHit?.({ local, dir, speed: effective, seed, world, otherCar })
+  }
+
+  /** Two seconds of extra push. Returns false while recharging. */
+  boost() {
+    if ((this.turboCooldown ?? 0) > performance.now()) return false
+    this.turboTime = 2
+    this.turboCooldown = performance.now() + 6000
+    return true
   }
 
   dropWheel(i) {
