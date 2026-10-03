@@ -124,7 +124,8 @@ async function seed() {
        ON CONFLICT (id) DO UPDATE SET title = excluded.title, tagline = excluded.tagline, how_to_play = excluded.how_to_play,
          emoji = excluded.emoji, color = excluded.color, category = excluded.category, together = excluded.together,
          featured = excluded.featured, updated_at = excluded.updated_at, live_url = excluded.live_url,
-         live_manifest = excluded.live_manifest, cover = excluded.cover, verified_at = excluded.verified_at, live = 1, status = 'public'`,
+         live_manifest = excluded.live_manifest, cover = excluded.cover, verified_at = excluded.verified_at, live = 1, status = 'public',
+         review_note = NULL`,
     )
     seeded++
     console.log(`listed ${game.id} at ${game.url}`)

@@ -7,6 +7,9 @@ import { MANIFEST_FILE } from './starter'
 /** Thrown for anything the creator can fix; the message is shown to their agent. */
 export class CreatorError extends Error {}
 
+/** A version that couldn't be fetched (yet): new version URLs take a little while to go live. */
+class UnreachableError extends CreatorError {}
+
 /**
  * The state of the creator's latest submission:
  * - draft: nothing waiting (never submitted, withdrawn, or details changed since)
@@ -179,10 +182,12 @@ export async function checkVersion(url: string): Promise<CheckedVersion> {
       // Static assets redirect within the site, e.g. /index.html to /.
       response = await fetch(version.base + path, { cf: { cacheTtl: 0 } })
     } catch {
-      throw new CreatorError(`Could not reach ${version.base}${path}.`)
+      throw new UnreachableError(`Could not reach ${version.base}${path}.`)
     }
     if (!response.url.startsWith(version.base)) throw new CreatorError(`${version.base}${path} redirects to another site.`)
-    if (response.status !== 200) throw new CreatorError(`${version.base}${path} answered ${response.status}; it should be a file of the game.`)
+    if (response.status !== 200) {
+      throw new UnreachableError(`${version.base}${path} answered ${response.status}; it should be a file of the game. (A version deployed in the last minute may not be live yet.)`)
+    }
     return response
   }
 
@@ -297,7 +302,7 @@ export async function unpublish(gameId: string, note: string | null) {
 /**
  * Scheduled: re-checks the live game checked longest ago. Only versions whose
  * URL could be an alias (see parseVersionUrl) can change, and a game whose
- * files changed is taken down. Unreachable versions are left for the next run.
+ * content changed is taken down. Unreachable versions are left for the next run.
  */
 export async function recheckLive() {
   // live_url is "https://<version>-...": its 9th character is the version's first.
@@ -311,8 +316,9 @@ export async function recheckLive() {
   try {
     changed = (await checkVersion(game.live_url)).manifest !== game.live_manifest
   } catch (error) {
-    // A file that no longer matches is a change; a network failure is not.
-    changed = error instanceof CreatorError && !error.message.startsWith('Could not reach')
+    // Different or missing content is a change. A failed fetch or error status is
+    // not: a version that just deployed answers 404 for a little while.
+    changed = error instanceof CreatorError && !(error instanceof UnreachableError)
   }
   if (changed) {
     await unpublish(game.id, 'The files of the approved version changed, so the game was taken out of the store. Deploy and submit a new version.')
