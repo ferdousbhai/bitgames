@@ -423,7 +423,10 @@ export class Debris {
     root.add(object)
   }
 
-  /** Drops a piece for good. Its geometry is the car's own clone, and the car no longer holds it. */
+  /**
+   * Takes a piece out of the world and frees its geometry (the car's own clone).
+   * If repair puts the part back later, three.js uploads the geometry again.
+   */
   remove(item) {
     this.world.removeBody(item.body)
     item.object.removeFromParent()

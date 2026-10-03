@@ -36,9 +36,8 @@ export const Route = createFileRoute('/upload/$token')({
           return text(411, 'Send the file with a Content-Length, e.g. curl -T model.glb <url>')
         }
         if (length > MAX_FILE_BYTES) return text(413, `Files can be at most ${mb(MAX_FILE_BYTES)}.`)
-        let growth: number
         try {
-          growth = await checkGameQuota(upload.game_id, upload.path, length)
+          await checkGameQuota(upload.game_id, upload.path, length)
         } catch (error) {
           if (error instanceof CreatorError) return text(413, error.message)
           throw error
@@ -53,7 +52,7 @@ export const Route = createFileRoute('/upload/$token')({
             httpMetadata: { contentType: CONTENT_TYPES[extensionOf(upload.path)] },
           }),
         ])
-        await markDraftChanged(upload.game_id, { addBytes: growth })
+        await markDraftChanged(upload.game_id, { recount: true })
         return text(200, `Uploaded ${upload.path} (${object.size} bytes).`)
       },
     },

@@ -108,13 +108,12 @@ async function editableGame(creatorId: string, gameId: string) {
 
 /**
  * The one place a draft change is recorded: bumps updated_at, optionally
- * adjusts the draft's size or details, and sends a published game's draft back
- * to "changed". Sizes change by a difference, applied atomically, so parallel
- * writes can't overwrite each other's totals.
+ * stores the draft's details or recounts its size, and sends a published
+ * game's draft back to "changed".
  */
 export async function markDraftChanged(
   gameId: string,
-  { addBytes, pendingInfo, info }: { addBytes?: number; pendingInfo?: string; info?: Partial<GameInfo> } = {},
+  { recount, pendingInfo, info }: { recount?: boolean; pendingInfo?: string; info?: Partial<GameInfo> } = {},
 ) {
   const sets = [`updated_at = ?`, `status = CASE WHEN status = 'public' THEN 'draft' ELSE status END`]
   const values: (string | number)[] = [Date.now()]
@@ -123,9 +122,11 @@ export async function markDraftChanged(
     sets.push(...changes.sets)
     values.push(...changes.values)
   }
-  if (addBytes) {
-    sets.push('bytes = MAX(0, bytes + ?)')
-    values.push(addBytes)
+  if (recount) {
+    // Counted from R2 after the change, so a race between parallel writes is
+    // corrected by the next write instead of drifting for good.
+    sets.push('bytes = ?')
+    values.push((await listObjects(objectKey(gameId, ''))).reduce((sum, o) => sum + o.bytes, 0))
   }
   if (pendingInfo !== undefined) {
     sets.push('pending_info = ?')
@@ -203,9 +204,9 @@ async function listObjects(prefix: string) {
 
 /**
  * Checks that putting `bytes` at `path` keeps the game and its creator within
- * their limits, and returns how much that grows the game (negative if it shrinks).
+ * their limits.
  */
-export async function checkGameQuota(gameId: string, path: string, bytes: number): Promise<number> {
+export async function checkGameQuota(gameId: string, path: string, bytes: number) {
   const [objects, row] = await Promise.all([
     listObjects(objectKey(gameId, '')),
     env.DB.prepare(
@@ -216,7 +217,6 @@ export async function checkGameQuota(gameId: string, path: string, bytes: number
       .first<{ other: number }>(),
   ])
   const others = objects.filter((o) => o.path !== path)
-  const previous = objects.find((o) => o.path === path)?.bytes ?? 0
   if (others.length + 1 > MAX_FILES_PER_GAME) throw new CreatorError(`A game can have at most ${MAX_FILES_PER_GAME} files.`)
   const gameTotal = others.reduce((sum, o) => sum + o.bytes, 0) + bytes
   if (gameTotal > MAX_GAME_BYTES) {
@@ -228,7 +228,6 @@ export async function checkGameQuota(gameId: string, path: string, bytes: number
       `This would bring all your games to ${mb(creatorTotal)}. Each creator can store up to ${mb(MAX_CREATOR_BYTES)}; delete files or games you don't need.`,
     )
   }
-  return bytes - previous
 }
 
 async function deletePrefix(prefix: string) {
@@ -295,9 +294,9 @@ export async function writeTextFile(creatorId: string, gameId: string, path: str
     throw new CreatorError(`Text files can be at most ${mb(MAX_TEXT_FILE_BYTES)}. Split the code into modules.`)
   }
   await editableGame(creatorId, gameId)
-  const growth = await checkGameQuota(gameId, path, bytes.length)
+  await checkGameQuota(gameId, path, bytes.length)
   await env.GAMES.put(objectKey(gameId, path), bytes, { httpMetadata: { contentType: CONTENT_TYPES[extensionOf(path)] } })
-  await markDraftChanged(gameId, { addBytes: growth })
+  await markDraftChanged(gameId, { recount: true })
   return bytes.length
 }
 
@@ -314,9 +313,9 @@ export async function deleteFile(creatorId: string, gameId: string, path: string
   assertPath(path)
   await editableGame(creatorId, gameId)
   const key = objectKey(gameId, path)
-  const existing = await env.GAMES.head(key)
+  if (!(await env.GAMES.head(key))) throw new CreatorError(`There is no file "${path}". Use list_files to see the files.`)
   await env.GAMES.delete(key)
-  await markDraftChanged(gameId, { addBytes: -(existing?.size ?? 0) })
+  await markDraftChanged(gameId, { recount: true })
 }
 
 export async function createUploadUrl(creatorId: string, gameId: string, path: string, origin: string) {
