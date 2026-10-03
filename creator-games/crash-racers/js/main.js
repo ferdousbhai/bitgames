@@ -606,7 +606,8 @@ function step(dt) {
       if (game.autopilot) {
         game.autopilot.car !== car && (game.autopilot = new Bot(car, game.track, 0.85, 7))
         game.autopilot.think(dt)
-      } else car.controls = game.progress.get(id)?.finished ? { steer: 0, throttle: 0, brake: 0.3 } : input.read()
+      } else if (game.progress.get(id)?.finished) car.controls = { steer: 0, throttle: 0, brake: 0.3 }
+      else car.controls = input.easyGas ? steeringHelper(car, input.read()) : input.read()
     } else {
       const bot = game.bots.get(id)
       if (game.mode === 'smash') bot?.hunt(dt, [...game.cars.values()])
@@ -616,6 +617,23 @@ function step(dt) {
   }
   world.step(dt)
   for (const car of game.cars.values()) if (!car.remote) car.afterStep(dt)
+}
+
+/**
+ * Easy mode's steering helper: leans the wheel towards the road ahead, less so
+ * the more the child is steering themselves. It never fights a deliberate turn.
+ */
+const NOSE = new CANNON.Vec3(0, 0, -1)
+function steeringHelper(car, controls) {
+  const prog = game.progress.get(car.id)
+  const proj = game.track.project(car.body.position, prog?.hint ?? -1)
+  const target = game.track.sampleAt(proj.dist + 8 + car.speed * 0.6)
+  const pos = car.body.position
+  const fwd = car.body.quaternion.vmult(NOSE)
+  const dx = target.p.x - pos.x, dz = target.p.z - pos.z
+  const angle = Math.atan2(fwd.x * dz - fwd.z * dx, fwd.x * dx + fwd.z * dz)
+  const help = clamp(angle * 1.6, -0.8, 0.8) * (1 - Math.abs(controls.steer) * 0.7)
+  return { ...controls, steer: clamp(controls.steer + help, -1, 1) }
 }
 
 function scrapeAndSkid(dt) {

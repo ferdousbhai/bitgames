@@ -210,7 +210,8 @@ export class Car {
     const v = this.body.velocity
     this.accel.set((v.x - this.lastVelocity.x) / dt, (v.y - this.lastVelocity.y) / dt, (v.z - this.lastVelocity.z) / dt)
     this.lastVelocity.copy(v)
-    if (this.hitAccumulator && performance.now() - this.hitAccumulator.time > 40) {
+    // Apply a crash a few physics steps after first contact, once the strongest contact is known.
+    if (this.hitAccumulator && ++this.hitAccumulator.steps >= 3) {
       const hit = this.hitAccumulator
       this.hitAccumulator = null
       this.applyHit(hit)
@@ -235,7 +236,7 @@ export class Car {
     const dir = new THREE.Vector3(n.x, n.y, n.z).transformDirection(inv)
     // Several contacts fire per crash; keep the strongest within a short window.
     if (!this.hitAccumulator || speed > this.hitAccumulator.speed) {
-      this.hitAccumulator = { speed, world, local, dir, normal: new THREE.Vector3(n.x, n.y, n.z), other, time: this.hitAccumulator?.time ?? performance.now() }
+      this.hitAccumulator = { speed, world, local, dir, normal: new THREE.Vector3(n.x, n.y, n.z), other, steps: this.hitAccumulator?.steps ?? 0 }
     }
   }
 

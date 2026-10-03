@@ -213,6 +213,9 @@ export class Track {
   addRamp(dist, { length = 7, width = 5, height = 1.4, lateral = 0, material }) {
     let best = dist, bestBend = Infinity
     for (let d = dist - 90; d <= dist + 90; d += 5) {
+      // Never on the start straight, where the cars line up.
+      const fromStart = Math.min((d + this.length) % this.length, this.length - ((d + this.length) % this.length))
+      if (fromStart < 70) continue
       const bend = this.bendAt(d)
       if (bend < bestBend) {
         bestBend = bend

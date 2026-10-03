@@ -4,7 +4,9 @@ A web game store built on BitChat's technology. Games are made with Blender and 
 
 ## Layout
 
-- `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog and R2 for game files)
+- `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog, R2 for game files and a Durable Object for multiplayer rooms)
+- `packages/game-sdk`: the multiplayer SDK games load from `/vendor/bitgames/multiplayer-1.js`
+- `creator-games/crash-racers`: Crash Racers, a 4-player car crash racing game made through the BitGames MCP tools (Blender scripts in `blender/`)
 - `packages/protocol`: TypeScript port of BitChat's binary packet format, padding, compression and fragmentation
 - `packages/webrtc`: peer-to-peer transport for those packets over WebRTC data channels
 - `apps/signal`: small WebSocket server that introduces peers to each other (game traffic never passes through it)
@@ -49,6 +51,14 @@ Anyone can build games for the store with a local agent such as Claude Code:
 4. An adult approves it at `/admin` (sign in with `ADMIN_KEY`). Only then does it appear in the store. Published games can be taken down there too.
 
 The MCP endpoint is `/mcp` (streamable HTTP, stateless, `Authorization: Bearer bg_...`). Its code is in `apps/store/src/server/mcp.ts`.
+
+## Crash Racers
+
+Race or smash up to 4 cars around Ubud, Helsinki or Montreal, on separate devices in the same home (BitGames' family lobby, WebRTC between devices) or alone against bots.
+
+- Rebuild the Blender models: `cd creator-games/crash-racers/blender && blender --background --python cars.py && blender --background --python props.py`
+- Publish changes through MCP: `BG_URL=... BG_KEY=bg_... node creator-games/sync.mjs creator-games/crash-racers crash-racers`, then `submit_for_review`
+- Debug hooks: open `/try/<token>?debug` (or `/preview/<token>/index.html?debug&city=montreal&mode=smash`) and use `window.__crash`
 
 ## Running the WebRTC lab
 
