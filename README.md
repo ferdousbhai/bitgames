@@ -26,7 +26,9 @@ pnpm db:migrate   # create the local tables
 pnpm seed         # list the deployed games in ../../examples
 ```
 
-To deploy, log in once with `pnpm exec cf auth login`, then:
+The store is live at https://bitgames.store. Every push to `master` on GitHub deploys it automatically: Cloudflare Workers Builds runs `pnpm run deploy` in `apps/store` (it vendors three.js and the multiplayer SDK, then `cf deploy`). Secrets set on the Worker are kept across deploys. Database migrations are not run automatically; apply them with `pnpm db:migrate:remote`.
+
+To deploy by hand, log in once with `pnpm exec cf auth login`, then:
 
 ```sh
 pnpm run deploy --secrets-file secrets.production.env   # ADMIN_KEY=... and TURNSTILE_SECRET=...
