@@ -1,5 +1,12 @@
 # Games run in a sandbox with an opaque origin, so loading these modules is a CORS request.
 /vendor/*
   Access-Control-Allow-Origin: *
-  Cache-Control: public, max-age=31536000, immutable
   X-Content-Type-Options: nosniff
+
+# Each three.js version lives at its own path, so it never changes.
+/vendor/three-*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The multiplayer SDK keeps its URL across fixes, so browsers check back often.
+/vendor/bitgames/*
+  Cache-Control: public, max-age=300

@@ -3,8 +3,11 @@
  * - three-<version>/: three.js and its addons, copied from node_modules
  * - bitgames/multiplayer-1.js: the multiplayer SDK, bundled from packages/game-sdk
  * Serving these ourselves means nothing a game loads can change after review.
+ * Published games pin their three version, so older three-<version>/ folders
+ * are never removed here; deploy from a machine that still has them (or
+ * re-vendor them) after upgrading three.
  */
-import { cpSync, existsSync, readFileSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, readFileSync } from 'node:fs'
 import { build } from 'esbuild'
 import { join, resolve } from 'node:path'
 
@@ -15,7 +18,6 @@ const { version } = JSON.parse(readFileSync(join(threeDir, 'package.json'), 'utf
 const target = join(root, 'public', 'vendor', `three-${version}`)
 
 if (!existsSync(join(target, 'build', 'three.module.js'))) {
-  rmSync(join(root, 'public', 'vendor'), { recursive: true, force: true })
   cpSync(join(threeDir, 'build'), join(target, 'build'), {
     recursive: true,
     filter: (src) => !src.endsWith('.cjs'),

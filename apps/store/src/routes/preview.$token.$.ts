@@ -16,7 +16,8 @@ export const Route = createFileRoute('/preview/$token/$')({
         if (!game) return gameNotFound()
         return serveGameFile(game.id, params._splat || 'index.html', request, {
           basePath: `/preview/${params.token}/`,
-          cache: 'no-store',
+          // Revalidated on every load (so the token and expiry are checked), but unchanged files come back as 304.
+          cache: 'private, no-cache',
         })
       },
     },

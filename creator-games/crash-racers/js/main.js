@@ -349,7 +349,6 @@ function startRace(setup) {
   game.crashes = 0
   game.raceTime = 0
   game.fixCooldown = 0
-  audio.startEngine()
   game.state = 'countdown'
   show(null)
   runCountdown()
@@ -473,7 +472,9 @@ function turbo() {
     banner('🔥 TURBO!', 700)
   }
 }
+// Any tap or key unlocks sound (the engine starts by itself once it can).
 addEventListener('pointerdown', () => audio.unlock())
+addEventListener('keydown', () => audio.unlock())
 
 // --- Race progress ----------------------------------------------------------------------------
 

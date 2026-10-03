@@ -80,6 +80,8 @@ export class Damage {
     /** Accumulated damage: 0 (new) to 1 (wrecked). */
     this.level = 0
     this.deformables = []
+    /** Geometries dented since the last repair. */
+    this.dented = new Set()
     this.parts = []
     this.glass = []
     this.lights = []
@@ -141,6 +143,7 @@ export class Damage {
       geometry.attributes.position.needsUpdate = true
       geometry.computeVertexNormals()
       geometry.computeBoundingSphere()
+      this.dented.add(geometry)
     }
 
     for (const part of this.parts) {
@@ -331,11 +334,16 @@ export class Damage {
 
   repair() {
     this.level = 0
+    // Only meshes that were actually dented need restoring; car meshes are dense.
     for (const def of this.deformables) {
-      def.mesh.geometry.attributes.position.array.set(def.original)
-      def.mesh.geometry.attributes.position.needsUpdate = true
-      def.mesh.geometry.computeVertexNormals()
+      const geometry = def.mesh.geometry
+      if (!this.dented.has(geometry)) continue
+      geometry.attributes.position.array.set(def.original)
+      geometry.attributes.position.needsUpdate = true
+      geometry.computeVertexNormals()
+      geometry.computeBoundingSphere()
     }
+    this.dented.clear()
     for (const part of this.parts) {
       if (part.state === 'gone') this.env.debris.recall(part.object, this.root)
       part.state = 'ok'

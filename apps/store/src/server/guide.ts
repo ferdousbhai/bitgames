@@ -1,8 +1,9 @@
 import { CATEGORIES } from '#/lib/categories'
+import pkg from '../../package.json' with { type: 'json' }
 import { BINARY_FILE_TYPES, MAX_FILE_BYTES, MAX_GAME_BYTES, MAX_TEXT_FILE_BYTES, TEXT_FILE_TYPES, mb } from './limits'
 
-/** Must match the exact `three` version in package.json, which scripts/vendor.ts copies to /vendor/. */
-const THREE_VERSION = '0.186.1'
+/** The exact `three` version in package.json, which scripts/vendor.ts copies to /vendor/. */
+const THREE_VERSION = pkg.dependencies.three
 const THREE_BASE = `/vendor/three-${THREE_VERSION}`
 
 /** Sent to the agent when it connects. Kept short; get_guide has the details. */

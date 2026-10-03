@@ -35,7 +35,6 @@ export class Audio {
   }
 
   startEngine() {
-    if (!this.ctx || this.engine) return
     const ctx = this.ctx
     const osc = ctx.createOscillator()
     const osc2 = ctx.createOscillator()
@@ -54,9 +53,10 @@ export class Audio {
     this.engine = { osc, osc2, filter, gain }
   }
 
-  /** Engine pitch follows speed; throttle opens it up. */
+  /** Engine pitch follows speed; throttle opens it up. Starts the engine once audio is unlocked. */
   updateEngine(speed, throttle) {
-    if (!this.engine) return
+    if (!this.ctx) return
+    if (!this.engine) this.startEngine()
     const t = this.ctx.currentTime
     const gearSpeed = speed % 9
     const rpm = 45 + gearSpeed * 9 + speed * 2.2
