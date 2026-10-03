@@ -9,6 +9,7 @@ const perMinute = (namespace: string, limit: number) => bindings.rateLimit({ nam
 export default defineConfig({
 	worker: {
 		name: "bitgames-store",
+		domains: ["bitgames.store"],
 		compatibilityDate: "2026-09-30",
 		compatibilityFlags: [
 			"nodejs_compat",

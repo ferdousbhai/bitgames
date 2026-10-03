@@ -3,7 +3,7 @@
  * accounts and load the shared three.js and multiplayer SDK from here by
  * absolute URL, so this must stay stable once games are published.
  */
-export const PUBLIC_ORIGIN = 'https://bitgames-store.ferdousbd.workers.dev'
+export const PUBLIC_ORIGIN = 'https://bitgames.store'
 
 export const VENDOR_BASE = `${PUBLIC_ORIGIN}/vendor`
 
