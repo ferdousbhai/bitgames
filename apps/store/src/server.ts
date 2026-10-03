@@ -1,5 +1,6 @@
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 import { env } from 'cloudflare:workers'
+import { recheckLive } from './server/games-store'
 import { isGameId } from './server/limits'
 import { allowedByIp } from './server/rate-limit'
 
@@ -24,10 +25,18 @@ async function handleRoom(request: Request, gameId: string, code: string): Promi
   return room.fetch(request)
 }
 
-export default createServerEntry({
+const entry = createServerEntry({
   fetch(request) {
     const match = ROOM_PATH.exec(new URL(request.url).pathname)
     if (match) return handleRoom(request, match[1]!, match[2]!)
     return handler.fetch(request)
   },
 })
+
+export default {
+  ...entry,
+  /** Every few minutes: re-check one published game's files (see recheckLive). */
+  scheduled(_controller: ScheduledController, _env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(recheckLive())
+  },
+}

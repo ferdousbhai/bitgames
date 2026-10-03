@@ -1,12 +1,12 @@
 # BitGames
 
-A web game store built on BitChat's technology. Games are made with Blender and three.js, by people's own AI agents connected through our MCP server.
+A web game store built on BitChat's technology. Games are made with Blender and three.js by people's own AI agents, run on each creator's own Cloudflare account, and are listed and reviewed in one place through our MCP server.
 
 ## Layout
 
-- `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog, R2 for game files and a Durable Object for multiplayer rooms)
+- `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog and a Durable Object for multiplayer rooms). It hosts no game files: it pins each game's reviewed Worker version and plays it in a sandboxed frame
 - `packages/game-sdk`: the multiplayer SDK games load from `/vendor/bitgames/multiplayer-1.js`
-- `creator-games/crash-racers`: Crash Racers, a 4-player car crash racing game made through the BitGames MCP tools (Blender scripts in `blender/`)
+- `examples/<game>`: our own games, one per folder, each a standalone creator project deployed to its own Worker (Crash Racers, Bunny Hop, Balloon Pop, Star Catcher, Memory Match)
 - `packages/protocol`: TypeScript port of BitChat's binary packet format, padding, compression and fragmentation
 - `packages/webrtc`: peer-to-peer transport for those packets over WebRTC data channels
 - `apps/signal`: small WebSocket server that introduces peers to each other (game traffic never passes through it)
@@ -23,10 +23,8 @@ cd apps/store
 echo 'ADMIN_KEY=pick-a-long-random-string' > .dev.vars
 pnpm dev          # http://localhost:3030, keep it running
 pnpm db:migrate   # create the local tables
-pnpm seed         # publish the starter games in games/
+pnpm seed         # list the deployed games in ../../examples
 ```
-
-Each starter game is a folder in `apps/store/games/` holding a `manifest.json` and its files.
 
 To deploy, log in once with `pnpm exec cf auth login`, then:
 
@@ -36,19 +34,29 @@ pnpm db:migrate:remote
 pnpm seed:remote
 ```
 
+Games load three.js and the multiplayer SDK from the production store's `/vendor/` (`PUBLIC_ORIGIN` in `apps/store/src/lib/site.ts`), so keep that address stable.
+
+## How games are hosted and kept safe
+
+- Each game is static files deployed as a Worker on its creator's Cloudflare account, from the project `get_starter_project` returns (`apps/store/src/server/starter.ts`).
+- `bitgames.mjs` lists every file with its SHA-256 in `public/bitgames.json` before each deploy.
+- The creator submits the deploy's version preview URL (`https://<version>-<worker>.<account>.workers.dev/`). BitGames downloads and checks every file, and on approval pins that exact version.
+- The store plays games in a frame with `sandbox` and a `csp` attribute, so a game can load only its own files and `/vendor/`. Games opt in with `Allow-CSP-From`; Chrome refuses to show a game that doesn't.
+- Version URLs never change, but an alias can look like a version whose id starts with a letter. A cron job re-checks those versions and takes down a game whose files changed.
+
 ## Making games with an AI agent
 
 Anyone can build games for the store with a local agent such as Claude Code:
 
 1. A grown-up opens `/make`, ticks "I'm a grown-up", and gets a creator key. The page shows a `claude mcp add` command with the key filled in.
 2. Optionally connect the [Blender MCP server](https://github.com/ahujasid/blender-mcp) too, so the agent can model in Blender.
-3. Ask the agent for a game. It reads the guide with `get_guide`, then:
-   - creates the game with `create_game`;
-   - writes three.js code with `write_file`;
-   - exports models from Blender as `.glb` and uploads them with `get_upload_url` plus `curl`;
-   - checks the private preview URL;
-   - calls `submit_for_review`.
-4. An adult approves it at `/admin` (sign in with `ADMIN_KEY`). Only then does it appear in the store. Published games can be taken down there too.
+3. The grown-up logs in to their own Cloudflare account once with `npx cf auth login`.
+4. Ask the agent for a game. It reads the guide with `get_guide`, then:
+   - registers the game with `create_game` and writes the project from `get_starter_project`;
+   - builds the three.js game in `public/`, exporting Blender models as `.glb` into `public/models/`;
+   - deploys with `npm run deploy` and checks the version URL;
+   - calls `submit_version` with that URL, then tries it on the private preview page.
+5. An adult approves it at `/admin` (sign in with `ADMIN_KEY`). Only then does it appear in the store. Published games can be taken down there too.
 
 The MCP endpoint is `/mcp` (streamable HTTP, stateless, `Authorization: Bearer bg_...`). Its code is in `apps/store/src/server/mcp.ts`.
 
@@ -56,9 +64,9 @@ The MCP endpoint is `/mcp` (streamable HTTP, stateless, `Authorization: Bearer b
 
 Race or smash up to 4 cars around Ubud, Helsinki or Montreal, on separate devices in the same home (BitGames' family lobby, WebRTC between devices) or alone against bots.
 
-- Rebuild the Blender models: `cd creator-games/crash-racers/blender && blender --background --python cars.py && blender --background --python props.py`
-- Publish changes through MCP: `BG_URL=... BG_KEY=bg_... node creator-games/sync.mjs creator-games/crash-racers crash-racers`, then `submit_for_review`
-- Debug hooks: open `/try/<token>?debug` (or `/preview/<token>/index.html?debug&city=montreal&mode=smash`) and use `window.__crash`
+- Rebuild the Blender models: `cd examples/crash-racers/blender && blender --background --python cars.py && blender --background --python props.py`
+- Deploy an example and record its new version in `game.json`: `node examples/publish.mjs crash-racers`, then `pnpm --dir apps/store seed:remote` to list that version
+- Debug hooks: open `/try/<token>?debug` (or the version URL with `index.html?debug&city=montreal&mode=smash`) and use `window.__crash`
 
 ## Running the WebRTC lab
 

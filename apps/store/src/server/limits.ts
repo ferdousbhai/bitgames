@@ -1,44 +1,21 @@
-/** Size and shape limits for creator-made games. */
-export const MAX_FILE_BYTES = 10 * 1024 * 1024
-export const MAX_TEXT_FILE_BYTES = 1024 * 1024
-export const MAX_GAME_BYTES = 50 * 1024 * 1024
-export const MAX_FILES_PER_GAME = 200
+/** Limits for creator-made games, which run on their creators' own Cloudflare accounts. */
 export const MAX_GAMES_PER_CREATOR = 30
-export const MAX_CREATOR_BYTES = 200 * 1024 * 1024
-/** Draft previews stop working this long after the game last changed, so drafts can't serve as file hosting. */
-export const DRAFT_PREVIEW_TTL_MS = 7 * 24 * 60 * 60 * 1000
-export const UPLOAD_URL_TTL_MS = 15 * 60 * 1000
-
-/** The content type is always chosen by extension, never by the uploader. */
-export const CONTENT_TYPES: Record<string, string> = {
-  html: 'text/html; charset=utf-8',
-  js: 'text/javascript; charset=utf-8',
-  mjs: 'text/javascript; charset=utf-8',
-  css: 'text/css; charset=utf-8',
-  json: 'application/json',
-  txt: 'text/plain; charset=utf-8',
-  glb: 'model/gltf-binary',
-  gltf: 'model/gltf+json',
-  bin: 'application/octet-stream',
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  ktx2: 'image/ktx2',
-  mp3: 'audio/mpeg',
-  ogg: 'audio/ogg',
-  wav: 'audio/wav',
-}
-
-export const TEXT_EXTENSIONS = new Set(['html', 'js', 'mjs', 'css', 'json', 'txt', 'gltf'])
+/** Each file is fetched and hashed when a version is checked, within one Worker request's subrequest budget. */
+export const MAX_FILES_PER_GAME = 40
+export const MAX_GAME_BYTES = 50 * 1024 * 1024
+export const MAX_MANIFEST_BYTES = 64 * 1024
 
 const GAME_ID = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/
 const FILE_PATH = /^(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/){0,4}[A-Za-z0-9_-][A-Za-z0-9._-]*\.[a-z0-9]+$/
 
-const listOf = (exts: Iterable<string>) => [...exts].map((e) => '.' + e).join(' ')
-/** File types for agent-facing text: written with write_file, and uploaded with get_upload_url. */
-export const TEXT_FILE_TYPES = listOf(TEXT_EXTENSIONS)
-export const BINARY_FILE_TYPES = listOf(Object.keys(CONTENT_TYPES).filter((e) => !TEXT_EXTENSIONS.has(e)))
+/**
+ * A Worker version preview URL: <first 8 hex of the version id>-<worker>.<account>.workers.dev.
+ * A version's files never change. Aliased preview URLs look the same but start
+ * with a letter and can be redeployed, so versions that start with a letter are
+ * re-checked regularly (see recheckLive).
+ */
+const VERSION_HOST = /^([0-9a-f]{8})-([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\.([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\.workers\.dev$/
+
 export const mb = (bytes: number) => `${+(bytes / 1024 / 1024).toFixed(1)} MB`
 
 export function isGameId(id: string): boolean {
@@ -50,28 +27,21 @@ export function isPreviewToken(token: string): boolean {
   return /^[a-f0-9]{32}$/.test(token)
 }
 
-export function extensionOf(path: string): string {
-  return path.slice(path.lastIndexOf('.') + 1).toLowerCase()
+export function isFilePath(path: string): boolean {
+  return FILE_PATH.test(path) && !path.includes('..') && path.length <= 200
 }
 
-/** Returns an error message, or null when the path is acceptable. */
-export function checkPath(path: string): string | null {
-  if (!FILE_PATH.test(path) || path.includes('..') || path.length > 200) {
-    return 'Paths look like "index.html", "models/bunny.glb" or "sounds/pop.mp3": letters, numbers, dashes and dots, up to 5 folders deep.'
+/** The normalised version URL ("https://<host>/"), or null if `url` isn't a Worker version preview URL. */
+export function parseVersionUrl(url: string): { base: string; immutable: boolean } | null {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
   }
-  if (!(extensionOf(path) in CONTENT_TYPES)) {
-    return `Files of type .${extensionOf(path)} are not allowed. Allowed: ${listOf(Object.keys(CONTENT_TYPES))}`
-  }
-  if (path === 'manifest.json') return 'manifest.json is reserved. Use update_game_info to change the game details.'
-  return null
-}
-
-/** Where the creator's working copy lives. */
-export function objectKey(gameId: string, path: string): string {
-  return `games/${gameId}/${path}`
-}
-
-/** Where the reviewed copy that children play lives. */
-export function liveKey(gameId: string, path: string): string {
-  return `live/${gameId}/${path}`
+  if (parsed.protocol !== 'https:' || parsed.port || parsed.username || parsed.password) return null
+  const match = VERSION_HOST.exec(parsed.hostname)
+  if (!match) return null
+  // Aliases must start with a letter, so a version prefix starting with a digit can only be a real version.
+  return { base: `https://${parsed.hostname}/`, immutable: /^[0-9]/.test(match[1]!) }
 }

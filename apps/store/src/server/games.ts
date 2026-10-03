@@ -20,6 +20,7 @@ interface GameRow {
   likes: number
   created_at: number
   cover: string | null
+  live_url: string
 }
 
 function toGame(row: GameRow): Game {
@@ -37,14 +38,15 @@ function toGame(row: GameRow): Game {
     plays: row.plays,
     likes: row.likes,
     createdAt: row.created_at,
-    cover: row.cover ? `/play/${row.id}/${row.cover}` : null,
+    url: row.live_url,
+    cover: row.cover ? row.live_url + row.cover : null,
   }
 }
 
 export const listGames = createServerFn({ method: 'GET' }).handler(async () => {
   const { results } = await env.DB.prepare(
     `SELECT id, title, tagline, how_to_play, emoji, color, category, together, entry,
-            featured, plays, likes, created_at, cover
+            featured, plays, likes, created_at, cover, live_url
        FROM games WHERE live = 1 ORDER BY created_at DESC LIMIT 500`,
   ).all<GameRow>()
   return results.map(toGame)

@@ -1,42 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import { CATEGORIES } from '#/lib/categories'
-import {
-  CreatorError,
-  createGame,
-  createUploadUrl,
-  deleteFile,
-  deleteGame,
-  listFiles,
-  listOwned,
-  previewUrl,
-  readTextFile,
-  reopenGame,
-  submitForReview,
-  updateInfo,
-  writeTextFile,
-} from './games-store'
-import { GUIDE, INSTRUCTIONS } from './guide'
-import { BINARY_FILE_TYPES, MAX_FILE_BYTES, MAX_TEXT_FILE_BYTES, TEXT_FILE_TYPES, UPLOAD_URL_TTL_MS, mb } from './limits'
-
-/**
- * Outside URLs the code would actually try to load: imports, fetch, src/href,
- * CSS url() and import-map entries. URLs in comments or plain text are fine.
- */
-function loadedUrls(content: string): string[] {
-  const patterns = [
-    /\bfrom\s*['"](https?:\/\/[^'"]+)/g,
-    /\bimport\s*\(?\s*['"](https?:\/\/[^'"]+)/g,
-    /\bfetch\s*\(\s*['"`](https?:\/\/[^'"`]+)/g,
-    /\b(?:src|href)\s*=\s*['"](https?:\/\/[^'"]+)/g,
-    /url\(\s*['"]?(https?:\/\/[^'")]+)/g,
-    /"[\w@/.-]+"\s*:\s*"(https?:\/\/[^"]+)"/g,
-    /\.loadAsync\s*\(\s*['"`](https?:\/\/[^'"`]+)/g,
-  ]
-  const found = new Set<string>()
-  for (const re of patterns) for (const m of content.matchAll(re)) found.add(m[1]!)
-  return [...found].slice(0, 5)
-}
+import { CreatorError, createGame, deleteGame, listOwned, previewUrl, submitVersion, updateInfo, withdrawVersion } from './games-store'
+import { GUIDE, INSTRUCTIONS, STARTER_GAME } from './guide'
+import { MAX_GAME_BYTES, mb } from './limits'
+import { starterProject, workerName } from './starter'
 
 type ToolResult = { content: { type: 'text'; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean }
 
@@ -57,7 +26,6 @@ async function run(fn: () => Promise<string | { text: string; structured: Record
 }
 
 const gameId = z.string().describe('The game id returned by create_game, e.g. "bunny-hop".')
-const filePath = z.string().describe('Path inside the game folder, e.g. "index.html", "js/main.js" or "models/bunny.glb".')
 
 const info = {
   title: z.string().min(2).max(40).describe('Short, fun name a child can read, e.g. "Bunny Hop".'),
@@ -70,21 +38,21 @@ const info = {
 }
 
 const STATUS_HELP: Record<string, string> = {
-  draft: 'draft with changes not yet submitted',
-  review: 'waiting for an adult to review it',
-  public: 'published; the store has this exact version',
-  rejected: 'not approved; see the note, fix it and submit again',
+  draft: 'nothing waiting for review',
+  review: 'a version is waiting for an adult to review it',
+  public: 'the store has the latest version',
+  rejected: 'not approved or taken down; see the note, fix it and submit a new version',
 }
 
 /** A fresh server per request: the endpoint is stateless and each call is authenticated on its own. */
 export function createMcpServer(creatorId: string, origin: string) {
-  const server = new McpServer({ name: 'bitgames', version: '1.0.0' }, { instructions: INSTRUCTIONS })
+  const server = new McpServer({ name: 'bitgames', version: '2.0.0' }, { instructions: INSTRUCTIONS })
 
   server.registerTool(
     'get_guide',
     {
       title: 'Read the game-making guide',
-      description: 'The rules for BitGames games (young children are the players), the three.js setup, the sandbox, and how to bring in Blender models. Read this before building.',
+      description: 'The rules for BitGames games (young children are the players), how games are deployed to your own Cloudflare account, three.js, multiplayer and Blender models. Read this before building.',
       annotations: { readOnlyHint: true },
     },
     async () => ok(GUIDE),
@@ -94,17 +62,75 @@ export function createMcpServer(creatorId: string, origin: string) {
     'create_game',
     {
       title: 'Create a game',
-      description: 'Creates a new draft game with a working starter index.html, and returns its id and private preview URL.',
+      description: 'Registers a new game in the BitGames catalog and returns its id and private preview URL. The game itself is deployed to your own Cloudflare account (see get_starter_project).',
       inputSchema: info,
     },
     (args) =>
       run(async () => {
         const game = await createGame(creatorId, args)
         return [
-          `Created draft game "${game.id}".`,
-          `Preview: ${previewUrl(origin, game.previewToken)}`,
-          'Next: read index.html with read_file, rewrite it with write_file, and add models with get_upload_url.',
+          `Created game "${game.id}".`,
+          `Preview (once a version is submitted): ${previewUrl(origin, game.previewToken)}`,
+          'Next: get_starter_project, build the game in public/, deploy it with `pnpm run deploy` (or npm), then submit_version with the version preview URL.',
         ].join('\n')
+      }),
+  )
+
+  server.registerTool(
+    'get_starter_project',
+    {
+      title: 'Get the starter project',
+      description: 'Returns the files of a deployable game project: Cloudflare config, the manifest script, public/_headers and a working starter public/index.html. Write them into an empty folder.',
+      inputSchema: { gameId },
+      outputSchema: { files: z.record(z.string(), z.string()).describe('Path inside the project folder -> file contents.') },
+      annotations: { readOnlyHint: true },
+    },
+    ({ gameId: id }) =>
+      run(async () => {
+        const files = { ...starterProject(id), 'public/index.html': STARTER_GAME }
+        const text = [
+          `Write these files into an empty folder for "${id}", then install and deploy:`,
+          '  npm install && npm run deploy',
+          `It deploys the Worker "${workerName(id)}" to the Cloudflare account \`cf\` is logged in to (run \`npx cf auth login\` first if needed).`,
+          'Submit the version preview URL: https://<first 8 characters of the "Current Version ID">-<worker>.<account>.workers.dev/',
+          '',
+          ...Object.entries(files).map(([path, content]) => `--- ${path}\n${content}`),
+        ].join('\n')
+        return { text, structured: { files } }
+      }),
+  )
+
+  server.registerTool(
+    'submit_version',
+    {
+      title: 'Submit a version for review',
+      description: `Checks a deployed version of the game and sends it to an adult reviewer. Pass the version preview URL from the deploy. Every file listed in bitgames.json is downloaded and checked (at most ${mb(MAX_GAME_BYTES)}). Once approved, that exact version appears in the store; a published game keeps its current version until then. Submitting again replaces the version waiting for review.`,
+      inputSchema: { gameId, url: z.string().describe('The version preview URL, e.g. "https://1a2b3c4d-bitgames-bunny-hop.alice.workers.dev/".') },
+      outputSchema: { url: z.string(), files: z.number(), bytes: z.number() },
+    },
+    ({ gameId: id, url }) =>
+      run(async () => {
+        if (!(await env.SUBMIT_LIMITER.limit({ key: creatorId })).success) throw new CreatorError('Too many submissions. Wait a minute.')
+        const version = await submitVersion(creatorId, id, url)
+        return {
+          text: `"${id}" is waiting for review: ${version.url} (${version.files} files, ${mb(version.bytes)}). Try it at the preview URL from list_my_games; check list_my_games later for the result.`,
+          structured: { url: version.url, files: version.files, bytes: version.bytes },
+        }
+      }),
+  )
+
+  server.registerTool(
+    'withdraw_version',
+    {
+      title: 'Withdraw from review',
+      description: 'Takes the version waiting for review back out of the queue.',
+      inputSchema: { gameId },
+      annotations: { destructiveHint: true },
+    },
+    ({ gameId: id }) =>
+      run(async () => {
+        await withdrawVersion(creatorId, id)
+        return `Withdrew the version of "${id}" that was waiting for review.`
       }),
   )
 
@@ -112,13 +138,13 @@ export function createMcpServer(creatorId: string, origin: string) {
     'update_game_info',
     {
       title: 'Change game details',
-      description: 'Changes the title, tagline, how-to-play text, emoji, colour, category or together flag. For a published game the change waits for review.',
+      description: 'Changes the title, tagline, how-to-play text, emoji, colour, category or together flag. For a game in the store, the change is reviewed with the next submitted version.',
       inputSchema: { gameId, ...Object.fromEntries(Object.entries(info).map(([k, v]) => [k, v.optional()])) },
     },
     ({ gameId: id, ...changes }) =>
       run(async () => {
         const result = await updateInfo(creatorId, id, changes)
-        return result === 'pending' ? `Saved. "${id}" is in the store, so the new details show after review (submit_for_review).` : `Updated "${id}".`
+        return result === 'pending' ? `Saved. "${id}" is in the store, so the new details show once a version is approved (submit_version).` : `Updated "${id}".`
       }),
   )
 
@@ -126,7 +152,7 @@ export function createMcpServer(creatorId: string, origin: string) {
     'list_my_games',
     {
       title: 'List my games',
-      description: 'Lists your games with their status, preview URL and any review note.',
+      description: 'Lists your games with their status, preview URL, versions and any review note.',
       annotations: { readOnlyHint: true },
     },
     () =>
@@ -136,8 +162,10 @@ export function createMcpServer(creatorId: string, origin: string) {
         return games
           .map((g) =>
             [
-              `- ${g.id}: "${g.title}" — ${g.live ? 'in the store' : 'not in the store'}; draft: ${STATUS_HELP[g.status] ?? g.status}`,
+              `- ${g.id}: "${g.title}" — ${g.live ? 'in the store' : 'not in the store'}; ${STATUS_HELP[g.status] ?? g.status}`,
               `  preview: ${previewUrl(origin, g.preview_token)}`,
+              g.live_url ? `  live version: ${g.live_url}` : null,
+              g.review_url ? `  version in review: ${g.review_url}` : null,
               g.live ? `  public page: ${origin}/game/${g.id}` : null,
               g.review_note ? `  review note: ${g.review_note}` : null,
             ]
@@ -149,126 +177,17 @@ export function createMcpServer(creatorId: string, origin: string) {
   )
 
   server.registerTool(
-    'list_files',
-    {
-      title: 'List game files',
-      description: 'Lists the files in a game and their sizes.',
-      inputSchema: { gameId },
-      outputSchema: { files: z.array(z.object({ path: z.string(), bytes: z.number() })) },
-      annotations: { readOnlyHint: true },
-    },
-    ({ gameId: id }) =>
-      run(async () => {
-        const files = (await listFiles(creatorId, id)).map(({ path, bytes }) => ({ path, bytes }))
-        const text = files.length ? files.map((f) => `${f.path}  ${f.bytes} bytes`).join('\n') : 'No files yet.'
-        return { text, structured: { files } }
-      }),
-  )
-
-  server.registerTool(
-    'read_file',
-    {
-      title: 'Read a game file',
-      description: `Returns the contents of a text file (${TEXT_FILE_TYPES}) in a game.`,
-      inputSchema: { gameId, path: filePath },
-      annotations: { readOnlyHint: true },
-    },
-    ({ gameId: id, path }) => run(() => readTextFile(creatorId, id, path)),
-  )
-
-  server.registerTool(
-    'write_file',
-    {
-      title: 'Write a game file',
-      description: `Creates or replaces a text file (${TEXT_FILE_TYPES}, up to ${mb(MAX_TEXT_FILE_BYTES)}) in a game's draft. Binary files go through get_upload_url.`,
-      inputSchema: { gameId, path: filePath, content: z.string().describe('The full file contents.') },
-      outputSchema: { bytes: z.number(), blockedUrls: z.array(z.string()).describe('Outside URLs the game tries to load, which will be blocked.') },
-    },
-    ({ gameId: id, path, content }) =>
-      run(async () => {
-        const bytes = await writeTextFile(creatorId, id, path, content)
-        const blockedUrls = loadedUrls(content)
-        const text = blockedUrls.length
-          ? `Wrote ${path} (${bytes} bytes).\nWarning: games can't load anything from other websites, so these URLs will be blocked: ${blockedUrls.join(', ')}. Use the /vendor/ three.js from the guide, and put other files in the game itself.`
-          : `Wrote ${path} (${bytes} bytes).`
-        return { text, structured: { bytes, blockedUrls } }
-      }),
-  )
-
-  server.registerTool(
-    'get_upload_url',
-    {
-      title: 'Get an upload link',
-      description: `Returns a one-time link, valid for ${UPLOAD_URL_TTL_MS / 60000} minutes, for uploading one binary file (${BINARY_FILE_TYPES}, up to ${mb(MAX_FILE_BYTES)}) into a game's draft. Upload it with: curl -fsS -T <local file> <url>`,
-      inputSchema: { gameId, path: filePath },
-      outputSchema: { url: z.string().describe('The one-time upload URL.') },
-    },
-    ({ gameId: id, path }) =>
-      run(async () => {
-        const url = await createUploadUrl(creatorId, id, path, origin)
-        return {
-          text: `Upload with:\ncurl -fsS -T <path to your local file> '${url}'\nThe link works once and expires in ${UPLOAD_URL_TTL_MS / 60000} minutes.`,
-          structured: { url },
-        }
-      }),
-  )
-
-  server.registerTool(
-    'delete_file',
-    {
-      title: 'Delete a game file',
-      description: 'Deletes one file from a draft game.',
-      inputSchema: { gameId, path: filePath },
-      annotations: { destructiveHint: true },
-    },
-    ({ gameId: id, path }) =>
-      run(async () => {
-        await deleteFile(creatorId, id, path)
-        return `Deleted ${path}.`
-      }),
-  )
-
-  server.registerTool(
-    'submit_for_review',
-    {
-      title: 'Submit for review',
-      description: 'Sends the game (or an update to a published game) to an adult reviewer. Once approved it appears in the store; a published game keeps its current version live meanwhile. The draft cannot change while it waits.',
-      inputSchema: { gameId },
-    },
-    ({ gameId: id }) =>
-      run(async () => {
-        await submitForReview(creatorId, id)
-        return `"${id}" is waiting for review. Check list_my_games later for the result.`
-      }),
-  )
-
-  server.registerTool(
-    'reopen_game',
-    {
-      title: 'Withdraw from review',
-      description: 'Takes a game back out of the review queue so it can be edited again. (Published games never need this: just edit them and submit the update.)',
-      inputSchema: { gameId },
-      annotations: { destructiveHint: true },
-    },
-    ({ gameId: id }) =>
-      run(async () => {
-        await reopenGame(creatorId, id)
-        return `"${id}" is a draft again.`
-      }),
-  )
-
-  server.registerTool(
     'delete_game',
     {
       title: 'Delete a game',
-      description: 'Permanently deletes one of your games and all its files.',
+      description: 'Removes one of your games from BitGames. Its Worker on your Cloudflare account is not touched; delete that yourself if you want.',
       inputSchema: { gameId },
       annotations: { destructiveHint: true },
     },
     ({ gameId: id }) =>
       run(async () => {
         await deleteGame(creatorId, id)
-        return `Deleted "${id}".`
+        return `Deleted "${id}" from BitGames.`
       }),
   )
 

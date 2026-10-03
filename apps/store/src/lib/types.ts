@@ -10,6 +10,8 @@ export const gameSchema = z.object({
   category: z.string(),
   together: z.boolean(),
   entry: z.string(),
+  /** The approved version of the game, on its creator's Cloudflare account (ends with "/"). */
+  url: z.string(),
   featured: z.boolean(),
   plays: z.number(),
   likes: z.number(),

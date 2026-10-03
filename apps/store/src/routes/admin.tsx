@@ -91,7 +91,7 @@ function AdminPage() {
               <GameFrame
                 gameId={game.id}
                 title={game.title}
-                src={`/preview/${game.preview_token}/${game.entry}`}
+                src={game.review_url! + game.entry}
                 className="mt-4 aspect-video w-full overflow-hidden rounded-2xl bg-ink"
               />
               <p className="mt-3 text-sm text-ink-soft">

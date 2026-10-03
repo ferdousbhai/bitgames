@@ -17,9 +17,6 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as GameIdRouteImport } from './routes/game.$id'
 import { Route as TryTokenRouteImport } from './routes/try.$token'
-import { Route as UploadTokenRouteImport } from './routes/upload.$token'
-import { Route as PlayGameIdSplatRouteImport } from './routes/play.$gameId.$'
-import { Route as PreviewTokenSplatRouteImport } from './routes/preview.$token.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -61,21 +58,6 @@ const TryTokenRoute = TryTokenRouteImport.update({
   path: '/try/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UploadTokenRoute = UploadTokenRouteImport.update({
-  id: '/upload/$token',
-  path: '/upload/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayGameIdSplatRoute = PlayGameIdSplatRouteImport.update({
-  id: '/play/$gameId/$',
-  path: '/play/$gameId/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PreviewTokenSplatRoute = PreviewTokenSplatRouteImport.update({
-  id: '/preview/$token/$',
-  path: '/preview/$token/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -86,9 +68,6 @@ export interface FileRoutesByFullPath {
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
   '/try/$token': typeof TryTokenRoute
-  '/upload/$token': typeof UploadTokenRoute
-  '/play/$gameId/$': typeof PlayGameIdSplatRoute
-  '/preview/$token/$': typeof PreviewTokenSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -99,9 +78,6 @@ export interface FileRoutesByTo {
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
   '/try/$token': typeof TryTokenRoute
-  '/upload/$token': typeof UploadTokenRoute
-  '/play/$gameId/$': typeof PlayGameIdSplatRoute
-  '/preview/$token/$': typeof PreviewTokenSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -113,9 +89,6 @@ export interface FileRoutesById {
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
   '/try/$token': typeof TryTokenRoute
-  '/upload/$token': typeof UploadTokenRoute
-  '/play/$gameId/$': typeof PlayGameIdSplatRoute
-  '/preview/$token/$': typeof PreviewTokenSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -128,9 +101,6 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/game/$id'
     | '/try/$token'
-    | '/upload/$token'
-    | '/play/$gameId/$'
-    | '/preview/$token/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -141,9 +111,6 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/game/$id'
     | '/try/$token'
-    | '/upload/$token'
-    | '/play/$gameId/$'
-    | '/preview/$token/$'
   id:
     | '__root__'
     | '/'
@@ -154,9 +121,6 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/game/$id'
     | '/try/$token'
-    | '/upload/$token'
-    | '/play/$gameId/$'
-    | '/preview/$token/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -168,9 +132,6 @@ export interface RootRouteChildren {
   CategorySlugRoute: typeof CategorySlugRoute
   GameIdRoute: typeof GameIdRoute
   TryTokenRoute: typeof TryTokenRoute
-  UploadTokenRoute: typeof UploadTokenRoute
-  PlayGameIdSplatRoute: typeof PlayGameIdSplatRoute
-  PreviewTokenSplatRoute: typeof PreviewTokenSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -231,27 +192,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TryTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/upload/$token': {
-      id: '/upload/$token'
-      path: '/upload/$token'
-      fullPath: '/upload/$token'
-      preLoaderRoute: typeof UploadTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/play/$gameId/$': {
-      id: '/play/$gameId/$'
-      path: '/play/$gameId/$'
-      fullPath: '/play/$gameId/$'
-      preLoaderRoute: typeof PlayGameIdSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/preview/$token/$': {
-      id: '/preview/$token/$'
-      path: '/preview/$token/$'
-      fullPath: '/preview/$token/$'
-      preLoaderRoute: typeof PreviewTokenSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -264,9 +204,6 @@ const rootRouteChildren: RootRouteChildren = {
   CategorySlugRoute: CategorySlugRoute,
   GameIdRoute: GameIdRoute,
   TryTokenRoute: TryTokenRoute,
-  UploadTokenRoute: UploadTokenRoute,
-  PlayGameIdSplatRoute: PlayGameIdSplatRoute,
-  PreviewTokenSplatRoute: PreviewTokenSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

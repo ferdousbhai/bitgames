@@ -2,7 +2,7 @@
  * Database and storage setup for the store.
  *
  *   node scripts/db.ts migrate            # local: needs `pnpm dev` running
- *   node scripts/db.ts seed               # local: publish the starter games in ./games
+ *   node scripts/db.ts seed               # local: list the deployed games in ../../examples
  *   node scripts/db.ts migrate --remote   # remote: needs `cf auth login`
  *   node scripts/db.ts seed --remote
  *
@@ -11,13 +11,14 @@
  * Migrations are tracked in the same d1_migrations table that cf and Wrangler use.
  */
 import { execFileSync } from 'node:child_process'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import config from '../cloudflare.config.ts'
-import { CONTENT_TYPES, extensionOf, liveKey, objectKey } from '../src/server/limits.ts'
+import { parseVersionUrl } from '../src/server/limits.ts'
+import { MANIFEST_FILE } from '../src/server/starter.ts'
 
 const DATABASE_ID = config.worker.env.DB.id!
-const BUCKET = config.worker.env.GAMES.name!
 const LOCAL_API = `${process.env.DEV_URL ?? 'http://localhost:3030'}/cdn-cgi/local/explorer/api`
 
 const root = new URL('..', import.meta.url).pathname
@@ -56,19 +57,6 @@ async function sql(query: string): Promise<Record<string, unknown>[]> {
   return (last?.rows ?? []).map((row) => Object.fromEntries(last!.columns.map((c, i) => [c, row[i]])))
 }
 
-async function putObject(key: string, file: string, contentType: string) {
-  if (remote) {
-    cf(['r2', 'objects', 'put', key, '--bucket-name', BUCKET, '--file', file, '--content-type', contentType])
-    return
-  }
-  // The local explorer routes on the encoded key; slashes must be %2F.
-  await localApi(`/r2/buckets/${BUCKET}/objects/${encodeURIComponent(key)}`, {
-    method: 'PUT',
-    headers: { 'content-type': contentType },
-    body: readFileSync(file),
-  })
-}
-
 async function migrate() {
   if (remote) {
     console.log(cf(['d1', 'migrations', 'apply', DATABASE_ID, '--dir', 'migrations']))
@@ -87,7 +75,7 @@ async function migrate() {
   console.log('local database is up to date')
 }
 
-interface Manifest {
+interface ExampleGame {
   id: string
   title: string
   tagline: string
@@ -97,45 +85,51 @@ interface Manifest {
   category: string
   together: boolean
   featured: boolean
-  entry?: string
+  /** The deployed version to list, written by examples/publish.mjs. */
+  url?: string
 }
 
-const literal = (value: string | number | boolean) =>
-  typeof value === 'string' ? `'${value.replaceAll("'", "''")}'` : String(Number(value))
+const literal = (value: string | number | boolean | null) =>
+  value === null ? 'NULL' : typeof value === 'string' ? `'${value.replaceAll("'", "''")}'` : String(Number(value))
 
-function filesIn(dir: string): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const full = join(dir, name)
-    return statSync(full).isDirectory() ? filesIn(full) : [full]
-  })
-}
+const COVER_FILES = ['cover.webp', 'cover.jpg', 'cover.png']
 
-/** Publishes the starter games in ./games as BitGames-made, already-public games. */
+/**
+ * Lists the games in ../../examples as BitGames-made, already-approved games,
+ * pinned to the version each game.json names. Those versions run on our own
+ * Cloudflare account, like any creator's game.
+ */
 async function seed() {
-  const gamesDir = join(root, 'games')
-  const ids = readdirSync(gamesDir).filter((name) => statSync(join(gamesDir, name)).isDirectory()).sort()
+  const examples = join(root, '..', '..', 'examples')
+  const ids = readdirSync(examples).filter((name) => existsSync(join(examples, name, 'game.json'))).sort()
   const now = Date.now()
+  let seeded = 0
   for (const [index, dir] of ids.entries()) {
-    const m: Manifest = JSON.parse(readFileSync(join(gamesDir, dir, 'manifest.json'), 'utf8'))
-    if (m.id !== dir) throw new Error(`games/${dir}/manifest.json has id "${m.id}"`)
-    for (const file of filesIn(join(gamesDir, dir))) {
-      const path = relative(join(gamesDir, dir), file)
-      if (path === 'manifest.json') continue
-      // Built-in games are published straight away: draft and live copies are the same.
-      const type = CONTENT_TYPES[extensionOf(path)] ?? 'application/octet-stream'
-      for (const key of [objectKey(dir, path), liveKey(dir, path)]) await putObject(key, file, type)
+    const game: ExampleGame = JSON.parse(readFileSync(join(examples, dir, 'game.json'), 'utf8'))
+    if (game.id !== dir) throw new Error(`examples/${dir}/game.json has id "${game.id}"`)
+    if (!game.url || !parseVersionUrl(game.url)) {
+      console.log(`skipped ${game.id}: deploy it first (node examples/publish.mjs ${game.id})`)
+      continue
     }
-    const values = [m.id, m.title, m.tagline, m.howToPlay, m.emoji, m.color, m.category, m.together, m.entry ?? 'index.html', m.featured, now - index * 60_000, now]
+    const manifestText = await (await fetch(game.url + MANIFEST_FILE)).text()
+    const files = (JSON.parse(manifestText) as { files: Record<string, string> }).files
+    const manifest = createHash('sha256').update(manifestText).digest('hex')
+    const cover = COVER_FILES.find((name) => name in files) ?? null
+    const values = [game.id, game.title, game.tagline, game.howToPlay, game.emoji, game.color, game.category, game.together, game.featured,
+      now - index * 60_000, now, game.url, manifest, cover]
     await sql(
-      `INSERT INTO games (id, title, tagline, how_to_play, emoji, color, category, together, entry, featured, created_at, updated_at, status, live, preview_token)
-       VALUES (${values.map(literal).join(', ')}, 'public', 1, lower(hex(randomblob(16))))
+      `INSERT INTO games (id, title, tagline, how_to_play, emoji, color, category, together, featured, created_at, updated_at,
+                          live_url, live_manifest, cover, verified_at, status, live, preview_token)
+       VALUES (${values.map(literal).join(', ')}, ${now}, 'public', 1, lower(hex(randomblob(16))))
        ON CONFLICT (id) DO UPDATE SET title = excluded.title, tagline = excluded.tagline, how_to_play = excluded.how_to_play,
          emoji = excluded.emoji, color = excluded.color, category = excluded.category, together = excluded.together,
-         entry = excluded.entry, featured = excluded.featured, updated_at = excluded.updated_at, live = 1, status = 'public'`,
+         featured = excluded.featured, updated_at = excluded.updated_at, live_url = excluded.live_url,
+         live_manifest = excluded.live_manifest, cover = excluded.cover, verified_at = excluded.verified_at, live = 1, status = 'public'`,
     )
-    console.log(`published ${m.id}`)
+    seeded++
+    console.log(`listed ${game.id} at ${game.url}`)
   }
-  console.log(`seeded ${ids.length} games (${remote ? 'remote' : 'local'})`)
+  console.log(`seeded ${seeded} games (${remote ? 'remote' : 'local'})`)
 }
 
 if (command === 'migrate') await migrate()

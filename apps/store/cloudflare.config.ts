@@ -1,4 +1,4 @@
-import { bindings, defineConfig, exports } from "cf/config";
+import { bindings, defineConfig, exports, triggers } from "cf/config";
 
 const perMinute = (namespace: string, limit: number) => bindings.rateLimit({ namespace, simple: { limit, period: 60 } });
 
@@ -19,6 +19,8 @@ export default defineConfig({
 			// One multiplayer signaling room per game and room code.
 			GameRoom: exports.durableObject({ storage: "sqlite" }),
 		},
+		// Re-checks that approved game versions still serve the files that were reviewed.
+		triggers: [triggers.scheduled({ schedule: "*/10 * * * *" })],
 		observability: {
 			enabled: true,
 			traces: {
@@ -36,14 +38,10 @@ export default defineConfig({
 				id: "34eb131f-ba97-412e-ba81-8d1aa5c2c808",
 				name: "bitgames",
 			}),
-			// Game files: drafts under games/<id>/<path>, reviewed copies under live/<id>/<path>.
-			GAMES: bindings.r2({
-				name: "bitgames-games",
-			}),
 			// Per-IP and per-creator rate limits, all per minute.
 			KEY_LIMITER: perMinute("4101", 3),
 			MCP_LIMITER: perMinute("4102", 120),
-			UPLOAD_LIMITER: perMinute("4103", 30),
+			SUBMIT_LIMITER: perMinute("4103", 10),
 			ADMIN_LIMITER: perMinute("4104", 30),
 			LIKE_LIMITER: perMinute("4105", 30),
 			ROOM_LIMITER: perMinute("4106", 30),

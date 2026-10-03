@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import { safeEqual } from './crypto'
 import { allowedByIp } from './rate-limit'
-import { publishDraft, unpublish } from './games-store'
+import { approveVersion, unpublish } from './games-store'
 import { isGameId } from './limits'
 
 async function requireAdmin(adminKey: string) {
@@ -25,7 +25,8 @@ export interface AdminGame {
   live: number
   pending_info: string | null
   review_note: string | null
-  preview_token: string
+  review_url: string | null
+  live_url: string | null
   entry: string
   creator_id: string | null
   updated_at: number
@@ -36,7 +37,7 @@ export const listForAdmin = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     await requireAdmin(data.adminKey)
     const { results } = await env.DB.prepare(
-      `SELECT id, title, tagline, how_to_play, emoji, category, entry, status, live, pending_info, review_note, preview_token, creator_id, updated_at
+      `SELECT id, title, tagline, how_to_play, emoji, category, entry, status, live, pending_info, review_note, review_url, live_url, creator_id, updated_at
          FROM games
         WHERE status = 'review' OR live = 1
         ORDER BY CASE status WHEN 'review' THEN 0 ELSE 1 END, updated_at DESC
@@ -62,9 +63,11 @@ export const reviewGame = createServerFn({ method: 'POST' })
       return unpublish(data.id, note)
     }
     if (game?.status !== 'review') throw new Error('That game changed in the meantime. Reload the list.')
-    if (data.decision === 'approve') return publishDraft(data.id)
+    if (data.decision === 'approve') return approveVersion(data.id)
     // Sending back an update leaves the live version in the store.
-    await env.DB.prepare(`UPDATE games SET status = 'rejected', review_note = ?, updated_at = ? WHERE id = ?`)
+    await env.DB.prepare(
+      `UPDATE games SET status = 'rejected', review_note = ?, review_url = NULL, review_manifest = NULL, review_cover = NULL, updated_at = ? WHERE id = ?`,
+    )
       .bind(note, Date.now(), data.id)
       .run()
   })

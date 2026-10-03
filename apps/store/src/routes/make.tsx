@@ -71,13 +71,15 @@ function GrownUps() {
         <a className="underline" href="https://github.com/ahujasid/blender-mcp" target="_blank" rel="noreferrer">
           Blender MCP server
         </a>
-        . New games stay private until an adult reviewer approves them for the store.
+        . Each game runs on your own free Cloudflare account (the agent deploys it there with Cloudflare's{' '}
+        <code>cf</code> command), and BitGames lists it here. Every version stays private until an adult reviewer
+        approves it for the store.
       </p>
       {key ? (
         <div className="mt-5 space-y-3">
           <p className="text-lg font-semibold">
             Here is your creator key. Copy it now, because it won't be shown again. Keep it private: anyone who has it
-            can edit your games.
+            can submit and change your games on BitGames.
           </p>
           <CopyBox label="Add BitGames to Claude Code" value={command} />
           <p className="text-ink-soft">

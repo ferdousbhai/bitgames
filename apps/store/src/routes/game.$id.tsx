@@ -97,7 +97,7 @@ function Player({ game }: { game: Game }) {
     >
       {started ? (
         <>
-          <GameFrame gameId={game.id} title={game.title} src={`/play/${game.id}/${game.entry}`} className="h-full w-full" />
+          <GameFrame gameId={game.id} title={game.title} src={game.url + game.entry} className="h-full w-full" />
           <button
             type="button"
             onClick={() => void frameRef.current?.requestFullscreen?.()}

@@ -1,0 +1,12 @@
+{
+  "id": "memory-match",
+  "title": "Memory Match",
+  "tagline": "Flip the cards and find the matching animal pairs!",
+  "howToPlay": "Tap a card to flip it over, then find its twin. Match all the pairs to win!",
+  "emoji": "🧩",
+  "color": "#2ec4b6",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "url": "https://85f22eda-bitgames-memory-match.ferdousbd.workers.dev/"
+}

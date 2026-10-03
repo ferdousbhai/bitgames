@@ -1,20 +1,22 @@
 import { CATEGORIES } from '#/lib/categories'
+import { VENDOR_BASE } from '#/lib/site'
 import pkg from '../../package.json' with { type: 'json' }
-import { BINARY_FILE_TYPES, MAX_FILE_BYTES, MAX_GAME_BYTES, MAX_TEXT_FILE_BYTES, TEXT_FILE_TYPES, mb } from './limits'
+import { MAX_FILES_PER_GAME, MAX_GAME_BYTES, mb } from './limits'
+import { MANIFEST_FILE, workerName } from './starter'
 
 /** The `three` version in package.json, which scripts/vendor.ts copies to /vendor/three/. Games always get the latest. */
 const THREE_VERSION = pkg.dependencies.three
-const THREE_BASE = '/vendor/three'
+const THREE_BASE = `${VENDOR_BASE}/three`
 
 /** Sent to the agent when it connects. Kept short; get_guide has the details. */
 export const INSTRUCTIONS = `BitGames is a game store for young children (about 4 to 8 years old).
-You build three.js browser games for it with the tools here, and an adult reviews every game before children see it.
-Call get_guide once before building. The workflow is: create_game, edit files with write_file, add Blender models with get_upload_url and curl, check the preview URL, then submit_for_review.`
+Games run on the creator's own Cloudflare account; BitGames lists them in one place, and an adult reviews every version before children see it.
+Call get_guide once before building. The workflow is: create_game, get_starter_project, build the game in public/, deploy it to Cloudflare, then submit_version with the version preview URL.`
 
 export const GUIDE = `# Making a BitGames game
 
 ## Who plays
-Children of about 4 to 8. Many can't read well yet. Every game is reviewed by an adult before it is published, and games that break these rules are rejected:
+Children of about 4 to 8. Many can't read well yet. Every version is reviewed by an adult before it is published, and games that break these rules are rejected:
 - Gentle and happy. No violence, weapons, blood, scary themes, or mean words.
 - No losing that feels bad: no "Game over" screens, no lives that run out. Slow down or let them try again.
 - Playable without reading: big pictures, emoji, sounds, and one-sentence instructions.
@@ -22,8 +24,14 @@ Children of about 4 to 8. Many can't read well yet. Every game is reviewed by an
 - No text input, chat, links out, purchases, ads, or collecting any information about the player.
 - Original or properly licensed art. If you use a CC-BY model, credit its creator in the game.
 
-## How a game is built
-A game is a folder of static files served from \`/preview/<token>/\` while it is a draft, and \`/play/<id>/\` once published. \`index.html\` is the entry point. create_game writes a working starter index.html; change it rather than starting from nothing.
+## Where a game lives
+Each game is a folder of static files deployed as a Worker on the creator's own Cloudflare account. BitGames keeps the catalog (title, tile, reviews) and plays the game in a frame on its pages.
+1. create_game registers the game and gives you its id.
+2. get_starter_project returns a project to write into an empty folder: \`cloudflare.config.ts\` and \`wrangler.config.ts\` (the Worker \`${workerName('<id>')}\`, static files from \`public/\`), \`bitgames.mjs\`, \`public/_headers\` and a working starter \`public/index.html\`. Change the starter rather than starting from nothing, and keep \`_headers\` as it is.
+3. Build the game in \`public/\`. \`index.html\` is the entry point.
+4. Deploy with \`npm install\` then \`npm run deploy\`. It runs \`node bitgames.mjs\`, which lists every file in \`public/\` with its SHA-256 in \`public/${MANIFEST_FILE}\`, then \`cf deploy\`. The creator logs in once with \`npx cf auth login\`.
+5. Every deploy is a new version with its own preview URL that never changes: \`https://<first 8 characters of the "Current Version ID">-${workerName('<id>')}.<account>.workers.dev/\`. Open it to check the game.
+6. submit_version with that URL. BitGames downloads every file, checks it against ${MANIFEST_FILE}, and sends the version to a reviewer. Once approved, exactly that version is what children play. To update a game, deploy again and submit the new version; the store keeps the current one until the update is approved. BitGames re-checks published versions and takes down a game whose files change.
 
 BitGames hosts three.js ${THREE_VERSION} with all of its addons (\`examples/jsm\`). Use exactly this import map:
 
@@ -37,22 +45,21 @@ BitGames hosts three.js ${THREE_VERSION} with all of its addons (\`examples/jsm\
 \`\`\`
 
 ## The sandbox
-Games run in a locked-down sandbox:
-- They can load only their own files (use relative paths like \`./models/bunny.glb\`) and the three.js copy under \`${THREE_BASE}/\`. Every other request is blocked, including CDNs such as jsDelivr or unpkg, so put any other library you need into the game's own files.
+On BitGames, games run in a locked-down frame:
+- They can load only their own files (use relative paths like \`./models/bunny.glb\`) and the libraries under \`${VENDOR_BASE}/\`. Every other request is blocked, including CDNs such as jsDelivr or unpkg, so put any other library you need into the game's own files.
 - There are no cookies, and \`localStorage\` throws. Keep all state in memory.
 - \`alert\`, \`prompt\`, popups, forms and links that open other pages don't work.
 - Start sounds with Web Audio inside a pointer or key event, because browsers block audio until the player interacts.
+- Use static files only: no Worker code, so a reviewed version can't behave differently later.
 
 ## Limits
-- Files: up to ${mb(MAX_FILE_BYTES)} each and ${mb(MAX_GAME_BYTES)} per game.
-- Text files (${TEXT_FILE_TYPES}, up to ${mb(MAX_TEXT_FILE_BYTES)}) are written with write_file.
-- Binary files (${BINARY_FILE_TYPES}) are uploaded with get_upload_url.
+- Up to ${MAX_FILES_PER_GAME} files and ${mb(MAX_GAME_BYTES)} per game (bundle code into a few modules).
 
 ## Playing together (multiplayer)
 Games can let up to 8 people in the same home play together, each on their own device. BitGames shows the lobby: one device taps "Start a family game" and gets a code made of three animals, and the others tap "Join" and pick the same animals. Game data then goes directly between the devices over WebRTC.
 
 \`\`\`js
-import { joinRoom } from '/vendor/bitgames/multiplayer-1.js'
+import { joinRoom } from '${VENDOR_BASE}/bitgames/multiplayer-1.js'
 
 const room = await joinRoom({ maxPlayers: 4 })   // shows the lobby; resolves when ready
 if (room.solo) { /* playing alone: add computer players */ }
@@ -67,18 +74,17 @@ room.send({ type: 'pos', x, y }, { fast: true }) // may drop; for frequent updat
 room.send(msg, { to: id })                       // one player only
 \`\`\`
 
-Messages are any JSON value. Keep fast messages small (under about 1 KB). The lobby needs the BitGames page around the game, so test multiplayer on the preview page (/try/...) in two browser windows; opened on its own, joinRoom returns a solo room.
+Messages are any JSON value. Keep fast messages small (under about 1 KB). The lobby needs the BitGames page around the game, so test multiplayer on the preview page (/try/...) in two browser windows after submitting; opened on its own, joinRoom returns a solo room.
 Set together=true in the game info for multiplayer games.
 
 ## Making 3D models in Blender
-If the Blender MCP server is connected, model things there, then export them as glTF binary:
+If the Blender MCP server is connected, model things there, then export them as glTF binary into the game's \`public/models/\` folder:
 1. Build or import the model. Keep it low-poly (under about 20k triangles per model), and use simple materials with a Principled BSDF and base colour or image textures.
 2. Apply transforms and put the model's origin where it should stand.
 3. Export only the model to a .glb file:
-   \`bpy.ops.export_scene.gltf(filepath="/tmp/bunny.glb", export_format="GLB", use_selection=True, export_apply=True)\`
+   \`bpy.ops.export_scene.gltf(filepath="<project>/public/models/bunny.glb", export_format="GLB", use_selection=True, export_apply=True)\`
    Read the valid options first if your Blender version rejects these.
-4. Call get_upload_url with the game id and a path like \`models/bunny.glb\`, then run the curl command it returns.
-5. Load the model in the game:
+4. Load the model in the game:
    \`\`\`js
    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
    const gltf = await new GLTFLoader().loadAsync('./models/bunny.glb')
@@ -89,10 +95,10 @@ If the Blender MCP server is connected, model things there, then export them as 
 Don't use Draco or meshopt compression: their decoders need extra permissions the sandbox doesn't give.
 
 ## Cover picture
-Add a cover so children can recognise the game: a 1280x720 screenshot of an exciting moment, uploaded as \`cover.jpg\`, \`cover.webp\` or \`cover.png\` in the game's top folder. Without one, the tile shows the game's emoji.
+Add a cover so children can recognise the game: a 1280x720 screenshot of an exciting moment, saved as \`public/cover.jpg\`, \`cover.webp\` or \`cover.png\`. Without one, the tile shows the game's emoji.
 
 ## Checking your work
-Open the preview URL (/try/<token>) in a browser, or have the user open it, and play the game. The raw files are under /preview/<token>/ if you need to load them directly. Query parameters on the preview page are passed to the game, so /try/<token>?debug reaches your game as location.search. Fix every console error. When it is fun and follows the rules above, call submit_for_review. Use list_my_games to see review results and notes. To update a published game, edit it and call submit_for_review again: the store keeps the current version until the update is approved.
+Open the version URL from the deploy, or have the user open it, and play the game; fix every console error. After submit_version, the preview page (/try/<token>, from list_my_games) plays the submitted version inside BitGames with the real sandbox and the multiplayer lobby. Query parameters on the preview page are passed to the game, so /try/<token>?debug reaches your game as location.search. Use list_my_games to see review results and notes.
 
 ## Categories
 ${CATEGORIES.map((c) => `- ${c.slug}: ${c.name} ${c.emoji}`).join('\n')}

@@ -1,0 +1,12 @@
+{
+  "id": "crash-racers",
+  "title": "Crash Racers",
+  "tagline": "Race up to 4 cars through Ubud, Helsinki and Montreal. Crashes welcome!",
+  "howToPlay": "Steer with the arrows (or ◀ ▶ on a tablet). The car drives itself in Easy gas mode. 🔧 fixes your car, 🔄 puts you back on the road.",
+  "emoji": "🏎️",
+  "color": "#ff595e",
+  "category": "race",
+  "together": true,
+  "featured": false,
+  "url": "https://48231a2e-bitgames-crash-racers.ferdousbd.workers.dev/"
+}
