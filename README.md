@@ -12,7 +12,7 @@ A web game store built on BitChat's technology. Games are made with Blender and 
 - `apps/signal`: small WebSocket server that introduces peers to each other (game traffic never passes through it)
 - `apps/lab`: browser page that measures latency, loss and throughput between devices
 - `reference/bitchat-ios`: the public-domain BitChat source we port from (see its PROVENANCE.md)
-- `tools/blender`: the Blender MCP add-on
+- `.mcp.json`: runs the [Blender MCP server](https://github.com/ahujasid/blender-mcp) for this project (install its Blender add-on from that repo)
 
 ## Running the store
 
