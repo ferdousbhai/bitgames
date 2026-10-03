@@ -5,6 +5,7 @@
  *
  * Kept free of Worker and path-alias imports so Node scripts can load it.
  */
+import { GAME_CSP_HEADER } from '../lib/site.ts'
 
 /** The `cf` and `wrangler` versions the project is known to deploy with. */
 export const DEPLOY_TOOLS = { cf: '1.0.0-beta.12', wrangler: '4.147.0' }
@@ -76,10 +77,12 @@ console.log(\`${MANIFEST_FILE}: \${Object.keys(files).length} files\`)
 `,
     '.gitignore': 'node_modules/\n.cloudflare/\n.wrangler/\npublic/bitgames.json\n',
     'public/_headers': `# BitGames plays the game in a sandboxed frame with no origin of its own, and
-# locks down what it may load. Allow-CSP-From lets the frame apply those rules
-# (without it, browsers refuse to show the game), and CORS lets the sandboxed
-# page load the game's own scripts and models.
+# locks down what it may load: only the game's own files and BitGames' shared
+# libraries. The Content-Security-Policy enforces that in every browser (BitGames
+# checks it when a version is submitted); Allow-CSP-From lets the frame apply the
+# same rules; CORS lets the sandboxed page load the game's own scripts and models.
 /*
+  Content-Security-Policy: ${GAME_CSP_HEADER}
   Allow-CSP-From: *
   Access-Control-Allow-Origin: *
   X-Content-Type-Options: nosniff

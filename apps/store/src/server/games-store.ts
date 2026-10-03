@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers'
 import { randomHex, sha256Hex } from './crypto'
 import { MAX_FILES_PER_GAME, MAX_GAMES_PER_CREATOR, MAX_GAME_BYTES, MAX_MANIFEST_BYTES, isFilePath, mb, parseVersionUrl } from './limits'
+import { GAME_CSP_HEADER } from '#/lib/site'
 import { MANIFEST_FILE } from './starter'
 
 /** Thrown for anything the creator can fix; the message is shown to their agent. */
@@ -204,6 +205,12 @@ export async function checkVersion(url: string): Promise<CheckedVersion> {
   let bytes = 0
   await inPool(entries, 6, async ([path, hash]) => {
     const response = await get(path)
+    // Pages must lock themselves down: every iPad browser ignores the frame's csp attribute.
+    if (path.endsWith('.html') && response.headers.get('content-security-policy') !== GAME_CSP_HEADER) {
+      throw new CreatorError(
+        `${path} is served without BitGames' Content-Security-Policy, so it isn't locked down on every device. Use the public/_headers file from get_starter_project unchanged.`,
+      )
+    }
     if (path === 'index.html') {
       if (!response.headers.has('allow-csp-from')) {
         throw new CreatorError('index.html is served without the Allow-CSP-From header, so BitGames cannot play it. Use the public/_headers file from get_starter_project.')

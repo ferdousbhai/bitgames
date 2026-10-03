@@ -28,3 +28,11 @@ export function gameCsp(gameOrigin: string, storeOrigin: string): string {
     "form-action 'none'",
   ].join('; ')
 }
+
+/**
+ * The same rules, sent by every game's own server as its Content-Security-Policy
+ * (from the starter project's public/_headers). Browsers that ignore the frame's
+ * `csp` attribute, such as every iPad browser (all WebKit), still enforce this.
+ * 'self' is the game's own site even inside the sandboxed frame.
+ */
+export const GAME_CSP_HEADER = gameCsp("'self'", PUBLIC_ORIGIN)
