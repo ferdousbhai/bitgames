@@ -72,14 +72,14 @@ function GrownUps() {
           Blender MCP server
         </a>
         . Each game runs on your own free Cloudflare account (the agent deploys it there with Cloudflare's{' '}
-        <code>cf</code> command), and BitGames lists it here. Every version stays private until an adult reviewer
-        approves it for the store.
+        <code>cf</code> command). As soon as the agent ships a game, you get a link to play it and share it with your
+        family. An adult reviewer then decides whether to list it in the store, so other families can find it too.
       </p>
       {key ? (
         <div className="mt-5 space-y-3">
           <p className="text-lg font-semibold">
             Here is your creator key. Copy it now, because it won't be shown again. Keep it private: anyone who has it
-            can submit and change your games on BitGames.
+            can ship and change your games on BitGames.
           </p>
           <CopyBox label="Add BitGames to Claude Code" value={command} />
           <p className="text-ink-soft">

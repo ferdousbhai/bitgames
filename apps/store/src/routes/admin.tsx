@@ -82,7 +82,11 @@ function AdminPage() {
     <div className="mt-6 space-y-10">
       {error && <p className="rounded-2xl bg-berry/15 px-4 py-2 text-berry">{error}</p>}
       <section>
-        <h1 className="mb-4 text-3xl font-bold">🛡️ Waiting for review ({waiting.length})</h1>
+        <h1 className="mb-1 text-3xl font-bold">🛡️ Waiting to be listed ({waiting.length})</h1>
+        <p className="mb-4 text-ink-soft">
+          These games already play at their creators' links. Approving lists them in the store so other families can
+          find them. Your Claude Code agent can review them too: ask it to “review the submitted games”.
+        </p>
         {waiting.length === 0 && <p className="text-lg text-ink-soft">Nothing to review. 🎉</p>}
         <div className="space-y-6">
           {waiting.map((game) => (
@@ -95,7 +99,7 @@ function AdminPage() {
                 className="mt-4 aspect-video w-full overflow-hidden rounded-2xl bg-ink"
               />
               <p className="mt-3 text-sm text-ink-soft">
-                Check: gentle and happy, playable without reading, no losing that feels bad, no links, text input or
+                Before listing, check: gentle and happy, playable without reading, no losing that feels bad, no links, text input or
                 data collection, licensed art credited.
               </p>
               <div className="mt-3 flex gap-3">
@@ -104,14 +108,14 @@ function AdminPage() {
                   className="toy rounded-full px-5 py-2 font-semibold text-white"
                   style={toy('var(--color-leaf)')}
                 >
-                  ✅ Approve
+                  ✅ List in the store
                 </button>
                 <button
                   onClick={() => void decide(game, 'reject')}
                   className="toy rounded-full px-5 py-2 font-semibold text-white"
                   style={toy('var(--color-berry)')}
                 >
-                  ↩️ Send back
+                  ↩️ Don't list
                 </button>
               </div>
             </article>

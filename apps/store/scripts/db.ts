@@ -119,13 +119,13 @@ async function seed() {
       now - index * 60_000, now, game.url, manifest, cover]
     await sql(
       `INSERT INTO games (id, title, tagline, how_to_play, emoji, color, category, together, featured, created_at, updated_at,
-                          live_url, live_manifest, cover, verified_at, status, live, preview_token)
-       VALUES (${values.map(literal).join(', ')}, ${now}, 'public', 1, lower(hex(randomblob(16))))
+                          live_url, live_manifest, cover, verified_at, status, live, preview_token, play_url)
+       VALUES (${values.map(literal).join(', ')}, ${now}, 'public', 1, lower(hex(randomblob(16))), ${literal(game.url)})
        ON CONFLICT (id) DO UPDATE SET title = excluded.title, tagline = excluded.tagline, how_to_play = excluded.how_to_play,
          emoji = excluded.emoji, color = excluded.color, category = excluded.category, together = excluded.together,
          featured = excluded.featured, updated_at = excluded.updated_at, live_url = excluded.live_url,
          live_manifest = excluded.live_manifest, cover = excluded.cover, verified_at = excluded.verified_at, live = 1, status = 'public',
-         review_note = NULL`,
+         play_url = excluded.play_url, review_note = NULL`,
     )
     seeded++
     console.log(`listed ${game.id} at ${game.url}`)

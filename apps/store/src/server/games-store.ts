@@ -11,11 +11,13 @@ export class CreatorError extends Error {}
 class UnreachableError extends CreatorError {}
 
 /**
- * The state of the creator's latest submission:
- * - draft: nothing waiting (never submitted, withdrawn, or details changed since)
- * - review: a version is waiting for an adult reviewer
- * - public: the store has the latest version
- * - rejected: sent back, or taken down; see review_note
+ * Shipping a version makes it playable right away at the creator's link
+ * (play_url). Review only decides whether it is listed in the store, so other
+ * families can find it. `status` is the state of that listing request:
+ * - draft: nothing waiting (never shipped, withdrawn, or details changed since)
+ * - review: the latest shipped version is waiting to be listed
+ * - public: the store lists the latest shipped version
+ * - rejected: not listed, or taken down; see review_note
  * Whether a game is in the store at all is the separate `live` flag.
  */
 export type GameStatus = 'draft' | 'review' | 'public' | 'rejected'
@@ -59,14 +61,15 @@ interface OwnedGameRow {
   pending_info: string | null
   live_url: string | null
   review_url: string | null
+  play_url: string | null
   updated_at: number
 }
 
-const OWNED_COLUMNS = 'id, title, live, status, review_note, preview_token, pending_info, live_url, review_url, updated_at'
+const OWNED_COLUMNS = 'id, title, live, status, review_note, preview_token, pending_info, live_url, review_url, play_url, updated_at'
 
 const COVER_FILES = ['cover.webp', 'cover.jpg', 'cover.png']
 
-/** The creator's private play page: their submitted version inside BitGames, so "play together" works too. */
+/** The creator's own link to their game: the latest shipped version inside BitGames, so "play together" works too. */
 export function previewUrl(origin: string, token: string) {
   return `${origin}/try/${token}`
 }
@@ -242,23 +245,27 @@ export async function checkVersion(url: string): Promise<CheckedVersion> {
   }
 }
 
-/** Checks a deployed version and puts it in the review queue (replacing any version already waiting). */
-export async function submitVersion(creatorId: string, gameId: string, url: string) {
-  await ownedGame(creatorId, gameId)
+/**
+ * Checks a deployed version and ships it: it plays at the creator's link right
+ * away, and waits for review to be listed in the store (replacing any version
+ * already waiting).
+ */
+export async function shipVersion(creatorId: string, gameId: string, url: string) {
+  const game = await ownedGame(creatorId, gameId)
   const version = await checkVersion(url)
   await env.DB.prepare(
-    `UPDATE games SET review_url = ?, review_manifest = ?, review_cover = ?, status = 'review', review_note = NULL, updated_at = ?
+    `UPDATE games SET play_url = ?, review_url = ?, review_manifest = ?, review_cover = ?, status = 'review', review_note = NULL, updated_at = ?
       WHERE id = ?`,
   )
-    .bind(version.url, version.manifest, version.cover, Date.now(), gameId)
+    .bind(version.url, version.url, version.manifest, version.cover, Date.now(), gameId)
     .run()
-  return version
+  return { ...version, previewToken: game.preview_token }
 }
 
-/** Withdraws the version waiting for review. */
+/** Withdraws the version waiting to be listed. It still plays at the creator's link. */
 export async function withdrawVersion(creatorId: string, gameId: string) {
   const game = await ownedGame(creatorId, gameId)
-  if (game.status !== 'review') throw new CreatorError('Nothing of this game is waiting for review.')
+  if (game.status !== 'review') throw new CreatorError('Nothing of this game is waiting to be listed.')
   await env.DB.prepare(`UPDATE games SET status = 'draft', review_url = NULL, review_manifest = NULL, review_cover = NULL, updated_at = ? WHERE id = ?`)
     .bind(Date.now(), gameId)
     .run()
@@ -292,7 +299,7 @@ export async function approveVersion(gameId: string) {
     .run()
 }
 
-/** Takes a game out of the store. The creator can submit a new version. */
+/** Takes a game out of the store; it still plays at the creator's link. The creator can ship a new version. */
 export async function unpublish(gameId: string, note: string | null) {
   await env.DB.prepare(`UPDATE games SET live = 0, status = 'rejected', review_note = ?, updated_at = ? WHERE id = ?`)
     .bind(note, Date.now(), gameId)
@@ -321,7 +328,7 @@ export async function recheckLive() {
     changed = error instanceof CreatorError && !(error instanceof UnreachableError)
   }
   if (changed) {
-    await unpublish(game.id, 'The files of the approved version changed, so the game was taken out of the store. Deploy and submit a new version.')
+    await unpublish(game.id, 'The files of the approved version changed, so the game was taken out of the store. Deploy and ship a new version.')
   }
   await env.DB.prepare('UPDATE games SET verified_at = ? WHERE id = ?').bind(Date.now(), game.id).run()
 }

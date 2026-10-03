@@ -22,6 +22,12 @@ html {
 
 body {
   min-height: 100dvh;
+  /* Edge to edge (viewport-fit=cover), but clear of rounded corners, notches and the home bar. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  /* Taps act at once, with no double-tap zoom getting in the way of little fingers. */
+  touch-action: manipulation;
   background:
     radial-gradient(circle at 10% 0%, #fff6d6 0, transparent 35%),
     radial-gradient(circle at 95% 10%, #ffe3ef 0, transparent 30%),

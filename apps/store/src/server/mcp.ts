@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import { CATEGORIES } from '#/lib/categories'
-import { CreatorError, createGame, deleteGame, listOwned, previewUrl, submitVersion, updateInfo, withdrawVersion } from './games-store'
+import { CreatorError, createGame, deleteGame, listOwned, previewUrl, shipVersion, updateInfo, withdrawVersion } from './games-store'
 import { GUIDE, INSTRUCTIONS, STARTER_GAME } from './guide'
 import { MAX_GAME_BYTES, mb } from './limits'
 import { starterProject, workerName } from './starter'
@@ -38,10 +38,10 @@ const info = {
 }
 
 const STATUS_HELP: Record<string, string> = {
-  draft: 'nothing waiting for review',
-  review: 'a version is waiting for an adult to review it',
-  public: 'the store has the latest version',
-  rejected: 'not approved or taken down; see the note, fix it and submit a new version',
+  draft: 'nothing waiting to be listed',
+  review: 'the latest version is waiting for an adult to review it for the store',
+  public: 'the store lists the latest version',
+  rejected: 'not listed in the store or taken down; see the note, fix it and ship a new version',
 }
 
 /** A fresh server per request: the endpoint is stateless and each call is authenticated on its own. */
@@ -62,7 +62,7 @@ export function createMcpServer(creatorId: string, origin: string) {
     'create_game',
     {
       title: 'Create a game',
-      description: 'Registers a new game in the BitGames catalog and returns its id and private preview URL. The game itself is deployed to your own Cloudflare account (see get_starter_project).',
+      description: "Registers a new game in BitGames and returns its id and the game's own link. The game itself is deployed to your own Cloudflare account (see get_starter_project).",
       inputSchema: info,
     },
     (args) =>
@@ -70,8 +70,8 @@ export function createMcpServer(creatorId: string, origin: string) {
         const game = await createGame(creatorId, args)
         return [
           `Created game "${game.id}".`,
-          `Preview (once a version is submitted): ${previewUrl(origin, game.previewToken)}`,
-          'Next: get_starter_project, build the game in public/, deploy it with `pnpm run deploy` (or npm), then submit_version with the version preview URL.',
+          `Play it here once a version is shipped: ${previewUrl(origin, game.previewToken)}`,
+          'Next: get_starter_project, build the game in public/, deploy it with `pnpm run deploy` (or npm), then ship_version with the version preview URL.',
         ].join('\n')
       }),
   )
@@ -92,7 +92,7 @@ export function createMcpServer(creatorId: string, origin: string) {
           `Write these files into an empty folder for "${id}", then install and deploy:`,
           '  npm install && npm run deploy',
           `It deploys the Worker "${workerName(id)}" to the Cloudflare account \`cf\` is logged in to (run \`npx cf auth login\` first if needed).`,
-          'Submit the version preview URL: https://<first 8 characters of the "Current Version ID">-<worker>.<account>.workers.dev/',
+          'Ship the version preview URL: https://<first 8 characters of the "Current Version ID">-<worker>.<account>.workers.dev/',
           '',
           ...Object.entries(files).map(([path, content]) => `--- ${path}\n${content}`),
         ].join('\n')
@@ -101,19 +101,22 @@ export function createMcpServer(creatorId: string, origin: string) {
   )
 
   server.registerTool(
-    'submit_version',
+    'ship_version',
     {
-      title: 'Submit a version for review',
-      description: `Checks a deployed version of the game and sends it to an adult reviewer. Pass the version preview URL from the deploy. Every file listed in bitgames.json is downloaded and checked (at most ${mb(MAX_GAME_BYTES)}). Once approved, that exact version appears in the store; a published game keeps its current version until then. Submitting again replaces the version waiting for review.`,
+      title: 'Ship a version',
+      description: `Checks a deployed version of the game and ships it: it plays right away at the game's own link (from list_my_games), which the creator can share with anyone. It also asks for the game to be listed in the store so other families can find it; an adult reviews that, and once approved that exact version is what the store shows (a listed game keeps its current store version until then). Pass the version preview URL from the deploy. Every file listed in bitgames.json is downloaded and checked (at most ${mb(MAX_GAME_BYTES)}). Shipping again replaces the version at the link and the one waiting for review.`,
       inputSchema: { gameId, url: z.string().describe('The version preview URL, e.g. "https://1a2b3c4d-bitgames-bunny-hop.alice.workers.dev/".') },
       outputSchema: { url: z.string(), files: z.number(), bytes: z.number() },
     },
     ({ gameId: id, url }) =>
       run(async () => {
         if (!(await env.SUBMIT_LIMITER.limit({ key: creatorId })).success) throw new CreatorError('Too many submissions. Wait a minute.')
-        const version = await submitVersion(creatorId, id, url)
+        const version = await shipVersion(creatorId, id, url)
         return {
-          text: `"${id}" is waiting for review: ${version.url} (${version.files} files, ${mb(version.bytes)}). Try it at the preview URL from list_my_games; check list_my_games later for the result.`,
+          text: [
+            `Shipped "${id}" (${version.files} files, ${mb(version.bytes)}). Play it now: ${previewUrl(origin, version.previewToken)}`,
+            'Anyone with that link can play it, together too. It is also waiting for an adult to review it for the store, so other families can find it; check list_my_games later for the result.',
+          ].join('\n'),
           structured: { url: version.url, files: version.files, bytes: version.bytes },
         }
       }),
@@ -123,14 +126,14 @@ export function createMcpServer(creatorId: string, origin: string) {
     'withdraw_version',
     {
       title: 'Withdraw from review',
-      description: 'Takes the version waiting for review back out of the queue.',
+      description: "Stops asking for the latest version to be listed in the store. It still plays at the game's own link.",
       inputSchema: { gameId },
       annotations: { destructiveHint: true },
     },
     ({ gameId: id }) =>
       run(async () => {
         await withdrawVersion(creatorId, id)
-        return `Withdrew the version of "${id}" that was waiting for review.`
+        return `"${id}" is no longer waiting to be listed. It still plays at its link.`
       }),
   )
 
@@ -138,13 +141,13 @@ export function createMcpServer(creatorId: string, origin: string) {
     'update_game_info',
     {
       title: 'Change game details',
-      description: 'Changes the title, tagline, how-to-play text, emoji, colour, category or together flag. For a game in the store, the change is reviewed with the next submitted version.',
+      description: 'Changes the title, tagline, how-to-play text, emoji, colour, category or together flag. For a game in the store, the change is reviewed with the next shipped version.',
       inputSchema: { gameId, ...Object.fromEntries(Object.entries(info).map(([k, v]) => [k, v.optional()])) },
     },
     ({ gameId: id, ...changes }) =>
       run(async () => {
         const result = await updateInfo(creatorId, id, changes)
-        return result === 'pending' ? `Saved. "${id}" is in the store, so the new details show once a version is approved (submit_version).` : `Updated "${id}".`
+        return result === 'pending' ? `Saved. "${id}" is in the store, so the new details show there once a version is approved (ship_version).` : `Updated "${id}".`
       }),
   )
 
@@ -152,7 +155,7 @@ export function createMcpServer(creatorId: string, origin: string) {
     'list_my_games',
     {
       title: 'List my games',
-      description: 'Lists your games with their status, preview URL, versions and any review note.',
+      description: "Lists your games with their link, whether they're in the store, versions and any review note.",
       annotations: { readOnlyHint: true },
     },
     () =>
@@ -163,9 +166,10 @@ export function createMcpServer(creatorId: string, origin: string) {
           .map((g) =>
             [
               `- ${g.id}: "${g.title}" — ${g.live ? 'in the store' : 'not in the store'}; ${STATUS_HELP[g.status] ?? g.status}`,
-              `  preview: ${previewUrl(origin, g.preview_token)}`,
-              g.live_url ? `  live version: ${g.live_url}` : null,
-              g.review_url ? `  version in review: ${g.review_url}` : null,
+              `  play link: ${previewUrl(origin, g.preview_token)}${g.play_url ? '' : ' (ship a version first)'}`,
+              g.play_url ? `  shipped version: ${g.play_url}` : null,
+              g.live_url ? `  version in the store: ${g.live_url}` : null,
+              g.review_url ? `  version waiting for review: ${g.review_url}` : null,
               g.live ? `  public page: ${origin}/game/${g.id}` : null,
               g.review_note ? `  review note: ${g.review_note}` : null,
             ]

@@ -30,7 +30,7 @@ export function Header() {
   useEffect(() => setQuery(currentQuery), [currentQuery])
 
   return (
-    <header className="sticky top-0 z-20 border-b-4 border-white/70 bg-sky/85 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b-4 border-white/70 bg-sky/85 backdrop-blur" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:gap-5">
         <Link to="/" className="shrink-0 rounded-2xl">
           <Logo />

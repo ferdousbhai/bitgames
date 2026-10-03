@@ -7,6 +7,13 @@
         "blender-mcp"
       ],
       "env": {}
+    },
+    "bitgames-review": {
+      "type": "http",
+      "url": "${BITGAMES_ORIGIN:-https://bitgames.store}/mcp/review",
+      "headers": {
+        "Authorization": "Bearer ${BITGAMES_ADMIN_KEY:-}"
+      }
     }
   }
 }

@@ -1,5 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
+import { useState } from 'react'
 import { GameFrame } from '#/components/GameFrame'
+import { PlayScreen, enterFullscreen } from '#/components/PlayScreen'
 import { Loading } from '#/components/GameShelf'
 import { isPreviewToken } from '#/server/limits'
 import { getPreview } from '#/server/preview'
@@ -21,6 +23,9 @@ export const Route = createFileRoute('/try/$token')({
 
 function TryPage() {
   const game = Route.useLoaderData()
+  const [fullscreen, setFullscreen] = useState(false)
+  // Query parameters on the preview page (e.g. ?debug) are passed to the game for testing.
+  const src = game.url ? game.url + game.entry + window.location.search : null
   return (
     <>
       <p className="mt-2 rounded-2xl bg-sun/30 px-4 py-2 text-center font-semibold">
@@ -30,14 +35,26 @@ function TryPage() {
         <span aria-hidden>{game.emoji}</span>
         {game.title}
       </h1>
-      {game.url ? (
-        <GameFrame
-          gameId={game.id}
-          title={game.title}
-          // Query parameters on the preview page (e.g. ?debug) are passed to the game for testing.
-          src={game.url + game.entry + window.location.search}
-          className="aspect-video w-full overflow-hidden rounded-[32px] border-4 border-white bg-ink"
-        />
+      {src ? (
+        <>
+          <GameFrame
+            gameId={game.id}
+            title={game.title}
+            src={src}
+            className="aspect-video w-full overflow-hidden rounded-[32px] border-4 border-white bg-ink"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              enterFullscreen()
+              setFullscreen(true)
+            }}
+            className="mt-3 rounded-full bg-cloud px-5 py-2 text-lg font-semibold"
+          >
+            ⛶ Try it full screen
+          </button>
+          {fullscreen && <PlayScreen gameId={game.id} title={game.title} src={src} onClose={() => setFullscreen(false)} />}
+        </>
       ) : (
         <p className="rounded-[32px] border-4 border-white bg-cloud p-8 text-center text-xl">
           Nothing to play yet: deploy the game and submit its version with submit_version. 🛠️

@@ -46,6 +46,8 @@ export default defineConfig({
 			ADMIN_LIMITER: perMinute("4104", 30),
 			LIKE_LIMITER: perMinute("4105", 30),
 			ROOM_LIMITER: perMinute("4106", 30),
+			// The reviewer's MCP endpoint: an agent reading a game's files makes many calls.
+			REVIEW_LIMITER: perMinute("4107", 120),
 		},
 	},
 });

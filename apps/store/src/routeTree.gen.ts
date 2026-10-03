@@ -16,6 +16,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as GameIdRouteImport } from './routes/game.$id'
+import { Route as McpReviewRouteImport } from './routes/mcp_.review'
 import { Route as TryTokenRouteImport } from './routes/try.$token'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +54,11 @@ const GameIdRoute = GameIdRouteImport.update({
   path: '/game/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpReviewRoute = McpReviewRouteImport.update({
+  id: '/mcp_/review',
+  path: '/mcp/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TryTokenRoute = TryTokenRouteImport.update({
   id: '/try/$token',
   path: '/try/$token',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/mcp/review': typeof McpReviewRoute
   '/try/$token': typeof TryTokenRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/mcp/review': typeof McpReviewRoute
   '/try/$token': typeof TryTokenRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/category/$slug': typeof CategorySlugRoute
   '/game/$id': typeof GameIdRoute
+  '/mcp_/review': typeof McpReviewRoute
   '/try/$token': typeof TryTokenRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/mcp/review'
     | '/try/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/mcp/review'
     | '/try/$token'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/category/$slug'
     | '/game/$id'
+    | '/mcp_/review'
     | '/try/$token'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   CategorySlugRoute: typeof CategorySlugRoute
   GameIdRoute: typeof GameIdRoute
+  McpReviewRoute: typeof McpReviewRoute
   TryTokenRoute: typeof TryTokenRoute
 }
 
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GameIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp_/review': {
+      id: '/mcp_/review'
+      path: '/mcp/review'
+      fullPath: '/mcp/review'
+      preLoaderRoute: typeof McpReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/try/$token': {
       id: '/try/$token'
       path: '/try/$token'
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   CategorySlugRoute: CategorySlugRoute,
   GameIdRoute: GameIdRoute,
+  McpReviewRoute: McpReviewRoute,
   TryTokenRoute: TryTokenRoute,
 }
 export const routeTree = rootRouteImport

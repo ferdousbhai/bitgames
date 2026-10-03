@@ -56,22 +56,24 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .player { background: rgba(255,255,255,0.18); border-radius: 18px; padding: 6px 14px; font-size: 20px; font-weight: 800; }
 
 #hud { position: fixed; inset: 0; pointer-events: none; }
-.hud-top { position: absolute; top: 10px; left: 10px; display: flex; gap: 8px; }
+.hud-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); display: flex; gap: 8px; }
 .pill { background: rgba(0,0,0,0.45); border-radius: 18px; padding: 6px 14px; font-size: 22px; font-weight: 900; }
 .pill.big { font-size: 34px; color: #ffbe0b; }
-#minimap { position: absolute; top: 10px; right: 10px; width: 140px; height: 140px; background: rgba(0,0,0,0.3); border-radius: 50%; }
-.speed { position: absolute; bottom: 150px; right: 18px; font-size: 44px; font-weight: 900; text-shadow: 0 3px 0 rgba(0,0,0,.4); }
+/* Below the top-right corner, which BitGames keeps for its ✕ button. */
+#minimap { position: absolute; top: calc(58px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); width: 140px; height: 140px; background: rgba(0,0,0,0.3); border-radius: 50%; }
+.speed { position: absolute; bottom: calc(150px + env(safe-area-inset-bottom)); right: calc(18px + env(safe-area-inset-right)); font-size: 44px; font-weight: 900; text-shadow: 0 3px 0 rgba(0,0,0,.4); }
 .speed small { font-size: 16px; margin-left: 4px; }
 .banner {
   position: absolute; top: 28%; left: 0; right: 0; text-align: center; font-size: clamp(40px, 9vw, 90px); font-weight: 900;
   color: #ffbe0b; text-shadow: 0 6px 0 #c0392b, 0 10px 30px rgba(0,0,0,.4); opacity: 0; transition: opacity .2s, transform .2s; transform: scale(.6);
 }
 .banner.show { opacity: 1; transform: scale(1); }
-.hud-buttons { position: absolute; top: 64px; left: 10px; display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+.hud-buttons { position: absolute; top: calc(64px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
 .hud-buttons button { width: 52px; height: 52px; border-radius: 16px; background: rgba(0,0,0,0.4); font-size: 26px; }
 .hud-buttons button.pressed { background: #ffbe0b; }
 
-.touch { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; padding: 16px; pointer-events: none; }
+.touch { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between;
+  padding: 16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); pointer-events: none; }
 .touch button {
   pointer-events: auto; width: min(22vw, 120px); height: min(22vw, 120px); border-radius: 28px; font-size: min(10vw, 52px);
   background: rgba(255,255,255,0.25); border: 4px solid rgba(255,255,255,0.6); box-shadow: 0 5px 0 rgba(0,0,0,.25);
@@ -80,7 +82,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .steer, .pedals { display: flex; gap: 14px; }
 .pedals .gas { background: rgba(138,201,38,0.45); }
 .pedals .brake { background: rgba(255,107,157,0.45); }
-@media (hover: hover) and (pointer: fine) { .touch { display: none; } .speed { bottom: 24px; } }
+/* Touch controls whenever there is a touchscreen, even with a mouse or trackpad attached. */
+@media not (any-pointer: coarse) { .touch { display: none; } .speed { bottom: calc(24px + env(safe-area-inset-bottom)); } }
 
 .countdown {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;

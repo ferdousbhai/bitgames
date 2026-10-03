@@ -77,6 +77,13 @@ room.send(msg, { to: id })                       // one player only
 Messages are any JSON value. Keep fast messages small (under about 1 KB). The lobby needs the BitGames page around the game, so test multiplayer on the preview page (/try/...) in two browser windows after submitting; opened on its own, joinRoom returns a solo room.
 Set together=true in the game info for multiplayer games.
 
+## Full screen
+Pressing Play on BitGames fills the whole screen (true fullscreen where the browser allows it), on tablets and phones in either orientation, and often on an iPad with only a touchscreen. Make the game fit that:
+- Fill the window: a canvas sized to \`innerWidth\` × \`innerHeight\`, re-sized on \`resize\` (which also fires when the device turns).
+- Use the viewport tag from the starter (\`viewport-fit=cover\`, no zooming), and keep HUD and buttons at least 16px from the edges with \`calc(16px + env(safe-area-inset-*))\`.
+- BitGames shows a ✕ button in the top-right corner. Keep about 60×60px there free of buttons and important HUD.
+- Show touch controls whenever there's a touchscreen (\`@media (any-pointer: coarse)\`), even if a mouse or keyboard is also connected. For held buttons (steer, gas), use touch events with \`preventDefault()\` (\`{ passive: false }\`): on an iPad, every browser is WebKit, and it cancels a held touch for its press-and-hold menu otherwise.
+
 ## Making 3D models in Blender
 If the Blender MCP server is connected, model things there, then export them as glTF binary into the game's \`public/models/\` folder:
 1. Build or import the model. Keep it low-poly (under about 20k triangles per model), and use simple materials with a Principled BSDF and base colour or image textures.
@@ -110,11 +117,11 @@ export const STARTER_GAME = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>My BitGames game</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe6ff; font-family: system-ui, sans-serif; touch-action: none; user-select: none; }
-  #hud { position: fixed; top: 16px; left: 0; right: 0; text-align: center; font-size: 40px; font-weight: 800; color: #fff; text-shadow: 0 3px 0 #6c63ff; pointer-events: none; }
+  #hud { position: fixed; top: calc(16px + env(safe-area-inset-top)); left: 0; right: 0; text-align: center; font-size: 40px; font-weight: 800; color: #fff; text-shadow: 0 3px 0 #6c63ff; pointer-events: none; }
 </style>
 <script type="importmap">
 { "imports": {

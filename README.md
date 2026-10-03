@@ -4,7 +4,7 @@ A web game store built on BitChat's technology. Games are made with Blender and 
 
 ## Layout
 
-- `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog and a Durable Object for multiplayer rooms). It hosts no game files: it pins each game's reviewed Worker version and plays it in a sandboxed frame
+- `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog and a Durable Object for multiplayer rooms). It hosts no game files: it plays each game's shipped Worker version in a sandboxed frame, and pins the reviewed version for the store
 - `packages/game-sdk`: the multiplayer SDK games load from `/vendor/bitgames/multiplayer-1.js`
 - `examples/<game>`: our own games, one per folder, each a standalone creator project deployed to its own Worker (Crash Racers, Bunny Hop, Balloon Pop, Star Catcher, Memory Match)
 - `packages/protocol`: TypeScript port of BitChat's binary packet format, padding, compression and fragmentation
@@ -42,7 +42,7 @@ Games load three.js and the multiplayer SDK from the production store's `/vendor
 
 - Each game is static files deployed as a Worker on its creator's Cloudflare account, from the project `get_starter_project` returns (`apps/store/src/server/starter.ts`).
 - `bitgames.mjs` lists every file with its SHA-256 in `public/bitgames.json` before each deploy.
-- The creator submits the deploy's version preview URL (`https://<version>-<worker>.<account>.workers.dev/`). BitGames downloads and checks every file, and on approval pins that exact version.
+- The creator ships the deploy's version preview URL (`https://<version>-<worker>.<account>.workers.dev/`). BitGames downloads and checks every file, and the game plays at once at its own link (`/try/<token>`). Review only decides whether it is listed in the store; on approval the store pins that exact version.
 - The store plays games in a frame with `sandbox` and a `csp` attribute, so a game can load only its own files and `/vendor/`. Games opt in with `Allow-CSP-From`; Chrome refuses to show a game that doesn't.
 - Version URLs never change, but an alias can look like a version whose id starts with a letter. A cron job re-checks those versions and takes down a game whose files changed.
 
@@ -57,8 +57,21 @@ Anyone can build games for the store with a local agent such as Claude Code:
    - registers the game with `create_game` and writes the project from `get_starter_project`;
    - builds the three.js game in `public/`, exporting Blender models as `.glb` into `public/models/`;
    - deploys with `npm run deploy` and checks the version URL;
-   - calls `submit_version` with that URL, then tries it on the private preview page.
-5. An adult approves it at `/admin` (sign in with `ADMIN_KEY`). Only then does it appear in the store. Published games can be taken down there too.
+   - calls `ship_version` with that URL and gets back the game's link, which plays it right away and can be shared with anyone.
+5. To list it in the store, where other families can find it, a reviewer approves it (see below). Until then it plays only at its link.
+
+## Reviewing games
+
+Review decides which shipped games are listed in the store. Ask Claude Code in this repo to "review the submitted games": the `review-games` skill (`.claude/skills/review-games/SKILL.md`) reads each waiting game's code, plays it with Claude in Chrome, and lists it or sends it back with a note for the creator. Anything it's unsure about is left for you.
+
+It uses the `bitgames-review` MCP server from `.mcp.json` (`/mcp/review`, code in `apps/store/src/server/review-mcp.ts`), which authenticates with the store's admin key. Start Claude Code with:
+
+```sh
+BITGAMES_ADMIN_KEY=... claude                                         # the live store
+BITGAMES_ADMIN_KEY=... BITGAMES_ORIGIN=http://localhost:3030 claude   # a local dev store
+```
+
+You can also review by hand at `/admin` (sign in with `ADMIN_KEY`). Listed games can be taken down there, or by asking the agent.
 
 The MCP endpoint is `/mcp` (streamable HTTP, stateless, `Authorization: Bearer bg_...`). Its code is in `apps/store/src/server/mcp.ts`.
 

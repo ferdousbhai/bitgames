@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { env } from 'cloudflare:workers'
 import { authenticate } from '#/server/creators'
 import { createMcpServer } from '#/server/mcp'
+import { serveMcp } from '#/server/mcp-http'
 
 const unauthorized = () =>
   Response.json(
@@ -17,15 +17,7 @@ async function handle(request: Request) {
     return Response.json({ error: 'Too many requests. Wait a minute and try again.' }, { status: 429 })
   }
 
-  // Stateless: no sessions, one server and transport per request, JSON responses.
-  const server = createMcpServer(creatorId, new URL(request.url).origin)
-  const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
-  await server.connect(transport)
-  try {
-    return await transport.handleRequest(request)
-  } finally {
-    await server.close()
-  }
+  return serveMcp(createMcpServer(creatorId, new URL(request.url).origin), request)
 }
 
 /** Remote MCP endpoint (streamable HTTP) that creators' local agents connect to. */

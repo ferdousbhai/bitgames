@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { and, eq, not, useLiveQuery } from '@tanstack/react-db'
-import { useEffect, useRef, useState } from 'react'
-import { GameFrame } from '#/components/GameFrame'
+import { useEffect, useState } from 'react'
+import { PlayScreen, enterFullscreen } from '#/components/PlayScreen'
 import { GameShelf, Loading } from '#/components/GameShelf'
 import { findCategory } from '#/lib/categories'
 import { countPlay, gamesCollection, likeGame } from '#/lib/collections'
@@ -81,54 +81,35 @@ function GamePage() {
   )
 }
 
+/** The game's cover with a big Play button; playing fills the whole screen. */
 function Player({ game }: { game: Game }) {
-  const [started, setStarted] = useState(false)
-  const frameRef = useRef<HTMLDivElement>(null)
+  const [playing, setPlaying] = useState(false)
 
   function start() {
-    setStarted(true)
+    enterFullscreen()
+    setPlaying(true)
     countPlay(game.id)
   }
 
   return (
-    <div
-      ref={frameRef}
-      className="relative aspect-video w-full overflow-hidden rounded-[32px] border-4 border-white bg-ink shadow-[0_10px_0_rgba(43,45,66,0.15)] [&:fullscreen]:rounded-none [&:fullscreen]:border-0"
-    >
-      {started ? (
-        <>
-          <GameFrame gameId={game.id} title={game.title} src={game.url + game.entry} className="h-full w-full" />
-          <button
-            type="button"
-            onClick={() => void frameRef.current?.requestFullscreen?.()}
-            className="absolute bottom-3 right-3 rounded-2xl bg-black/40 px-3 py-2 text-2xl text-white backdrop-blur hover:bg-black/60"
-            aria-label="Make it big"
-            title="Make it big"
-          >
-            ⛶
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          onClick={start}
-          className="group flex h-full w-full flex-col items-center justify-center gap-4 text-white"
-          style={{
-            background: game.cover
-              ? `radial-gradient(circle, transparent 30%, rgba(43,45,66,0.55)), center / cover no-repeat url("${game.cover}")`
-              : `radial-gradient(circle at 50% 40%, ${game.color}, color-mix(in oklab, ${game.color} 50%, #2b2d42))`,
-          }}
-        >
-          {!game.cover && <span aria-hidden className="float text-8xl drop-shadow-2xl sm:text-9xl">{game.emoji}</span>}
-          <span
-            className="toy rounded-full px-10 py-4 text-3xl font-bold text-ink"
-            style={toy('var(--color-sun)')}
-          >
-            ▶ Play
-          </span>
-        </button>
-      )}
-    </div>
+    <>
+      <button
+        type="button"
+        onClick={start}
+        className="group flex aspect-video w-full flex-col items-center justify-center gap-4 overflow-hidden rounded-[32px] border-4 border-white text-white shadow-[0_10px_0_rgba(43,45,66,0.15)]"
+        style={{
+          background: game.cover
+            ? `radial-gradient(circle, transparent 30%, rgba(43,45,66,0.55)), center / cover no-repeat url("${game.cover}")`
+            : `radial-gradient(circle at 50% 40%, ${game.color}, color-mix(in oklab, ${game.color} 50%, #2b2d42))`,
+        }}
+      >
+        {!game.cover && <span aria-hidden className="float text-8xl drop-shadow-2xl sm:text-9xl">{game.emoji}</span>}
+        <span className="toy rounded-full px-10 py-4 text-3xl font-bold text-ink" style={toy('var(--color-sun)')}>
+          ▶ Play
+        </span>
+      </button>
+      {playing && <PlayScreen gameId={game.id} title={game.title} src={game.url + game.entry} onClose={() => setPlaying(false)} />}
+    </>
   )
 }
 
