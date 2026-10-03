@@ -6,9 +6,9 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3030 --strictPort",
-    "build": "vite build",
-    "deploy": "cf deploy",
+    "dev": "node scripts/vendor.ts && vite dev --port 3030 --strictPort",
+    "build": "node scripts/vendor.ts && vite build",
+    "deploy": "node scripts/vendor.ts && cf deploy",
     "cf-typegen": "cf workers types",
     "typecheck": "cf workers types >/dev/null && tsc --noEmit",
     "db:migrate": "node scripts/db.ts migrate",

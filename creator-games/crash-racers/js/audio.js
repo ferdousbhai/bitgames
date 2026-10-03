@@ -66,6 +66,11 @@ export class Audio {
     this.engine.gain.gain.setTargetAtTime(0.05 + throttle * 0.05, t, 0.1)
   }
 
+  /** Off the track (menus, lobby): fade the engine out until the next race. */
+  idleEngine() {
+    if (this.engine) this.engine.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.2)
+  }
+
   burst({ freq, q = 1, gain = 0.5, decay = 0.4, type = 'bandpass', delay = 0 }) {
     if (!this.ready) return
     const ctx = this.ctx

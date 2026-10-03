@@ -844,7 +844,7 @@ function frame(now) {
       const cars = [...game.cars.values()].filter((c) => !c.remote).map((c) => ({ id: c.id, ...c.snapshot() }))
       send({ t: 's', cars }, { fast: true })
     }
-  }
+  } else audio.idleEngine()
   effects.update(realDt, camera)
   if (game.state === 'race') measureQuality(realDt)
   renderer.render(scene, camera)
