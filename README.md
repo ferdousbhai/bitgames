@@ -86,3 +86,7 @@ Open the lab URL on two or more devices on the same Wi-Fi, use the same room nam
 pnpm test
 pnpm typecheck
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE). Third-party code keeps its own license: `reference/bitchat-ios` is public domain (Unlicense) and `examples/crash-racers/public/lib/cannon-es.js` is MIT (see the license file next to it).

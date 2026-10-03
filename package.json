@@ -8,5 +8,6 @@
     "signal": "pnpm --filter @bitgames/signal start",
     "lab": "pnpm --filter @bitgames/lab dev"
   },
-  "packageManager": "pnpm@11.28.2"
+  "packageManager": "pnpm@11.28.2",
+  "license": "MIT"
 }
