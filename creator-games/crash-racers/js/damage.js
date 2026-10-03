@@ -40,7 +40,7 @@ const crackTexture = canvasTexture(256, 256, (g) => {
       g.stroke()
     }
   }
-}, { repeat: [1, 1] })
+})
 
 /** How each named part reacts once loose. */
 const PART_KINDS = {
@@ -104,7 +104,7 @@ export class Damage {
           name, kind, object: child, health: 1, state: 'ok',
           rest: { position: child.position.clone(), quaternion: child.quaternion.clone() },
           center, radius: box.getSize(new THREE.Vector3()).length() / 2,
-          swing: 0, swingVel: 0, side: name.endsWith('_l') ? -1 : 1, body: null,
+          swing: 0, swingVel: 0, angle: 0, side: name.endsWith('_l') ? -1 : 1, body: null,
         })
       } else if (name.startsWith('glass')) {
         this.glass.push({ ...piece(child, rootInv), state: 'ok' })
@@ -173,7 +173,7 @@ export class Damage {
           m.emissiveIntensity = 0
           m.color.multiplyScalar(0.35)
         })
-        this.env.audio?.glass(0.4)
+        this.env.audio.glass(0.4)
       }
     }
     this.car.wheels.forEach((wheel, i) => {
@@ -242,20 +242,25 @@ export class Damage {
       part.swing = (r() < 0.5 ? -1 : 1) * (0.12 + r() * 0.15)
       o.position.y -= 0.06
     } else if (part.kind === 'mirror') part.swing = part.side * 0.9
-    this.env.audio?.clunk(0.5)
+    this.env.audio.clunk(0.5)
+  }
+
+  /** World-space direction pointing out of the car, away from a hit coming from `dir`. */
+  outward(dir) {
+    return new THREE.Vector3().copy(dir).negate().transformDirection(this.root.matrixWorld)
   }
 
   detach(part, dir, speed, r) {
     if (part.state === 'gone') return
     part.state = 'gone'
     const { velocity, angularVelocity } = this.car.body
-    const pushOut = new THREE.Vector3().copy(dir).negate().transformDirection(this.root.matrixWorld)
+    const pushOut = this.outward(dir)
     const vel = new THREE.Vector3(velocity.x, velocity.y, velocity.z)
       .multiplyScalar(0.8)
       .addScaledVector(pushOut, 1.5 + speed * 0.12)
       .add(new THREE.Vector3((r() - 0.5) * 3, 1.5 + r() * 3, (r() - 0.5) * 3))
     part.body = this.env.debris.throw(part.object, vel, new THREE.Vector3(angularVelocity.x + (r() - 0.5) * 12, (r() - 0.5) * 12, (r() - 0.5) * 12))
-    this.env.audio?.clunk(1)
+    this.env.audio.clunk(1)
   }
 
   detachWheel(index, dir, speed) {
@@ -264,16 +269,16 @@ export class Damage {
     wheel.state = 'gone'
     this.car.dropWheel(index)
     const { velocity } = this.car.body
-    const pushOut = new THREE.Vector3().copy(dir).negate().transformDirection(this.root.matrixWorld)
+    const pushOut = this.outward(dir)
     const vel = new THREE.Vector3(velocity.x, velocity.y, velocity.z).addScaledVector(pushOut, 2 + speed * 0.15).add(new THREE.Vector3(0, 2, 0))
     wheel.debris = this.env.debris.throw(wheel.object, vel, new THREE.Vector3((Math.random() - 0.5) * 20, 0, 0), { wheel: wheel.radius })
-    this.env.audio?.clunk(1)
+    this.env.audio.clunk(1)
   }
 
   crackGlass(g) {
     g.state = 'cracked'
     g.meshes.forEach((m) => (m.material = this.crackedGlass))
-    this.env.audio?.glass(0.5)
+    this.env.audio.glass(0.5)
   }
 
   shatterGlass(g, dir) {
@@ -281,8 +286,8 @@ export class Damage {
     g.object.visible = false
     const world = g.center.clone().applyMatrix4(this.root.matrixWorld)
     const v = this.car.body.velocity
-    this.env.effects.shatter(world, new THREE.Vector3(v.x, v.y, v.z).multiplyScalar(0.7).add(new THREE.Vector3().copy(dir).negate().transformDirection(this.root.matrixWorld).multiplyScalar(2)))
-    this.env.audio?.glass(1)
+    this.env.effects.shatter(world, new THREE.Vector3(v.x, v.y, v.z).multiplyScalar(0.7).add(this.outward(dir).multiplyScalar(2)))
+    this.env.audio.glass(1)
   }
 
   /** Loose parts swing on their hinges; damaged engines smoke. */
@@ -292,9 +297,9 @@ export class Damage {
       const o = part.object
       // A spring toward the loose angle, kicked around by the car's acceleration.
       const kick = part.kind === 'door' ? -accel.z * 0.03 * part.side : part.kind === 'hood' ? accel.z * 0.01 : accel.x * 0.02
-      part.swingVel += ((part.swing - (part.angle ?? 0)) * 30 + kick * 20) * dt
+      part.swingVel += ((part.swing - part.angle) * 30 + kick * 20) * dt
       part.swingVel *= 1 - Math.min(1, dt * 4)
-      part.angle = (part.angle ?? 0) + part.swingVel * dt
+      part.angle = part.angle + part.swingVel * dt
       o.quaternion.copy(part.rest.quaternion)
       if (part.kind === 'door') o.rotateY(part.angle)
       else if (part.kind === 'hood') o.rotateX(part.angle)

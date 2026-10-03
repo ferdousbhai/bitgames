@@ -12,7 +12,7 @@
  * WebRTC, wrapped in BitChat packets.
  */
 import { WebRTCTransport, type Signaling, type SignalData, type SignalingEvents } from "@bitgames/webrtc";
-import { BRIDGE, MAX_ROOM_PLAYERS, isBridgeMessage, type GameToPage, type PageToGame, type Unbridged } from "./bridge.js";
+import { BRIDGE, isBridgeMessage, roomSize, type GameToPage, type PageToGame, type Unbridged } from "./bridge.js";
 
 /** BitChat packet type for game messages (outside BitChat's own range). */
 const GAME_MESSAGE = 0x70;
@@ -166,6 +166,6 @@ export async function joinRoom(options: { maxPlayers?: number } = {}): Promise<R
         resolve(new Room(m.selfId, m.isHost, m.code, transport));
       }
     });
-    post({ type: "open", maxPlayers: Math.min(MAX_ROOM_PLAYERS, Math.max(2, options.maxPlayers ?? 4)) });
+    post({ type: "open", maxPlayers: roomSize(options.maxPlayers, 4) });
   });
 }

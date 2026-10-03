@@ -3,6 +3,10 @@ import * as CANNON from 'cannon'
 import { Damage } from './damage.js'
 import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, clamp, damp, harmless } from './util.js'
 
+// Scratch objects for snapshot playback, which runs every physics step.
+const _pos = new THREE.Vector3(), _pos2 = new THREE.Vector3()
+const _quat = new THREE.Quaternion(), _quat2 = new THREE.Quaternion()
+
 export const CAR_MODELS = {
   rocket: { name: 'Rocket', emoji: '🏎️', power: 1.12, grip: 1.1 },
   sunny: { name: 'Sunny Taxi', emoji: '🚕', power: 1.0, grip: 1.0 },
@@ -272,7 +276,7 @@ export class Car {
     this.env.effects.sparkBurst(world, normal.negate(), effective)
     this.env.effects.addShake(this.isPlayer ? Math.min(1, effective / 25) : 0)
     this.env.audio.crash(effective, this.isPlayer)
-    this.onHit?.({ local, dir, speed: effective, seed, world, otherCar })
+    this.onHit?.({ local, dir, speed: effective, seed, otherCar })
   }
 
   /** Two seconds of extra push. Returns false while recharging. */
@@ -334,8 +338,10 @@ export class Car {
     }
   }
 
-  pushSnapshot(s, time = performance.now()) {
-    this.snapshots.push({ ...s, time })
+  /** `s` is a freshly decoded message, so it is stamped in place. */
+  pushSnapshot(s) {
+    s.time = performance.now()
+    this.snapshots.push(s)
     if (this.snapshots.length > 30) this.snapshots.shift()
   }
 
@@ -354,11 +360,11 @@ export class Car {
     }
     const span = b.time - a.time
     const t = span > 0 ? clamp((renderTime - a.time) / span, 0, 1.5) : 1
-    const pos = new THREE.Vector3(...a.p).lerp(new THREE.Vector3(...b.p), t)
-    const q = new THREE.Quaternion(...a.q).slerp(new THREE.Quaternion(...b.q), Math.min(t, 1))
+    const pos = _pos.fromArray(a.p).lerp(_pos2.fromArray(b.p), t)
+    const q = _quat.fromArray(a.q).slerp(_quat2.fromArray(b.q), Math.min(t, 1))
     const body = this.body
     // Kinematic bodies need a velocity so collisions with local cars push properly.
-    body.velocity.set(...b.v)
+    body.velocity.set(b.v[0], b.v[1], b.v[2])
     body.position.set(pos.x, pos.y, pos.z)
     body.quaternion.set(q.x, q.y, q.z, q.w)
     this.steerAngle = b.s

@@ -64,7 +64,7 @@ const info = {
   tagline: z.string().min(5).max(90).describe('One simple sentence, e.g. "Help the bunny hop over logs!"'),
   howToPlay: z.string().min(5).max(200).describe('One or two short sentences explaining the controls.'),
   emoji: z.string().min(1).max(16).describe('One emoji for the game tile, e.g. "🐰".'),
-  color: z.string().describe('Tile colour as hex, e.g. "#8ac926". Bright, cheerful colours work best.'),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color must be a hex colour like "#ff6b9d"').describe('Tile colour as hex, e.g. "#8ac926". Bright, cheerful colours work best.'),
   category: z.enum(CATEGORIES.map((c) => c.slug) as [string, ...string[]]).describe('Which shelf the game appears on.'),
   together: z.boolean().describe('True only if two or more people can play at the same time.'),
 }
@@ -138,7 +138,7 @@ export function createMcpServer(creatorId: string, origin: string) {
             [
               `- ${g.id}: "${g.title}" — ${g.live ? 'in the store' : 'not in the store'}; draft: ${STATUS_HELP[g.status] ?? g.status}`,
               `  preview: ${previewUrl(origin, g.preview_token)}`,
-              g.status === 'public' ? `  public page: ${origin}/game/${g.id}` : null,
+              g.live ? `  public page: ${origin}/game/${g.id}` : null,
               g.review_note ? `  review note: ${g.review_note}` : null,
             ]
               .filter(Boolean)
@@ -154,12 +154,14 @@ export function createMcpServer(creatorId: string, origin: string) {
       title: 'List game files',
       description: 'Lists the files in a game and their sizes.',
       inputSchema: { gameId },
+      outputSchema: { files: z.array(z.object({ path: z.string(), bytes: z.number() })) },
       annotations: { readOnlyHint: true },
     },
     ({ gameId: id }) =>
       run(async () => {
         const files = await listFiles(creatorId, id)
-        return files.length ? files.map((f) => `${f.path}  ${f.bytes} bytes`).join('\n') : 'No files yet.'
+        const text = files.length ? files.map((f) => `${f.path}  ${f.bytes} bytes`).join('\n') : 'No files yet.'
+        return { text, structured: { files } }
       }),
   )
 
@@ -180,14 +182,16 @@ export function createMcpServer(creatorId: string, origin: string) {
       title: 'Write a game file',
       description: `Creates or replaces a text file (${TEXT_FILE_TYPES}, up to ${mb(MAX_TEXT_FILE_BYTES)}) in a game's draft. Binary files go through get_upload_url.`,
       inputSchema: { gameId, path: filePath, content: z.string().describe('The full file contents.') },
+      outputSchema: { bytes: z.number(), blockedUrls: z.array(z.string()).describe('Outside URLs the game tries to load, which will be blocked.') },
     },
     ({ gameId: id, path, content }) =>
       run(async () => {
         const bytes = await writeTextFile(creatorId, id, path, content)
-        const external = loadedUrls(content)
-        return external.length
-          ? `Wrote ${path} (${bytes} bytes).\nWarning: games can't load anything from other websites, so these URLs will be blocked: ${external.join(', ')}. Use the /vendor/ three.js from the guide, and put other files in the game itself.`
+        const blockedUrls = loadedUrls(content)
+        const text = blockedUrls.length
+          ? `Wrote ${path} (${bytes} bytes).\nWarning: games can't load anything from other websites, so these URLs will be blocked: ${blockedUrls.join(', ')}. Use the /vendor/ three.js from the guide, and put other files in the game itself.`
           : `Wrote ${path} (${bytes} bytes).`
+        return { text, structured: { bytes, blockedUrls } }
       }),
   )
 

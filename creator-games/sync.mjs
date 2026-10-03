@@ -38,9 +38,8 @@ const call = async (name, args) => {
 
 async function send(file, path) {
   if (TEXT_EXTENSIONS.has(extensionOf(path))) {
-    const r = await call('write_file', { gameId, path, content: readFileSync(file, 'utf8') })
-    const text = r.content.map((c) => c.text).join('\n')
-    if (text.includes('Warning')) console.log(text)
+    const { structuredContent } = await call('write_file', { gameId, path, content: readFileSync(file, 'utf8') })
+    if (structuredContent.blockedUrls.length) console.log(`${path} loads blocked URLs: ${structuredContent.blockedUrls.join(', ')}`)
   } else {
     const { structuredContent } = await call('get_upload_url', { gameId, path })
     await promisify(execFile)('curl', ['-fsS', '-T', file, structuredContent.url])
@@ -52,26 +51,34 @@ const files = localFiles(dir).map((file) => {
   return { file, path: relative(dir, file), stamp: `${size}:${mtimeMs}` }
 })
 const changed = files.filter((f) => cache[f.path] !== f.stamp)
-for (let i = 0; i < changed.length; i += CONCURRENCY) {
-  await Promise.all(
-    changed.slice(i, i + CONCURRENCY).map(async ({ file, path, stamp }) => {
-      await send(file, path)
-      cache[path] = stamp
-      writeFileSync(cacheFile, JSON.stringify(cache, null, 1))
-      console.log(`sent ${path}`)
-    }),
-  )
+
+/** Runs `fn` over `items` with at most CONCURRENCY in flight. */
+async function inPool(items, fn) {
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) await fn(items[next++])
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, worker))
+}
+
+try {
+  await inPool(changed, async ({ file, path, stamp }) => {
+    await send(file, path)
+    cache[path] = stamp
+    console.log(`sent ${path}`)
+  })
+} finally {
+  writeFileSync(cacheFile, JSON.stringify(cache, null, 1))
 }
 
 // Files removed locally are removed from the game too.
 const local = new Set(files.map((f) => f.path))
-const listing = (await call('list_files', { gameId })).content.map((c) => c.text).join('\n')
-const remote = listing.split('\n').map((line) => line.split(/\s{2,}/)[0]).filter((p) => p && p !== 'No files yet.')
-for (const path of remote.filter((p) => !local.has(p))) {
+const { structuredContent } = await call('list_files', { gameId })
+await inPool(structuredContent.files.filter((f) => !local.has(f.path)), async ({ path }) => {
   await call('delete_file', { gameId, path })
   delete cache[path]
   console.log(`deleted ${path}`)
-}
+})
 writeFileSync(cacheFile, JSON.stringify(cache, null, 1))
 console.log(changed.length ? `synced ${changed.length} file(s)` : 'nothing changed')
 await client.close()

@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
-export const lerp = (a, b, t) => a + (b - a) * t
+const lerp = (a, b, t) => a + (b - a) * t
 export const damp = (a, b, rate, dt) => lerp(a, b, smoothing(rate, dt))
 
 /** Small deterministic random generator, so every device builds the same city. */

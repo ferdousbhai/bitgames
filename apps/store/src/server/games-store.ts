@@ -1,5 +1,4 @@
 import { env } from 'cloudflare:workers'
-import { CATEGORIES } from '#/lib/categories'
 import { randomHex, randomToken, sha256Hex } from './crypto'
 import {
   CONTENT_TYPES,
@@ -13,6 +12,7 @@ import {
   checkPath,
   extensionOf,
   liveKey,
+  mb,
   objectKey,
 } from './limits'
 import { STARTER_GAME } from './guide'
@@ -85,15 +85,6 @@ function slugify(title: string) {
   )
 }
 
-function validateInfo(info: Partial<GameInfo>) {
-  if (info.category !== undefined && !CATEGORIES.some((c) => c.slug === info.category)) {
-    throw new CreatorError(`category must be one of: ${CATEGORIES.map((c) => c.slug).join(', ')}`)
-  }
-  if (info.color !== undefined && !/^#[0-9a-fA-F]{6}$/.test(info.color)) {
-    throw new CreatorError('color must be a hex colour like "#ff6b9d"')
-  }
-}
-
 function assertPath(path: string) {
   const error = checkPath(path)
   if (error) throw new CreatorError(error)
@@ -117,11 +108,19 @@ async function editableGame(creatorId: string, gameId: string) {
 
 /**
  * The one place a draft change is recorded: bumps updated_at, optionally stores
- * the draft's new size, and sends a published game's draft back to "changed".
+ * the draft's new size or details, and sends a published game's draft back to "changed".
  */
-export async function markDraftChanged(gameId: string, { bytes, pendingInfo }: { bytes?: number; pendingInfo?: string } = {}) {
+export async function markDraftChanged(
+  gameId: string,
+  { bytes, pendingInfo, info }: { bytes?: number; pendingInfo?: string; info?: Partial<GameInfo> } = {},
+) {
   const sets = [`updated_at = ?`, `status = CASE WHEN status = 'public' THEN 'draft' ELSE status END`]
   const values: (string | number)[] = [Date.now()]
+  if (info) {
+    const changes = infoSets(info)
+    sets.push(...changes.sets)
+    values.push(...changes.values)
+  }
   if (bytes !== undefined) {
     sets.push('bytes = ?')
     values.push(bytes)
@@ -134,7 +133,6 @@ export async function markDraftChanged(gameId: string, { bytes, pendingInfo }: {
 }
 
 export async function createGame(creatorId: string, info: GameInfo) {
-  validateInfo(info)
   const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM games WHERE creator_id = ?')
     .bind(creatorId)
     .first<{ n: number }>()
@@ -166,7 +164,6 @@ export async function createGame(creatorId: string, info: GameInfo) {
 }
 
 export async function updateInfo(creatorId: string, gameId: string, info: Partial<GameInfo>) {
-  validateInfo(info)
   const game = await editableGame(creatorId, gameId)
   if (game.live) {
     // Children keep seeing the reviewed details until these are approved too.
@@ -174,11 +171,7 @@ export async function updateInfo(creatorId: string, gameId: string, info: Partia
     await markDraftChanged(gameId, { pendingInfo: JSON.stringify(pending) })
     return 'pending'
   }
-  const { sets, values } = infoSets(info)
-  if (sets.length === 0) return 'applied'
-  await env.DB.prepare(`UPDATE games SET ${sets.join(', ')}, updated_at = ? WHERE id = ?`)
-    .bind(...values, Date.now(), gameId)
-    .run()
+  await markDraftChanged(gameId, { info })
   return 'applied'
 }
 
@@ -211,23 +204,25 @@ async function listObjects(prefix: string) {
  * their limits, and returns the game's new total size.
  */
 export async function checkGameQuota(gameId: string, path: string, bytes: number): Promise<number> {
-  const others = (await listObjects(objectKey(gameId, ''))).filter((o) => o.path !== path)
+  const [objects, row] = await Promise.all([
+    listObjects(objectKey(gameId, '')),
+    env.DB.prepare(
+      `SELECT COALESCE(SUM(bytes), 0) AS other FROM games
+        WHERE creator_id = (SELECT creator_id FROM games WHERE id = ?) AND id != ?`,
+    )
+      .bind(gameId, gameId)
+      .first<{ other: number }>(),
+  ])
+  const others = objects.filter((o) => o.path !== path)
   if (others.length + 1 > MAX_FILES_PER_GAME) throw new CreatorError(`A game can have at most ${MAX_FILES_PER_GAME} files.`)
   const gameTotal = others.reduce((sum, o) => sum + o.bytes, 0) + bytes
-  const mb = (n: number) => (n / 1024 / 1024).toFixed(1)
   if (gameTotal > MAX_GAME_BYTES) {
-    throw new CreatorError(`This would make the game ${mb(gameTotal)} MB. A game can be at most ${MAX_GAME_BYTES / 1024 / 1024} MB.`)
+    throw new CreatorError(`This would make the game ${mb(gameTotal)}. A game can be at most ${mb(MAX_GAME_BYTES)}.`)
   }
-  const row = await env.DB.prepare(
-    `SELECT COALESCE(SUM(bytes), 0) AS other FROM games
-      WHERE creator_id = (SELECT creator_id FROM games WHERE id = ?) AND id != ?`,
-  )
-    .bind(gameId, gameId)
-    .first<{ other: number }>()
   const creatorTotal = (row?.other ?? 0) + gameTotal
   if (creatorTotal > MAX_CREATOR_BYTES) {
     throw new CreatorError(
-      `This would bring all your games to ${mb(creatorTotal)} MB. Each creator can store up to ${MAX_CREATOR_BYTES / 1024 / 1024} MB; delete files or games you don't need.`,
+      `This would bring all your games to ${mb(creatorTotal)}. Each creator can store up to ${mb(MAX_CREATOR_BYTES)}; delete files or games you don't need.`,
     )
   }
   return gameTotal
@@ -239,8 +234,12 @@ async function deletePrefix(prefix: string) {
 }
 
 /** Runs `fn` over `items` with at most `limit` in flight. */
-async function inBatches<T>(items: T[], limit: number, fn: (item: T) => Promise<unknown>) {
-  for (let i = 0; i < items.length; i += limit) await Promise.all(items.slice(i, i + limit).map(fn))
+async function inPool<T>(items: T[], limit: number, fn: (item: T) => Promise<unknown>) {
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) await fn(items[next++])
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
 }
 
 /**
@@ -253,7 +252,7 @@ export async function publishDraft(gameId: string) {
     listObjects(liveKey(gameId, '')),
     env.DB.prepare('SELECT pending_info FROM games WHERE id = ?').bind(gameId).first<{ pending_info: string | null }>(),
   ])
-  await inBatches(draft, 8, async ({ path }) => {
+  await inPool(draft, 8, async ({ path }) => {
     const object = await env.GAMES.get(objectKey(gameId, path))
     // Buffered: R2 needs a known length, and files are capped at 10 MB.
     if (object) await env.GAMES.put(liveKey(gameId, path), await object.arrayBuffer(), { httpMetadata: object.httpMetadata })
@@ -287,7 +286,7 @@ export async function writeTextFile(creatorId: string, gameId: string, path: str
   }
   const bytes = new TextEncoder().encode(content)
   if (bytes.length > MAX_TEXT_FILE_BYTES) {
-    throw new CreatorError(`Text files can be at most ${MAX_TEXT_FILE_BYTES / 1024} KB. Split the code into modules.`)
+    throw new CreatorError(`Text files can be at most ${mb(MAX_TEXT_FILE_BYTES)}. Split the code into modules.`)
   }
   await editableGame(creatorId, gameId)
   const total = await checkGameQuota(gameId, path, bytes.length)

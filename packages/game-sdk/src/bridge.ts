@@ -31,7 +31,12 @@ export function newPeerId(): string {
 }
 
 /** The most players a room can hold, whatever a game asks for. */
-export const MAX_ROOM_PLAYERS = 8;
+const MAX_ROOM_PLAYERS = 8;
+
+/** A game's requested room size, kept between 2 and the platform limit. */
+export function roomSize(requested: number | undefined, fallback = MAX_ROOM_PLAYERS): number {
+  return Math.min(MAX_ROOM_PLAYERS, Math.max(2, requested || fallback));
+}
 
 export function isBridgeMessage<T extends { bridge: string }>(data: unknown): data is T {
   return typeof data === "object" && data !== null && (data as { bridge?: unknown }).bridge === BRIDGE;

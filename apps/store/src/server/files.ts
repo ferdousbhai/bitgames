@@ -36,11 +36,10 @@ interface ServeOptions {
   /** Serve the reviewed live copy instead of the draft. */
   live?: boolean
   cache: string
-  noindex?: boolean
 }
 
 /** Serves one file of a game from R2. The caller has already checked who may see it. */
-export async function serveGameFile(gameId: string, path: string, request: Request, { basePath, live, cache, noindex }: ServeOptions) {
+export async function serveGameFile(gameId: string, path: string, request: Request, { basePath, live, cache }: ServeOptions) {
   if (checkPath(path)) return gameNotFound()
   const { origin } = new URL(request.url)
   const object = await env.GAMES.get(live ? liveKey(gameId, path) : objectKey(gameId, path), { onlyIf: request.headers })
@@ -56,7 +55,8 @@ export async function serveGameFile(gameId: string, path: string, request: Reque
     'cache-control': cache,
     etag: object.httpEtag,
   })
-  if (noindex) headers.set('x-robots-tag', 'noindex')
+  // Drafts are for their creator and reviewers, not search engines.
+  if (!live) headers.set('x-robots-tag', 'noindex')
   if (!('body' in object)) return new Response(null, { status: 304, headers })
   return new Response(object.body, { headers })
 }

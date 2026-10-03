@@ -1,4 +1,4 @@
-import { MAX_ROOM_PLAYERS, PEER_ID } from '@bitgames/game-sdk/bridge'
+import { PEER_ID, roomSize } from '@bitgames/game-sdk/bridge'
 import { DurableObject } from 'cloudflare:workers'
 
 /**
@@ -22,7 +22,7 @@ export class GameRoom extends DurableObject<Env> {
     const peer = url.searchParams.get('peer') ?? ''
     if (!PEER_ID.test(peer)) return new Response('Invalid peer ID', { status: 400 })
     // The game says how many players it supports; never more than the platform limit.
-    const max = Math.min(MAX_ROOM_PLAYERS, Math.max(2, Number(url.searchParams.get('max')) || MAX_ROOM_PLAYERS))
+    const max = roomSize(Number(url.searchParams.get('max')))
 
     const existing = this.ctx.getWebSockets()
     if (existing.length >= max) return new Response('Room full', { status: 409 })

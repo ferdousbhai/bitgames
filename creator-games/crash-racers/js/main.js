@@ -25,8 +25,6 @@ const MEDAL = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅', '🏅', '🏅']
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75))
-renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.05
@@ -38,7 +36,6 @@ const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 1600)
 const hemi = new THREE.HemisphereLight('#ffffff', '#6a7a50', 0.7)
 scene.add(hemi)
 const sun = new THREE.DirectionalLight('#ffffff', 2.2)
-sun.castShadow = true
 sun.shadow.mapSize.set(2048, 2048)
 Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 220 })
 sun.shadow.bias = -0.0004
@@ -100,7 +97,6 @@ function measureQuality(realDt) {
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false)
   camera.aspect = innerWidth / innerHeight
-  camera.fov = camera.aspect < 1 ? 75 : 62
   camera.updateProjectionMatrix()
 }
 addEventListener('resize', resize)
@@ -119,7 +115,7 @@ const game = {
   laps: 2,
   players: new Map(), // id -> { id, emoji }
   cars: new Map(), // id -> Car
-  progress: new Map(), // id -> { lap, sector, hint, total, finished, time }
+  progress: new Map(), // id -> { lap, sector, hint, total, finished, proj }
   finishTimes: new Map(),
   track: null,
   player: null,
@@ -347,7 +343,7 @@ function startRace(setup) {
       tag.position.set(0, car.dims.top + 0.9, 0)
       car.root.add(tag)
     }
-    game.progress.set(entry.id, { lap: 0, sector: 0, hint: -1, total: 0, finished: false, time: 0 })
+    game.progress.set(entry.id, { lap: 0, sector: 0, hint: -1, total: 0, finished: false })
   })
   game.player = game.cars.get(game.room.selfId)
   game.crashes = 0
@@ -505,7 +501,6 @@ function updateProgress(id, car) {
 function finishCar(id, car) {
   const prog = game.progress.get(id)
   prog.finished = true
-  prog.time = game.raceTime
   game.finishTimes.set(id, game.raceTime)
   send({ t: 'done', id, time: game.raceTime })
   if (car.isPlayer) {
@@ -577,7 +572,6 @@ const COAST = { steer: 0, throttle: 0, brake: 0.3 }
 
 /** The child at this device: keyboard, touch or gamepad, with Easy mode's helper. */
 const humanController = {
-  human: true,
   update(car) {
     if (game.progress.get(car.id)?.finished) car.controls = COAST
     else car.controls = input.easyGas ? steeringHelper(car, input.read()) : input.read()
@@ -664,11 +658,10 @@ function scrapeAndSkid(dt) {
     if (!car.vehicle) continue
     const e = car.root.matrixWorld.elements // car's right axis is the first column
     car.vehicle.wheelInfos.forEach((w, i) => {
-      const key = car.skidKeys?.[i] ?? ((car.skidKeys ??= [])[i] = car.id + i)
-      if (car.wheels[i].state === 'gone' || !w.isInContact) return effects.skids.mark(key, 0, 0, 0, 0, 0)
+      if (car.wheels[i].state === 'gone' || !w.isInContact) return effects.skids.mark(w, 0, 0, 0, 0, 0)
       const slip = 1 - w.skidInfo
       const hit = w.raycastResult.hitPointWorld
-      effects.skids.mark(key, hit.x, hit.z, e[0], e[2], slip > 0.35 && car.speed > 5 ? slip : 0)
+      effects.skids.mark(w, hit.x, hit.z, e[0], e[2], slip > 0.35 && car.speed > 5 ? slip : 0)
       if (slip > 0.6 && car.speed > 8 && Math.random() < 0.3) effects.puff(sparkPoint.set(hit.x, 0.3, hit.z), smokeVelocity, tyreSmoke)
     })
   }
@@ -701,7 +694,7 @@ function offRoadEffects(dt) {
     // Wedged against something mid-race: put the car back on the road a little further on.
     const finished = game.progress.get(car.id)?.finished
     car.stuckTime = car.speed < 1.5 && !finished ? (car.stuckTime ?? 0) + dt : 0
-    const limit = car.controller.human ? 5 : 3.5
+    const limit = car.isPlayer ? 5 : 3.5
     if ((!car.isPlayer && car.upsideDownTime > 3) || car.stuckTime > limit) {
       respawn(car, 6)
       car.stuckTime = 0
@@ -803,14 +796,18 @@ function drawMinimap() {
     const outline = new Path2D()
     t.samples.forEach((s, i) => outline[i ? 'lineTo' : 'moveTo'](20 + (s.p.x - minX) * scale, 20 + (s.p.z - minZ) * scale))
     outline.closePath()
-    minimap = { track: t, minX, minZ, scale, outline, g: $('minimap').getContext('2d') }
+    const background = document.createElement('canvas')
+    background.width = background.height = 160
+    const bg = background.getContext('2d')
+    bg.strokeStyle = 'rgba(255,255,255,0.85)'
+    bg.lineWidth = 6
+    bg.lineJoin = 'round'
+    bg.stroke(outline)
+    minimap = { track: t, minX, minZ, scale, background, g: $('minimap').getContext('2d') }
   }
   const { g, minX, minZ, scale } = minimap
   g.clearRect(0, 0, 160, 160)
-  g.strokeStyle = 'rgba(255,255,255,0.85)'
-  g.lineWidth = 6
-  g.lineJoin = 'round'
-  g.stroke(minimap.outline)
+  g.drawImage(minimap.background, 0, 0)
   for (const car of game.cars.values()) {
     g.fillStyle = car.isPlayer ? '#ffbe0b' : '#ff6b9d'
     g.beginPath()

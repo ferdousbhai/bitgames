@@ -4,7 +4,7 @@ import { toy } from '#/lib/ui'
 
 const LOGO_COLORS = ['#ff6b9d', '#ff9f1c', '#ffbe0b', '#8ac926', '#2ec4b6', '#6c63ff']
 
-export function Logo() {
+function Logo() {
   return (
     <span className="text-3xl font-bold tracking-tight sm:text-4xl" aria-label="BitGames">
       {'BitGames'.split('').map((letter, i) => (

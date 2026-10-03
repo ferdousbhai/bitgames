@@ -98,7 +98,7 @@ export class WebRTCTransport {
     const targets = options.to ? [this.links.get(options.to)] : [...this.links.values()];
     for (const link of targets) {
       if (!link?.connected) continue;
-      const dc = channel === "fast" ? link.fast : link.reliable;
+      const dc = link[channel];
       if (dc.readyState !== "open") continue;
       for (const frame of frames) dc.send(frame as Uint8Array<ArrayBuffer>);
     }
@@ -108,7 +108,7 @@ export class WebRTCTransport {
   drained(peer: string, channel: Channel = "reliable"): Promise<void> {
     const link = this.links.get(peer);
     if (!link) return Promise.resolve();
-    const dc = channel === "fast" ? link.fast : link.reliable;
+    const dc = link[channel];
     if (dc.bufferedAmount <= DRAIN_THRESHOLD) return Promise.resolve();
     return new Promise((resolve) => {
       dc.addEventListener("bufferedamountlow", () => resolve(), { once: true });

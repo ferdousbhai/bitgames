@@ -60,7 +60,7 @@ export function checkPath(path: string): string | null {
     return 'Paths look like "index.html", "models/bunny.glb" or "sounds/pop.mp3": letters, numbers, dashes and dots, up to 5 folders deep.'
   }
   if (!(extensionOf(path) in CONTENT_TYPES)) {
-    return `Files of type .${extensionOf(path)} are not allowed. Allowed: ${Object.keys(CONTENT_TYPES).map((e) => '.' + e).join(' ')}`
+    return `Files of type .${extensionOf(path)} are not allowed. Allowed: ${listOf(Object.keys(CONTENT_TYPES))}`
   }
   if (path === 'manifest.json') return 'manifest.json is reserved. Use update_game_info to change the game details.'
   return null

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { Track } from './track.js'
 import { canvasTexture, rng, speckle } from './util.js'
 
@@ -211,19 +212,25 @@ function lampPost(track, position, mat) {
   trunkCollider(track, position, 0.3)
 }
 
-const coneMaterial = std({ color: '#ff6a00', roughness: 0.6 })
-const coneStripe = std({ color: '#ffffff', roughness: 0.5 })
+/** One mesh per cone (orange body and base, white stripe as vertex colours), built once and shared. */
+let coneGeometry
+function makeConeGeometry() {
+  const part = (geo, y, color) => {
+    geo.translate(0, y, 0)
+    const c = new THREE.Color(color)
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: geo.attributes.position.count }, () => [c.r, c.g, c.b]).flat(), 3))
+    return geo
+  }
+  return mergeGeometries([
+    part(new THREE.ConeGeometry(0.28, 0.75, 12), 0, '#ff6a00'),
+    part(new THREE.CylinderGeometry(0.16, 0.2, 0.12, 12), 0.05, '#ffffff'),
+    part(new THREE.BoxGeometry(0.6, 0.06, 0.6), -0.36, '#ff6a00'),
+  ])
+}
 function cone(track, position) {
-  const g = new THREE.Group()
-  const body = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.75, 12), coneMaterial)
-  body.position.y = 0.0
-  const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.12, 12), coneStripe)
-  stripe.position.y = 0.05
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 0.6), coneMaterial)
-  base.position.y = -0.36
-  g.add(body, stripe, base)
-  g.traverse((o) => (o.castShadow = true))
-  track.addProp(g, new CANNON.Box(new CANNON.Vec3(0.25, 0.38, 0.25)), new THREE.Vector3(position.x, 0.4, position.z), 3)
+  coneGeometry ??= makeConeGeometry()
+  const m = new THREE.Mesh(coneGeometry, std({ vertexColors: true, roughness: 0.6 }))
+  track.addProp(m, new CANNON.Box(new CANNON.Vec3(0.25, 0.38, 0.25)), new THREE.Vector3(position.x, 0.4, position.z), 3)
 }
 
 const crateMat = std({ color: '#b0793f' })
@@ -269,7 +276,7 @@ function buildUbud(env, props) {
   sceneryBase(track, { ground: std({ map: grassTexture('#4f9a33') }), sky: ['#7ec8f0', '#f6e7c8'], fog: '#d9ead0', sun: '#fff1d6' })
   track.buildRoad(std({ map: asphalt({ lines: false, patches: true, edge: '#8b7a55' }), roughness: 0.9 }))
   track.buildStrip(std({ color: '#8b6f47' }), track.width / 2, track.width / 2 + 1.2, 0.015) // dirt verge
-  const water = new THREE.MeshStandardMaterial({ color: '#7fb6c7', metalness: 0.4, roughness: 0.08, transparent: true, opacity: 0.85 })
+  const water = std({ color: '#7fb6c7', metalness: 0.4, roughness: 0.08, transparent: true, opacity: 0.85 })
   const rice = std({ map: riceTexture() })
   const terraceWall = std({ color: '#8a6a45' })
 
@@ -399,7 +406,7 @@ function buildHelsinki(env, props) {
     track.addGeometry(dome, std({ color: '#3f8f6a', metalness: 0.3, roughness: 0.4 }))
   }
   // Harbour with the ferry, and the SkyWheel
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 400), new THREE.MeshStandardMaterial({ color: '#3d6f8f', metalness: 0.5, roughness: 0.15 }))
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 400), std({ color: '#3d6f8f', metalness: 0.5, roughness: 0.15 }))
   sea.rotation.x = -Math.PI / 2
   sea.position.set(30, 0.03, -260)
   track.group.add(sea)

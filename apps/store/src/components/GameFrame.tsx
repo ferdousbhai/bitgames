@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toy } from '#/lib/ui'
 
 /** Room codes are three of these animals, so children can share them without reading. */
-export const ROOM_ANIMALS = ['🐶', '🐱', '🐸', '🦁', '🐼', '🐵', '🐷', '🦊', '🐰', '🐻', '🐯', '🐨']
+const ROOM_ANIMALS = ['🐶', '🐱', '🐸', '🦁', '🐼', '🐵', '🐷', '🦊', '🐰', '🐻', '🐯', '🐨']
 
 type Lobby =
   | { step: 'closed' }

@@ -2,7 +2,7 @@ import { CATEGORIES } from '#/lib/categories'
 import { BINARY_FILE_TYPES, MAX_FILE_BYTES, MAX_GAME_BYTES, MAX_TEXT_FILE_BYTES, TEXT_FILE_TYPES, mb } from './limits'
 
 /** Must match the exact `three` version in package.json, which scripts/vendor.ts copies to /vendor/. */
-export const THREE_VERSION = '0.186.1'
+const THREE_VERSION = '0.186.1'
 const THREE_BASE = `/vendor/three-${THREE_VERSION}`
 
 /** Sent to the agent when it connects. Kept short; get_guide has the details. */

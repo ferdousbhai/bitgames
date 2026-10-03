@@ -17,7 +17,6 @@ export const Route = createFileRoute('/preview/$token/$')({
         return serveGameFile(game.id, params._splat || 'index.html', request, {
           basePath: `/preview/${params.token}/`,
           cache: 'no-store',
-          noindex: true,
         })
       },
     },

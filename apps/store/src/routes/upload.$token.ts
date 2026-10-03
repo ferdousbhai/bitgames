@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
 import { sha256Hex } from '#/server/crypto'
 import { CreatorError, checkGameQuota, isEditable, markDraftChanged } from '#/server/games-store'
-import { CONTENT_TYPES, MAX_FILE_BYTES, extensionOf, objectKey } from '#/server/limits'
+import { CONTENT_TYPES, MAX_FILE_BYTES, extensionOf, mb, objectKey } from '#/server/limits'
 
 const text = (status: number, body: string) =>
   new Response(body + '\n', { status, headers: { 'content-type': 'text/plain; charset=utf-8' } })
@@ -35,7 +35,7 @@ export const Route = createFileRoute('/upload/$token')({
         if (!request.body || !Number.isInteger(length) || length <= 0) {
           return text(411, 'Send the file with a Content-Length, e.g. curl -T model.glb <url>')
         }
-        if (length > MAX_FILE_BYTES) return text(413, `Files can be at most ${MAX_FILE_BYTES / 1024 / 1024} MB.`)
+        if (length > MAX_FILE_BYTES) return text(413, `Files can be at most ${mb(MAX_FILE_BYTES)}.`)
         let total: number
         try {
           total = await checkGameQuota(upload.game_id, upload.path, length)

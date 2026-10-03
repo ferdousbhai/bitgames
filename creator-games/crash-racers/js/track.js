@@ -68,7 +68,7 @@ export class Track {
     let best = -1, bestD = Infinity
     const search = (from, to) => {
       for (let k = from; k <= to; k++) {
-        const i = ((k % this.samples.length) + this.samples.length) % this.samples.length
+        const i = wrap(k, this.samples.length)
         const p = this.samples[i].p
         const d = (p.x - pos.x) ** 2 + (p.z - pos.z) ** 2
         if (d < bestD) {
@@ -130,6 +130,10 @@ export class Track {
         index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2) // counter-clockwise from above, so it faces up
       }
     }
+    return this.ribbon(positions, uvs, index, material)
+  }
+
+  ribbon(positions, uvs, index, material) {
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
@@ -160,18 +164,9 @@ export class Track {
         }
       }
     }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
-    geo.setIndex(index)
-    geo.computeVertexNormals()
-    const mesh = new THREE.Mesh(geo, material)
-    mesh.receiveShadow = true
-    this.group.add(mesh)
-    return mesh
+    return this.ribbon(positions, uvs, index, material)
   }
 
-  /** A static box collider (and optional visual) at a position with a yaw. */
   /** A static collider box. */
   staticBox(center, halfSize, quaternion) {
     const body = new CANNON.Body({ mass: 0, material: this.staticMaterial, collisionFilterGroup: GROUP_STATIC, collisionFilterMask: STATIC_MASK })
@@ -297,12 +292,16 @@ export class Track {
 
   update() {
     for (const p of this.props) {
+      if (p.body.sleepState === CANNON.Body.SLEEPING) continue
       p.mesh.position.copy(p.body.position)
       p.mesh.quaternion.copy(p.body.quaternion)
     }
   }
 
-  /** Removes the city from the world and frees its GPU resources (a new race builds a fresh one). */
+  /**
+   * Removes the city from the world and frees its geometry (a new race builds
+   * a fresh one). Materials and textures are shared across races, so they stay.
+   */
   dispose() {
     for (const b of this.bodies) this.world.removeBody(b)
     for (const p of this.props) {
@@ -310,14 +309,7 @@ export class Track {
       p.mesh.removeFromParent()
     }
     this.group.removeFromParent()
-    const free = (o) => {
-      if (!o.isMesh) return
-      o.geometry.dispose()
-      for (const m of [o.material].flat()) {
-        m.map?.dispose()
-        m.dispose()
-      }
-    }
+    const free = (o) => o.isMesh && o.geometry.dispose()
     this.group.traverse(free)
     for (const p of this.props) p.mesh.traverse(free)
   }
