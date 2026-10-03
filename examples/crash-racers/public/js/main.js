@@ -433,7 +433,7 @@ const projOf = (car) => game.progress.get(car.id)?.proj ?? game.track.project(ca
 
 function respawn(car, ahead = 0) {
   const proj = projOf(car)
-  const s = game.track.sampleAt(proj.dist + ahead)
+  const s = game.track.sampleAt(game.track.clearOfRamps(proj.dist + ahead))
   car.place(s.p, game.track.headingAt(s))
   car.upsideDownTime = 0
 }
@@ -696,12 +696,18 @@ function offRoadEffects(dt) {
   for (const car of game.cars.values()) {
     if (car.remote) continue
     // Wedged against something mid-race: put the car back on the road a little further on.
-    const finished = game.progress.get(car.id)?.finished
+    const prog = game.progress.get(car.id)
+    const finished = prog?.finished
     car.stuckTime = car.speed < 1.5 && !finished ? (car.stuckTime ?? 0) + dt : 0
     const limit = car.isPlayer ? 5 : 3.5
-    if ((!car.isPlayer && car.upsideDownTime > 3) || car.stuckTime > limit) {
+    // A bot wriggling against a wall keeps moving but gets nowhere, so in a race
+    // also watch its headway along the road.
+    if (!car.headway || finished || prog.total - car.headway.total > 4) car.headway = { total: prog?.total ?? 0, time: game.raceTime }
+    const noHeadway = !car.isPlayer && game.mode === 'race' && game.raceTime - car.headway.time > 8
+    if ((!car.isPlayer && car.upsideDownTime > 3) || car.stuckTime > limit || noHeadway) {
       respawn(car, 6)
       car.stuckTime = 0
+      car.headway = null
       // Bots come back fixed so a wreck doesn't sit at the back forever.
       if (!car.isPlayer && car.damage.level > 0.6) {
         car.damage.repair()

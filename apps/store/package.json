@@ -14,7 +14,8 @@
     "db:migrate": "node scripts/db.ts migrate",
     "db:migrate:remote": "node scripts/db.ts migrate --remote",
     "seed": "node scripts/db.ts seed",
-    "seed:remote": "node scripts/db.ts seed --remote"
+    "seed:remote": "node scripts/db.ts seed --remote",
+    "test": "node --test scripts/*.test.ts"
   },
   "dependencies": {
     "@bitgames/game-sdk": "workspace:*",

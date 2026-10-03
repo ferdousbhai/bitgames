@@ -214,6 +214,19 @@ export class Track {
     })
   }
 
+  /**
+   * The first distance at or after `dist` where a car (about `margin` metres
+   * long either way) doesn't overlap a ramp, so a respawned car isn't put
+   * inside one and flipped.
+   */
+  clearOfRamps(dist, margin = 3) {
+    for (const ramp of this.ramps) {
+      const offset = wrap(dist - ramp.dist + this.length / 2, this.length) - this.length / 2
+      if (Math.abs(offset) < ramp.half + margin) return wrap(ramp.dist + ramp.half + margin, this.length)
+    }
+    return wrap(dist, this.length)
+  }
+
   /** How much the road turns over `span` metres either side of `dist` (0 = straight). */
   bendAt(dist, span = 30) {
     const a = this.sampleAt(dist - span).t, b = this.sampleAt(dist + span).t
@@ -239,7 +252,7 @@ export class Track {
     const angle = Math.atan2(height, length)
     const slope = Math.hypot(height, length)
     const center = s.p.clone().addScaledVector(s.side, lateral)
-    this.ramps.push({ dist, lateral })
+    this.ramps.push({ dist, lateral, half: slope / 2 })
     const q = new CANNON.Quaternion().setFromEuler(-angle, yaw, 0, 'YXZ')
     const body = this.staticBox(new THREE.Vector3(center.x, height / 2 - 0.22, center.z), new THREE.Vector3(width / 2, 0.25, slope / 2), q)
     const geo = new THREE.BoxGeometry(width, 0.5, slope)
