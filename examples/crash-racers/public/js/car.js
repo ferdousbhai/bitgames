@@ -181,7 +181,8 @@ export class Car {
     this.turboTime = Math.max(0, this.turboTime - dt)
     const turbo = this.turboActive
     const enginePower = 7000 * this.spec.power * damageLoss * (turbo ? 2.2 : 1)
-    const topSpeed = turbo ? 40 : 30
+    // Part throttle (e.g. Easy mode cruising) tops out lower, so full gas is a real burst of speed.
+    const topSpeed = turbo ? 40 : throttle >= 1 ? 30 : 22
 
     // Steering: generous at low speed, gentle at high speed. Input +1 is right, a negative angle.
     const maxSteer = clamp(0.55 - speed * 0.011, 0.2, 0.55)
