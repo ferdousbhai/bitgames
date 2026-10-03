@@ -8,7 +8,7 @@
   html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1446; font-family: system-ui, sans-serif; touch-action: none; user-select: none; }
   #hud { position: fixed; top: 16px; left: 0; right: 0; text-align: center; font-size: 40px; font-weight: 800; color: #ffd23f; text-shadow: 0 4px 12px rgba(0,0,0,.4); pointer-events: none; }
 </style>
-<script type="importmap">{ "imports": { "three": "/vendor/three-0.186.1/build/three.module.js" } }</script>
+<script type="importmap">{ "imports": { "three": "/vendor/three/build/three.module.js" } }</script>
 </head>
 <body>
 <div id="hud">⭐ 0</div>
@@ -136,10 +136,11 @@ function resize() {
 addEventListener('resize', resize)
 resize()
 
-const clock = new THREE.Clock()
+const timer = new THREE.Timer()
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05)
-  const t = clock.elapsedTime
+  timer.update()
+  const dt = Math.min(timer.getDelta(), 0.05)
+  const t = timer.getElapsed()
   const { w, h } = halfSize()
   if (keys.has('ArrowLeft') || keys.has('a')) targetX -= 14 * dt
   if (keys.has('ArrowRight') || keys.has('d')) targetX += 14 * dt

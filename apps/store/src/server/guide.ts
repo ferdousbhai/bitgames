@@ -2,9 +2,9 @@ import { CATEGORIES } from '#/lib/categories'
 import pkg from '../../package.json' with { type: 'json' }
 import { BINARY_FILE_TYPES, MAX_FILE_BYTES, MAX_GAME_BYTES, MAX_TEXT_FILE_BYTES, TEXT_FILE_TYPES, mb } from './limits'
 
-/** The exact `three` version in package.json, which scripts/vendor.ts copies to /vendor/. */
+/** The `three` version in package.json, which scripts/vendor.ts copies to /vendor/three/. Games always get the latest. */
 const THREE_VERSION = pkg.dependencies.three
-const THREE_BASE = `/vendor/three-${THREE_VERSION}`
+const THREE_BASE = '/vendor/three'
 
 /** Sent to the agent when it connects. Kept short; get_guide has the details. */
 export const INSTRUCTIONS = `BitGames is a game store for young children (about 4 to 8 years old).
@@ -173,9 +173,10 @@ function resize() {
 addEventListener('resize', resize)
 resize()
 
-const clock = new THREE.Clock()
+const timer = new THREE.Timer()
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05)
+  timer.update()
+  const dt = Math.min(timer.getDelta(), 0.05)
   squish = Math.max(0, squish - dt * 3)
   toy.rotation.y += dt
   toy.scale.setScalar(1 + Math.sin(squish * Math.PI) * 0.3)
