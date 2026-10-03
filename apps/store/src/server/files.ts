@@ -27,18 +27,24 @@ function sandboxCsp(base: string, vendor: string) {
   ].join('; ')
 }
 
-// CORS on 404s too, so a missing optional file shows up in the game as a plain 404, not a CORS error.
-const notFound = () => new Response('Not found', { status: 404, headers: { 'access-control-allow-origin': '*' } })
+/** Every 404 under /play and /preview: with CORS, so a game sees a plain 404 rather than a CORS error. */
+export const gameNotFound = () => new Response('Not found', { status: 404, headers: { 'access-control-allow-origin': '*' } })
 
-/**
- * Serves one file of a game from R2. The caller has already checked who may
- * see it. `basePath` is the URL folder the game is served from, e.g. "/play/<id>/".
- */
-export async function serveGameFile(gameId: string, path: string, request: Request, basePath: string, cacheSeconds: number, live = false) {
-  if (checkPath(path)) return notFound()
+interface ServeOptions {
+  /** The URL folder the game is served from, e.g. "/play/<id>/". */
+  basePath: string
+  /** Serve the reviewed live copy instead of the draft. */
+  live?: boolean
+  cache: string
+  noindex?: boolean
+}
+
+/** Serves one file of a game from R2. The caller has already checked who may see it. */
+export async function serveGameFile(gameId: string, path: string, request: Request, { basePath, live, cache, noindex }: ServeOptions) {
+  if (checkPath(path)) return gameNotFound()
   const { origin } = new URL(request.url)
   const object = await env.GAMES.get(live ? liveKey(gameId, path) : objectKey(gameId, path), { onlyIf: request.headers })
-  if (!object) return notFound()
+  if (!object) return gameNotFound()
 
   const headers = new Headers({
     'content-type': CONTENT_TYPES[extensionOf(path)]!,
@@ -47,9 +53,10 @@ export async function serveGameFile(gameId: string, path: string, request: Reque
     'access-control-allow-origin': '*',
     'x-content-type-options': 'nosniff',
     'referrer-policy': 'no-referrer',
-    'cache-control': `public, max-age=${cacheSeconds}`,
+    'cache-control': cache,
     etag: object.httpEtag,
   })
+  if (noindex) headers.set('x-robots-tag', 'noindex')
   if (!('body' in object)) return new Response(null, { status: 304, headers })
   return new Response(object.body, { headers })
 }

@@ -18,8 +18,8 @@ import {
   V2_HEADER_SIZE,
   maxPayloadBytes,
 } from "./limits.js";
-import { optimalBlockSize, pad, unpad } from "./padding.js";
-import { concatBytes, fixedSize } from "./bytes.js";
+import { BLOCK_SIZES, optimalBlockSize, pad, unpad } from "./padding.js";
+import { bytesEqual, fixedSize } from "./bytes.js";
 
 export const Flags = {
   hasRecipient: 0x01,
@@ -47,18 +47,12 @@ export interface Packet {
 /** Recipient ID meaning "everyone". */
 export const BROADCAST_ID = new Uint8Array(8).fill(0xff);
 
-function headerSize(version: number): number | null {
-  return version === 1 ? V1_HEADER_SIZE : version === 2 ? V2_HEADER_SIZE : null;
+export function isBroadcast(recipientID: Uint8Array | undefined): boolean {
+  return !recipientID || bytesEqual(recipientID, BROADCAST_ID);
 }
 
-class Writer {
-  private parts: Uint8Array[] = [];
-  u8(v: number) { this.parts.push(Uint8Array.of(v & 0xff)); }
-  u16(v: number) { this.u8(v >>> 8); this.u8(v); }
-  u32(v: number) { this.u16(v >>> 16); this.u16(v); }
-  u64(v: bigint) { for (let s = 56n; s >= 0n; s -= 8n) this.u8(Number((v >> s) & 0xffn)); }
-  bytes(b: Uint8Array) { this.parts.push(b); }
-  finish(): Uint8Array { return concatBytes(...this.parts); }
+function headerSize(version: number): number | null {
+  return version === 1 ? V1_HEADER_SIZE : version === 2 ? V2_HEADER_SIZE : null;
 }
 
 export function encodePacket(packet: Packet, options: { padding?: boolean } = {}): Uint8Array | null {
@@ -66,9 +60,20 @@ export function encodePacket(packet: Packet, options: { padding?: boolean } = {}
   if (version !== 1 && version !== 2) return null;
   const lengthFieldBytes = version === 2 ? 4 : 2;
 
+  const rawRoute = version >= 2 ? (packet.route ?? []) : [];
+  if (rawRoute.some((hop) => hop.length === 0)) return null;
+  const route = rawRoute.map((hop) => fixedSize(hop, SENDER_ID_SIZE));
+  if (route.length > 255) return null;
+  const signature = packet.signature?.subarray(0, SIGNATURE_SIZE);
+  // Everything in the frame except the payload (and its original-size field).
+  const overhead = headerSize(version)! + SENDER_ID_SIZE + (packet.recipientID ? RECIPIENT_ID_SIZE : 0) +
+    (route.length ? 1 + route.length * SENDER_ID_SIZE : 0) + (signature?.length ?? 0);
+
   let payload = packet.payload;
   let originalSize: number | null = null;
-  if (shouldCompress(payload)) {
+  // Small frames are padded to the smallest block anyway, so compressing them saves nothing.
+  const fitsSmallestBlock = optimalBlockSize(overhead + payload.length) === BLOCK_SIZES[0];
+  if (!fitsSmallestBlock && shouldCompress(payload)) {
     const maxRepresentable = version === 2 ? 0xffffffff : 0xffff;
     const compressed = payload.length <= maxRepresentable ? compress(payload) : null;
     if (compressed) {
@@ -76,11 +81,6 @@ export function encodePacket(packet: Packet, options: { padding?: boolean } = {}
       payload = compressed;
     }
   }
-
-  const rawRoute = version >= 2 ? (packet.route ?? []) : [];
-  if (rawRoute.some((hop) => hop.length === 0)) return null;
-  const route = rawRoute.map((hop) => fixedSize(hop, SENDER_ID_SIZE));
-  if (route.length > 255) return null;
 
   // payloadLength excludes the route but includes the original-size field.
   const payloadDataSize = payload.length + (originalSize !== null ? lengthFieldBytes : 0);
@@ -93,28 +93,35 @@ export function encodePacket(packet: Packet, options: { padding?: boolean } = {}
   if (route.length > 0) flags |= Flags.hasRoute;
   if (packet.isRSR) flags |= Flags.isRSR;
 
-  const w = new Writer();
-  w.u8(version);
-  w.u8(packet.type);
-  w.u8(packet.ttl);
-  w.u64(packet.timestamp);
-  w.u8(flags);
-  if (version === 2) w.u32(payloadDataSize);
-  else w.u16(payloadDataSize);
-  w.bytes(fixedSize(packet.senderID, SENDER_ID_SIZE));
-  if (packet.recipientID) w.bytes(fixedSize(packet.recipientID, RECIPIENT_ID_SIZE));
+  const data = new Uint8Array(overhead + payloadDataSize);
+  const view = new DataView(data.buffer);
+  let o = 0;
+  const put = (bytes: Uint8Array) => {
+    data.set(bytes, o);
+    o += bytes.length;
+  };
+  const putLength = (n: number) => {
+    if (version === 2) view.setUint32(o, n);
+    else view.setUint16(o, n);
+    o += version === 2 ? 4 : 2;
+  };
+  view.setUint8(o++, version);
+  view.setUint8(o++, packet.type);
+  view.setUint8(o++, packet.ttl);
+  view.setBigUint64(o, packet.timestamp);
+  o += 8;
+  view.setUint8(o++, flags);
+  putLength(payloadDataSize);
+  put(fixedSize(packet.senderID, SENDER_ID_SIZE));
+  if (packet.recipientID) put(fixedSize(packet.recipientID, RECIPIENT_ID_SIZE));
   if (route.length > 0) {
-    w.u8(route.length);
-    for (const hop of route) w.bytes(hop);
+    view.setUint8(o++, route.length);
+    for (const hop of route) put(hop);
   }
-  if (originalSize !== null) {
-    if (version === 2) w.u32(originalSize);
-    else w.u16(originalSize);
-  }
-  w.bytes(payload);
-  if (packet.signature) w.bytes(packet.signature.subarray(0, SIGNATURE_SIZE));
+  if (originalSize !== null) putLength(originalSize);
+  put(payload);
+  if (signature) put(signature);
 
-  const data = w.finish();
   return options.padding === false ? data : pad(data, optimalBlockSize(data.length));
 }
 

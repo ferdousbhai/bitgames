@@ -3,6 +3,7 @@ import { useServerFn } from '@tanstack/react-start'
 import { useEffect, useState } from 'react'
 import { GameFrame } from '#/components/GameFrame'
 import { type AdminGame, listForAdmin, reviewGame } from '#/server/admin'
+import { toy } from '#/lib/ui'
 
 export const Route = createFileRoute('/admin')({
   head: () => ({ meta: [{ title: 'Review · BitGames' }, { name: 'robots', content: 'noindex' }] }),
@@ -90,7 +91,7 @@ function AdminPage() {
               <GameFrame
                 gameId={game.id}
                 title={game.title}
-                src={`/preview/${game.preview_token}/index.html`}
+                src={`/preview/${game.preview_token}/${game.entry}`}
                 className="mt-4 aspect-video w-full overflow-hidden rounded-2xl bg-ink"
               />
               <p className="mt-3 text-sm text-ink-soft">
@@ -101,14 +102,14 @@ function AdminPage() {
                 <button
                   onClick={() => void decide(game, 'approve')}
                   className="toy rounded-full px-5 py-2 font-semibold text-white"
-                  style={{ '--toy-bg': 'var(--color-leaf)' } as React.CSSProperties}
+                  style={toy('var(--color-leaf)')}
                 >
                   ✅ Approve
                 </button>
                 <button
                   onClick={() => void decide(game, 'reject')}
                   className="toy rounded-full px-5 py-2 font-semibold text-white"
-                  style={{ '--toy-bg': 'var(--color-berry)' } as React.CSSProperties}
+                  style={toy('var(--color-berry)')}
                 >
                   ↩️ Send back
                 </button>

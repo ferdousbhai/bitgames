@@ -3,6 +3,7 @@ import { getRequestHeader } from '@tanstack/react-start/server'
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import { createCreator } from './creators'
+import { allowedByIp } from './rate-limit'
 
 const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 
@@ -23,7 +24,7 @@ export const createCreatorKey = createServerFn({ method: 'POST' })
   .validator(z.object({ grownUp: z.literal(true), turnstileToken: z.string().min(1).max(4096) }))
   .handler(async ({ data }) => {
     const ip = getRequestHeader('cf-connecting-ip') ?? 'unknown'
-    if (!(await env.KEY_LIMITER.limit({ key: ip })).success) {
+    if (!(await allowedByIp(env.KEY_LIMITER, ip))) {
       throw new Error('Too many keys from this network. Please wait a minute.')
     }
     if (!(await passedTurnstile(data.turnstileToken, ip))) {

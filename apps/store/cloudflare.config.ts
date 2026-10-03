@@ -1,5 +1,7 @@
 import { bindings, defineConfig, exports } from "cf/config";
 
+const perMinute = (namespace: string, limit: number) => bindings.rateLimit({ namespace, simple: { limit, period: 60 } });
+
 /**
  * Cloudflare config for the store Worker, deployed with `cf deploy`.
  * D1 migrations live in ./migrations (the default) and are applied with `cf d1 migrations apply`.
@@ -34,53 +36,17 @@ export default defineConfig({
 				id: "34eb131f-ba97-412e-ba81-8d1aa5c2c808",
 				name: "bitgames",
 			}),
-			// Game files, stored under games/<id>/<path>.
+			// Game files: drafts under games/<id>/<path>, reviewed copies under live/<id>/<path>.
 			GAMES: bindings.r2({
 				name: "bitgames-games",
 			}),
-			// Per-IP and per-creator rate limits for key creation, MCP calls, uploads and admin sign-in.
-			KEY_LIMITER: bindings.rateLimit({
-				namespace: "4101",
-				simple: {
-					limit: 3,
-					period: 60,
-				},
-			}),
-			MCP_LIMITER: bindings.rateLimit({
-				namespace: "4102",
-				simple: {
-					limit: 120,
-					period: 60,
-				},
-			}),
-			UPLOAD_LIMITER: bindings.rateLimit({
-				namespace: "4103",
-				simple: {
-					limit: 30,
-					period: 60,
-				},
-			}),
-			ADMIN_LIMITER: bindings.rateLimit({
-				namespace: "4104",
-				simple: {
-					limit: 30,
-					period: 60,
-				},
-			}),
-			ROOM_LIMITER: bindings.rateLimit({
-				namespace: "4106",
-				simple: {
-					limit: 30,
-					period: 60,
-				},
-			}),
-			LIKE_LIMITER: bindings.rateLimit({
-				namespace: "4105",
-				simple: {
-					limit: 30,
-					period: 60,
-				},
-			}),
+			// Per-IP and per-creator rate limits, all per minute.
+			KEY_LIMITER: perMinute("4101", 3),
+			MCP_LIMITER: perMinute("4102", 120),
+			UPLOAD_LIMITER: perMinute("4103", 30),
+			ADMIN_LIMITER: perMinute("4104", 30),
+			LIKE_LIMITER: perMinute("4105", 30),
+			ROOM_LIMITER: perMinute("4106", 30),
 		},
 	},
 });

@@ -2,7 +2,7 @@ import * as THREE from 'three'
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 export const lerp = (a, b, t) => a + (b - a) * t
-export const damp = (a, b, rate, dt) => lerp(a, b, 1 - Math.exp(-rate * dt))
+export const damp = (a, b, rate, dt) => lerp(a, b, smoothing(rate, dt))
 
 /** Small deterministic random generator, so every device builds the same city. */
 export function rng(seed) {
@@ -55,6 +55,19 @@ export function speckle(g, w, h, base, variance, count, size = 2, rand = Math.ra
   }
 }
 
-export const tmpV = new THREE.Vector3()
-export const tmpV2 = new THREE.Vector3()
-export const tmpQ = new THREE.Quaternion()
+// Collision groups
+export const GROUP_STATIC = 1
+export const GROUP_CAR = 2
+export const GROUP_DEBRIS = 4
+export const GROUP_PROP = 8
+/** What static scenery collides with. */
+export const STATIC_MASK = GROUP_CAR | GROUP_DEBRIS | GROUP_PROP
+
+/** Debris and props get knocked about but never damage a car. */
+export const harmless = (body) => (body.collisionFilterGroup & (GROUP_DEBRIS | GROUP_PROP)) !== 0
+
+/** Fraction to move towards a target this frame for exponential smoothing at `rate` per second. */
+export const smoothing = (rate, dt) => 1 - Math.exp(-rate * dt)
+
+/** Wraps a distance along a loop of `length` into 0..length. */
+export const wrap = (d, length) => ((d % length) + length) % length

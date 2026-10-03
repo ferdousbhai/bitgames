@@ -4,6 +4,7 @@ import { CategoryBar } from '#/components/CategoryBar'
 import { GameShelf, Loading } from '#/components/GameShelf'
 import { gamesCollection } from '#/lib/collections'
 import type { Game } from '#/lib/types'
+import { toy } from '#/lib/ui'
 
 export const Route = createFileRoute('/')({
   loader: () => gamesCollection.preload(),
@@ -68,7 +69,7 @@ function Hero({ game }: { game: Game }) {
             to="/game/$id"
             params={{ id: game.id }}
             className="toy mt-6 inline-flex items-center gap-2 rounded-full px-8 py-4 text-2xl font-bold text-ink"
-            style={{ '--toy-bg': 'var(--color-sun)' } as React.CSSProperties}
+            style={toy('var(--color-sun)')}
           >
             ▶ Play now
           </Link>

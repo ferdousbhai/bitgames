@@ -15,45 +15,63 @@ const softDot = canvasTexture(64, 64, (g) => {
   g.fillRect(0, 0, 64, 64)
 })
 
+const colors = new Map()
+/** Parsed colours, so spawning a particle doesn't parse a CSS string. */
+const colorOf = (css) => colors.get(css) ?? colors.set(css, new THREE.Color(css)).get(css)
+const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0)
+
+/**
+ * A fixed ring of particle slots in one InstancedMesh. A new particle takes the
+ * next slot (replacing the oldest when full), so colours are written once at
+ * spawn and nothing is spliced or allocated per frame.
+ */
 class Pool {
   constructor(scene, { count, geometry, material, gravity = 0, drag = 0, grow = 0, billboard = false }) {
     this.mesh = new THREE.InstancedMesh(geometry, material, count)
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
     this.mesh.frustumCulled = false
     this.mesh.count = 0
+    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3)
     scene.add(this.mesh)
-    this.items = []
-    this.max = count
+    this.slots = Array.from({ length: count }, () => ({
+      alive: false, p: new THREE.Vector3(), v: new THREE.Vector3(), rot: new THREE.Euler(), life: 1, age: 0, size: 1, spin: 0,
+    }))
+    this.next = 0
     this.gravity = gravity
     this.drag = drag
     this.grow = grow
     this.billboard = billboard
     this.dummy = new THREE.Object3D()
-    this.color = new THREE.Color()
-    if (material.vertexColors !== undefined) this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3)
   }
 
   spawn(position, velocity, { life = 1, size = 0.2, color = '#ffffff', spin = 0 } = {}) {
-    if (this.items.length >= this.max) this.items.shift()
-    this.items.push({
-      p: position.clone(),
-      v: velocity.clone(),
-      life,
-      age: 0,
-      size,
-      color: new THREE.Color(color),
-      rot: new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6),
-      spin,
-    })
+    const i = this.next
+    this.next = (i + 1) % this.slots.length
+    const it = this.slots[i]
+    it.alive = true
+    it.p.copy(position)
+    it.v.copy(velocity)
+    it.rot.set(Math.random() * 6, Math.random() * 6, Math.random() * 6)
+    it.life = life
+    it.age = 0
+    it.size = size
+    it.spin = spin
+    this.mesh.setColorAt(i, colorOf(color))
+    this.mesh.instanceColor.needsUpdate = true
+    this.mesh.count = Math.max(this.mesh.count, i + 1)
   }
 
   update(dt, camera) {
-    const items = this.items
-    for (let i = items.length - 1; i >= 0; i--) {
-      const it = items[i]
+    const d = this.dummy
+    let any = false
+    for (let i = 0; i < this.mesh.count; i++) {
+      const it = this.slots[i]
+      if (!it.alive) continue
+      any = true
       it.age += dt
       if (it.age >= it.life) {
-        items.splice(i, 1)
+        it.alive = false
+        this.mesh.setMatrixAt(i, HIDDEN)
         continue
       }
       it.v.y -= this.gravity * dt
@@ -67,10 +85,6 @@ class Pool {
       }
       it.rot.x += it.spin * dt
       it.rot.y += it.spin * dt * 0.7
-    }
-    const d = this.dummy
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i]
       const t = it.age / it.life
       d.position.copy(it.p)
       if (this.billboard) d.quaternion.copy(camera.quaternion)
@@ -78,20 +92,18 @@ class Pool {
       d.scale.setScalar(it.size * (1 + this.grow * t) * (this.grow ? 1 : 1 - t * 0.5))
       d.updateMatrix()
       this.mesh.setMatrixAt(i, d.matrix)
-      if (this.mesh.instanceColor) {
-        // Fade by darkening toward the fog-ish background for opaque pools.
-        this.mesh.setColorAt(i, it.color)
-      }
     }
-    this.mesh.count = items.length
-    this.mesh.instanceMatrix.needsUpdate = true
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true
+    if (any) this.mesh.instanceMatrix.needsUpdate = true
+  }
+
+  clear() {
+    for (const it of this.slots) it.alive = false
+    this.mesh.count = 0
   }
 }
 
 export class Effects {
   constructor(scene) {
-    this.scene = scene
     this.sparks = new Pool(scene, {
       count: 400,
       geometry: new THREE.BoxGeometry(0.05, 0.05, 0.3),
@@ -192,13 +204,13 @@ export class Effects {
   }
 
   reset() {
-    for (const pool of this.pools) pool.items.length = 0
+    for (const pool of this.pools) pool.clear()
     this.skids.clear()
   }
 }
 
 /** Tyre marks: a ring buffer of dark quads laid on the road behind sliding wheels. */
-export class SkidMarks {
+class SkidMarks {
   constructor(scene, max = 3000) {
     this.max = max
     this.positions = new Float32Array(max * 6 * 3)
@@ -218,38 +230,42 @@ export class SkidMarks {
     this.mesh.frustumCulled = false
     scene.add(this.mesh)
     this.cursor = 0
-    this.last = new Map()
+    /** Per wheel: the trail's last left/right edge points, and whether the trail is running. */
+    this.trails = new Map()
   }
 
-  /** Adds a segment for wheel `key` at `point` with lateral axis `side`, or breaks the trail when intensity is 0. */
-  mark(key, point, side, intensity, width = 0.22) {
-    const prev = this.last.get(key)
+  /** Extends wheel `key`'s trail to (x, z) with lateral axis (sx, sz), or breaks it when intensity is low. */
+  mark(key, x, z, sx, sz, intensity, width = 0.22) {
+    let trail = this.trails.get(key)
+    if (!trail) this.trails.set(key, (trail = { on: false, lx: 0, lz: 0, rx: 0, rz: 0 }))
     if (intensity <= 0.05) {
-      this.last.delete(key)
+      trail.on = false
       return
     }
-    const l = point.clone().addScaledVector(side, width)
-    const r = point.clone().addScaledVector(side, -width)
-    l.y = r.y = 0.02
-    if (prev && prev.l.distanceToSquared(l) < 9) {
+    const lx = x + sx * width, lz = z + sz * width
+    const rx = x - sx * width, rz = z - sz * width
+    if (trail.on && (trail.lx - lx) ** 2 + (trail.lz - lz) ** 2 < 9) {
       const i = this.cursor
-      const quad = [prev.l, prev.r, l, prev.r, r, l]
-      for (let k = 0; k < 6; k++) {
-        this.positions.set([quad[k].x, quad[k].y, quad[k].z], (i * 6 + k) * 3)
-        this.alpha[i * 6 + k] = Math.min(1, intensity)
-      }
-      this.cursor = (this.cursor + 1) % this.max
-      this.mesh.geometry.attributes.position.needsUpdate = true
-      this.mesh.geometry.attributes.alpha.needsUpdate = true
+      const y = 0.02
+      // Two triangles: prev-left, prev-right, left / prev-right, right, left.
+      this.positions.set([trail.lx, y, trail.lz, trail.rx, y, trail.rz, lx, y, lz, trail.rx, y, trail.rz, rx, y, rz, lx, y, lz], i * 18)
+      this.alpha.fill(Math.min(1, intensity), i * 6, i * 6 + 6)
+      const { position, alpha } = this.mesh.geometry.attributes
+      position.addUpdateRange(i * 18, 18)
+      alpha.addUpdateRange(i * 6, 6)
+      position.needsUpdate = alpha.needsUpdate = true
+      this.cursor = (i + 1) % this.max
     }
-    this.last.set(key, { l, r })
+    Object.assign(trail, { on: true, lx, lz, rx, rz })
   }
 
   clear() {
     this.positions.fill(0)
     this.alpha.fill(0)
-    this.mesh.geometry.attributes.position.needsUpdate = true
-    this.mesh.geometry.attributes.alpha.needsUpdate = true
-    this.last.clear()
+    const { position, alpha } = this.mesh.geometry.attributes
+    position.clearUpdateRanges()
+    alpha.clearUpdateRanges()
+    position.needsUpdate = alpha.needsUpdate = true
+    this.trails.clear()
   }
 }

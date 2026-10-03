@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { CATEGORIES, TOGETHER } from '#/lib/categories'
+import { toy } from '#/lib/ui'
 
 export function CategoryBar() {
   return (
@@ -11,7 +12,7 @@ export function CategoryBar() {
               to="/category/$slug"
               params={{ slug: c.slug }}
               className="toy flex items-center gap-2 rounded-full px-5 py-3 text-lg font-semibold text-white"
-              style={{ '--toy-bg': c.color } as React.CSSProperties}
+              style={toy(c.color)}
               activeProps={{ className: 'ring-4 ring-white' }}
             >
               <span aria-hidden className="text-2xl">{c.emoji}</span>

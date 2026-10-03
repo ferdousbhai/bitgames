@@ -1,14 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeader } from '@tanstack/react-start/server'
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import { safeEqual } from './crypto'
+import { allowedByIp } from './rate-limit'
 import { publishDraft, unpublish } from './games-store'
+import { isGameId } from './limits'
 
 async function requireAdmin(adminKey: string) {
   // Rate-limit guesses per IP before comparing.
-  const ip = getRequestHeader('cf-connecting-ip') ?? 'unknown'
-  if (!(await env.ADMIN_LIMITER.limit({ key: ip })).success) throw new Error('Too many attempts. Wait a minute.')
+  if (!(await allowedByIp(env.ADMIN_LIMITER))) throw new Error('Too many attempts. Wait a minute.')
   if (!env.ADMIN_KEY || !(await safeEqual(adminKey, env.ADMIN_KEY))) throw new Error('Wrong admin key.')
 }
 
@@ -26,6 +26,7 @@ export interface AdminGame {
   pending_info: string | null
   review_note: string | null
   preview_token: string
+  entry: string
   creator_id: string | null
   updated_at: number
 }
@@ -35,7 +36,7 @@ export const listForAdmin = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     await requireAdmin(data.adminKey)
     const { results } = await env.DB.prepare(
-      `SELECT id, title, tagline, how_to_play, emoji, category, status, live, pending_info, review_note, preview_token, creator_id, updated_at
+      `SELECT id, title, tagline, how_to_play, emoji, category, entry, status, live, pending_info, review_note, preview_token, creator_id, updated_at
          FROM games
         WHERE status = 'review' OR live = 1
         ORDER BY CASE status WHEN 'review' THEN 0 ELSE 1 END, updated_at DESC
@@ -47,7 +48,7 @@ export const listForAdmin = createServerFn({ method: 'POST' })
 export const reviewGame = createServerFn({ method: 'POST' })
   .validator(
     auth.extend({
-      id: z.string().max(64),
+      id: z.string().refine(isGameId),
       decision: z.enum(['approve', 'reject', 'unpublish']),
       note: z.string().max(500).optional(),
     }),

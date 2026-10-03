@@ -1,5 +1,6 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { toy } from '#/lib/ui'
 
 const LOGO_COLORS = ['#ff6b9d', '#ff9f1c', '#ffbe0b', '#8ac926', '#2ec4b6', '#6c63ff']
 
@@ -60,7 +61,7 @@ export function Header() {
         <Link
           to="/make"
           className="toy ml-auto shrink-0 rounded-full px-5 py-2.5 text-lg font-semibold text-white"
-          style={{ '--toy-bg': 'var(--color-berry)' } as React.CSSProperties}
+          style={toy('var(--color-berry)')}
         >
           🛠️ <span className="hidden sm:inline">Make a game</span><span className="sm:hidden">Make</span>
         </Link>

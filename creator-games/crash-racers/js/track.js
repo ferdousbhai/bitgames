@@ -1,8 +1,7 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC } from './car.js'
-import { rng } from './util.js'
+import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, STATIC_MASK, rng, wrap } from './util.js'
 
 /**
  * A closed loop road. Cities describe the path and decorate the sides; this
@@ -85,8 +84,18 @@ export class Track {
     return { index: best, dist: s.dist, lateral, offRoad: Math.abs(lateral) > this.width / 2 + 0.5, distance: Math.sqrt(bestD) }
   }
 
+  /** Yaw that points a car's nose (-Z) along the road at sample `s`. */
+  headingAt(s) {
+    return Math.atan2(-s.t.x, -s.t.z)
+  }
+
+  /** Yaw that lines an object's +Z up with the road at sample `s` (scenery). */
+  alongAt(s) {
+    return Math.atan2(s.t.x, s.t.z)
+  }
+
   sampleAt(dist) {
-    const i = Math.floor((((dist % this.length) + this.length) % this.length) / this.length * this.samples.length)
+    const i = Math.floor((wrap(dist, this.length) / this.length) * this.samples.length)
     return this.samples[i % this.samples.length]
   }
 
@@ -96,7 +105,7 @@ export class Track {
     for (let k = 0; k < n; k++) {
       const s = this.sampleAt(this.length - 8 - Math.floor(k / 2) * 9)
       const lateral = (k % 2 === 0 ? -1 : 1) * this.width * 0.22
-      out.push({ position: s.p.clone().addScaledVector(s.side, lateral), yaw: Math.atan2(-s.t.x, -s.t.z) })
+      out.push({ position: s.p.clone().addScaledVector(s.side, lateral), yaw: this.headingAt(s) })
     }
     return out
   }
@@ -104,8 +113,9 @@ export class Track {
   // --- Building blocks ------------------------------------------------------
 
   /** The road ribbon, with UVs in metres along and 0..1 across. */
-  buildRoad(material, { y = 0.02, extra = 0 } = {}) {
-    const half = this.width / 2 + extra
+  buildRoad(material) {
+    const half = this.width / 2
+    const y = 0.02
     const positions = [], uvs = [], index = []
     const n = this.samples.length
     for (let i = 0; i <= n; i++) {
@@ -132,7 +142,7 @@ export class Track {
   }
 
   /** A strip running beside the road (sidewalk, curb, verge). */
-  buildStrip(material, from, to, y, { height = 0 } = {}) {
+  buildStrip(material, from, to, y) {
     const positions = [], uvs = [], index = []
     const n = this.samples.length
     for (const sign of [-1, 1]) {
@@ -141,7 +151,7 @@ export class Track {
         const s = this.samples[i % n]
         const a = s.p.clone().addScaledVector(s.side, sign * from)
         const b = s.p.clone().addScaledVector(s.side, sign * to)
-        positions.push(a.x, y + height, a.z, b.x, y + height, b.z)
+        positions.push(a.x, y, a.z, b.x, y, b.z)
         uvs.push(0, i * 0.5, 1, i * 0.5)
         if (i < n) {
           const k = base + i * 2
@@ -162,13 +172,19 @@ export class Track {
   }
 
   /** A static box collider (and optional visual) at a position with a yaw. */
-  addStaticBox(center, size, yaw, material, { visual = true, castShadow = true, merge = true } = {}) {
-    const body = new CANNON.Body({ mass: 0, material: this.staticMaterial, collisionFilterGroup: GROUP_STATIC, collisionFilterMask: GROUP_CAR | GROUP_DEBRIS | GROUP_PROP })
-    body.addShape(new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)))
+  /** A static collider box. */
+  staticBox(center, halfSize, quaternion) {
+    const body = new CANNON.Body({ mass: 0, material: this.staticMaterial, collisionFilterGroup: GROUP_STATIC, collisionFilterMask: STATIC_MASK })
+    body.addShape(new CANNON.Box(new CANNON.Vec3(halfSize.x, halfSize.y, halfSize.z)))
     body.position.set(center.x, center.y, center.z)
-    body.quaternion.setFromEuler(0, yaw, 0)
+    body.quaternion.copy(quaternion)
     this.world.addBody(body)
     this.bodies.push(body)
+    return body
+  }
+
+  addStaticBox(center, size, yaw, material, { visual = true, castShadow = true } = {}) {
+    const body = this.staticBox(center, size.clone().multiplyScalar(0.5), new CANNON.Quaternion().setFromEuler(0, yaw, 0))
     if (visual && material) {
       const geo = new THREE.BoxGeometry(size.x, size.y, size.z)
       geo.rotateY(yaw)
@@ -214,7 +230,7 @@ export class Track {
     let best = dist, bestBend = Infinity
     for (let d = dist - 90; d <= dist + 90; d += 5) {
       // Never on the start straight, where the cars line up.
-      const fromStart = Math.min((d + this.length) % this.length, this.length - ((d + this.length) % this.length))
+      const fromStart = Math.min(wrap(d, this.length), this.length - wrap(d, this.length))
       if (fromStart < 70) continue
       const bend = this.bendAt(d)
       if (bend < bestBend) {
@@ -222,20 +238,15 @@ export class Track {
         best = d
       }
     }
-    dist = (best + this.length) % this.length
+    dist = wrap(best, this.length)
     const s = this.sampleAt(dist)
-    const yaw = Math.atan2(s.t.x, s.t.z)
+    const yaw = this.alongAt(s)
     const angle = Math.atan2(height, length)
     const slope = Math.hypot(height, length)
     const center = s.p.clone().addScaledVector(s.side, lateral)
-    this.ramps.push({ dist, lateral, width })
-    const body = new CANNON.Body({ mass: 0, material: this.staticMaterial, collisionFilterGroup: GROUP_STATIC, collisionFilterMask: GROUP_CAR | GROUP_DEBRIS | GROUP_PROP })
-    body.addShape(new CANNON.Box(new CANNON.Vec3(width / 2, 0.25, slope / 2)))
+    this.ramps.push({ dist, lateral })
     const q = new CANNON.Quaternion().setFromEuler(-angle, yaw, 0, 'YXZ')
-    body.quaternion.copy(q)
-    body.position.set(center.x, height / 2 - 0.22, center.z)
-    this.world.addBody(body)
-    this.bodies.push(body)
+    const body = this.staticBox(new THREE.Vector3(center.x, height / 2 - 0.22, center.z), new THREE.Vector3(width / 2, 0.25, slope / 2), q)
     const geo = new THREE.BoxGeometry(width, 0.5, slope)
     const mesh = new THREE.Mesh(geo, material)
     mesh.position.copy(body.position)
@@ -250,11 +261,10 @@ export class Track {
     body.addShape(shape)
     body.position.set(position.x, position.y, position.z)
     body.sleep()
-    body.isDebris = true // props never damage cars
     this.world.addBody(body)
     mesh.castShadow = true
     this.scene.add(mesh)
-    this.props.push({ mesh, body, home: position.clone() })
+    this.props.push({ mesh, body })
     mesh.position.copy(position)
   }
 
@@ -268,7 +278,7 @@ export class Track {
         const clearance = this.distanceToRoad(center.x, center.z, 3)
         if (clearance < offset + depth / 2 - 0.5) continue
         if (skip?.(d, sign)) continue
-        place({ center, yaw: Math.atan2(s.t.x, s.t.z), sign, dist: d, sample: s })
+        place({ center, yaw: this.alongAt(s), sign, dist: d, sample: s })
       }
     }
   }
@@ -292,16 +302,7 @@ export class Track {
     }
   }
 
-  resetProps() {
-    for (const p of this.props) {
-      p.body.position.set(p.home.x, p.home.y, p.home.z)
-      p.body.quaternion.set(0, 0, 0, 1)
-      p.body.velocity.setZero()
-      p.body.angularVelocity.setZero()
-      p.body.sleep()
-    }
-  }
-
+  /** Removes the city from the world and frees its GPU resources (a new race builds a fresh one). */
   dispose() {
     for (const b of this.bodies) this.world.removeBody(b)
     for (const p of this.props) {
@@ -309,5 +310,15 @@ export class Track {
       p.mesh.removeFromParent()
     }
     this.group.removeFromParent()
+    const free = (o) => {
+      if (!o.isMesh) return
+      o.geometry.dispose()
+      for (const m of [o.material].flat()) {
+        m.map?.dispose()
+        m.dispose()
+      }
+    }
+    this.group.traverse(free)
+    for (const p of this.props) p.mesh.traverse(free)
   }
 }

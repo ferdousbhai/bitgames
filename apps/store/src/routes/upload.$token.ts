@@ -1,9 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
 import { sha256Hex } from '#/server/crypto'
-import { MAX_FILE_BYTES, objectKey } from '#/server/limits'
-import { checkGameQuota, recordGameBytes } from '#/server/games-store'
-import { CONTENT_TYPES, extensionOf } from '#/server/limits'
+import { CreatorError, checkGameQuota, isEditable, markDraftChanged } from '#/server/games-store'
+import { CONTENT_TYPES, MAX_FILE_BYTES, extensionOf, objectKey } from '#/server/limits'
 
 const text = (status: number, body: string) =>
   new Response(body + '\n', { status, headers: { 'content-type': 'text/plain; charset=utf-8' } })
@@ -28,7 +27,7 @@ export const Route = createFileRoute('/upload/$token')({
         const game = await env.DB.prepare(`SELECT status FROM games WHERE id = ?`)
           .bind(upload.game_id)
           .first<{ status: string }>()
-        if (!game || game.status === 'review') {
+        if (!game || !isEditable(game.status)) {
           return text(409, 'This game is waiting for review, so its files cannot change. Use reopen_game first.')
         }
 
@@ -37,8 +36,13 @@ export const Route = createFileRoute('/upload/$token')({
           return text(411, 'Send the file with a Content-Length, e.g. curl -T model.glb <url>')
         }
         if (length > MAX_FILE_BYTES) return text(413, `Files can be at most ${MAX_FILE_BYTES / 1024 / 1024} MB.`)
-        const quotaError = await checkGameQuota(upload.game_id, upload.path, length)
-        if (quotaError) return text(413, quotaError)
+        let total: number
+        try {
+          total = await checkGameQuota(upload.game_id, upload.path, length)
+        } catch (error) {
+          if (error instanceof CreatorError) return text(413, error.message)
+          throw error
+        }
 
         // FixedLengthStream lets R2 accept the body without buffering it, and
         // errors if the client sends more bytes than it declared.
@@ -49,7 +53,7 @@ export const Route = createFileRoute('/upload/$token')({
             httpMetadata: { contentType: CONTENT_TYPES[extensionOf(upload.path)] },
           }),
         ])
-        await recordGameBytes(upload.game_id)
+        await markDraftChanged(upload.game_id, { bytes: total })
         return text(200, `Uploaded ${upload.path} (${object.size} bytes).`)
       },
     },

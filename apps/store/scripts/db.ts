@@ -12,28 +12,17 @@
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { extname, join, relative } from 'node:path'
+import { join, relative } from 'node:path'
+import config from '../cloudflare.config.ts'
+import { CONTENT_TYPES, extensionOf, liveKey, objectKey } from '../src/server/limits.ts'
 
-const DATABASE_ID = '34eb131f-ba97-412e-ba81-8d1aa5c2c808'
-const BUCKET = 'bitgames-games'
+const DATABASE_ID = config.worker.env.DB.id!
+const BUCKET = config.worker.env.GAMES.name!
 const LOCAL_API = `${process.env.DEV_URL ?? 'http://localhost:3030'}/cdn-cgi/local/explorer/api`
 
 const root = new URL('..', import.meta.url).pathname
 const remote = process.argv.includes('--remote')
 const command = process.argv[2]
-
-const CONTENT_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json',
-  '.glb': 'model/gltf-binary',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.mp3': 'audio/mpeg',
-  '.ogg': 'audio/ogg',
-}
 
 function cf(args: string[]): string {
   return execFileSync('pnpm', ['exec', 'cf', ...args], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] })
@@ -133,7 +122,8 @@ async function seed() {
       const path = relative(join(gamesDir, dir), file)
       if (path === 'manifest.json') continue
       // Built-in games are published straight away: draft and live copies are the same.
-      for (const prefix of ['games', 'live']) await putObject(`${prefix}/${dir}/${path}`, file, CONTENT_TYPES[extname(file)] ?? 'application/octet-stream')
+      const type = CONTENT_TYPES[extensionOf(path)] ?? 'application/octet-stream'
+      for (const key of [objectKey(dir, path), liveKey(dir, path)]) await putObject(key, file, type)
     }
     const values = [m.id, m.title, m.tagline, m.howToPlay, m.emoji, m.color, m.category, m.together, m.entry ?? 'index.html', m.featured, now - index * 60_000, now]
     await sql(

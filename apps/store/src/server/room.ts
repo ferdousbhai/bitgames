@@ -1,3 +1,4 @@
+import { MAX_ROOM_PLAYERS, PEER_ID } from '@bitgames/game-sdk/bridge'
 import { DurableObject } from 'cloudflare:workers'
 
 /**
@@ -10,27 +11,28 @@ import { DurableObject } from 'cloudflare:workers'
  *
  * Client -> room: {t:"signal", to, data}
  * Room -> client: {t:"peers", peers} on connect, then {t:"joined", peer} |
- *                 {t:"left", peer} | {t:"signal", from, data} | {t:"error", message}
+ *                 {t:"left", peer} | {t:"signal", from, data}
  */
-export const MAX_ROOM_PEERS = 8
 const MAX_MESSAGE_BYTES = 64 * 1024
-const PEER_ID = /^[0-9a-f]{16}$/
 
 export class GameRoom extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     if (request.headers.get('upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 })
-    const peer = new URL(request.url).searchParams.get('peer') ?? ''
+    const url = new URL(request.url)
+    const peer = url.searchParams.get('peer') ?? ''
     if (!PEER_ID.test(peer)) return new Response('Invalid peer ID', { status: 400 })
+    // The game says how many players it supports; never more than the platform limit.
+    const max = Math.min(MAX_ROOM_PLAYERS, Math.max(2, Number(url.searchParams.get('max')) || MAX_ROOM_PLAYERS))
 
     const existing = this.ctx.getWebSockets()
-    if (existing.length >= MAX_ROOM_PEERS) return new Response('Room full', { status: 409 })
+    if (existing.length >= max) return new Response('Room full', { status: 409 })
     if (this.ctx.getWebSockets(peer).length > 0) return new Response('Peer ID in use', { status: 409 })
 
     const { 0: client, 1: server } = new WebSocketPair()
     this.ctx.acceptWebSocket(server, [peer])
     const others = existing.map((ws) => this.ctx.getTags(ws)[0]).filter((id): id is string => !!id)
     server.send(JSON.stringify({ t: 'peers', peers: others }))
-    for (const ws of existing) ws.send(JSON.stringify({ t: 'joined', peer }))
+    this.broadcast({ t: 'joined', peer }, existing)
     return new Response(null, { status: 101, webSocket: client })
   }
 
@@ -43,10 +45,7 @@ export class GameRoom extends DurableObject<Env> {
       return
     }
     if (msg.t !== 'signal' || typeof msg.to !== 'string') return
-    const from = this.ctx.getTags(ws)[0]
-    for (const target of this.ctx.getWebSockets(msg.to)) {
-      target.send(JSON.stringify({ t: 'signal', from, data: msg.data }))
-    }
+    this.broadcast({ t: 'signal', from: this.ctx.getTags(ws)[0], data: msg.data }, this.ctx.getWebSockets(msg.to))
   }
 
   async webSocketClose(ws: WebSocket) {
@@ -58,9 +57,11 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   private leave(ws: WebSocket) {
-    const peer = this.ctx.getTags(ws)[0]
-    for (const other of this.ctx.getWebSockets()) {
-      if (other !== ws) other.send(JSON.stringify({ t: 'left', peer }))
-    }
+    this.broadcast({ t: 'left', peer: this.ctx.getTags(ws)[0] }, this.ctx.getWebSockets().filter((other) => other !== ws))
+  }
+
+  private broadcast(message: unknown, sockets: WebSocket[]) {
+    const text = JSON.stringify(message)
+    for (const ws of sockets) ws.send(text)
   }
 }

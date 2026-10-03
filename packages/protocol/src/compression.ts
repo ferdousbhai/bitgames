@@ -6,7 +6,7 @@ export const COMPRESSION_THRESHOLD = 100;
 export function shouldCompress(data: Uint8Array): boolean {
   if (data.length < COMPRESSION_THRESHOLD) return false;
   // Many distinct byte values usually means the data is already compressed.
-  const unique = new Set(data).size;
+  const unique = new Set(data.subarray(0, 256)).size;
   const sampleSize = Math.min(data.length, 256);
   return unique / sampleSize < 0.9;
 }

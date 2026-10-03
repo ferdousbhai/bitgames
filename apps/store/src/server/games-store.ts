@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { CATEGORIES } from '#/lib/categories'
-import { randomToken, sha256Hex } from './crypto'
+import { randomHex, randomToken, sha256Hex } from './crypto'
 import {
   CONTENT_TYPES,
   MAX_CREATOR_BYTES,
@@ -32,6 +32,25 @@ export interface GameInfo {
   together: boolean
 }
 
+/** GameInfo field -> games column. */
+const INFO_COLUMNS: Record<keyof GameInfo, string> = {
+  title: 'title', tagline: 'tagline', howToPlay: 'how_to_play', emoji: 'emoji',
+  color: 'color', category: 'category', together: 'together',
+}
+
+/** `col = ?` assignments and their values for the fields present in `info`. */
+function infoSets(info: Partial<GameInfo>) {
+  const sets: string[] = []
+  const values: (string | number)[] = []
+  for (const [key, column] of Object.entries(INFO_COLUMNS) as [keyof GameInfo, string][]) {
+    const value = info[key]
+    if (value === undefined) continue
+    sets.push(`${column} = ?`)
+    values.push(typeof value === 'boolean' ? Number(value) : value)
+  }
+  return { sets, values }
+}
+
 interface OwnedGameRow {
   id: string
   title: string
@@ -39,11 +58,16 @@ interface OwnedGameRow {
   status: GameStatus
   review_note: string | null
   preview_token: string
+  pending_info: string | null
   updated_at: number
 }
 
-// A published game's draft stays editable: the live copy keeps playing until the changes are approved.
-const EDITABLE: GameStatus[] = ['draft', 'rejected', 'public']
+const OWNED_COLUMNS = 'id, title, live, status, review_note, preview_token, pending_info, updated_at'
+
+/** A published game's draft stays editable: the live copy keeps playing until the changes are approved. */
+export const isEditable = (status: string) => status !== 'review'
+
+const COVER_FILES = ['cover.webp', 'cover.jpg', 'cover.png']
 
 /** The creator's private play page: the game inside BitGames, so "play together" works too. */
 export function previewUrl(origin: string, token: string) {
@@ -61,7 +85,7 @@ function slugify(title: string) {
   )
 }
 
-export function validateInfo(info: Partial<GameInfo>) {
+function validateInfo(info: Partial<GameInfo>) {
   if (info.category !== undefined && !CATEGORIES.some((c) => c.slug === info.category)) {
     throw new CreatorError(`category must be one of: ${CATEGORIES.map((c) => c.slug).join(', ')}`)
   }
@@ -70,10 +94,13 @@ export function validateInfo(info: Partial<GameInfo>) {
   }
 }
 
+function assertPath(path: string) {
+  const error = checkPath(path)
+  if (error) throw new CreatorError(error)
+}
+
 async function ownedGame(creatorId: string, gameId: string) {
-  const game = await env.DB.prepare(
-    'SELECT id, title, live, status, review_note, preview_token, updated_at FROM games WHERE id = ? AND creator_id = ?',
-  )
+  const game = await env.DB.prepare(`SELECT ${OWNED_COLUMNS} FROM games WHERE id = ? AND creator_id = ?`)
     .bind(gameId, creatorId)
     .first<OwnedGameRow>()
   if (!game) throw new CreatorError(`You have no game with id "${gameId}". Use list_my_games to see your games.`)
@@ -82,10 +109,28 @@ async function ownedGame(creatorId: string, gameId: string) {
 
 async function editableGame(creatorId: string, gameId: string) {
   const game = await ownedGame(creatorId, gameId)
-  if (!EDITABLE.includes(game.status)) {
+  if (!isEditable(game.status)) {
     throw new CreatorError('This game is waiting for review, so it cannot change. Use reopen_game to take it back and edit it.')
   }
   return game
+}
+
+/**
+ * The one place a draft change is recorded: bumps updated_at, optionally stores
+ * the draft's new size, and sends a published game's draft back to "changed".
+ */
+export async function markDraftChanged(gameId: string, { bytes, pendingInfo }: { bytes?: number; pendingInfo?: string } = {}) {
+  const sets = [`updated_at = ?`, `status = CASE WHEN status = 'public' THEN 'draft' ELSE status END`]
+  const values: (string | number)[] = [Date.now()]
+  if (bytes !== undefined) {
+    sets.push('bytes = ?')
+    values.push(bytes)
+  }
+  if (pendingInfo !== undefined) {
+    sets.push('pending_info = ?')
+    values.push(pendingInfo)
+  }
+  await env.DB.prepare(`UPDATE games SET ${sets.join(', ')} WHERE id = ?`).bind(...values, gameId).run()
 }
 
 export async function createGame(creatorId: string, info: GameInfo) {
@@ -98,24 +143,22 @@ export async function createGame(creatorId: string, info: GameInfo) {
   }
 
   const now = Date.now()
-  const previewToken = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('')
+  const previewToken = randomHex(16)
+  const starter = new TextEncoder().encode(STARTER_GAME)
   const base = slugify(info.title)
   for (let attempt = 0; attempt < 5; attempt++) {
-    const id = attempt === 0 ? base : `${base}-${randomToken(3).toLowerCase().replace(/[^a-z0-9]/g, '')}`
+    const id = attempt === 0 ? base : `${base}-${randomHex(3)}`
     const result = await env.DB.prepare(
       `INSERT INTO games (id, creator_id, title, tagline, how_to_play, emoji, color, category, together,
-                          status, preview_token, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)
+                          status, preview_token, bytes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)
        ON CONFLICT (id) DO NOTHING`,
     )
       .bind(id, creatorId, info.title, info.tagline, info.howToPlay, info.emoji, info.color, info.category,
-        info.together ? 1 : 0, previewToken, now, now)
+        info.together ? 1 : 0, previewToken, starter.length, now, now)
       .run()
     if (result.meta.changes === 1) {
-      await env.GAMES.put(objectKey(id, 'index.html'), STARTER_GAME, {
-        httpMetadata: { contentType: CONTENT_TYPES.html },
-      })
-      await recordGameBytes(id)
+      await env.GAMES.put(objectKey(id, 'index.html'), starter, { httpMetadata: { contentType: CONTENT_TYPES.html } })
       return { id, previewToken }
     }
   }
@@ -127,26 +170,12 @@ export async function updateInfo(creatorId: string, gameId: string, info: Partia
   const game = await editableGame(creatorId, gameId)
   if (game.live) {
     // Children keep seeing the reviewed details until these are approved too.
-    const row = await env.DB.prepare('SELECT pending_info FROM games WHERE id = ?').bind(gameId).first<{ pending_info: string | null }>()
-    const pending = { ...(row?.pending_info ? JSON.parse(row.pending_info) : {}), ...info }
-    await env.DB.prepare(`UPDATE games SET pending_info = ?, status = 'draft', updated_at = ? WHERE id = ?`)
-      .bind(JSON.stringify(pending), Date.now(), gameId)
-      .run()
+    const pending = { ...(game.pending_info ? JSON.parse(game.pending_info) : {}), ...info }
+    await markDraftChanged(gameId, { pendingInfo: JSON.stringify(pending) })
     return 'pending'
   }
-  const columns: Record<keyof GameInfo, string> = {
-    title: 'title', tagline: 'tagline', howToPlay: 'how_to_play', emoji: 'emoji',
-    color: 'color', category: 'category', together: 'together',
-  }
-  const sets: string[] = []
-  const values: (string | number)[] = []
-  for (const [key, column] of Object.entries(columns) as [keyof GameInfo, string][]) {
-    const value = info[key]
-    if (value === undefined) continue
-    sets.push(`${column} = ?`)
-    values.push(typeof value === 'boolean' ? Number(value) : value)
-  }
-  if (sets.length === 0) return
+  const { sets, values } = infoSets(info)
+  if (sets.length === 0) return 'applied'
   await env.DB.prepare(`UPDATE games SET ${sets.join(', ')}, updated_at = ? WHERE id = ?`)
     .bind(...values, Date.now(), gameId)
     .run()
@@ -154,9 +183,7 @@ export async function updateInfo(creatorId: string, gameId: string, info: Partia
 }
 
 export async function listOwned(creatorId: string) {
-  const { results } = await env.DB.prepare(
-    'SELECT id, title, live, status, review_note, preview_token, updated_at FROM games WHERE creator_id = ? ORDER BY updated_at DESC',
-  )
+  const { results } = await env.DB.prepare(`SELECT ${OWNED_COLUMNS} FROM games WHERE creator_id = ? ORDER BY updated_at DESC`)
     .bind(creatorId)
     .all<OwnedGameRow>()
   return results
@@ -164,26 +191,32 @@ export async function listOwned(creatorId: string) {
 
 export async function listFiles(creatorId: string, gameId: string) {
   await ownedGame(creatorId, gameId)
-  return listGameObjects(gameId)
+  return listObjects(objectKey(gameId, ''))
 }
 
-async function listGameObjects(gameId: string) {
-  const prefix = objectKey(gameId, '')
-  const listed = await env.GAMES.list({ prefix, limit: 1000 })
-  return listed.objects.map((o) => ({ path: o.key.slice(prefix.length), bytes: o.size }))
+/** Every object under a prefix (paged), with paths relative to the prefix. */
+async function listObjects(prefix: string) {
+  const out: { path: string; bytes: number }[] = []
+  let cursor: string | undefined
+  do {
+    const listed = await env.GAMES.list({ prefix, cursor, limit: 1000 })
+    for (const o of listed.objects) out.push({ path: o.key.slice(prefix.length), bytes: o.size })
+    cursor = listed.truncated ? listed.cursor : undefined
+  } while (cursor)
+  return out
 }
 
 /**
- * Returns an error message when putting `bytes` at `path` would break the
- * per-game file and size limits or the creator's total storage cap.
+ * Checks that putting `bytes` at `path` keeps the game and its creator within
+ * their limits, and returns the game's new total size.
  */
-export async function checkGameQuota(gameId: string, path: string, bytes: number): Promise<string | null> {
-  const others = (await listGameObjects(gameId)).filter((o) => o.path !== path)
-  if (others.length + 1 > MAX_FILES_PER_GAME) return `A game can have at most ${MAX_FILES_PER_GAME} files.`
+export async function checkGameQuota(gameId: string, path: string, bytes: number): Promise<number> {
+  const others = (await listObjects(objectKey(gameId, ''))).filter((o) => o.path !== path)
+  if (others.length + 1 > MAX_FILES_PER_GAME) throw new CreatorError(`A game can have at most ${MAX_FILES_PER_GAME} files.`)
   const gameTotal = others.reduce((sum, o) => sum + o.bytes, 0) + bytes
   const mb = (n: number) => (n / 1024 / 1024).toFixed(1)
   if (gameTotal > MAX_GAME_BYTES) {
-    return `This would make the game ${mb(gameTotal)} MB. A game can be at most ${MAX_GAME_BYTES / 1024 / 1024} MB.`
+    throw new CreatorError(`This would make the game ${mb(gameTotal)} MB. A game can be at most ${MAX_GAME_BYTES / 1024 / 1024} MB.`)
   }
   const row = await env.DB.prepare(
     `SELECT COALESCE(SUM(bytes), 0) AS other FROM games
@@ -193,30 +226,21 @@ export async function checkGameQuota(gameId: string, path: string, bytes: number
     .first<{ other: number }>()
   const creatorTotal = (row?.other ?? 0) + gameTotal
   if (creatorTotal > MAX_CREATOR_BYTES) {
-    return `This would bring all your games to ${mb(creatorTotal)} MB. Each creator can store up to ${MAX_CREATOR_BYTES / 1024 / 1024} MB; delete files or games you don't need.`
+    throw new CreatorError(
+      `This would bring all your games to ${mb(creatorTotal)} MB. Each creator can store up to ${MAX_CREATOR_BYTES / 1024 / 1024} MB; delete files or games you don't need.`,
+    )
   }
-  return null
-}
-
-export const COVER_FILES = ['cover.webp', 'cover.jpg', 'cover.png']
-
-/** Recomputes a game's stored size after its draft changes; a changed published game needs review again. */
-export async function recordGameBytes(gameId: string) {
-  const total = (await listGameObjects(gameId)).reduce((sum, o) => sum + o.bytes, 0)
-  await env.DB.prepare(
-    `UPDATE games SET bytes = ?, updated_at = ?, status = CASE WHEN status = 'public' THEN 'draft' ELSE status END WHERE id = ?`,
-  )
-    .bind(total, Date.now(), gameId)
-    .run()
+  return gameTotal
 }
 
 async function deletePrefix(prefix: string) {
-  let cursor: string | undefined
-  do {
-    const listed = await env.GAMES.list({ prefix, cursor, limit: 1000 })
-    if (listed.objects.length) await env.GAMES.delete(listed.objects.map((o) => o.key))
-    cursor = listed.truncated ? listed.cursor : undefined
-  } while (cursor)
+  const keys = (await listObjects(prefix)).map((o) => prefix + o.path)
+  for (let i = 0; i < keys.length; i += 1000) await env.GAMES.delete(keys.slice(i, i + 1000))
+}
+
+/** Runs `fn` over `items` with at most `limit` in flight. */
+async function inBatches<T>(items: T[], limit: number, fn: (item: T) => Promise<unknown>) {
+  for (let i = 0; i < items.length; i += limit) await Promise.all(items.slice(i, i + limit).map(fn))
 }
 
 /**
@@ -224,33 +248,28 @@ async function deletePrefix(prefix: string) {
  * draft no longer has, applies any pending details and puts the game in the store.
  */
 export async function publishDraft(gameId: string) {
-  const draft = await listGameObjects(gameId)
-  for (const { path } of draft) {
+  const [draft, live, row] = await Promise.all([
+    listObjects(objectKey(gameId, '')),
+    listObjects(liveKey(gameId, '')),
+    env.DB.prepare('SELECT pending_info FROM games WHERE id = ?').bind(gameId).first<{ pending_info: string | null }>(),
+  ])
+  await inBatches(draft, 8, async ({ path }) => {
     const object = await env.GAMES.get(objectKey(gameId, path))
-    if (!object) continue
     // Buffered: R2 needs a known length, and files are capped at 10 MB.
-    await env.GAMES.put(liveKey(gameId, path), await object.arrayBuffer(), { httpMetadata: object.httpMetadata })
-  }
-  const keep = new Set(draft.map((o) => liveKey(gameId, o.path)))
-  const live = await env.GAMES.list({ prefix: liveKey(gameId, ''), limit: 1000 })
-  const stale = live.objects.map((o) => o.key).filter((k) => !keep.has(k))
+    if (object) await env.GAMES.put(liveKey(gameId, path), await object.arrayBuffer(), { httpMetadata: object.httpMetadata })
+  })
+  const keep = new Set(draft.map((o) => o.path))
+  const stale = live.filter((o) => !keep.has(o.path)).map((o) => liveKey(gameId, o.path))
   if (stale.length) await env.GAMES.delete(stale)
 
-  const cover = COVER_FILES.find((name) => draft.some((o) => o.path === name)) ?? null
-  const row = await env.DB.prepare('SELECT pending_info FROM games WHERE id = ?').bind(gameId).first<{ pending_info: string | null }>()
-  const pending: Partial<GameInfo> = row?.pending_info ? JSON.parse(row.pending_info) : {}
-  const columns: Record<keyof GameInfo, string> = {
-    title: 'title', tagline: 'tagline', howToPlay: 'how_to_play', emoji: 'emoji',
-    color: 'color', category: 'category', together: 'together',
-  }
-  const sets = ['live = 1', `status = 'public'`, 'review_note = NULL', 'pending_info = NULL', 'cover = ?', 'updated_at = ?']
-  const values: (string | number | null)[] = [cover, Date.now()]
-  for (const [key, column] of Object.entries(columns) as [keyof GameInfo, string][]) {
-    if (pending[key] === undefined) continue
-    sets.push(`${column} = ?`)
-    values.push(typeof pending[key] === 'boolean' ? Number(pending[key]) : (pending[key] as string))
-  }
-  await env.DB.prepare(`UPDATE games SET ${sets.join(', ')} WHERE id = ?`).bind(...values, gameId).run()
+  const cover = COVER_FILES.find((name) => keep.has(name)) ?? null
+  const { sets, values } = infoSets(row?.pending_info ? JSON.parse(row.pending_info) : {})
+  await env.DB.prepare(
+    `UPDATE games SET live = 1, status = 'public', review_note = NULL, pending_info = NULL, cover = ?, updated_at = ?
+       ${sets.length ? ', ' + sets.join(', ') : ''} WHERE id = ?`,
+  )
+    .bind(cover, Date.now(), ...values, gameId)
+    .run()
 }
 
 /** Takes a game out of the store: the live copy goes, the draft stays with the creator. */
@@ -262,8 +281,7 @@ export async function unpublish(gameId: string, note: string | null) {
 }
 
 export async function writeTextFile(creatorId: string, gameId: string, path: string, content: string) {
-  const pathError = checkPath(path)
-  if (pathError) throw new CreatorError(pathError)
+  assertPath(path)
   if (!TEXT_EXTENSIONS.has(extensionOf(path))) {
     throw new CreatorError(`.${extensionOf(path)} is a binary file. Upload it with get_upload_url instead.`)
   }
@@ -272,18 +290,14 @@ export async function writeTextFile(creatorId: string, gameId: string, path: str
     throw new CreatorError(`Text files can be at most ${MAX_TEXT_FILE_BYTES / 1024} KB. Split the code into modules.`)
   }
   await editableGame(creatorId, gameId)
-  const quotaError = await checkGameQuota(gameId, path, bytes.length)
-  if (quotaError) throw new CreatorError(quotaError)
-  await env.GAMES.put(objectKey(gameId, path), bytes, {
-    httpMetadata: { contentType: CONTENT_TYPES[extensionOf(path)] },
-  })
-  await recordGameBytes(gameId)
+  const total = await checkGameQuota(gameId, path, bytes.length)
+  await env.GAMES.put(objectKey(gameId, path), bytes, { httpMetadata: { contentType: CONTENT_TYPES[extensionOf(path)] } })
+  await markDraftChanged(gameId, { bytes: total })
   return bytes.length
 }
 
 export async function readTextFile(creatorId: string, gameId: string, path: string) {
-  const pathError = checkPath(path)
-  if (pathError) throw new CreatorError(pathError)
+  assertPath(path)
   if (!TEXT_EXTENSIONS.has(extensionOf(path))) throw new CreatorError('Only text files can be read back.')
   await ownedGame(creatorId, gameId)
   const object = await env.GAMES.get(objectKey(gameId, path))
@@ -292,16 +306,15 @@ export async function readTextFile(creatorId: string, gameId: string, path: stri
 }
 
 export async function deleteFile(creatorId: string, gameId: string, path: string) {
-  const pathError = checkPath(path)
-  if (pathError) throw new CreatorError(pathError)
+  assertPath(path)
   await editableGame(creatorId, gameId)
   await env.GAMES.delete(objectKey(gameId, path))
-  await recordGameBytes(gameId)
+  const total = (await listObjects(objectKey(gameId, ''))).reduce((sum, o) => sum + o.bytes, 0)
+  await markDraftChanged(gameId, { bytes: total })
 }
 
 export async function createUploadUrl(creatorId: string, gameId: string, path: string, origin: string) {
-  const pathError = checkPath(path)
-  if (pathError) throw new CreatorError(pathError)
+  assertPath(path)
   await editableGame(creatorId, gameId)
   const token = randomToken(32)
   await env.DB.batch([
@@ -334,7 +347,6 @@ export async function reopenGame(creatorId: string, gameId: string) {
 
 export async function deleteGame(creatorId: string, gameId: string) {
   await ownedGame(creatorId, gameId)
-  await deletePrefix(objectKey(gameId, ''))
-  await deletePrefix(liveKey(gameId, ''))
+  await Promise.all([deletePrefix(objectKey(gameId, '')), deletePrefix(liveKey(gameId, ''))])
   await env.DB.prepare('DELETE FROM games WHERE id = ? AND creator_id = ?').bind(gameId, creatorId).run()
 }

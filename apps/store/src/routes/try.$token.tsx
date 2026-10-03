@@ -1,12 +1,13 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { GameFrame } from '#/components/GameFrame'
 import { Loading } from '#/components/GameShelf'
+import { isPreviewToken } from '#/server/limits'
 import { getPreview } from '#/server/preview'
 
 /** A creator's private preview inside the store page, so "play together" works while testing. */
 export const Route = createFileRoute('/try/$token')({
   loader: async ({ params }) => {
-    if (!/^[a-f0-9]{32}$/.test(params.token)) throw notFound()
+    if (!isPreviewToken(params.token)) throw notFound()
     const game = await getPreview({ data: { token: params.token } })
     if (!game) throw notFound()
     return game

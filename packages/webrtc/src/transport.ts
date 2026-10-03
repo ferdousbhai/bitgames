@@ -17,6 +17,7 @@ import {
   encodePacket,
   fragmentPacket,
   fromHex,
+  isBroadcast,
 } from "@bitgames/protocol";
 import type { SignalData, Signaling } from "./signaling.js";
 
@@ -34,6 +35,8 @@ export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.
 
 interface PeerLink {
   id: string;
+  /** `id` as bytes, to check packet sender IDs without re-parsing. */
+  idBytes: Uint8Array;
   pc: RTCPeerConnection;
   reliable: RTCDataChannel;
   fast: RTCDataChannel;
@@ -101,12 +104,6 @@ export class WebRTCTransport {
     }
   }
 
-  bufferedAmount(peer: string, channel: Channel = "reliable"): number {
-    const link = this.links.get(peer);
-    if (!link) return 0;
-    return (channel === "fast" ? link.fast : link.reliable).bufferedAmount;
-  }
-
   /** Resolves once the channel's send buffer has drained below the threshold. */
   drained(peer: string, channel: Channel = "reliable"): Promise<void> {
     const link = this.links.get(peer);
@@ -160,6 +157,7 @@ export class WebRTCTransport {
     const fast = pc.createDataChannel("fast", { negotiated: true, id: FAST_ID, ordered: false, maxRetransmits: 0 });
     const link: PeerLink = {
       id: peer,
+      idBytes: fromHex(peer),
       pc,
       reliable,
       fast,
@@ -213,8 +211,8 @@ export class WebRTCTransport {
     let packet = decodePacket(bytes);
     if (!packet) return;
     // Direct links only: a packet must come from the peer that sent it.
-    if (!bytesEqual(packet.senderID, fromHex(link.id))) return;
-    if (packet.recipientID && !bytesEqual(packet.recipientID, this.selfBytes) && !isBroadcast(packet.recipientID)) return;
+    if (!bytesEqual(packet.senderID, link.idBytes)) return;
+    if (!isBroadcast(packet.recipientID) && !bytesEqual(packet.recipientID!, this.selfBytes)) return;
     if (packet.type === MessageType.fragment) {
       packet = link.assembler.add(packet);
       if (!packet) return;
@@ -231,6 +229,3 @@ export class WebRTCTransport {
   }
 }
 
-function isBroadcast(id: Uint8Array): boolean {
-  return id.every((b) => b === 0xff);
-}

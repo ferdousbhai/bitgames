@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
-import { canvasTexture, clamp, noise3, rng } from './util.js'
+import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, canvasTexture, clamp, noise3, rng } from './util.js'
 
 /**
  * Realistic-ish soft-body damage without a soft-body solver:
@@ -52,6 +52,22 @@ const PART_KINDS = {
   extra_plate_f: 'extra', extra_plate_r: 'extra',
 }
 
+/**
+ * A window or light: its meshes, root-space centre and size, and its own copies
+ * of the template's materials so this car can crack or dim them alone.
+ */
+function piece(object, rootInv) {
+  const meshes = []
+  object.traverse((o) => o.isMesh && meshes.push(o))
+  const materials = meshes.map((m) => (m.material = m.material.clone()))
+  const box = new THREE.Box3().setFromObject(object)
+  return {
+    object, meshes, materials,
+    center: box.getCenter(new THREE.Vector3()).applyMatrix4(rootInv),
+    radius: box.getSize(new THREE.Vector3()).length() / 2,
+  }
+}
+
 export class Damage {
   /**
    * @param car the Car (root, body, vehicle, wheels)
@@ -61,7 +77,8 @@ export class Damage {
     this.car = car
     this.env = env
     this.root = car.root
-    this.total = 0 // accumulated damage, 0..1
+    /** Accumulated damage: 0 (new) to 1 (wrecked). */
+    this.level = 0
     this.deformables = []
     this.parts = []
     this.glass = []
@@ -71,8 +88,10 @@ export class Damage {
 
     this.root.traverse((obj) => {
       if (!obj.isMesh) return
-      const pos = obj.geometry.attributes.position
-      this.deformables.push({ mesh: obj, original: pos.array.slice() })
+      obj.geometry.computeBoundingSphere()
+      // Root-space bounds, so an impact can skip meshes it can't reach.
+      const bounds = obj.geometry.boundingSphere.clone().applyMatrix4(rootInv.clone().multiply(obj.matrixWorld))
+      this.deformables.push({ mesh: obj, original: obj.geometry.attributes.position.array.slice(), bounds })
     })
 
     for (const child of this.root.children) {
@@ -88,32 +107,13 @@ export class Damage {
           swing: 0, swingVel: 0, side: name.endsWith('_l') ? -1 : 1, body: null,
         })
       } else if (name.startsWith('glass')) {
-        const meshes = []
-        child.traverse((o) => o.isMesh && meshes.push(o))
-        const box = new THREE.Box3().setFromObject(child)
-        this.glass.push({
-          object: child, meshes, state: 'ok',
-          materials: meshes.map((m) => m.material),
-          center: box.getCenter(new THREE.Vector3()).applyMatrix4(rootInv),
-          radius: box.getSize(new THREE.Vector3()).length() / 2,
-        })
+        this.glass.push({ ...piece(child, rootInv), state: 'ok' })
       } else if (name.startsWith('light')) {
-        const meshes = []
-        child.traverse((o) => o.isMesh && meshes.push(o))
-        const box = new THREE.Box3().setFromObject(child)
-        this.lights.push({ object: child, meshes, materials: meshes.map((m) => m.material), broken: false, center: box.getCenter(new THREE.Vector3()).applyMatrix4(rootInv) })
+        this.lights.push({ ...piece(child, rootInv), broken: false })
       }
     }
-    // Materials are shared by the template; each car needs its own to change them.
-    for (const g of this.glass) g.meshes.forEach((m, i) => (m.material = g.materials[i] = m.material.clone()))
-    for (const l of this.lights) l.meshes.forEach((m, i) => (m.material = l.materials[i] = m.material.clone()))
     this.crackedGlass = new THREE.MeshStandardMaterial({ color: '#cfe6f2', map: crackTexture, transparent: true, opacity: 0.75, roughness: 0.2, metalness: 0.1 })
     this.smokeTimer = 0
-  }
-
-  /** 0 (new) to 1 (wrecked). */
-  get level() {
-    return this.total
   }
 
   /**
@@ -122,20 +122,25 @@ export class Damage {
    */
   impact(point, dir, speed, seed = 1) {
     if (speed < 2.5) return
-    ;(this.log ??= []).push({ speed: +speed.toFixed(1), at: point.toArray().map((n) => +n.toFixed(2)), dir: dir.toArray().map((n) => +n.toFixed(2)) })
     const r = rng(seed)
     const force = speed - 2.5
     const radius = clamp(0.4 + force * 0.05, 0.4, 1.4)
     const depth = clamp(force * 0.042, 0, 0.6)
-    this.total = clamp(this.total + force * force * 0.0009, 0, 1)
-    this.dent(point, dir, radius, depth, seed)
+    this.level = clamp(this.level + force * force * 0.0009, 0, 1)
+    const dirty = new Set()
+    this.dent(point, dir, radius, depth, seed, dirty)
     // Big hits buckle the panels around the impact too, so the crush is ragged, not round.
     if (force > 10) {
       for (let k = 0; k < 3; k++) {
         const jitter = new THREE.Vector3((r() - 0.5) * radius * 1.4, (r() - 0.5) * radius * 0.8, (r() - 0.5) * radius * 1.4)
         const sideDir = dir.clone().add(new THREE.Vector3((r() - 0.5) * 0.8, (r() - 0.5) * 0.6, (r() - 0.5) * 0.8)).normalize()
-        this.dent(point.clone().add(jitter), sideDir, radius * 0.45, depth * 0.45, seed + k + 1)
+        this.dent(point.clone().add(jitter), sideDir, radius * 0.45, depth * 0.45, seed + k + 1, dirty)
       }
+    }
+    for (const geometry of dirty) {
+      geometry.attributes.position.needsUpdate = true
+      geometry.computeVertexNormals()
+      geometry.computeBoundingSphere()
     }
 
     for (const part of this.parts) {
@@ -181,7 +186,8 @@ export class Damage {
     })
   }
 
-  dent(point, dir, radius, depth, seed) {
+  /** Pushes vertices within `radius` of `point` along `dir`; adds the geometries it changed to `dirty`. */
+  dent(point, dir, radius, depth, seed, dirty) {
     const inv = new THREE.Matrix4()
     const rootInv = this.root.matrixWorld.clone().invert()
     const p = new THREE.Vector3()
@@ -191,14 +197,15 @@ export class Damage {
     const wrinkle = 0.35 + (seed % 7) * 0.05
     for (const def of this.deformables) {
       const mesh = def.mesh
-      if (!mesh.parent || !this.isOnCar(mesh)) continue
+      // Out of reach (with slack for dents and loose parts), or torn off.
+      if (def.bounds.center.distanceTo(point) > radius + def.bounds.radius + MAX_DENT) continue
+      if (!this.isOnCar(mesh)) continue
       // root space -> mesh space
-      inv.copy(rootInv.clone().multiply(mesh.matrixWorld)).invert()
+      inv.multiplyMatrices(rootInv, mesh.matrixWorld).invert()
       p.copy(point).applyMatrix4(inv)
       ldir.copy(dir).transformDirection(inv)
       const pos = mesh.geometry.attributes.position
       const arr = pos.array
-      let changed = false
       const r2 = radius * radius
       for (let i = 0; i < arr.length; i += 3) {
         const dx = arr[i] - p.x, dy = arr[i + 1] - p.y, dz = arr[i + 2] - p.z
@@ -216,12 +223,7 @@ export class Damage {
         arr[i] += ldir.x * amount + n * amount * wrinkle * 0.6
         arr[i + 1] += ldir.y * amount + noise3(arr[i] * 9, 3, arr[i + 2] * 9) * amount * wrinkle * 0.5
         arr[i + 2] += ldir.z * amount - n * amount * wrinkle * 0.6
-        changed = true
-      }
-      if (changed) {
-        pos.needsUpdate = true
-        mesh.geometry.computeVertexNormals()
-        mesh.geometry.computeBoundingSphere()
+        dirty.add(mesh.geometry)
       }
     }
   }
@@ -296,30 +298,34 @@ export class Damage {
       o.quaternion.copy(part.rest.quaternion)
       if (part.kind === 'door') o.rotateY(part.angle)
       else if (part.kind === 'hood') o.rotateX(part.angle)
-      else if (part.kind === 'bumper') o.rotateZ(part.angle)
-      else if (part.kind === 'mirror') o.rotateZ(part.angle)
+      else o.rotateZ(part.angle) // bumpers sag, mirrors droop
     }
-    if (this.total > 0.45 && !this.noSmoke) {
+    if (this.level > 0.45) {
       this.smokeTimer -= dt
       if (this.smokeTimer <= 0) {
-        this.smokeTimer = 0.2 - this.total * 0.1
+        this.smokeTimer = 0.2 - this.level * 0.1
         const front = this.car.dims.length / 2 - 0.6
         const p = new THREE.Vector3(0, this.car.dims.hoodHeight + 0.1, -front).applyMatrix4(this.root.matrixWorld)
         const v = this.car.body.velocity
-        const dark = clamp((this.total - 0.45) * 1.8, 0, 1)
+        const dark = clamp((this.level - 0.45) * 1.8, 0, 1)
         const shade = Math.round(220 - dark * 190)
         this.env.effects.puff(p, new THREE.Vector3(v.x * 0.3, 1.2 + Math.random(), v.z * 0.3), {
           color: `rgb(${shade},${shade},${shade})`,
-          size: 0.3 + this.total * 0.7,
-          life: 1.2 + this.total,
+          size: 0.3 + this.level * 0.7,
+          life: 1.2 + this.level,
         })
-        if (this.total > 0.85) this.env.effects.flame(p)
+        if (this.level > 0.85) this.env.effects.flame(p)
       }
     }
   }
 
+  dispose() {
+    for (const m of [...this.glass, ...this.lights].flatMap((p) => p.materials)) m.dispose()
+    this.crackedGlass.dispose()
+  }
+
   repair() {
-    this.total = 0
+    this.level = 0
     for (const def of this.deformables) {
       def.mesh.geometry.attributes.position.array.set(def.original)
       def.mesh.geometry.attributes.position.needsUpdate = true
@@ -380,7 +386,13 @@ export class Debris {
     const size = box.getSize(new THREE.Vector3())
     const center = box.getCenter(new THREE.Vector3())
     this.scene.attach(object)
-    const body = new CANNON.Body({ mass: clamp(size.x * size.y * size.z * 120, 4, 40), linearDamping: 0.05, angularDamping: 0.15 })
+    const body = new CANNON.Body({
+      mass: clamp(size.x * size.y * size.z * 120, 4, 40),
+      linearDamping: 0.05,
+      angularDamping: 0.15,
+      collisionFilterGroup: GROUP_DEBRIS,
+      collisionFilterMask: GROUP_STATIC | GROUP_CAR | GROUP_DEBRIS | GROUP_PROP,
+    })
     if (wheel) {
       const shape = new CANNON.Cylinder(wheel, wheel, 0.26, 12)
       body.addShape(shape, new CANNON.Vec3(center.x, center.y, center.z), new CANNON.Quaternion().setFromEuler(0, 0, Math.PI / 2))
@@ -391,7 +403,6 @@ export class Debris {
     body.quaternion.copy(object.quaternion)
     body.velocity.set(velocity.x, velocity.y, velocity.z)
     body.angularVelocity.set(angularVelocity.x, angularVelocity.y, angularVelocity.z)
-    body.isDebris = true
     this.world.addBody(body)
     this.items.push({ object, body, age: 0 })
     if (this.items.length > this.max) this.remove(this.items[0])
@@ -417,7 +428,8 @@ export class Debris {
   }
 
   update(dt) {
-    for (const item of [...this.items]) {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const item = this.items[i]
       item.age += dt
       item.object.position.copy(item.body.position)
       item.object.quaternion.copy(item.body.quaternion)
@@ -430,6 +442,6 @@ export class Debris {
   }
 
   clear() {
-    for (const item of [...this.items]) this.remove(item)
+    while (this.items.length) this.remove(this.items[0])
   }
 }

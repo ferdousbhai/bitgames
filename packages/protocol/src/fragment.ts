@@ -4,10 +4,10 @@
  *
  * Fragment payload: fragmentID(8) index(2) total(2) originalType(1) chunk
  */
-import { bytesEqual, concatBytes, randomBytes, toHex } from "./bytes.js";
+import { concatBytes, randomBytes, toHex } from "./bytes.js";
 import { maxFrameBytes } from "./limits.js";
 import { MessageType } from "./messageType.js";
-import { BROADCAST_ID, type Packet, decodePacket, encodePacket } from "./packet.js";
+import { type Packet, decodePacket, encodePacket, isBroadcast } from "./packet.js";
 
 const FRAGMENT_HEADER_SIZE = 13;
 const MIN_CHUNK_SIZE = 64;
@@ -77,7 +77,7 @@ export function parseFragmentHeader(packet: Packet): FragmentHeader | null {
     total,
     originalType: p[12]!,
     data: p.subarray(FRAGMENT_HEADER_SIZE),
-    isBroadcast: !packet.recipientID || bytesEqual(packet.recipientID, BROADCAST_ID),
+    isBroadcast: isBroadcast(packet.recipientID),
   };
 }
 

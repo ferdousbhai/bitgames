@@ -1,19 +1,22 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { env } from 'cloudflare:workers'
-import { serveGameFile } from '#/server/files'
+import { gameNotFound, serveGameFile } from '#/server/files'
 import { isGameId } from '#/server/limits'
 
-/** The reviewed (live) copy of published games. Drafts are only reachable through /preview. */
+/**
+ * The reviewed (live) copy of published games. Files only exist under live/
+ * while a game is published, so R2 alone decides what is served; drafts are
+ * only reachable through /preview.
+ */
 export const Route = createFileRoute('/play/$gameId/$')({
   server: {
     handlers: {
-      GET: async ({ params, request }) => {
-        if (!isGameId(params.gameId)) return new Response('Not found', { status: 404 })
-        const game = await env.DB.prepare(`SELECT 1 AS ok FROM games WHERE id = ? AND live = 1`)
-          .bind(params.gameId)
-          .first()
-        if (!game) return new Response('Not found', { status: 404 })
-        return serveGameFile(params.gameId, params._splat || 'index.html', request, `/play/${params.gameId}/`, 300, true)
+      GET: ({ params, request }) => {
+        if (!isGameId(params.gameId)) return gameNotFound()
+        return serveGameFile(params.gameId, params._splat || 'index.html', request, {
+          basePath: `/play/${params.gameId}/`,
+          live: true,
+          cache: 'public, max-age=300',
+        })
       },
     },
   },

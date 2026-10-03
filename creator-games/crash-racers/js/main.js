@@ -5,12 +5,12 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { joinRoom } from '/vendor/bitgames/multiplayer-1.js'
 import { Audio } from './audio.js'
 import { Bot } from './bot.js'
-import { CAR_MODELS, Car, GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC } from './car.js'
+import { CAR_MODELS, Car } from './car.js'
 import { CITIES, buildCity } from './cities.js'
 import { Debris } from './damage.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
-import { clamp, damp, rng } from './util.js'
+import { GROUP_STATIC, STATIC_MASK, canvasTexture, clamp, damp, harmless, rng, smoothing } from './util.js'
 
 const params = new URLSearchParams(location.search)
 const DEBUG = params.has('debug')
@@ -64,7 +64,7 @@ world.addContactMaterial(new CANNON.ContactMaterial(groundMaterial, carMaterial,
 world.addContactMaterial(new CANNON.ContactMaterial(carMaterial, carMaterial, { friction: 0.3, restitution: 0.15 }))
 world.defaultContactMaterial.friction = 0.4
 world.defaultContactMaterial.restitution = 0.1
-const ground = new CANNON.Body({ mass: 0, material: groundMaterial, collisionFilterGroup: GROUP_STATIC, collisionFilterMask: GROUP_CAR | GROUP_DEBRIS | GROUP_PROP })
+const ground = new CANNON.Body({ mass: 0, material: groundMaterial, collisionFilterGroup: GROUP_STATIC, collisionFilterMask: STATIC_MASK })
 ground.addShape(new CANNON.Plane())
 ground.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
 world.addBody(ground)
@@ -119,7 +119,6 @@ const game = {
   laps: 2,
   players: new Map(), // id -> { id, emoji }
   cars: new Map(), // id -> Car
-  bots: new Map(), // id -> Bot (only on the device that runs them)
   progress: new Map(), // id -> { lap, sector, hint, total, finished, time }
   finishTimes: new Map(),
   track: null,
@@ -134,7 +133,6 @@ const game = {
   fixCooldown: 0,
   offRoadTime: 0,
 }
-window.__crashRacers = DEBUG ? game : undefined
 
 // --- Assets -------------------------------------------------------------------------
 
@@ -142,19 +140,17 @@ async function loadAssets() {
   const loader = new GLTFLoader()
   const models = Object.keys(CAR_MODELS)
   let done = 0
-  await Promise.all(
-    models.map(async (name) => {
-      const gltf = await loader.loadAsync(`./models/car_${name}.glb`)
-      game.templates[name] = gltf.scene.getObjectByName(`car_${name}`) ?? gltf.scene
-      $('loading-text').textContent = `Building cars… ${++done}/${models.length}`
-    }),
+  const cars = models.map(async (name) => {
+    const gltf = await loader.loadAsync(`./models/car_${name}.glb`)
+    game.templates[name] = gltf.scene.getObjectByName(`car_${name}`) ?? gltf.scene
+    $('loading-text').textContent = `Building cars… ${++done}/${models.length}`
+  })
+  // Props are optional: the cities draw stand-ins without them.
+  const props = loader.loadAsync('./models/props.glb').then(
+    (gltf) => gltf.scene.children.forEach((child) => (game.props[child.name] = child)),
+    () => {},
   )
-  try {
-    const props = await loader.loadAsync('./models/props.glb')
-    for (const child of props.scene.children) game.props[child.name] = child
-  } catch {
-    // Props are optional: the cities draw stand-ins without them.
-  }
+  await Promise.all([...cars, props])
 }
 
 // --- Menu ---------------------------------------------------------------------------
@@ -240,11 +236,8 @@ function setupRoom(room) {
   })
   room.on('leave', (id) => {
     game.players.delete(id)
-    const car = game.cars.get(id)
-    if (car) {
-      car.dispose()
-      game.cars.delete(id)
-    }
+    game.cars.get(id)?.dispose()
+    game.cars.delete(id)
     renderPlayers()
   })
   room.on('message', (msg, from) => onMessage(msg, from))
@@ -265,14 +258,12 @@ function onMessage(msg, from) {
     case 'menu':
       if (game.state !== 'race') enterLobbyScreen()
       break
-    case 's': {
-      const car = game.cars.get(msg.id)
-      if (car?.remote) {
-        car.pushSnapshot(msg)
-        car.remoteTurbo = msg.b === 1
+    case 's':
+      for (const snap of msg.cars) {
+        const car = game.cars.get(snap.id)
+        if (car?.remote) car.pushSnapshot(snap)
       }
       break
-    }
     case 'hit': {
       const car = game.cars.get(msg.id)
       if (car?.remote) {
@@ -327,7 +318,6 @@ function startRace(setup) {
   // Tear down the previous race
   for (const car of game.cars.values()) car.dispose()
   game.cars.clear()
-  game.bots.clear()
   game.progress.clear()
   game.finishTimes.clear()
   debris.clear()
@@ -343,18 +333,20 @@ function startRace(setup) {
   const grid = game.track.grid4(setup.entries.length)
   setup.entries.forEach((entry, i) => {
     const local = entry.id === game.room.selfId || (entry.bot && isHost)
-    const car = new Car({ id: entry.id, model: entry.model, template: game.templates[entry.model], env, remote: !local, label: entry.emoji })
+    const car = new Car({ id: entry.id, model: entry.model, template: game.templates[entry.model], env, remote: !local })
     car.place(grid[i].position, grid[i].yaw)
     car.isPlayer = entry.id === game.room.selfId
-    if (local) car.onHit = (hit) => onLocalHit(car, hit)
+    if (local) {
+      car.onHit = (hit) => onLocalHit(car, hit)
+      car.controller = car.isPlayer ? humanController : botController(new Bot(car, game.track, 0.72 + i * 0.05, i + 1))
+    }
     game.cars.set(entry.id, car)
     // Tags on everyone else's car; your own would only block your view.
-    if (entry.id !== game.room.selfId) {
-      const tag = nameTag(entry.emoji, false)
+    if (!car.isPlayer) {
+      const tag = nameTag(entry.emoji)
       tag.position.set(0, car.dims.top + 0.9, 0)
       car.root.add(tag)
     }
-    if (entry.bot && isHost) game.bots.set(entry.id, new Bot(car, game.track, 0.72 + i * 0.05, i + 1))
     game.progress.set(entry.id, { lap: 0, sector: 0, hint: -1, total: 0, finished: false, time: 0 })
   })
   game.player = game.cars.get(game.room.selfId)
@@ -368,21 +360,17 @@ function startRace(setup) {
 }
 
 /** A floating emoji tag above each car so little players can tell who is who. */
-function nameTag(text, mine = false) {
-  const canvas = document.createElement('canvas')
-  canvas.width = 256
-  canvas.height = 128
-  const g = canvas.getContext('2d')
-  g.fillStyle = mine ? 'rgba(255,190,11,0.95)' : 'rgba(255,255,255,0.9)'
-  g.beginPath()
-  g.roundRect(8, 8, 240, 112, 56)
-  g.fill()
-  g.font = '80px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif'
-  g.textAlign = 'center'
-  g.textBaseline = 'middle'
-  g.fillText(text, 128, 70)
-  const tex = new THREE.CanvasTexture(canvas)
-  tex.colorSpace = THREE.SRGBColorSpace
+function nameTag(text) {
+  const tex = canvasTexture(256, 128, (g) => {
+    g.fillStyle = 'rgba(255,255,255,0.9)'
+    g.beginPath()
+    g.roundRect(8, 8, 240, 112, 56)
+    g.fill()
+    g.font = '80px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText(text, 128, 70)
+  })
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }))
   sprite.scale.set(1.6, 0.8, 1)
   sprite.renderOrder = 10
@@ -446,10 +434,9 @@ function banner(text, ms = 1300) {
 }
 
 function respawn(car, ahead = 0) {
-  const prog = game.progress.get(car.id)
-  const proj = game.track.project(car.body.position, prog?.hint ?? -1)
+  const proj = game.progress.get(car.id)?.proj ?? game.track.project(car.body.position)
   const s = game.track.sampleAt(proj.dist + ahead)
-  car.place(s.p, Math.atan2(-s.t.x, -s.t.z))
+  car.place(s.p, game.track.headingAt(s))
   car.upsideDownTime = 0
 }
 
@@ -462,30 +449,24 @@ function fixPlayer() {
   audio.cheer()
 }
 
-input.on('key', (k) => {
-  audio.unlock()
-  if (game.state !== 'race') return
-  if (k === 'r') respawn(game.player)
-  if (k === 'f') fixPlayer()
-  if (k === 'h') {
+/** In-race actions, by keyboard key and by on-screen button name. */
+const ACTIONS = {
+  reset: () => respawn(game.player),
+  fix: fixPlayer,
+  horn: () => {
     audio.horn()
-    send({ t: 'horn', id: game.room.selfId })
-  }
-  if (k === 'c') game.cameraMode = (game.cameraMode + 1) % 3
-  if (k === 'shift') turbo()
-})
-input.on('button', (name) => {
+    send({ t: 'horn' })
+  },
+  camera: () => (game.cameraMode = (game.cameraMode + 1) % 3),
+  turbo,
+}
+const KEYS = { r: 'reset', f: 'fix', h: 'horn', c: 'camera', shift: 'turbo' }
+function act(name) {
   audio.unlock()
-  if (game.state !== 'race') return
-  if (name === 'reset') respawn(game.player)
-  if (name === 'fix') fixPlayer()
-  if (name === 'horn') {
-    audio.horn()
-    send({ t: 'horn', id: game.room.selfId })
-  }
-  if (name === 'camera') game.cameraMode = (game.cameraMode + 1) % 3
-  if (name === 'turbo') turbo()
-})
+  if (game.state === 'race') ACTIONS[name]?.()
+}
+input.on('key', (k) => act(KEYS[k]))
+input.on('button', act)
 
 function turbo() {
   if (game.player?.boost()) {
@@ -519,7 +500,6 @@ function updateProgress(id, car) {
     prog.sector = sector
   }
   prog.total = prog.lap * game.track.length + proj.dist
-  prog.proj = proj
 }
 
 function finishCar(id, car) {
@@ -592,26 +572,34 @@ let last = performance.now()
 const camPos = new THREE.Vector3(0, 10, 20)
 const camLook = new THREE.Vector3()
 let sparkTimer = 0
+const BRAKE = { steer: 0, throttle: 0, brake: 1 }
+const COAST = { steer: 0, throttle: 0, brake: 0.3 }
+
+/** The child at this device: keyboard, touch or gamepad, with Easy mode's helper. */
+const humanController = {
+  human: true,
+  update(car) {
+    if (game.progress.get(car.id)?.finished) car.controls = COAST
+    else car.controls = input.easyGas ? steeringHelper(car, input.read()) : input.read()
+  },
+}
+
+/** A computer driver; in Smash mode it hunts the nearest car. */
+function botController(bot) {
+  return {
+    update(car, dt) {
+      const proj = game.progress.get(car.id)?.proj ?? game.track.project(car.body.position)
+      bot.update(dt, proj, game.mode === 'smash' ? Bot.nearest(car, game.cars.values()) : null)
+    },
+  }
+}
 
 function step(dt) {
   const racing = game.state === 'race'
-  for (const [id, car] of game.cars) {
-    if (car.remote) {
-      car.drive(dt)
-      continue
-    }
-    if (!racing) {
-      car.controls = { steer: 0, throttle: 0, brake: 1 }
-    } else if (car.isPlayer) {
-      if (game.autopilot) {
-        game.autopilot.car !== car && (game.autopilot = new Bot(car, game.track, 0.85, 7))
-        game.autopilot.think(dt)
-      } else if (game.progress.get(id)?.finished) car.controls = { steer: 0, throttle: 0, brake: 0.3 }
-      else car.controls = input.easyGas ? steeringHelper(car, input.read()) : input.read()
-    } else {
-      const bot = game.bots.get(id)
-      if (game.mode === 'smash') bot?.hunt(dt, [...game.cars.values()])
-      else bot?.think(dt)
+  for (const car of game.cars.values()) {
+    if (!car.remote) {
+      if (racing) car.controller.update(car, dt)
+      else car.controls = BRAKE
     }
     car.drive(dt)
   }
@@ -623,52 +611,65 @@ function step(dt) {
  * Easy mode's steering helper: leans the wheel towards the road ahead, less so
  * the more the child is steering themselves. It never fights a deliberate turn.
  */
-const NOSE = new CANNON.Vec3(0, 0, -1)
 function steeringHelper(car, controls) {
-  const prog = game.progress.get(car.id)
-  const proj = game.track.project(car.body.position, prog?.hint ?? -1)
+  const proj = game.progress.get(car.id)?.proj
+  if (!proj) return controls
   const target = game.track.sampleAt(proj.dist + 8 + car.speed * 0.6)
-  const pos = car.body.position
-  const fwd = car.body.quaternion.vmult(NOSE)
-  const dx = target.p.x - pos.x, dz = target.p.z - pos.z
-  const angle = Math.atan2(fwd.x * dz - fwd.z * dx, fwd.x * dx + fwd.z * dz)
-  const help = clamp(angle * 1.6, -0.8, 0.8) * (1 - Math.abs(controls.steer) * 0.7)
+  const help = clamp(car.angleTo(target.p.x, target.p.z) * 1.6, -0.8, 0.8) * (1 - Math.abs(controls.steer) * 0.7)
   return { ...controls, steer: clamp(controls.steer + help, -1, 1) }
 }
 
+/** Everything that follows the physics: visuals, damage, progress and effects. Shared by the frame loop and sim(). */
+function tick(dt, realDt) {
+  if (game.state === 'race') {
+    game.raceTime += dt
+    if (game.mode === 'smash' && game.raceTime >= SMASH_SECONDS) endSmash()
+  }
+  game.fixCooldown = Math.max(0, game.fixCooldown - realDt)
+  for (const [id, car] of game.cars) {
+    car.syncVisual(dt)
+    car.damage.update(dt, car.accel)
+    updateProgress(id, car)
+    if (car.turboActive) exhaustFlames(car)
+  }
+  debris.update(dt)
+  game.track.update()
+  scrapeAndSkid(dt)
+  offRoadEffects(dt)
+}
+
+const sparkPoint = new THREE.Vector3()
+const sparkUp = new THREE.Vector3(0, 1, 0)
+const smokeVelocity = new THREE.Vector3(0, 0.8, 0)
+const tyreSmoke = { color: '#e8e8e8', size: 0.5, life: 1.2, kind: 'dust' }
 function scrapeAndSkid(dt) {
   const player = game.player
-  if (!player) return
-  // Sparks where the body grinds against walls, other cars or the road.
+  // Sparks where the player's body grinds against walls, other cars or the road.
   sparkTimer -= dt
-  for (const c of world.contacts) {
-    const mine = c.bi === player.body || c.bj === player.body
-    if (!mine || sparkTimer > 0) continue
-    const other = c.bi === player.body ? c.bj : c.bi
-    if (other.isDebris) continue
-    const speed = player.speed
-    if (speed < 5) continue
-    const r = c.bi === player.body ? c.ri : c.rj
-    const p = new THREE.Vector3(player.body.position.x + r.x, player.body.position.y + r.y, player.body.position.z + r.z)
-    effects.sparkBurst(p, new THREE.Vector3(0, 1, 0), speed * 0.25)
-    audio.scrape(Math.min(1, speed / 20))
-    sparkTimer = 0.05
+  if (player && sparkTimer <= 0 && player.speed >= 5) {
+    for (const c of world.contacts) {
+      const mine = c.bi === player.body
+      if (!mine && c.bj !== player.body) continue
+      if (harmless(mine ? c.bj : c.bi)) continue
+      const r = mine ? c.ri : c.rj
+      sparkPoint.set(player.body.position.x + r.x, player.body.position.y + r.y, player.body.position.z + r.z)
+      effects.sparkBurst(sparkPoint, sparkUp, player.speed * 0.25)
+      audio.scrape(Math.min(1, player.speed / 20))
+      sparkTimer = 0.05
+      break
+    }
   }
   // Skid marks and tyre smoke for every locally simulated car.
   for (const car of game.cars.values()) {
     if (!car.vehicle) continue
+    const e = car.root.matrixWorld.elements // car's right axis is the first column
     car.vehicle.wheelInfos.forEach((w, i) => {
-      if (car.wheels[i].state === 'gone' || !w.isInContact) {
-        effects.skids.mark(`${car.id}${i}`, null, null, 0)
-        return
-      }
+      const key = car.skidKeys?.[i] ?? ((car.skidKeys ??= [])[i] = car.id + i)
+      if (car.wheels[i].state === 'gone' || !w.isInContact) return effects.skids.mark(key, 0, 0, 0, 0, 0)
       const slip = 1 - w.skidInfo
       const hit = w.raycastResult.hitPointWorld
-      const side = new THREE.Vector3(1, 0, 0).applyQuaternion(car.root.quaternion)
-      effects.skids.mark(`${car.id}${i}`, new THREE.Vector3(hit.x, hit.y, hit.z), side, slip > 0.35 && car.speed > 5 ? slip : 0)
-      if (slip > 0.6 && car.speed > 8 && Math.random() < 0.3) {
-        effects.puff(new THREE.Vector3(hit.x, 0.3, hit.z), new THREE.Vector3(0, 0.8, 0), { color: '#e8e8e8', size: 0.5, life: 1.2, kind: 'dust' })
-      }
+      effects.skids.mark(key, hit.x, hit.z, e[0], e[2], slip > 0.35 && car.speed > 5 ? slip : 0)
+      if (slip > 0.6 && car.speed > 8 && Math.random() < 0.3) effects.puff(sparkPoint.set(hit.x, 0.3, hit.z), smokeVelocity, tyreSmoke)
     })
   }
 }
@@ -676,8 +677,7 @@ function scrapeAndSkid(dt) {
 function offRoadEffects(dt) {
   const p = game.player
   if (!p || game.state !== 'race') return
-  const prog = game.progress.get(p.id)
-  const proj = prog?.proj
+  const proj = game.progress.get(p.id)?.proj
   if (!proj) return
   if (proj.offRoad && p.speed > 3) {
     if (game.track.waterZones) {
@@ -701,7 +701,7 @@ function offRoadEffects(dt) {
     // Wedged against something mid-race: put the car back on the road a little further on.
     const finished = game.progress.get(car.id)?.finished
     car.stuckTime = car.speed < 1.5 && !finished ? (car.stuckTime ?? 0) + dt : 0
-    const limit = car.isPlayer && !game.autopilot ? 5 : 3.5
+    const limit = car.controller.human ? 5 : 3.5
     if ((!car.isPlayer && car.upsideDownTime > 3) || car.stuckTime > limit) {
       respawn(car, 6)
       car.stuckTime = 0
@@ -715,37 +715,40 @@ function offRoadEffects(dt) {
   }
 }
 
+const CAMERA_MODES = [
+  { offset: new THREE.Vector3(0, 2.6, 6.8), look: new THREE.Vector3(0, 1, -4), stiffness: 7 }, // chase
+  { offset: new THREE.Vector3(0, 5, 12), look: new THREE.Vector3(0, 1, -4), stiffness: 7 }, // far chase
+  { offset: new THREE.Vector3(0, 1.4, -0.4), look: new THREE.Vector3(0, 1.2, -10), stiffness: 30 }, // bonnet
+]
+const UP_AXIS = new THREE.Vector3(0, 1, 0)
+const headingQ = new THREE.Quaternion()
+const headingE = new THREE.Euler()
+const want = new THREE.Vector3()
 function updateCamera(dt) {
   const p = game.player
   if (!p) return
   const pos = p.root.position
-  const q = p.root.quaternion
-  const slowmo = performance.now() < game.slowmoUntil
-  let offset, lookAhead
   if (game.debugCam) {
     const { yaw, dist, height } = game.debugCam
-    camPos.copy(pos).add(new THREE.Vector3(Math.sin(yaw) * dist, height, Math.cos(yaw) * dist))
-    camLook.copy(pos).add(new THREE.Vector3(0, 0.6, 0))
-  } else if (slowmo) {
+    camPos.set(pos.x + Math.sin(yaw) * dist, pos.y + height, pos.z + Math.cos(yaw) * dist)
+    camLook.copy(pos).y += 0.6
+  } else if (performance.now() < game.slowmoUntil) {
     // Swing around the car for a dramatic replay angle.
     const a = performance.now() / 600
-    offset = new THREE.Vector3(Math.cos(a) * 7, 2.5, Math.sin(a) * 7)
-    camPos.lerp(pos.clone().add(offset), 1 - Math.exp(-4 * dt))
-    camLook.lerp(pos, 1 - Math.exp(-6 * dt))
+    camPos.lerp(want.set(pos.x + Math.cos(a) * 7, pos.y + 2.5, pos.z + Math.sin(a) * 7), smoothing(4, dt))
+    camLook.lerp(pos, smoothing(6, dt))
   } else {
-    const modes = [new THREE.Vector3(0, 2.6, 6.8), new THREE.Vector3(0, 5, 12), new THREE.Vector3(0, 1.4, -0.4)]
-    offset = modes[game.cameraMode].clone()
-    lookAhead = game.cameraMode === 2 ? new THREE.Vector3(0, 1.2, -10) : new THREE.Vector3(0, 1, -4)
+    const mode = CAMERA_MODES[game.cameraMode]
     // Use only the car's heading, so the camera doesn't flip with a rolling car.
-    const yaw = new THREE.Euler().setFromQuaternion(q, 'YXZ').y
-    const yq = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
-    const want = pos.clone().add(offset.applyQuaternion(yq))
-    const stiffness = game.cameraMode === 2 ? 30 : 7
-    camPos.lerp(want, 1 - Math.exp(-stiffness * dt))
-    camLook.lerp(pos.clone().add(lookAhead.applyQuaternion(yq)), 1 - Math.exp(-12 * dt))
+    headingQ.setFromAxisAngle(UP_AXIS, headingE.setFromQuaternion(p.root.quaternion, 'YXZ').y)
+    camPos.lerp(want.copy(mode.offset).applyQuaternion(headingQ).add(pos), smoothing(mode.stiffness, dt))
+    camLook.lerp(want.copy(mode.look).applyQuaternion(headingQ).add(pos), smoothing(12, dt))
   }
   camera.position.copy(camPos)
-  if (effects.shake > 0) camera.position.add(new THREE.Vector3((Math.random() - 0.5) * effects.shake, (Math.random() - 0.5) * effects.shake, 0))
+  if (effects.shake > 0) {
+    camera.position.x += (Math.random() - 0.5) * effects.shake
+    camera.position.y += (Math.random() - 0.5) * effects.shake
+  }
   camera.lookAt(camLook)
   camera.fov = damp(camera.fov, (camera.aspect < 1 ? 75 : 62) + clamp(p.speed - 15, 0, 20) * 0.5, 3, dt)
   camera.updateProjectionMatrix()
@@ -754,59 +757,64 @@ function updateCamera(dt) {
   sky.position.copy(camera.position)
 }
 
+const flamePoint = new THREE.Vector3()
 function exhaustFlames(car) {
-  for (const side of [-0.4, 0.4]) {
-    const p = new THREE.Vector3(side, 0.35, car.dims.length / 2 + 0.1).applyMatrix4(car.root.matrixWorld)
-    effects.flame(p)
-  }
+  for (const side of [-0.4, 0.4]) effects.flame(flamePoint.set(side, 0.35, car.dims.length / 2 + 0.1).applyMatrix4(car.root.matrixWorld))
 }
 
-function updateHud() {
+/** Sets an element's text only when it changed, so the HUD doesn't touch the DOM every frame. */
+const shown = new Map()
+function setText(id, text) {
+  if (shown.get(id) === text) return
+  shown.set(id, text)
+  $(id).firstChild.nodeValue = text
+}
+
+let placeUpdatedAt = 0
+function updateHud(now) {
   const p = game.player
   if (!p || !game.setup) return
-  const order = standings()
-  const place = order.findIndex((e) => e.id === p.id)
-  $('position').textContent = `${MEDAL[place]} ${ORDINAL[place]}`
+  // Standings sort every car, so only a few times a second.
+  if (now - placeUpdatedAt > 200) {
+    placeUpdatedAt = now
+    const place = standings().findIndex((e) => e.id === p.id)
+    setText('position', `${MEDAL[place]} ${ORDINAL[place]}`)
+  }
   const prog = game.progress.get(p.id)
-  $('lap').textContent = `Lap ${Math.min(game.laps, (prog?.lap ?? 0) + 1)}/${game.laps}`
+  setText('lap', `Lap ${Math.min(game.laps, (prog?.lap ?? 0) + 1)}/${game.laps}`)
   if (game.mode === 'smash') {
-    $('crashes').textContent = `💥 ${game.scores.get(p.id) ?? 0}`
+    setText('crashes', `💥 ${game.scores.get(p.id) ?? 0}`)
     const left = Math.max(0, SMASH_SECONDS - game.raceTime)
-    $('timer').textContent = `⏱️ ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`
-  } else $('crashes').textContent = `💥 ${game.crashes}`
-  $('turbo-btn').classList.toggle('cooling', (p.turboCooldown ?? 0) > performance.now())
-  $('speed').innerHTML = `${Math.round(p.speed * 3.6)}<small>km/h</small>`
+    setText('timer', `⏱️ ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`)
+  } else setText('crashes', `💥 ${game.crashes}`)
+  $('turbo-btn').classList.toggle('cooling', p.turboCooldown > now)
+  setText('speed', String(Math.round(p.speed * 3.6)))
   drawMinimap()
 }
 
-let minimapPath = null
+/** The track outline is drawn once per city; each frame only the car dots are drawn on top. */
+let minimap = null
 function drawMinimap() {
-  const c = $('minimap')
-  const g = c.getContext('2d')
   const t = game.track
-  if (!minimapPath || minimapPath.track !== t) {
+  if (minimap?.track !== t) {
     const xs = t.samples.map((s) => s.p.x), zs = t.samples.map((s) => s.p.z)
-    const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs)
-    const scale = 120 / Math.max(maxX - minX, maxZ - minZ)
-    const map = (x, z) => [20 + (x - minX) * scale, 20 + (z - minZ) * scale]
-    minimapPath = { track: t, map }
+    const minX = Math.min(...xs), minZ = Math.min(...zs)
+    const scale = 120 / Math.max(Math.max(...xs) - minX, Math.max(...zs) - minZ)
+    const outline = new Path2D()
+    t.samples.forEach((s, i) => outline[i ? 'lineTo' : 'moveTo'](20 + (s.p.x - minX) * scale, 20 + (s.p.z - minZ) * scale))
+    outline.closePath()
+    minimap = { track: t, minX, minZ, scale, outline, g: $('minimap').getContext('2d') }
   }
+  const { g, minX, minZ, scale } = minimap
   g.clearRect(0, 0, 160, 160)
   g.strokeStyle = 'rgba(255,255,255,0.85)'
   g.lineWidth = 6
   g.lineJoin = 'round'
-  g.beginPath()
-  t.samples.forEach((s, i) => {
-    const [x, y] = minimapPath.map(s.p.x, s.p.z)
-    i ? g.lineTo(x, y) : g.moveTo(x, y)
-  })
-  g.closePath()
-  g.stroke()
+  g.stroke(minimap.outline)
   for (const car of game.cars.values()) {
-    const [x, y] = minimapPath.map(car.body.position.x, car.body.position.z)
     g.fillStyle = car.isPlayer ? '#ffbe0b' : '#ff6b9d'
     g.beginPath()
-    g.arc(x, y, car.isPlayer ? 7 : 5, 0, Math.PI * 2)
+    g.arc(20 + (car.body.position.x - minX) * scale, 20 + (car.body.position.z - minZ) * scale, car.isPlayer ? 7 : 5, 0, Math.PI * 2)
     g.fill()
   }
 }
@@ -825,28 +833,15 @@ function frame(now) {
       steps++
     }
     if (steps === 4) accumulator = 0
-    if (game.state === 'race') {
-      game.raceTime += dt
-      if (game.mode === 'smash' && game.raceTime >= SMASH_SECONDS) endSmash()
-    }
-    for (const car of game.cars.values()) if (car.turboTime > 0 || car.remoteTurbo) exhaustFlames(car)
-    game.fixCooldown = Math.max(0, game.fixCooldown - realDt)
-    for (const [id, car] of game.cars) {
-      car.syncVisual(dt)
-      car.damage.update(dt, car.accel)
-      updateProgress(id, car)
-    }
-    debris.update(dt)
-    game.track.update()
-    scrapeAndSkid(dt)
-    offRoadEffects(dt)
+    tick(dt, realDt)
     updateCamera(realDt)
-    updateHud()
+    updateHud(now)
     if (game.player) audio.updateEngine(game.player.speed, game.player.controls.throttle)
-    // Send our cars ~20 times a second; bots too if we run them.
+    // Send our cars ~20 times a second (bots too if we run them), in one message.
     if (now - game.lastSend > 50 && !game.room.solo) {
       game.lastSend = now
-      for (const car of game.cars.values()) if (!car.remote) send({ t: 's', id: car.id, ...car.snapshot(), b: car.turboTime > 0 ? 1 : 0 }, { fast: true })
+      const cars = [...game.cars.values()].filter((c) => !c.remote).map((c) => ({ id: c.id, ...c.snapshot() }))
+      send({ t: 's', cars }, { fast: true })
     }
   }
   effects.update(realDt, camera)
@@ -859,9 +854,8 @@ function frame(now) {
 
 async function boot() {
   buildMenu()
-  await loadAssets()
-  $('loading-text').textContent = 'Who is playing?'
-  const room = await joinRoom({ maxPlayers: 4 })
+  // The "Who's playing?" lobby can be answered while the cars load.
+  const [room] = await Promise.all([joinRoom({ maxPlayers: 4 }), loadAssets()])
   setupRoom(room)
   if (DEBUG && params.get('city')) {
     game.city = params.get('city')
@@ -886,8 +880,6 @@ if (DEBUG) {
       progress: game.progress.get(game.player?.id),
       pos: game.player && [game.player.body.position.x, game.player.body.position.y, game.player.body.position.z],
       debris: debris.items.length,
-      impacts: game.player?.damage.log,
-      glassAt: game.player?.damage.glass.map((g) => [g.object.name, g.center.toArray().map((n) => +n.toFixed(2)), +g.radius.toFixed(2)]),
     }),
     /** Points the player's car at a world position and sets it moving at `speed` m/s. */
     launch(x, z, speed, yawOverride) {
@@ -898,8 +890,9 @@ if (DEBUG) {
       car.body.velocity.set(-Math.sin(yaw) * speed, 0, -Math.cos(yaw) * speed)
       car.body.angularVelocity.setZero()
     },
+    /** Lets a bot drive the player's car (for tests); off gives it back to the input. */
     autopilot(on = true) {
-      game.autopilot = on ? { car: null } : null
+      game.player.controller = on ? botController(new Bot(game.player, game.track, 0.85, 7)) : humanController
     },
     race: () => ({
       time: game.raceTime,
@@ -920,19 +913,10 @@ if (DEBUG) {
     },
     /** Runs `seconds` of game time immediately (no rendering), optionally overriding the player's controls. */
     sim(seconds, controls) {
-      const steps = Math.round(seconds / FIXED_DT)
-      for (let i = 0; i < steps; i++) {
-        if (controls) input.override = controls
+      input.override = controls ?? null
+      for (let i = Math.round(seconds / FIXED_DT); i > 0; i--) {
         step(FIXED_DT)
-        if (game.state === 'race') game.raceTime += FIXED_DT
-        for (const [id, car] of game.cars) {
-          car.syncVisual(FIXED_DT)
-          car.damage.update(FIXED_DT, car.accel)
-          updateProgress(id, car)
-        }
-        debris.update(FIXED_DT)
-        game.track.update()
-        offRoadEffects(FIXED_DT)
+        tick(FIXED_DT, FIXED_DT)
       }
       input.override = null
       updateCamera(1)

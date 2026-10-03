@@ -20,7 +20,7 @@ import os
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models")
 
@@ -202,7 +202,7 @@ def split_faces(body, name, predicate, offset, under_material_index=None):
 def set_origin(obj, point):
     """Moves the object's origin to point (world space) without moving its geometry."""
     offset = Vector(point) - obj.location
-    obj.data.transform(__import__("mathutils").Matrix.Translation(-offset))
+    obj.data.transform(Matrix.Translation(-offset))
     obj.location = Vector(point)
 
 

@@ -6,6 +6,7 @@ import { GameShelf, Loading } from '#/components/GameShelf'
 import { findCategory } from '#/lib/categories'
 import { countPlay, gamesCollection, likeGame } from '#/lib/collections'
 import type { Game } from '#/lib/types'
+import { toy } from '#/lib/ui'
 
 export const Route = createFileRoute('/game/$id')({
   loader: async ({ params }) => {
@@ -121,7 +122,7 @@ function Player({ game }: { game: Game }) {
           {!game.cover && <span aria-hidden className="float text-8xl drop-shadow-2xl sm:text-9xl">{game.emoji}</span>}
           <span
             className="toy rounded-full px-10 py-4 text-3xl font-bold text-ink"
-            style={{ '--toy-bg': 'var(--color-sun)' } as React.CSSProperties}
+            style={toy('var(--color-sun)')}
           >
             ▶ Play
           </span>
@@ -157,7 +158,7 @@ function LikeButton({ game }: { game: Game }) {
         } catch {}
       }}
       className="toy flex items-center gap-2 rounded-full px-5 py-3 text-lg font-semibold text-white disabled:cursor-default"
-      style={{ '--toy-bg': liked ? 'var(--color-berry)' : 'var(--color-grape)' } as React.CSSProperties}
+      style={toy(liked ? 'var(--color-berry)' : 'var(--color-grape)')}
       aria-pressed={liked}
     >
       <span aria-hidden className={popping ? 'pop' : ''} onAnimationEnd={() => setPopping(false)}>

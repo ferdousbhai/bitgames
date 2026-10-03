@@ -1,5 +1,6 @@
-import { BRIDGE, isBridgeMessage, type GameToPage, type PageToGame } from '@bitgames/game-sdk/bridge'
-import { forwardRef, useCallback, useEffect, useRef, useState } from 'react'
+import { BRIDGE, isBridgeMessage, newPeerId, type GameToPage, type PageToGame, type Unbridged } from '@bitgames/game-sdk/bridge'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { toy } from '#/lib/ui'
 
 /** Room codes are three of these animals, so children can share them without reading. */
 export const ROOM_ANIMALS = ['🐶', '🐱', '🐸', '🦁', '🐼', '🐵', '🐷', '🦊', '🐰', '🐻', '🐯', '🐨']
@@ -11,12 +12,6 @@ type Lobby =
   | { step: 'connecting' }
   | { step: 'in-room'; code: number[]; isHost: boolean; showCode: boolean }
 
-type Distribute<T> = T extends { type: infer K } ? Omit<T, 'bridge'> & { type: K } : never
-
-function randomPeerId() {
-  return [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 const emojiCode = (code: number[]) => code.map((i) => ROOM_ANIMALS[i]).join('')
 
 /**
@@ -24,13 +19,13 @@ const emojiCode = (code: number[]) => code.map((i) => ROOM_ANIMALS[i]).join('')
  * multiplayer SDK. The game asks for a room; this page connects to the
  * room's signaling WebSocket and relays connection setup to the game.
  */
-export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: string; title: string; className?: string }>(
-  function GameFrame({ gameId, src, title, className }, forwardedRef) {
+export function GameFrame({ gameId, src, title, className }: { gameId: string; src: string; title: string; className?: string }) {
     const frame = useRef<HTMLIFrameElement | null>(null)
+    const maxPlayers = useRef(4)
     const socket = useRef<WebSocket | null>(null)
     const [lobby, setLobby] = useState<Lobby>({ step: 'closed' })
 
-    const toGame = useCallback((message: Distribute<PageToGame>) => {
+    const toGame = useCallback((message: Unbridged<PageToGame>) => {
       frame.current?.contentWindow?.postMessage({ bridge: BRIDGE, ...message }, '*')
     }, [])
 
@@ -46,13 +41,13 @@ export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: st
       (code: number[], isHost: boolean) => {
         closeSocket()
         setLobby({ step: 'connecting' })
-        const selfId = randomPeerId()
+        const selfId = newPeerId()
         const url = new URL(`/rooms/${gameId}/${code.join('-')}`, window.location.href)
         url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
         url.searchParams.set('peer', selfId)
+        url.searchParams.set('max', String(maxPlayers.current))
         const ws = new WebSocket(url)
         socket.current = ws
-        let ready = false
 
         ws.onmessage = (event) => {
           const msg = JSON.parse(String(event.data)) as { t: string; peers?: string[]; peer?: string; from?: string; data?: unknown }
@@ -62,15 +57,12 @@ export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: st
               setLobby({ step: 'pick', picked: code, error: `Nobody is playing in ${emojiCode(code)} yet. Check the animals!` })
               return
             }
-            ready = true
             // The game creates its connection handler on "ready", before it sees the peer list.
             toGame({ type: 'ready', selfId, isHost, code: emojiCode(code) })
             toGame({ type: 'peers', peers: msg.peers ?? [] })
             setLobby({ step: 'in-room', code, isHost, showCode: isHost })
             // Collapse the hint to just the animals after a few seconds.
             setTimeout(() => setLobby((l) => (l.step === 'in-room' ? { ...l, showCode: false } : l)), 8000)
-          } else if (msg.t === 'joined' && msg.peer) {
-            toGame({ type: 'joined', peer: msg.peer })
           } else if (msg.t === 'left' && msg.peer) {
             toGame({ type: 'left', peer: msg.peer })
           } else if (msg.t === 'signal' && msg.from) {
@@ -79,9 +71,10 @@ export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: st
         }
         ws.onclose = () => {
           socket.current = null
-          if (ready) toGame({ type: 'closed', reason: 'The connection to the room was lost.' })
-          else if (isHost) setLobby({ step: 'choose' })
-          else setLobby({ step: 'pick', picked: code, error: 'That room is full or could not be reached.' })
+          // Losing the room mid-game leaves the game running with the players it has.
+          setLobby((l) =>
+            l.step === 'in-room' ? l : isHost ? { step: 'choose' } : { step: 'pick', picked: code, error: 'That room is full or could not be reached.' },
+          )
         }
       },
       [gameId, toGame, closeSocket],
@@ -93,7 +86,10 @@ export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: st
         const msg = event.data
         if (msg.type === 'hello') toGame({ type: 'hello' })
         // Ignore a repeated or late "open" so it can't undo what the player already picked.
-        else if (msg.type === 'open') setLobby((current) => (current.step === 'closed' ? { step: 'choose' } : current))
+        else if (msg.type === 'open') {
+          maxPlayers.current = msg.maxPlayers
+          setLobby((current) => (current.step === 'closed' ? { step: 'choose' } : current))
+        }
         else if (msg.type === 'signal') socket.current?.send(JSON.stringify({ t: 'signal', to: msg.to, data: msg.data }))
         else if (msg.type === 'leave') {
           closeSocket()
@@ -107,17 +103,13 @@ export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: st
       }
     }, [toGame, closeSocket])
 
-    const setFrame = (el: HTMLIFrameElement | null) => {
-      frame.current = el
-      if (typeof forwardedRef === 'function') forwardedRef(el)
-      else if (forwardedRef) forwardedRef.current = el
-      el?.focus()
-    }
-
     return (
       <div className={`relative ${className ?? ''}`}>
         <iframe
-          ref={setFrame}
+          ref={(el) => {
+            frame.current = el
+            el?.focus()
+          }}
           title={title}
           src={src}
           // Games are untrusted: scripts only, no same-origin access to the store.
@@ -158,8 +150,7 @@ export const GameFrame = forwardRef<HTMLIFrameElement, { gameId: string; src: st
         )}
       </div>
     )
-  },
-)
+}
 
 function LobbyOverlay({
   lobby,
@@ -183,13 +174,13 @@ function LobbyOverlay({
         <>
           <h2 className="text-center text-3xl font-bold sm:text-4xl">Who's playing? 🎮</h2>
           <div className="flex flex-wrap justify-center gap-4">
-            <button type="button" onClick={onHost} className={bigButton} style={{ '--toy-bg': 'var(--color-berry)' } as React.CSSProperties}>
+            <button type="button" onClick={onHost} className={bigButton} style={toy('var(--color-berry)')}>
               <span className="text-5xl">🏠</span>Start a family game
             </button>
-            <button type="button" onClick={onJoin} className={bigButton} style={{ '--toy-bg': 'var(--color-grape)' } as React.CSSProperties}>
+            <button type="button" onClick={onJoin} className={bigButton} style={toy('var(--color-grape)')}>
               <span className="text-5xl">🤝</span>Join a family game
             </button>
-            <button type="button" onClick={onSolo} className={bigButton} style={{ '--toy-bg': 'var(--color-mint)' } as React.CSSProperties}>
+            <button type="button" onClick={onSolo} className={bigButton} style={toy('var(--color-mint)')}>
               <span className="text-5xl">🙋</span>Just me
             </button>
           </div>

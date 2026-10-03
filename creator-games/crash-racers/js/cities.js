@@ -14,11 +14,26 @@ export const CITIES = {
   montreal: { name: 'Montreal', emoji: '🍁', flag: '🇨🇦', blurb: 'Staircases and orange cones', color: '#d64a2f' },
 }
 
-const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.85, ...o })
+const cache = new Map()
+/** Memoises `make` by key, so every race (and every loop iteration) reuses one material or texture. */
+function cached(key, make) {
+  if (!cache.has(key)) cache.set(key, make())
+  return cache.get(key)
+}
+const keyOf = (value) => JSON.stringify(value, (_, v) => (v?.isTexture ? v.uuid : v))
+
+/**
+ * One material per distinct set of options. Track.addGeometry merges geometry
+ * per material, so a fresh material per call would cost a draw call each.
+ */
+const std = (o) => cached('std' + keyOf(o), () => new THREE.MeshStandardMaterial({ roughness: 0.85, ...o }))
+
+/** Wraps a texture builder so each distinct set of arguments is drawn only once. */
+const memoTexture = (name, build) => (...args) => cached(name + keyOf(args), () => build(...args))
 
 // --- Shared textures ---------------------------------------------------------
 
-function asphalt({ lines = true, patches = false, edge = '#d8d8d0' } = {}) {
+const asphalt = memoTexture('asphalt', function asphalt({ lines = true, patches = false, edge = '#d8d8d0' } = {}) {
   return canvasTexture(256, 512, (g, w, h) => {
     const r = rng(3)
     speckle(g, w, h, '#4a4b4f', 0.18, 9000, 2, r)
@@ -46,9 +61,9 @@ function asphalt({ lines = true, patches = false, edge = '#d8d8d0' } = {}) {
       for (let y = 0; y < h; y += 128) g.fillRect(w / 2 - 3, y, 6, 70)
     }
   })
-}
+})
 
-function cobbles() {
+const cobbles = memoTexture('cobbles', function cobbles() {
   return canvasTexture(512, 512, (g, w, h) => {
     const r = rng(11)
     g.fillStyle = '#5e5a55'
@@ -68,13 +83,13 @@ function cobbles() {
     g.fillStyle = '#b8bcc2'
     for (const x of [0.36, 0.44, 0.56, 0.64]) g.fillRect(x * w - 3, 0, 6, h)
   })
-}
+})
 
-function grassTexture(base = '#5fa83a') {
+const grassTexture = memoTexture('grassTexture', function grassTexture(base = '#5fa83a') {
   return canvasTexture(256, 256, (g, w, h) => speckle(g, w, h, base, 0.25, 6000, 3, rng(5)), { repeat: [60, 60] })
-}
+})
 
-function riceTexture() {
+const riceTexture = memoTexture('riceTexture', function riceTexture() {
   return canvasTexture(256, 256, (g, w, h) => {
     const r = rng(9)
     g.fillStyle = '#5fb84a'
@@ -86,10 +101,10 @@ function riceTexture() {
       }
     }
   }, { repeat: [3, 3] })
-}
+})
 
 /** A building front: wall colour, a grid of windows and a door; tiles every 8 m x 12 m. */
-function facade({ wall, window = '#2d3a4a', frame = '#f4f1ea', brick = false, shutters = null, floors = 4 }) {
+const facade = memoTexture('facade', function facade({ wall, window = '#2d3a4a', frame = '#f4f1ea', brick = false, shutters = null, floors = 4 }) {
   return canvasTexture(256, 384, (g, w, h) => {
     const r = rng(wall.length * 31)
     if (brick) {
@@ -127,7 +142,7 @@ function facade({ wall, window = '#2d3a4a', frame = '#f4f1ea', brick = false, sh
       }
     }
   })
-}
+})
 
 /** Box with wall UVs scaled in metres, so windows keep their size on any building. */
 function buildingGeometry(w, h, d) {
@@ -178,8 +193,12 @@ function tree(track, position, kind, r) {
       track.addGeometry(ball, mat)
     }
   }
-  // Trunks are solid: hitting a tree is a crash.
-  track.addStaticBox(new THREE.Vector3(position.x, 1.5, position.z), new THREE.Vector3(0.5, 3, 0.5), 0, null, { visual: false })
+  trunkCollider(track, position)
+}
+
+/** Trunks are solid: hitting a tree is a crash. */
+function trunkCollider(track, position, width = 0.5) {
+  track.addStaticBox(new THREE.Vector3(position.x, 1.5, position.z), new THREE.Vector3(width, 3, width), 0, null, { visual: false })
 }
 
 function lampPost(track, position, mat) {
@@ -189,7 +208,7 @@ function lampPost(track, position, mat) {
   const head = new THREE.SphereGeometry(0.3, 8, 6)
   head.translate(position.x, 5.1, position.z)
   track.addGeometry(head, std({ color: '#fff7d6', emissive: '#fff2b0', emissiveIntensity: 0.4 }))
-  track.addStaticBox(new THREE.Vector3(position.x, 1.5, position.z), new THREE.Vector3(0.3, 3, 0.3), 0, null, { visual: false })
+  trunkCollider(track, position, 0.3)
 }
 
 const coneMaterial = std({ color: '#ff6a00', roughness: 0.6 })
@@ -274,7 +293,7 @@ function buildUbud(env, props) {
   track.lineSides({ offset: track.width / 2 + 1.6, spacing: () => 16 + r() * 18, depth: 0.6 }, ({ center }) => {
     if (props.palm) {
       track.addObject(props.palm, center, r() * 6, 0.9 + r() * 0.3)
-      track.addStaticBox(new THREE.Vector3(center.x, 1.5, center.z), new THREE.Vector3(0.5, 3, 0.5), 0, null, { visual: false })
+      trunkCollider(track, center)
     } else tree(track, center, 'palm', r)
   })
 
@@ -282,7 +301,7 @@ function buildUbud(env, props) {
   const start = track.sampleAt(0)
   for (const sign of [-1, 1]) {
     const c = start.p.clone().addScaledVector(start.side, sign * (track.width / 2 + 2.4))
-    const yaw = Math.atan2(start.t.x, start.t.z)
+    const yaw = track.alongAt(start)
     // The prop's tower extends along its +X, which this yaw points away from the road on the left; mirror it on the right.
     if (props.gate) track.addObject(props.gate, c, yaw + (sign > 0 ? Math.PI : 0), 1)
     else {
@@ -406,7 +425,7 @@ function buildHelsinki(env, props) {
   for (const d of [60, 600]) {
     const s = track.sampleAt(d)
     const c = s.p.clone().addScaledVector(s.side, track.width / 2 + 2.6)
-    const yaw = Math.atan2(s.t.x, s.t.z)
+    const yaw = track.alongAt(s)
     if (props.tram) {
       track.addObject(props.tram, c, yaw, 1)
       track.addStaticBox(new THREE.Vector3(c.x, 1.7, c.z), new THREE.Vector3(2.6, 3.4, 26), yaw, null, { visual: false })

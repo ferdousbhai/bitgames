@@ -3,9 +3,15 @@ export function randomToken(bytes = 32): string {
   return btoa(String.fromCharCode(...data)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
 }
 
+const toHex = (bytes: ArrayBuffer | Uint8Array) =>
+  [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('')
+
+export function randomHex(bytes: number): string {
+  return toHex(crypto.getRandomValues(new Uint8Array(bytes)))
+}
+
 export async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+  return toHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))
 }
 
 // Workers-only extension; the DOM lib in tsconfig shadows the Workers SubtleCrypto type.

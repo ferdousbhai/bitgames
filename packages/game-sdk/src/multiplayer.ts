@@ -12,15 +12,13 @@
  * WebRTC, wrapped in BitChat packets.
  */
 import { WebRTCTransport, type Signaling, type SignalData, type SignalingEvents } from "@bitgames/webrtc";
-import { BRIDGE, isBridgeMessage, type GameToPage, type PageToGame } from "./bridge.js";
+import { BRIDGE, MAX_ROOM_PLAYERS, isBridgeMessage, type GameToPage, type PageToGame, type Unbridged } from "./bridge.js";
 
 /** BitChat packet type for game messages (outside BitChat's own range). */
 const GAME_MESSAGE = 0x70;
 const HELLO_TIMEOUT_MS = 1500;
 
-type Distribute<T> = T extends { type: infer K } ? Omit<T, "bridge"> & { type: K } : never;
-
-function post(message: Distribute<GameToPage>) {
+function post(message: Unbridged<GameToPage>) {
   window.parent.postMessage({ bridge: BRIDGE, ...message }, "*");
 }
 
@@ -41,10 +39,8 @@ class BridgeSignaling implements Signaling {
   constructor(readonly selfID: string) {
     this.stop = onPage((m) => {
       if (m.type === "peers") this.handlers.peers?.(m.peers);
-      else if (m.type === "joined") this.handlers.joined?.(m.peer);
       else if (m.type === "left") this.handlers.left?.(m.peer);
       else if (m.type === "signal") this.handlers.signal?.(m.from, m.data);
-      else if (m.type === "closed") this.handlers.error?.(m.reason);
     });
   }
 
@@ -170,6 +166,6 @@ export async function joinRoom(options: { maxPlayers?: number } = {}): Promise<R
         resolve(new Room(m.selfId, m.isHost, m.code, transport));
       }
     });
-    post({ type: "open", maxPlayers: Math.min(8, Math.max(2, options.maxPlayers ?? 4)) });
+    post({ type: "open", maxPlayers: Math.min(MAX_ROOM_PLAYERS, Math.max(2, options.maxPlayers ?? 4)) });
   });
 }

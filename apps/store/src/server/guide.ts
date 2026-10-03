@@ -1,5 +1,5 @@
 import { CATEGORIES } from '#/lib/categories'
-import { MAX_FILE_BYTES, MAX_GAME_BYTES } from './limits'
+import { BINARY_FILE_TYPES, MAX_FILE_BYTES, MAX_GAME_BYTES, MAX_TEXT_FILE_BYTES, TEXT_FILE_TYPES, mb } from './limits'
 
 /** Must match the exact `three` version in package.json, which scripts/vendor.ts copies to /vendor/. */
 export const THREE_VERSION = '0.186.1'
@@ -43,9 +43,9 @@ Games run in a locked-down sandbox:
 - Start sounds with Web Audio inside a pointer or key event, because browsers block audio until the player interacts.
 
 ## Limits
-- Files: up to ${MAX_FILE_BYTES / 1024 / 1024} MB each and ${MAX_GAME_BYTES / 1024 / 1024} MB per game.
-- Text files (.html .js .css .json) are written with write_file.
-- Binary files (.glb .png .jpg .webp .mp3 .ogg .wav) are uploaded with get_upload_url.
+- Files: up to ${mb(MAX_FILE_BYTES)} each and ${mb(MAX_GAME_BYTES)} per game.
+- Text files (${TEXT_FILE_TYPES}, up to ${mb(MAX_TEXT_FILE_BYTES)}) are written with write_file.
+- Binary files (${BINARY_FILE_TYPES}) are uploaded with get_upload_url.
 
 ## Playing together (multiplayer)
 Games can let up to 8 people in the same home play together, each on their own device. BitGames shows the lobby: one device taps "Start a family game" and gets a code made of three animals, and the others tap "Join" and pick the same animals. Game data then goes directly between the devices over WebRTC.

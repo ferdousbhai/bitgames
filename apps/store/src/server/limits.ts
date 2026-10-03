@@ -35,8 +35,19 @@ export const TEXT_EXTENSIONS = new Set(['html', 'js', 'mjs', 'css', 'json', 'txt
 const GAME_ID = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/
 const FILE_PATH = /^(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/){0,4}[A-Za-z0-9_-][A-Za-z0-9._-]*\.[a-z0-9]+$/
 
+const listOf = (exts: Iterable<string>) => [...exts].map((e) => '.' + e).join(' ')
+/** File types for agent-facing text: written with write_file, and uploaded with get_upload_url. */
+export const TEXT_FILE_TYPES = listOf(TEXT_EXTENSIONS)
+export const BINARY_FILE_TYPES = listOf(Object.keys(CONTENT_TYPES).filter((e) => !TEXT_EXTENSIONS.has(e)))
+export const mb = (bytes: number) => `${+(bytes / 1024 / 1024).toFixed(1)} MB`
+
 export function isGameId(id: string): boolean {
   return GAME_ID.test(id)
+}
+
+/** Preview tokens are 16 random bytes in hex. */
+export function isPreviewToken(token: string): boolean {
+  return /^[a-f0-9]{32}$/.test(token)
 }
 
 export function extensionOf(path: string): string {

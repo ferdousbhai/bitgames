@@ -17,7 +17,7 @@ import {
   writeTextFile,
 } from './games-store'
 import { GUIDE, INSTRUCTIONS } from './guide'
-import { MAX_FILE_BYTES } from './limits'
+import { BINARY_FILE_TYPES, MAX_FILE_BYTES, MAX_TEXT_FILE_BYTES, TEXT_FILE_TYPES, UPLOAD_URL_TTL_MS, mb } from './limits'
 
 /**
  * Outside URLs the code would actually try to load: imports, fetch, src/href,
@@ -38,14 +38,18 @@ function loadedUrls(content: string): string[] {
   return [...found].slice(0, 5)
 }
 
-type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean }
+type ToolResult = { content: { type: 'text'; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean }
 
-const ok = (text: string): ToolResult => ({ content: [{ type: 'text', text }] })
+const ok = (text: string, structuredContent?: Record<string, unknown>): ToolResult => ({ content: [{ type: 'text', text }], structuredContent })
 
-/** Turns creator mistakes into tool errors the agent can read and fix; anything else is a real failure. */
-async function run(fn: () => Promise<string>): Promise<ToolResult> {
+/**
+ * Turns creator mistakes into tool errors the agent can read and fix; anything else is a real failure.
+ * `fn` returns the text for the agent, or text plus machine-readable `structured` data.
+ */
+async function run(fn: () => Promise<string | { text: string; structured: Record<string, unknown> }>): Promise<ToolResult> {
   try {
-    return ok(await fn())
+    const result = await fn()
+    return typeof result === 'string' ? ok(result) : ok(result.text, result.structured)
   } catch (error) {
     if (error instanceof CreatorError) return { content: [{ type: 'text', text: error.message }], isError: true }
     throw error
@@ -163,7 +167,7 @@ export function createMcpServer(creatorId: string, origin: string) {
     'read_file',
     {
       title: 'Read a game file',
-      description: 'Returns the contents of a text file (.html .js .css .json) in a game.',
+      description: `Returns the contents of a text file (${TEXT_FILE_TYPES}) in a game.`,
       inputSchema: { gameId, path: filePath },
       annotations: { readOnlyHint: true },
     },
@@ -174,7 +178,7 @@ export function createMcpServer(creatorId: string, origin: string) {
     'write_file',
     {
       title: 'Write a game file',
-      description: 'Creates or replaces a text file (.html .js .css .json, up to 1 MB) in a draft game. Binary files go through get_upload_url.',
+      description: `Creates or replaces a text file (${TEXT_FILE_TYPES}, up to ${mb(MAX_TEXT_FILE_BYTES)}) in a game's draft. Binary files go through get_upload_url.`,
       inputSchema: { gameId, path: filePath, content: z.string().describe('The full file contents.') },
     },
     ({ gameId: id, path, content }) =>
@@ -191,13 +195,17 @@ export function createMcpServer(creatorId: string, origin: string) {
     'get_upload_url',
     {
       title: 'Get an upload link',
-      description: `Returns a one-time link, valid for 15 minutes, for uploading one binary file (a Blender .glb model, image or sound, up to ${MAX_FILE_BYTES / 1024 / 1024} MB) into a draft game. Upload it with: curl -fsS -T <local file> <url>`,
+      description: `Returns a one-time link, valid for ${UPLOAD_URL_TTL_MS / 60000} minutes, for uploading one binary file (${BINARY_FILE_TYPES}, up to ${mb(MAX_FILE_BYTES)}) into a game's draft. Upload it with: curl -fsS -T <local file> <url>`,
       inputSchema: { gameId, path: filePath },
+      outputSchema: { url: z.string().describe('The one-time upload URL.') },
     },
     ({ gameId: id, path }) =>
       run(async () => {
         const url = await createUploadUrl(creatorId, id, path, origin)
-        return `Upload with:\ncurl -fsS -T <path to your local file> '${url}'\nThe link works once and expires in 15 minutes.`
+        return {
+          text: `Upload with:\ncurl -fsS -T <path to your local file> '${url}'\nThe link works once and expires in ${UPLOAD_URL_TTL_MS / 60000} minutes.`,
+          structured: { url },
+        }
       }),
   )
 

@@ -3,7 +3,6 @@ export class Audio {
   constructor() {
     this.ctx = null
     this.engine = null
-    this.muted = false
     this.lastCrash = 0
   }
 
@@ -25,7 +24,7 @@ export class Audio {
   }
 
   get ready() {
-    return !!this.ctx && !this.muted
+    return !!this.ctx
   }
 
   noiseSource() {
@@ -64,14 +63,7 @@ export class Audio {
     this.engine.osc.frequency.setTargetAtTime(rpm, t, 0.05)
     this.engine.osc2.frequency.setTargetAtTime(rpm * 0.5, t, 0.05)
     this.engine.filter.frequency.setTargetAtTime(400 + throttle * 900 + speed * 20, t, 0.08)
-    this.engine.gain.gain.setTargetAtTime(this.muted ? 0 : 0.05 + throttle * 0.05, t, 0.1)
-  }
-
-  stopEngine() {
-    if (!this.engine) return
-    this.engine.osc.stop()
-    this.engine.osc2.stop()
-    this.engine = null
+    this.engine.gain.gain.setTargetAtTime(0.05 + throttle * 0.05, t, 0.1)
   }
 
   burst({ freq, q = 1, gain = 0.5, decay = 0.4, type = 'bandpass', delay = 0 }) {

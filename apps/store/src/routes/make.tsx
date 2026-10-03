@@ -3,6 +3,7 @@ import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
 import { Turnstile } from '#/components/Turnstile'
 import { createCreatorKey } from '#/server/keys'
+import { toy } from '#/lib/ui'
 
 export const Route = createFileRoute('/make')({
   head: () => ({ meta: [{ title: 'Make a game · BitGames' }] }),
@@ -145,7 +146,7 @@ function CopyBox({ label, value }: { label: string; value: string }) {
             setCopied(true)
           }}
           className="toy shrink-0 rounded-2xl px-4 font-semibold text-white"
-          style={{ '--toy-bg': 'var(--color-mint)' } as React.CSSProperties}
+          style={toy('var(--color-mint)')}
         >
           {copied ? '✅ Copied' : '📋 Copy'}
         </button>
