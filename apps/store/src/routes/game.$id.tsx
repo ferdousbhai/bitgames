@@ -112,9 +112,13 @@ function Player({ game }: { game: Game }) {
           type="button"
           onClick={start}
           className="group flex h-full w-full flex-col items-center justify-center gap-4 text-white"
-          style={{ background: `radial-gradient(circle at 50% 40%, ${game.color}, color-mix(in oklab, ${game.color} 50%, #2b2d42))` }}
+          style={{
+            background: game.cover
+              ? `radial-gradient(circle, transparent 30%, rgba(43,45,66,0.55)), center / cover no-repeat url("${game.cover}")`
+              : `radial-gradient(circle at 50% 40%, ${game.color}, color-mix(in oklab, ${game.color} 50%, #2b2d42))`,
+          }}
         >
-          <span aria-hidden className="float text-8xl drop-shadow-2xl sm:text-9xl">{game.emoji}</span>
+          {!game.cover && <span aria-hidden className="float text-8xl drop-shadow-2xl sm:text-9xl">{game.emoji}</span>}
           <span
             className="toy rounded-full px-10 py-4 text-3xl font-bold text-ink"
             style={{ '--toy-bg': 'var(--color-sun)' } as React.CSSProperties}

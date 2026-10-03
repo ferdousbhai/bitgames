@@ -14,6 +14,8 @@ export const gameSchema = z.object({
   plays: z.number(),
   likes: z.number(),
   createdAt: z.number(),
+  /** URL of the cover picture, or null to show the emoji. */
+  cover: z.string().nullable(),
 })
 
 export type Game = z.infer<typeof gameSchema>

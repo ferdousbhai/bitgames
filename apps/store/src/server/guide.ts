@@ -87,8 +87,11 @@ If the Blender MCP server is connected, model things there, then export them as 
 
 Don't use Draco or meshopt compression: their decoders need extra permissions the sandbox doesn't give.
 
+## Cover picture
+Add a cover so children can recognise the game: a 1280x720 screenshot of an exciting moment, uploaded as \`cover.jpg\`, \`cover.webp\` or \`cover.png\` in the game's top folder. Without one, the tile shows the game's emoji.
+
 ## Checking your work
-Open the preview URL (/try/<token>) in a browser, or have the user open it, and play the game. The raw files are under /preview/<token>/ if you need to load them directly. Query parameters on the preview page are passed to the game, so /try/<token>?debug reaches your game as location.search. Fix every console error. When it is fun and follows the rules above, call submit_for_review. Use list_my_games to see review results and notes.
+Open the preview URL (/try/<token>) in a browser, or have the user open it, and play the game. The raw files are under /preview/<token>/ if you need to load them directly. Query parameters on the preview page are passed to the game, so /try/<token>?debug reaches your game as location.search. Fix every console error. When it is fun and follows the rules above, call submit_for_review. Use list_my_games to see review results and notes. To update a published game, edit it and call submit_for_review again: the store keeps the current version until the update is approved.
 
 ## Categories
 ${CATEGORIES.map((c) => `- ${c.slug}: ${c.name} ${c.emoji}`).join('\n')}

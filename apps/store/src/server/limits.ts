@@ -55,6 +55,12 @@ export function checkPath(path: string): string | null {
   return null
 }
 
+/** Where the creator's working copy lives. */
 export function objectKey(gameId: string, path: string): string {
   return `games/${gameId}/${path}`
+}
+
+/** Where the reviewed copy that children play lives. */
+export function liveKey(gameId: string, path: string): string {
+  return `live/${gameId}/${path}`
 }

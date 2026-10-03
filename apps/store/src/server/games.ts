@@ -18,6 +18,7 @@ interface GameRow {
   plays: number
   likes: number
   created_at: number
+  cover: string | null
 }
 
 function toGame(row: GameRow): Game {
@@ -35,14 +36,15 @@ function toGame(row: GameRow): Game {
     plays: row.plays,
     likes: row.likes,
     createdAt: row.created_at,
+    cover: row.cover ? `/play/${row.id}/${row.cover}` : null,
   }
 }
 
 export const listGames = createServerFn({ method: 'GET' }).handler(async () => {
   const { results } = await env.DB.prepare(
     `SELECT id, title, tagline, how_to_play, emoji, color, category, together, entry,
-            featured, plays, likes, created_at
-       FROM games WHERE status = 'public' ORDER BY created_at DESC LIMIT 500`,
+            featured, plays, likes, created_at, cover
+       FROM games WHERE live = 1 ORDER BY created_at DESC LIMIT 500`,
   ).all<GameRow>()
   return results.map(toGame)
 })
@@ -54,7 +56,7 @@ async function increment(id: string, column: 'plays' | 'likes') {
   const ip = getRequestHeader('cf-connecting-ip') ?? 'unknown'
   if (!(await env.LIKE_LIMITER.limit({ key: ip })).success) return null
   const row = await env.DB.prepare(
-    `UPDATE games SET ${column} = ${column} + 1 WHERE id = ? AND status = 'public' RETURNING ${column} AS value`,
+    `UPDATE games SET ${column} = ${column} + 1 WHERE id = ? AND live = 1 RETURNING ${column} AS value`,
   )
     .bind(id)
     .first<{ value: number }>()

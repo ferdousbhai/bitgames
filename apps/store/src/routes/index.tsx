@@ -51,7 +51,11 @@ function Hero({ game }: { game: Game }) {
   return (
     <section
       className="relative mt-4 overflow-hidden rounded-[36px] border-4 border-white p-6 text-white shadow-[0_10px_0_rgba(43,45,66,0.12)] sm:p-10"
-      style={{ background: `linear-gradient(120deg, ${game.color}, color-mix(in oklab, ${game.color} 60%, #6c63ff))` }}
+      style={{
+        background: game.cover
+          ? `linear-gradient(90deg, color-mix(in oklab, ${game.color} 85%, transparent) 25%, transparent 75%), center / cover no-repeat url("${game.cover}"), ${game.color}`
+          : `linear-gradient(120deg, ${game.color}, color-mix(in oklab, ${game.color} 60%, #6c63ff))`,
+      }}
     >
       <span aria-hidden className="absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-white/10" />
       <span aria-hidden className="absolute right-1/3 top-4 h-16 w-16 rounded-full bg-white/10" />
@@ -69,9 +73,11 @@ function Hero({ game }: { game: Game }) {
             ▶ Play now
           </Link>
         </div>
-        <span aria-hidden className="float text-[9rem] leading-none drop-shadow-2xl sm:text-[12rem]">
-          {game.emoji}
-        </span>
+        {!game.cover && (
+          <span aria-hidden className="float text-[9rem] leading-none drop-shadow-2xl sm:text-[12rem]">
+            {game.emoji}
+          </span>
+        )}
       </div>
     </section>
   )

@@ -9,7 +9,7 @@ export const getPreview = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     return env.DB.prepare(
       `SELECT id, title, emoji, how_to_play AS howToPlay, entry, status FROM games
-        WHERE preview_token = ? AND (status IN ('review', 'public') OR updated_at > ?)`,
+        WHERE preview_token = ? AND (status = 'review' OR live = 1 OR updated_at > ?)`,
     )
       .bind(data.token, Date.now() - DRAFT_PREVIEW_TTL_MS)
       .first<{ id: string; title: string; emoji: string; howToPlay: string; entry: string; status: string }>()

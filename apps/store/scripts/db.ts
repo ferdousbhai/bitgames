@@ -132,15 +132,16 @@ async function seed() {
     for (const file of filesIn(join(gamesDir, dir))) {
       const path = relative(join(gamesDir, dir), file)
       if (path === 'manifest.json') continue
-      await putObject(`games/${dir}/${path}`, file, CONTENT_TYPES[extname(file)] ?? 'application/octet-stream')
+      // Built-in games are published straight away: draft and live copies are the same.
+      for (const prefix of ['games', 'live']) await putObject(`${prefix}/${dir}/${path}`, file, CONTENT_TYPES[extname(file)] ?? 'application/octet-stream')
     }
     const values = [m.id, m.title, m.tagline, m.howToPlay, m.emoji, m.color, m.category, m.together, m.entry ?? 'index.html', m.featured, now - index * 60_000, now]
     await sql(
-      `INSERT INTO games (id, title, tagline, how_to_play, emoji, color, category, together, entry, featured, created_at, updated_at, status, preview_token)
-       VALUES (${values.map(literal).join(', ')}, 'public', lower(hex(randomblob(16))))
+      `INSERT INTO games (id, title, tagline, how_to_play, emoji, color, category, together, entry, featured, created_at, updated_at, status, live, preview_token)
+       VALUES (${values.map(literal).join(', ')}, 'public', 1, lower(hex(randomblob(16))))
        ON CONFLICT (id) DO UPDATE SET title = excluded.title, tagline = excluded.tagline, how_to_play = excluded.how_to_play,
          emoji = excluded.emoji, color = excluded.color, category = excluded.category, together = excluded.together,
-         entry = excluded.entry, featured = excluded.featured, updated_at = excluded.updated_at`,
+         entry = excluded.entry, featured = excluded.featured, updated_at = excluded.updated_at, live = 1, status = 'public'`,
     )
     console.log(`published ${m.id}`)
   }

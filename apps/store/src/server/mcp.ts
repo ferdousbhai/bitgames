@@ -66,9 +66,9 @@ const info = {
 }
 
 const STATUS_HELP: Record<string, string> = {
-  draft: 'draft (only you can see it; the preview link pauses after 7 days without changes)',
+  draft: 'draft with changes not yet submitted',
   review: 'waiting for an adult to review it',
-  public: 'published for everyone',
+  public: 'published; the store has this exact version',
   rejected: 'not approved; see the note, fix it and submit again',
 }
 
@@ -108,13 +108,13 @@ export function createMcpServer(creatorId: string, origin: string) {
     'update_game_info',
     {
       title: 'Change game details',
-      description: 'Changes the title, tagline, how-to-play text, emoji, colour, category or together flag of a draft game.',
+      description: 'Changes the title, tagline, how-to-play text, emoji, colour, category or together flag. For a published game the change waits for review.',
       inputSchema: { gameId, ...Object.fromEntries(Object.entries(info).map(([k, v]) => [k, v.optional()])) },
     },
     ({ gameId: id, ...changes }) =>
       run(async () => {
-        await updateInfo(creatorId, id, changes)
-        return `Updated "${id}".`
+        const result = await updateInfo(creatorId, id, changes)
+        return result === 'pending' ? `Saved. "${id}" is in the store, so the new details show after review (submit_for_review).` : `Updated "${id}".`
       }),
   )
 
@@ -132,7 +132,7 @@ export function createMcpServer(creatorId: string, origin: string) {
         return games
           .map((g) =>
             [
-              `- ${g.id}: "${g.title}" (${STATUS_HELP[g.status] ?? g.status})`,
+              `- ${g.id}: "${g.title}" — ${g.live ? 'in the store' : 'not in the store'}; draft: ${STATUS_HELP[g.status] ?? g.status}`,
               `  preview: ${previewUrl(origin, g.preview_token)}`,
               g.status === 'public' ? `  public page: ${origin}/game/${g.id}` : null,
               g.review_note ? `  review note: ${g.review_note}` : null,
@@ -220,7 +220,7 @@ export function createMcpServer(creatorId: string, origin: string) {
     'submit_for_review',
     {
       title: 'Submit for review',
-      description: 'Sends a finished game to an adult reviewer. Once approved it appears in the store. The game cannot change while it waits.',
+      description: 'Sends the game (or an update to a published game) to an adult reviewer. Once approved it appears in the store; a published game keeps its current version live meanwhile. The draft cannot change while it waits.',
       inputSchema: { gameId },
     },
     ({ gameId: id }) =>
@@ -233,8 +233,8 @@ export function createMcpServer(creatorId: string, origin: string) {
   server.registerTool(
     'reopen_game',
     {
-      title: 'Reopen a game for editing',
-      description: 'Moves a game that is waiting for review or published back to draft so it can be edited. A published game is taken out of the store until it is approved again.',
+      title: 'Withdraw from review',
+      description: 'Takes a game back out of the review queue so it can be edited again. (Published games never need this: just edit them and submit the update.)',
       inputSchema: { gameId },
       annotations: { destructiveHint: true },
     },

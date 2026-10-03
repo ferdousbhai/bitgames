@@ -28,8 +28,8 @@ export const Route = createFileRoute('/upload/$token')({
         const game = await env.DB.prepare(`SELECT status FROM games WHERE id = ?`)
           .bind(upload.game_id)
           .first<{ status: string }>()
-        if (!game || (game.status !== 'draft' && game.status !== 'rejected')) {
-          return text(409, 'This game is not a draft any more, so its files cannot change.')
+        if (!game || game.status === 'review') {
+          return text(409, 'This game is waiting for review, so its files cannot change. Use reopen_game first.')
         }
 
         const length = Number(request.headers.get('content-length'))

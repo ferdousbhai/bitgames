@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers'
-import { CONTENT_TYPES, checkPath, extensionOf, objectKey } from './limits'
+import { CONTENT_TYPES, checkPath, extensionOf, liveKey, objectKey } from './limits'
 
 /**
  * Every game response is sandboxed: the page gets an opaque origin, so it
@@ -34,10 +34,10 @@ const notFound = () => new Response('Not found', { status: 404, headers: { 'acce
  * Serves one file of a game from R2. The caller has already checked who may
  * see it. `basePath` is the URL folder the game is served from, e.g. "/play/<id>/".
  */
-export async function serveGameFile(gameId: string, path: string, request: Request, basePath: string, cacheSeconds: number) {
+export async function serveGameFile(gameId: string, path: string, request: Request, basePath: string, cacheSeconds: number, live = false) {
   if (checkPath(path)) return notFound()
   const { origin } = new URL(request.url)
-  const object = await env.GAMES.get(objectKey(gameId, path), { onlyIf: request.headers })
+  const object = await env.GAMES.get(live ? liveKey(gameId, path) : objectKey(gameId, path), { onlyIf: request.headers })
   if (!object) return notFound()
 
   const headers = new Headers({

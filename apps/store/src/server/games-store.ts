@@ -12,6 +12,7 @@ import {
   UPLOAD_URL_TTL_MS,
   checkPath,
   extensionOf,
+  liveKey,
   objectKey,
 } from './limits'
 import { STARTER_GAME } from './guide'
@@ -34,13 +35,15 @@ export interface GameInfo {
 interface OwnedGameRow {
   id: string
   title: string
+  live: number
   status: GameStatus
   review_note: string | null
   preview_token: string
   updated_at: number
 }
 
-const EDITABLE: GameStatus[] = ['draft', 'rejected']
+// A published game's draft stays editable: the live copy keeps playing until the changes are approved.
+const EDITABLE: GameStatus[] = ['draft', 'rejected', 'public']
 
 /** The creator's private play page: the game inside BitGames, so "play together" works too. */
 export function previewUrl(origin: string, token: string) {
@@ -69,7 +72,7 @@ export function validateInfo(info: Partial<GameInfo>) {
 
 async function ownedGame(creatorId: string, gameId: string) {
   const game = await env.DB.prepare(
-    'SELECT id, title, status, review_note, preview_token, updated_at FROM games WHERE id = ? AND creator_id = ?',
+    'SELECT id, title, live, status, review_note, preview_token, updated_at FROM games WHERE id = ? AND creator_id = ?',
   )
     .bind(gameId, creatorId)
     .first<OwnedGameRow>()
@@ -80,11 +83,7 @@ async function ownedGame(creatorId: string, gameId: string) {
 async function editableGame(creatorId: string, gameId: string) {
   const game = await ownedGame(creatorId, gameId)
   if (!EDITABLE.includes(game.status)) {
-    throw new CreatorError(
-      game.status === 'review'
-        ? 'This game is waiting for review, so it cannot change. Use reopen_game to take it back and edit it.'
-        : 'This game is published, so it cannot change. Use reopen_game to take it offline and edit it.',
-    )
+    throw new CreatorError('This game is waiting for review, so it cannot change. Use reopen_game to take it back and edit it.')
   }
   return game
 }
@@ -125,7 +124,16 @@ export async function createGame(creatorId: string, info: GameInfo) {
 
 export async function updateInfo(creatorId: string, gameId: string, info: Partial<GameInfo>) {
   validateInfo(info)
-  await editableGame(creatorId, gameId)
+  const game = await editableGame(creatorId, gameId)
+  if (game.live) {
+    // Children keep seeing the reviewed details until these are approved too.
+    const row = await env.DB.prepare('SELECT pending_info FROM games WHERE id = ?').bind(gameId).first<{ pending_info: string | null }>()
+    const pending = { ...(row?.pending_info ? JSON.parse(row.pending_info) : {}), ...info }
+    await env.DB.prepare(`UPDATE games SET pending_info = ?, status = 'draft', updated_at = ? WHERE id = ?`)
+      .bind(JSON.stringify(pending), Date.now(), gameId)
+      .run()
+    return 'pending'
+  }
   const columns: Record<keyof GameInfo, string> = {
     title: 'title', tagline: 'tagline', howToPlay: 'how_to_play', emoji: 'emoji',
     color: 'color', category: 'category', together: 'together',
@@ -142,11 +150,12 @@ export async function updateInfo(creatorId: string, gameId: string, info: Partia
   await env.DB.prepare(`UPDATE games SET ${sets.join(', ')}, updated_at = ? WHERE id = ?`)
     .bind(...values, Date.now(), gameId)
     .run()
+  return 'applied'
 }
 
 export async function listOwned(creatorId: string) {
   const { results } = await env.DB.prepare(
-    'SELECT id, title, status, review_note, preview_token, updated_at FROM games WHERE creator_id = ? ORDER BY updated_at DESC',
+    'SELECT id, title, live, status, review_note, preview_token, updated_at FROM games WHERE creator_id = ? ORDER BY updated_at DESC',
   )
     .bind(creatorId)
     .all<OwnedGameRow>()
@@ -189,10 +198,67 @@ export async function checkGameQuota(gameId: string, path: string, bytes: number
   return null
 }
 
-/** Recomputes a game's stored size after its files change. */
+export const COVER_FILES = ['cover.webp', 'cover.jpg', 'cover.png']
+
+/** Recomputes a game's stored size after its draft changes; a changed published game needs review again. */
 export async function recordGameBytes(gameId: string) {
   const total = (await listGameObjects(gameId)).reduce((sum, o) => sum + o.bytes, 0)
-  await env.DB.prepare('UPDATE games SET bytes = ?, updated_at = ? WHERE id = ?').bind(total, Date.now(), gameId).run()
+  await env.DB.prepare(
+    `UPDATE games SET bytes = ?, updated_at = ?, status = CASE WHEN status = 'public' THEN 'draft' ELSE status END WHERE id = ?`,
+  )
+    .bind(total, Date.now(), gameId)
+    .run()
+}
+
+async function deletePrefix(prefix: string) {
+  let cursor: string | undefined
+  do {
+    const listed = await env.GAMES.list({ prefix, cursor, limit: 1000 })
+    if (listed.objects.length) await env.GAMES.delete(listed.objects.map((o) => o.key))
+    cursor = listed.truncated ? listed.cursor : undefined
+  } while (cursor)
+}
+
+/**
+ * Approval: copies the draft files over the live copy, removes live files the
+ * draft no longer has, applies any pending details and puts the game in the store.
+ */
+export async function publishDraft(gameId: string) {
+  const draft = await listGameObjects(gameId)
+  for (const { path } of draft) {
+    const object = await env.GAMES.get(objectKey(gameId, path))
+    if (!object) continue
+    // Buffered: R2 needs a known length, and files are capped at 10 MB.
+    await env.GAMES.put(liveKey(gameId, path), await object.arrayBuffer(), { httpMetadata: object.httpMetadata })
+  }
+  const keep = new Set(draft.map((o) => liveKey(gameId, o.path)))
+  const live = await env.GAMES.list({ prefix: liveKey(gameId, ''), limit: 1000 })
+  const stale = live.objects.map((o) => o.key).filter((k) => !keep.has(k))
+  if (stale.length) await env.GAMES.delete(stale)
+
+  const cover = COVER_FILES.find((name) => draft.some((o) => o.path === name)) ?? null
+  const row = await env.DB.prepare('SELECT pending_info FROM games WHERE id = ?').bind(gameId).first<{ pending_info: string | null }>()
+  const pending: Partial<GameInfo> = row?.pending_info ? JSON.parse(row.pending_info) : {}
+  const columns: Record<keyof GameInfo, string> = {
+    title: 'title', tagline: 'tagline', howToPlay: 'how_to_play', emoji: 'emoji',
+    color: 'color', category: 'category', together: 'together',
+  }
+  const sets = ['live = 1', `status = 'public'`, 'review_note = NULL', 'pending_info = NULL', 'cover = ?', 'updated_at = ?']
+  const values: (string | number | null)[] = [cover, Date.now()]
+  for (const [key, column] of Object.entries(columns) as [keyof GameInfo, string][]) {
+    if (pending[key] === undefined) continue
+    sets.push(`${column} = ?`)
+    values.push(typeof pending[key] === 'boolean' ? Number(pending[key]) : (pending[key] as string))
+  }
+  await env.DB.prepare(`UPDATE games SET ${sets.join(', ')} WHERE id = ?`).bind(...values, gameId).run()
+}
+
+/** Takes a game out of the store: the live copy goes, the draft stays with the creator. */
+export async function unpublish(gameId: string, note: string | null) {
+  await deletePrefix(liveKey(gameId, ''))
+  await env.DB.prepare(`UPDATE games SET live = 0, status = 'rejected', review_note = ?, updated_at = ? WHERE id = ?`)
+    .bind(note, Date.now(), gameId)
+    .run()
 }
 
 export async function writeTextFile(creatorId: string, gameId: string, path: string, content: string) {
@@ -259,19 +325,16 @@ export async function submitForReview(creatorId: string, gameId: string) {
     .run()
 }
 
+/** Withdraws a game from the review queue so it can be edited again. */
 export async function reopenGame(creatorId: string, gameId: string) {
-  await ownedGame(creatorId, gameId)
+  const game = await ownedGame(creatorId, gameId)
+  if (game.status !== 'review') throw new CreatorError('This game is not waiting for review; you can already edit it.')
   await env.DB.prepare(`UPDATE games SET status = 'draft', updated_at = ? WHERE id = ?`).bind(Date.now(), gameId).run()
 }
 
 export async function deleteGame(creatorId: string, gameId: string) {
   await ownedGame(creatorId, gameId)
-  const prefix = objectKey(gameId, '')
-  let cursor: string | undefined
-  do {
-    const listed = await env.GAMES.list({ prefix, cursor, limit: 1000 })
-    if (listed.objects.length) await env.GAMES.delete(listed.objects.map((o) => o.key))
-    cursor = listed.truncated ? listed.cursor : undefined
-  } while (cursor)
+  await deletePrefix(objectKey(gameId, ''))
+  await deletePrefix(liveKey(gameId, ''))
   await env.DB.prepare('DELETE FROM games WHERE id = ? AND creator_id = ?').bind(gameId, creatorId).run()
 }

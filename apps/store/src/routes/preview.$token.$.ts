@@ -17,7 +17,7 @@ export const Route = createFileRoute('/preview/$token/$')({
         if (!/^[a-f0-9]{32}$/.test(params.token)) return new Response('Not found', { status: 404 })
         const game = await env.DB.prepare(
           `SELECT id FROM games
-            WHERE preview_token = ? AND (status IN ('review', 'public') OR updated_at > ?)`,
+            WHERE preview_token = ? AND (status = 'review' OR live = 1 OR updated_at > ?)`,
         )
           .bind(params.token, Date.now() - DRAFT_PREVIEW_TTL_MS)
           .first<{ id: string }>()

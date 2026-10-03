@@ -76,7 +76,7 @@ function AdminPage() {
   }
 
   const waiting = games.filter((g) => g.status === 'review')
-  const live = games.filter((g) => g.status === 'public')
+  const live = games.filter((g) => g.live)
   return (
     <div className="mt-6 space-y-10">
       {error && <p className="rounded-2xl bg-berry/15 px-4 py-2 text-berry">{error}</p>}
@@ -146,6 +146,10 @@ function GameHeader({ game }: { game: AdminGame }) {
       <p className="text-ink-soft">{game.tagline}</p>
       <p className="text-sm text-ink-soft">How to play: {game.how_to_play}</p>
       {game.creator_id === null && <p className="text-sm text-ink-soft">Made by BitGames</p>}
+      {game.status === 'review' && game.live ? (
+        <p className="text-sm font-semibold text-tangerine">Update to a game that is already in the store.</p>
+      ) : null}
+      {game.pending_info && <p className="text-sm text-ink-soft">New details: {game.pending_info}</p>}
     </div>
   )
 }
