@@ -42,7 +42,7 @@ function measureQuality(dt) {
   }
 }
 
-const view = { halfW: 8, dist: 14, lead: 0.45 }
+const view = { halfW: 8, dist: 14, lead: 0.45, follow: 0.3 }
 function resize() {
   const aspect = innerWidth / innerHeight
   renderer.setSize(innerWidth, innerHeight, false)
@@ -54,7 +54,12 @@ function resize() {
   // upright gets less, so Pip stays big enough, and Pip sits further left.
   // Phones held sideways are short, so they show a bit less path to keep Pip big.
   const short = aspect < 1 ? 0 : clamp((560 - innerHeight) / 200, 0, 1)
-  view.dist = clamp((aspect < 1 ? 4.5 : 9 - 2 * short) / (tan * aspect), 7, 24)
+  // Boxier screens held sideways (iPads, 4:3) are tall, so they show a bit less
+  // path too: otherwise Pip is a small bunny under a big sky.
+  const boxy = aspect < 1 ? 0 : clamp((1.7 - aspect) / 0.37, 0, 1)
+  view.dist = clamp((aspect < 1 ? 4.5 : 9 - 2 * short - 1.7 * boxy) / (tan * aspect), 7, 24)
+  // and short screens tilt up further with a high double hop, so Pip's ears stay clear of the score
+  view.follow = 0.3 + 0.4 * short
   view.halfW = view.dist * tan * aspect
   view.lead = aspect < 1 ? 0.62 : 0.45 + short * 0.07
   // Aim so the path sits low on the screen (about 3/4 of the way down): the sky
@@ -117,7 +122,7 @@ async function init() {
   weather.setKind(BIOMES[0].weather)
   glints = new Glints(scene)
   popups = new Popups($('popups'), camera)
-  if (window.game) Object.assign(window, { course, view })
+  if (window.game) Object.assign(window, { course, view, camera, bunny })
   applyQuality()
   toMenu()
   requestAnimationFrame(frame)
@@ -165,8 +170,18 @@ function start() {
   $('score-num').textContent = '0'
   $('tap-hint').classList.remove('gone')
   show(null)
+  fitPopups()
   banner(`${BIOMES[game.biome].emoji} ${BIOMES[game.biome].name}`)
 }
+
+// Floating words start a little below the score and the trip bar, so a word
+// floating up fades out before it reaches them (short sideways phones especially).
+function fitPopups() {
+  if (!popups || $('hud').classList.contains('hidden')) return
+  const bottom = Math.max($('score').getBoundingClientRect().bottom, document.querySelector('.trip').getBoundingClientRect().bottom)
+  popups.minTop = bottom + 56
+}
+addEventListener('resize', fitPopups)
 
 let bannerTimer
 function banner(text, ms = 2200) {
@@ -376,7 +391,7 @@ function updateCamera(dt) {
     py = view.height + bunny.y * 0.25
     pz = view.dist
     lx = game.x + lead
-    ly = view.aim + bunny.y * 0.3
+    ly = view.aim + bunny.y * view.follow
   }
   if (game.state === 'play') {
     // move with the bunny first, so the easing below doesn't trail behind at speed

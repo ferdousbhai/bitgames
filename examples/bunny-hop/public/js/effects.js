@@ -253,6 +253,7 @@ export class Popups {
     this.camera = camera
     this.v = new THREE.Vector3()
     this.counter = null
+    this.minTop = 0 // px: words start below the score and trip bar, so they never hide behind them
   }
 
   /**
@@ -277,7 +278,7 @@ export class Popups {
     el.textContent = text
     // a little sideways jiggle, so quick words don't stack into one blob
     el.style.left = `calc(${((this.v.x + 1) / 2) * 100}% + ${count ? 0 : Math.round(rand(-22, 22))}px)`
-    el.style.top = `${((1 - this.v.y) / 2) * 100}%`
+    el.style.top = `${Math.max(this.minTop, ((1 - this.v.y) / 2) * innerHeight)}px`
     el.timer = setTimeout(() => el.remove(), 1000)
   }
 }
