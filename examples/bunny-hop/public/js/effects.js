@@ -252,18 +252,32 @@ export class Popups {
     this.layer = layer
     this.camera = camera
     this.v = new THREE.Vector3()
+    this.counter = null
   }
 
-  show(text, at, cls = '') {
+  /**
+   * `count`: a running tally ("+1", "+2", "+3"…) that reuses the last one while it's
+   * still showing, so a row of carrots counts up in one spot instead of piling up.
+   */
+  show(text, at, cls = '', count = false) {
     this.v.copy(at).project(this.camera)
     if (this.v.z > 1) return
-    const el = document.createElement('div')
+    let el = count && this.counter?.isConnected ? this.counter : null
+    if (el) {
+      clearTimeout(el.timer)
+      el.style.animation = 'none'
+      void el.offsetWidth
+      el.style.animation = ''
+    } else {
+      el = document.createElement('div')
+      this.layer.appendChild(el)
+    }
+    if (count) this.counter = el
     el.className = `popup ${cls}`
     el.textContent = text
-    // a little sideways jiggle, so quick munches don't stack into one blob
-    el.style.left = `calc(${((this.v.x + 1) / 2) * 100}% + ${Math.round(rand(-22, 22))}px)`
+    // a little sideways jiggle, so quick words don't stack into one blob
+    el.style.left = `calc(${((this.v.x + 1) / 2) * 100}% + ${count ? 0 : Math.round(rand(-22, 22))}px)`
     el.style.top = `${((1 - this.v.y) / 2) * 100}%`
-    this.layer.appendChild(el)
-    setTimeout(() => el.remove(), 1000)
+    el.timer = setTimeout(() => el.remove(), 1000)
   }
 }

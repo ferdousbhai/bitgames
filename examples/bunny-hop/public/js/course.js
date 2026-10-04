@@ -85,6 +85,7 @@ export class Course {
     const obj = copy(this.templates[name], { recolor: BIOMES[biomeIndexAt(x)].recolor, shadow: true })
     obj.position.set(x, 0, 0)
     obj.rotation.y = name === 'log' ? rand(-0.15, 0.15) : rand(-0.6, 0.6)
+    obj.userData.kind = name // tappable: a poke sets userData.boing, and it wobbles
     this.scene.add(obj)
     this.items.push({ kind: 'obstacle', name, obj, x, ...OBSTACLES[name], hit: false, cleared: false, wobble: 0 })
   }
@@ -171,6 +172,10 @@ export class Course {
         if (bunny && this.eat(it, bunny, dt, events)) return false
       } else {
         if (bunny) this.bump(it, bunny, events)
+        if (o.userData.boing) {
+          o.userData.boing = 0
+          it.wobble = 1
+        }
         if (it.wobble > 0) {
           it.wobble = Math.max(0, it.wobble - dt * 1.5)
           const w = Math.sin(it.wobble * 30) * 0.18 * it.wobble
@@ -186,6 +191,11 @@ export class Course {
       return true
     })
     return events
+  }
+
+  /** The logs, pumpkins and snowmen on the path, for taps. */
+  obstacles() {
+    return this.items.filter((it) => it.kind === 'obstacle').map((it) => it.obj)
   }
 
   /** Returns true when the bunny munches this carrot. */

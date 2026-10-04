@@ -52,9 +52,11 @@ function resize() {
   const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
   // Show about this much path either side of the camera's centre: a phone held
   // upright gets less, so Pip stays big enough, and Pip sits further left.
-  view.dist = clamp((aspect < 1 ? 4.5 : 9) / (tan * aspect), 9, 24)
+  // Phones held sideways are short, so they show a bit less path to keep Pip big.
+  const short = aspect < 1 ? 0 : clamp((560 - innerHeight) / 200, 0, 1)
+  view.dist = clamp((aspect < 1 ? 4.5 : 9 - 2 * short) / (tan * aspect), 7, 24)
   view.halfW = view.dist * tan * aspect
-  view.lead = aspect < 1 ? 0.62 : 0.45
+  view.lead = aspect < 1 ? 0.62 : 0.45 + short * 0.07
   // Aim so the path sits low on the screen (about 3/4 of the way down): the sky
   // above holds the HUD and the high golden carrots, with little empty grass below.
   view.height = 3.0 + view.dist * 0.1
@@ -74,6 +76,7 @@ const game = {
   slow: 1,
   score: 0,
   combo: 0,
+  streak: 0, // carrots munched in a row, for the counting pop-up
   comboTimer: 0,
   hops: 0,
   biome: 0,
@@ -239,9 +242,9 @@ addEventListener('pointerdown', (e) => {
 const raycaster = new THREE.Raycaster()
 const ndc = new THREE.Vector2()
 const POKE = {
-  tree_round: 'tree', tree_pine: 'tree', tree_pine_snow: 'tree', bush: 'tree', grass: 'tree', flower: 'flower',
+  tree_round: 'tree', tree_round_snow: 'tree', tree_pine: 'tree', tree_pine_snow: 'tree', bush: 'tree', grass: 'tree', flower: 'flower',
   mushroom_red: 'boing', mushroom_blue: 'boing', toadstool: 'boing', pumpkin: 'thud', rock: 'thud', stump: 'thud',
-  snowman: 'snow', fence: 'knock', burrow: 'knock', butterfly: 'flutter',
+  snowman: 'snow', log: 'thud', fence: 'knock', burrow: 'knock', butterfly: 'flutter',
 }
 const LEAF_MATS = ['canopy', 'pine', 'bush', 'grass', 'petal', 'cap_red', 'cap_mushroom_red', 'cap_mushroom_blue', 'pumpkin', 'wing']
 function colorOf(obj, fallback) {
@@ -271,11 +274,11 @@ function poke(sx, sy) {
   // While hopping along every tap is a hop, so scenery only wobbles when hit
   // squarely, and quietly: the hop makes the sound.
   const playing = game.state === 'play'
-  const hit = world.poke(raycaster, camera, sx, sy, !playing)
+  const hit = world.poke(raycaster, camera, sx, sy, !playing, course.obstacles())
   if (!hit) return
   const kind = POKE[hit.kind] ?? 'boing'
   if (!playing) sound.poke(kind)
-  if (kind === 'tree') effects.leaves(hit.top, hit.kind === 'tree_pine_snow' ? '#ffffff' : colorOf(hit.obj, '#7bd14b'))
+  if (kind === 'tree') effects.leaves(hit.top, hit.kind.endsWith('_snow') ? '#ffffff' : colorOf(hit.obj, '#7bd14b'))
   else if (kind === 'snow') effects.puff(hit.top, 10, '#ffffff', 1.2)
   else if (kind === 'knock' && hit.kind === 'burrow') effects.puff(world.chimney(tmp2), 6, '#ffffff', 1)
   else effects.sparkle(hit.top, 8, [colorOf(hit.obj, '#ffd23f'), '#ffffff'], 2.5)
@@ -314,6 +317,7 @@ function handleEvents(events) {
   for (const ev of events) {
     if (ev.type === 'carrot') {
       game.combo = game.comboTimer > 0 ? game.combo + 1 : 0
+      game.streak = game.combo && !ev.gold ? game.streak + 1 : ev.gold ? 0 : 1
       game.comboTimer = 1.1
       game.score += ev.gold ? 5 : 1
       bumpScore()
@@ -326,7 +330,9 @@ function handleEvents(events) {
         sound.munch(game.combo)
         effects.crumbs(ev.pos)
         effects.sparkle(ev.pos, 5, undefined, 2)
-        popups.show(game.combo >= 4 && game.combo % 2 === 0 ? pick(YUM) : '+1', ev.pos.setY(ev.pos.y + 0.6))
+        // a row of carrots counts up in one spot above Pip: +1, +2, +3…
+        popups.show(`+${game.streak}`, tmp.set(game.x + 0.4, bunny.y + 1.9, 0), '', true)
+        if (game.combo >= 3 && game.combo % 2 === 1) popups.show(pick(YUM), tmp.set(game.x + 1.4, bunny.y + 2.9, 0), 'nice')
       }
     } else if (ev.type === 'bump') {
       bunny.bonk()

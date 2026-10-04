@@ -24,7 +24,7 @@ Node names the game relies on (public/js/models.js):
 
   carrot, carrot_gold                       collectibles
   log, rock, stump, toadstool, pumpkin, snowman   obstacles to hop over
-  tree_round, tree_pine, tree_pine_snow, bush, flower, grass, mushroom_red,
+  tree_round, tree_round_snow, tree_pine, tree_pine_snow, bush, flower, grass, mushroom_red,
   mushroom_blue, fence, cloud, burrow        scenery
   butterfly with butterfly_wing_L / butterfly_wing_R (flap)
 
@@ -486,15 +486,38 @@ def snowman():
 
 # --- Scenery --------------------------------------------------------------------------
 
-def tree_round():
-    root = empty("tree_round")
+ROUND_CANOPY = ((0, 0, 2.5, 1.0, 1), (0.6, 0.2, 2.15, 0.7, 2), (-0.6, -0.1, 2.2, 0.72, 3), (0.1, -0.3, 3.05, 0.7, 4), (-0.2, 0.45, 2.7, 0.7, 5))
+
+
+def snow_cap(m, r, loc, seed, lumpy=0.12):
+    """A lumpy blob's snowy top: the same lumps a touch bigger, kept above a wavy snow line."""
+    me = bpy.data.meshes.new("cap")
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=3, radius=r * 1.05)
+    for v in bm.verts:
+        n = noise.noise(v.co * (2.2 / (r * 1.05)) + Vector((seed, seed * 1.7, seed * 0.3)))
+        v.co *= 1 + lumpy * n
+    line = lambda v: r * (0.12 + 0.13 * math.sin(math.atan2(v.co.y, v.co.x) * 5 + seed))
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < line(v)], context="VERTS")
+    bm.to_mesh(me)
+    bm.free()
+    return bake(link(me, "cap"), m, loc)
+
+
+def tree_round(snowy=False):
+    """A puffy round tree; the snowy one keeps a green canopy under caps of snow."""
+    name = "tree_round_snow" if snowy else "tree_round"
+    root = empty(name)
     trunk = mat("trunk", "#8a5a33", rough=0.95)
-    canopy = mat("canopy", "#6cc644", rough=0.8)
+    canopy = mat("frost_canopy", "#4fa874", rough=0.85) if snowy else mat("canopy", "#6cc644", rough=0.8)
+    snow = mat("snow", "#f7fbff", rough=0.9)
     parts = [lathe(trunk, [(0, 0), (0.3, 0), (0.22, 0.2), (0.17, 1.2), (0.15, 1.9), (0, 1.9)], seg=12)]
     parts.append(cyl(trunk, 0.07, 0.6, (0.25, 0, 1.6), rot=(0, 0.8, 0), verts=8, r2=0.04))
-    for (x, y, z, r, sd) in ((0, 0, 2.5, 1.0, 1), (0.6, 0.2, 2.15, 0.7, 2), (-0.6, -0.1, 2.2, 0.72, 3), (0.1, -0.3, 3.05, 0.7, 4), (-0.2, 0.45, 2.7, 0.7, 5)):
+    for (x, y, z, r, sd) in ROUND_CANOPY:
         parts.append(ico(canopy, r, (x, y, z), subdiv=2, lumpy=0.12, seed=sd))
-    join(parts, "tree_round_mesh", sharp_deg=180).parent = root
+        if snowy:
+            parts.append(snow_cap(snow, r, (x, y, z), sd))
+    join(parts, f"{name}_mesh", sharp_deg=180).parent = root
     return root
 
 
@@ -586,17 +609,31 @@ def cloud():
 
 
 def butterfly():
+    """Big round wings with a dark rim and white spots on both faces, so they read as a
+    butterfly from any side; a little round head with eyes and curly-tipped antennae."""
     root = empty("butterfly")
     body = mat("butterfly_body", "#3a2a3a", rough=0.6)
     wing = mat("wing", "#ffb703", rough=0.5)
+    rim = mat("wing_rim", "#3a2a3a", rough=0.6)
     spot = mat("wing_spot", "#ffffff", rough=0.5)
-    b = join([sphere(body, 1, (0, 0, 0), (0.16, 0.035, 0.035), seg=10, rings=6),
-              sphere(body, 0.045, (0.17, 0, 0.01), seg=8, rings=6)], "butterfly_body")
-    b.parent = root
+    eye = mat("butterfly_eye", "#ffffff", rough=0.3)
+    b = [sphere(body, 1, (-0.02, 0, 0), (0.15, 0.032, 0.032), seg=10, rings=6),
+         sphere(body, 0.05, (0.15, 0, 0.012), seg=10, rings=8)]
+    for s in (1, -1):
+        b.append(sphere(eye, 0.018, (0.185, 0.026 * s, 0.03), seg=8, rings=6))
+        b.append(cyl(body, 0.007, 0.16, (0.21, 0.035 * s, 0.1), rot=(-0.35 * s, 0.75, 0), verts=5))
+        b.append(sphere(body, 0.02, (0.27, 0.06 * s, 0.155), seg=8, rings=6))
+    join(b, "butterfly_body").parent = root
     for s, side in ((1, "L"), (-1, "R")):
-        parts = [sphere(wing, 1, (0.06, 0.15 * s, 0), (0.12, 0.15, 0.012), rot=(0, 0, s * 0.4), seg=14, rings=6),
-                 sphere(wing, 1, (-0.07, 0.11 * s, 0), (0.08, 0.1, 0.012), rot=(0, 0, s * -0.3), seg=12, rings=6),
-                 sphere(spot, 1, (0.07, 0.18 * s, 0.006), (0.035, 0.035, 0.012), seg=8, rings=4)]
+        parts = []
+        # forewing reaching forwards, hindwing tucked behind; each sits on a slightly
+        # bigger dark rim, and the spots are thicker than the wing so both faces show them
+        for (cx, cy, rx, ry, a, spots) in ((0.07, 0.17, 0.13, 0.18, 0.45, ((0.1, 0.24, 0.04), (0.04, 0.13, 0.025))),
+                                         (-0.07, 0.13, 0.09, 0.12, -0.35, ((-0.08, 0.16, 0.03),))):
+            parts.append(sphere(rim, 1, (cx, cy * s, 0), (rx + 0.018, ry + 0.018, 0.009), rot=(0, 0, s * a), seg=20, rings=6))
+            parts.append(sphere(wing, 1, (cx, cy * s, 0), (rx, ry, 0.013), rot=(0, 0, s * a), seg=20, rings=6))
+            for (x, y, r) in spots:
+                parts.append(sphere(spot, 1, (x, y * s, 0), (r, r, 0.017), seg=12, rings=4))
         w = join(parts, f"butterfly_wing_{side}", sharp_deg=180)
         w.parent = root
     return root
@@ -662,7 +699,7 @@ def main():
         carrot("carrot", mat("carrot", "#ff8a1f", rough=0.5), mat("carrot_leaf", "#4caf3a", rough=0.7)),
         carrot("carrot_gold", mat("gold", "#ffc21a", rough=0.3, metal=0.35, emit="#ff9d00"), mat("gold_leaf", "#b8e65a", rough=0.4, emit="#6a9a10")),
         log(), rock(), stump(), mushroom("toadstool", 0.75, "#ff6a3d"), pumpkin(), snowman(),
-        tree_round(), tree_pine(), tree_pine(snowy=True), bush(), flower(), grass(), fence(), cloud(), butterfly(), burrow(),
+        tree_round(), tree_round(snowy=True), tree_pine(), tree_pine(snowy=True), bush(), flower(), grass(), fence(), cloud(), butterfly(), burrow(),
         mushroom("mushroom_red", 2.6, "#ff4b4b"), mushroom("mushroom_blue", 2.0, "#8a6cff", stem_hex="#e8f0ff"),
     ]
     export(world, "world.glb")

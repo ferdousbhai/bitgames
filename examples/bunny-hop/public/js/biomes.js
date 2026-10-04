@@ -110,7 +110,6 @@ export const BIOMES = [
     hemi: ['#ffffff', '#9fb8d0'],
     sun: ['#ffffff', 2.3],
     recolor: {
-      canopy: ['#e6f3fa'],
       bush: ['#a6cdb8'],
       grass: ['#d0e8f2'],
       pine: ['#2f8a68'],
@@ -120,12 +119,12 @@ export const BIOMES = [
     },
     weather: 'snow',
     dust: '#ffffff', // the puffs kicked up by Pip's feet
-    hillTrees: ['tree_pine_snow'], // dotted on the near hills (picked at random)
+    hillTrees: ['tree_pine_snow', 'tree_pine_snow', 'tree_round_snow'], // dotted on the near hills (picked at random)
     butterflies: 0,
     obstacles: ['snowman', 'rock', 'snowman'],
     near: [['grass', 2, 0.8, 1.2]],
     side: [['snowman', 2, 0.6, 0.85], ['rock', 2, 0.6, 1], ['tree_pine_snow', 1, 0.4, 0.55]],
-    mid: [['tree_pine_snow', 7, 0.8, 1.25], ['tree_round', 1, 0.9, 1.1]],
+    mid: [['tree_pine_snow', 6, 0.8, 1.25], ['tree_round_snow', 2, 0.9, 1.1]],
     back: [['tree_pine_snow', 4, 1.1, 1.6]],
   },
 ]

@@ -156,6 +156,7 @@ export class World {
     for (const f of this.butterflies) this.scene.remove(f)
     this.butterflies = []
     this.butterflyBiome = -1
+    this.butterflyX = null
     this.biome = biomeIndexAt(x)
     this.target = this.paletteOf(BIOMES[this.biome])
     this.blendPalette(1)
@@ -253,9 +254,10 @@ export class World {
    * The bit of scenery (or butterfly) under a tap, or null. Forgiving taps
    * that land near something still count. Pokes it into a wobble and
    * returns { kind, obj, top } (top: a point near the top of it, for effects).
+   * `extra`: more tappable things (the obstacles on the path).
    */
-  poke(raycaster, camera, sx, sy, forgiving = true) {
-    const list = this.items.filter((it) => it.userData.kind)
+  poke(raycaster, camera, sx, sy, forgiving = true, extra = []) {
+    const list = this.items.filter((it) => it.userData.kind).concat(extra)
     for (const f of this.butterflies) if (!f.userData.leaving) list.push(f)
     const owner = (o) => {
       while (o && !o.userData.kind) o = o.parent
@@ -313,16 +315,20 @@ export class World {
       for (const f of this.butterflies) f.userData.leaving = true
       for (let i = 0; i < b.butterflies; i++) {
         const f = copy(this.templates.butterfly, { recolor: b.recolor })
-        f.scale.setScalar(2.4)
-        f.userData = { kind: 'butterfly', phase: rand(0, 6), ox: rand(1, 7), oz: rand(-2.5, 2.5), oy: rand(1.2, 3), x: bunnyX + 25 + i * 6, rise: 0, scare: 0 }
+        f.scale.setScalar(2.2)
+        f.userData = { kind: 'butterfly', phase: rand(0, 6), ox: rand(2, 8), oz: rand(-3, -1.2), oy: rand(1.8, 3.2), x: bunnyX + 25 + i * 6, rise: 0, scare: 0 }
         f.position.set(f.userData.x, 2, 0)
         f.userData.wings = [f.getObjectByName('butterfly_wing_L'), f.getObjectByName('butterfly_wing_R')]
         this.scene.add(f)
         this.butterflies.push(f)
       }
     }
+    // they keep up with Pip (rather than trailing behind round his head), then drift about
+    const moved = bunnyX - (this.butterflyX ?? bunnyX)
+    this.butterflyX = bunnyX
     keepWhere(this.butterflies, (f) => {
       const u = f.userData
+      if (!u.leaving) u.x += moved
       // flutter along with the bunny, a little ahead, drifting about
       const goal = u.leaving ? f.position.x - 1 : bunnyX + u.ox + Math.sin(time * 0.4 + u.phase) * 2
       u.x = THREE.MathUtils.damp(u.x, goal, u.leaving ? 0.2 : 1.2, dt)
@@ -331,8 +337,9 @@ export class World {
       u.scare = Math.max(0, u.scare - dt * 0.8)
       const dart = Math.sin(u.scare * Math.PI) * 1.6
       f.position.set(u.x + Math.sin(u.scare * 9) * u.scare * 0.6, u.oy + Math.sin(time * 2.3 + u.phase) * 0.5 + u.rise + dart, u.oz + Math.sin(time * 0.9 + u.phase) * 0.8)
-      // body pointing at the camera, so the wings beat in a V we can see
-      f.rotation.y = -Math.PI / 2 + Math.sin(time * 0.9 + u.phase) * 0.5
+      // flying along the path, rolled a little towards the camera, so the wings
+      // show their colours and spots (seen head-on they'd look like a fly)
+      f.rotation.set(0.5, Math.sin(time * 0.9 + u.phase) * 0.45, 0)
       // wings beat between flat-ish and raised high, so they show from the side
       u.beat = (u.beat ?? 0) + dt * (20 + u.scare * 30)
       const flap = 0.9 + Math.sin(u.beat + u.phase) * 0.65
