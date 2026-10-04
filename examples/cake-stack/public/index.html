@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Cake Stack</title>
+<link rel="icon" href="data:," />
+<script type="importmap">
+{ "imports": {
+  "three": "https://bitgames.store/vendor/three/build/three.module.js",
+  "three/addons/": "https://bitgames.store/vendor/three/examples/jsm/"
+} }
+</script>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="labels"></div>
+
+<div id="loading" class="screen">
+  <div class="logo"><span>C</span><span>A</span><span>K</span><span>E</span> <span>S</span><span>T</span><span>A</span><span>C</span><span>K</span></div>
+  <div class="spinner">🎂</div>
+  <div id="loading-text">Warming up the oven…</div>
+</div>
+
+<div id="title" class="overlay hidden">
+  <div class="title-top">
+    <div class="logo"><span>C</span><span>A</span><span>K</span><span>E</span> <span>S</span><span>T</span><span>A</span><span>C</span><span>K</span></div>
+    <p class="tag">Stack a birthday cake for your animal friends!</p>
+  </div>
+  <div class="title-bottom">
+    <button id="play" class="big-go">▶ Play</button>
+    <div class="scores"><span class="pill">🏆 <b id="best">0</b> ⭐</span> <span id="last"></span></div>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <button id="home" class="round-btn" title="Home (Esc)">🏠</button>
+    <div class="pill score">⭐ <b id="score">0</b></div>
+    <div id="best-badge" class="pill badge hidden">🏆 Best!</div>
+  </div>
+  <div class="hud-right">
+    <button id="music" class="round-btn" title="Music">🎵</button>
+    <button id="sound" class="round-btn" title="Sound">🔊</button>
+  </div>
+  <div class="progress"><div id="pips" class="pips"></div></div>
+  <button id="done" class="done-btn hidden" title="Finish the cake">🕯️</button>
+  <div id="banner" class="banner"></div>
+  <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div><div id="intro-sub"></div></div>
+</div>
+
+<div id="card" class="overlay card-wrap hidden">
+  <div class="card">
+    <div id="card-emoji" class="card-emoji">🐻</div>
+    <div class="card-title">Happy Birthday!</div>
+    <div class="card-stars">⭐ +<b id="card-stars">0</b></div>
+    <div id="card-next" class="card-next"></div>
+    <div class="row">
+      <button id="next" class="big-go">Next ▶</button>
+      <button id="card-home" class="big-go alt" title="Home">🏠</button>
+    </div>
+  </div>
+</div>
+
+<div id="hint" class="hint-finger hidden">👆</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
