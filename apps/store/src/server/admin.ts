@@ -1,18 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
-import { safeEqual } from './crypto'
-import { allowedByIp } from './rate-limit'
+import { isAdminKey } from './admin-key'
 import { isGameId } from './limits'
 import { decide, listForReview } from './review'
 
 export type { ReviewGame as AdminGame } from './review'
-
-/** Checks the admin key, rate-limiting guesses per IP first. Shared with the reviewer MCP endpoint. */
-export async function isAdminKey(adminKey: string, limiter: RateLimit, ip?: string) {
-  if (!(await allowedByIp(limiter, ip))) throw new Error('Too many attempts. Wait a minute.')
-  return Boolean(env.ADMIN_KEY) && (await safeEqual(adminKey, env.ADMIN_KEY))
-}
 
 async function requireAdmin(adminKey: string) {
   if (!(await isAdminKey(adminKey, env.ADMIN_LIMITER))) throw new Error('Wrong admin key.')

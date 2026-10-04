@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
-import { isAdminKey } from '#/server/admin'
+import { isAdminKey } from '#/server/admin-key'
 import { serveMcp } from '#/server/mcp-http'
 import { createReviewMcpServer } from '#/server/review-mcp'
 
