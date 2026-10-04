@@ -44,6 +44,24 @@ export function canvasTexture(width, height, draw, { repeat = [1, 1], srgb = tru
   return tex
 }
 
+/** Gives a geometry an index (0, 1, 2…) if it has none, so it can merge with indexed ones. Returns it. */
+export function ensureIndexed(geometry) {
+  if (!geometry.index) geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from({ length: geometry.attributes.position.count }, (_, i) => i), 1))
+  return geometry
+}
+
+/** Paints every vertex of a geometry one colour (a `color` attribute, for vertex-coloured materials). Returns it. */
+export function solidColor(geometry, color) {
+  const colours = new Float32Array(geometry.attributes.position.count * 3)
+  for (let i = 0; i < colours.length; i += 3) {
+    colours[i] = color.r
+    colours[i + 1] = color.g
+    colours[i + 2] = color.b
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colours, 3))
+  return geometry
+}
+
 /** Speckled noise fill, the base of most surface textures. */
 export function speckle(g, w, h, base, variance, count, size = 2, rand = Math.random) {
   g.fillStyle = base
@@ -71,3 +89,6 @@ export const smoothing = (rate, dt) => 1 - Math.exp(-rate * dt)
 
 /** Wraps a distance along a loop of `length` into 0..length. */
 export const wrap = (d, length) => ((d % length) + length) % length
+
+/** Escapes text for innerHTML (peer-supplied names and emoji). */
+export const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])

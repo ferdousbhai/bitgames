@@ -8,7 +8,7 @@ export class Audio {
 
   /** Browsers only allow audio after a tap or key press. */
   unlock() {
-    if (this.ctx) return this.ctx.resume()
+    if (this.ctx) return document.hidden ? undefined : this.ctx.resume()
     try {
       this.ctx = new AudioContext()
     } catch {
@@ -21,6 +21,13 @@ export class Audio {
     this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate)
     const data = this.noise.getChannelData(0)
     for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
+  }
+
+  /** Hidden tab or app in the background: stop making sound (and using the CPU for it). */
+  setHidden(hidden) {
+    if (!this.ctx) return
+    if (hidden) this.ctx.suspend()
+    else this.ctx.resume()
   }
 
   get ready() {
@@ -155,5 +162,29 @@ export class Audio {
 
   whoosh() {
     this.burst({ freq: 500, q: 0.5, gain: 0.3, decay: 0.8, type: 'lowpass' })
+  }
+
+  /** A star: a bright ding that climbs with a streak of stars. */
+  coin(streak = 0) {
+    const f = 988 * Math.pow(2, Math.min(streak, 12) / 12)
+    this.tone({ freq: f, type: 'square', gain: 0.07, decay: 0.08 })
+    this.tone({ freq: f * 1.5, type: 'triangle', gain: 0.1, decay: 0.25, delay: 0.06 })
+  }
+
+  /** A mystery box opening: a quick rising arpeggio. */
+  box() {
+    ;[392, 494, 587, 784, 988].forEach((f, i) => this.tone({ freq: f, type: 'square', gain: 0.07, decay: 0.12, delay: i * 0.05 }))
+  }
+
+  /** The horn shockwave: a big honk and a whoomp. */
+  wave() {
+    this.horn()
+    this.tone({ freq: 120, type: 'sine', gain: 0.5, decay: 0.6, slide: -80 })
+    this.burst({ freq: 300, q: 0.6, gain: 0.4, decay: 0.7, type: 'lowpass' })
+  }
+
+  /** The last seconds of the finish countdown. */
+  tick() {
+    this.tone({ freq: 660, type: 'triangle', gain: 0.08, decay: 0.08 })
   }
 }

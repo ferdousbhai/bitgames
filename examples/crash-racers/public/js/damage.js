@@ -50,7 +50,13 @@ const PART_KINDS = {
   mirror_l: 'mirror', mirror_r: 'mirror',
   extra_spoiler: 'extra', extra_sign: 'extra', extra_lightbar: 'extra', extra_rack: 'extra', extra_spare: 'extra',
   extra_plate_f: 'extra', extra_plate_r: 'extra',
+  extra_fins: 'extra', extra_booster: 'extra', extra_surfboard: 'extra', extra_bubble: 'extra',
+  extra_stacks: 'extra', extra_rollbar: 'extra', extra_flag: 'extra',
 }
+const _v = new THREE.Vector3()
+
+/** Can this node of a car be drawn on its own (it swings loose, cracks or flies off)? Everything else stays merged. */
+export const separable = (name) => Object.hasOwn(PART_KINDS, name) || name.startsWith('glass')
 
 /**
  * A window or light: its meshes, root-space centre and size, and its own copies
@@ -89,7 +95,8 @@ export class Damage {
     const rootInv = this.root.matrixWorld.clone().invert()
 
     this.root.traverse((obj) => {
-      if (!obj.isMesh) return
+      // Meshes that are never drawn (only their merged copy is) aren't worth denting.
+      if (!obj.isMesh || obj.userData.mergedOnly) return
       obj.geometry.computeBoundingSphere()
       // Root-space bounds, so an impact can skip meshes it can't reach.
       const bounds = obj.geometry.boundingSphere.clone().applyMatrix4(rootInv.clone().multiply(obj.matrixWorld))
@@ -102,11 +109,12 @@ export class Damage {
       if (kind) {
         const box = new THREE.Box3().setFromObject(child)
         const center = box.getCenter(new THREE.Vector3()).applyMatrix4(rootInv)
+        const size = box.getSize(new THREE.Vector3())
         this.parts.push({
           name, kind, object: child, health: 1, state: 'ok',
           rest: { position: child.position.clone(), quaternion: child.quaternion.clone() },
-          center, radius: box.getSize(new THREE.Vector3()).length() / 2,
-          swing: 0, swingVel: 0, angle: 0, side: name.endsWith('_l') ? -1 : 1,
+          center, radius: size.length() / 2, halfWidth: size.x / 2,
+          swing: 0, swingVel: 0, angle: 0, side: name.endsWith('_l') ? -1 : 1, pivot: null,
         })
       } else if (name.startsWith('glass')) {
         this.glass.push({ ...piece(child, rootInv), state: 'ok' })
@@ -114,6 +122,17 @@ export class Damage {
         this.lights.push({ ...piece(child, rootInv), broken: false })
       }
     }
+    // Merged meshes (see car.js): the intact car is drawn as one mesh per material, with
+    // index ranges per part. A part that comes loose is cut out of it and drawn on its own.
+    this.proxies = []
+    this.root.traverse((o) => {
+      if (o.isMesh && o.userData.ranges) this.proxies.push({ mesh: o, index: o.geometry.index.array.slice(), ranges: o.userData.ranges })
+    })
+    // Hubcaps sit on the wheels and pop off on their own.
+    this.hubcaps = this.car.wheels.map((w) => {
+      const object = w.object.children.find((c) => c.name.startsWith('hubcap'))
+      return object && { object, wheel: w, rest: { position: object.position.clone(), quaternion: object.quaternion.clone() }, state: 'ok' }
+    }).filter(Boolean)
     this.crackedGlass = new THREE.MeshStandardMaterial({ color: '#cfe6f2', map: crackTexture, transparent: true, opacity: 0.75, roughness: 0.2, metalness: 0.1 })
     this.smokeTimer = 0
   }
@@ -183,6 +202,9 @@ export class Damage {
       if (wheel.state === 'gone') return
       const d = wheel.center.distanceTo(point)
       if (d > radius + 0.5) return
+      // Even a bump can send a hubcap rolling away.
+      const cap = this.hubcaps.find((h) => h.wheel === wheel && h.state === 'ok')
+      if (cap && force > 5 && r() < 0.35 + force * 0.02) this.popHubcap(cap, dir, speed, r)
       wheel.health -= (force / 20) * (1 - d / (radius + 0.5))
       if (wheel.health <= 0 || (force > 20 && d < 0.6 && r() < 0.45)) this.detachWheel(i, dir, speed)
       else if (wheel.health < 0.6) wheel.bent = Math.min(0.35, (0.6 - wheel.health) * 0.6) * (r() < 0.5 ? -1 : 1)
@@ -236,14 +258,50 @@ export class Damage {
     return false
   }
 
+  /** Stops drawing `name`'s pieces as part of the merged mesh(es) under `owner`. */
+  cut(name, owner = this.root) {
+    for (const p of this.proxies) {
+      if (p.mesh.parent !== owner) continue
+      const index = p.mesh.geometry.index
+      for (const r of p.ranges) if (r.name === name) index.array.fill(0, r.start, r.start + r.count)
+      index.needsUpdate = true
+    }
+  }
+
+  /** Draws a part on its own instead of merged (it swings loose, cracks or flies off). */
+  separate(object, owner = this.root, name = object.name) {
+    this.cut(name, owner)
+    object.visible = true
+  }
+
+  /**
+   * Back to drawing the intact car merged: every merged piece is drawn by its
+   * merged mesh again, and its own node (and every hubcap) is hidden. The one
+   * place that hides parts after a repair, whatever state they were in.
+   */
+  rejoin() {
+    for (const p of this.proxies) {
+      p.mesh.geometry.index.array.set(p.index)
+      p.mesh.geometry.index.needsUpdate = true
+      if (p.mesh.parent !== this.root) continue
+      for (const r of p.ranges) {
+        const node = this.root.getObjectByName(r.name)
+        if (node && node.parent === this.root) node.visible = false
+      }
+    }
+    for (const cap of this.hubcaps) cap.object.visible = false
+  }
+
   loosen(part, r) {
     part.state = 'loose'
-    const o = part.object
+    this.separate(part.object)
     if (part.kind === 'door') part.swing = part.side * (0.35 + r() * 0.5)
     else if (part.kind === 'hood') part.swing = -(0.15 + r() * 0.25)
     else if (part.kind === 'bumper') {
-      part.swing = (r() < 0.5 ? -1 : 1) * (0.12 + r() * 0.15)
-      o.position.y -= 0.06
+      // Hangs on by one end; the other drops and drags.
+      const end = r() < 0.5 ? -1 : 1
+      part.pivot = new THREE.Vector3(end * part.halfWidth * 0.9, 0.05, 0)
+      part.swing = end * (0.3 + r() * 0.25)
     } else if (part.kind === 'mirror') part.swing = part.side * 0.9
     this.env.audio.clunk(0.5)
   }
@@ -256,6 +314,7 @@ export class Damage {
   detach(part, dir, speed, r) {
     if (part.state === 'gone') return
     part.state = 'gone'
+    this.separate(part.object)
     const { velocity, angularVelocity } = this.car.body
     const pushOut = this.outward(dir)
     const vel = new THREE.Vector3(velocity.x, velocity.y, velocity.z)
@@ -264,6 +323,21 @@ export class Damage {
       .add(new THREE.Vector3((r() - 0.5) * 3, 1.5 + r() * 3, (r() - 0.5) * 3))
     this.env.debris.throw(part.object, vel, new THREE.Vector3(angularVelocity.x + (r() - 0.5) * 12, (r() - 0.5) * 12, (r() - 0.5) * 12))
     this.env.audio.clunk(1)
+  }
+
+  popHubcap(cap, dir, speed, r) {
+    cap.state = 'gone'
+    this.separate(cap.object, cap.wheel.object, 'hubcap')
+    const { velocity } = this.car.body
+    // Out of the wheel's side, whichever side that is.
+    const side = new THREE.Vector3(Math.sign(cap.wheel.rest.x) || 1, 0, 0).transformDirection(this.root.matrixWorld)
+    const vel = new THREE.Vector3(velocity.x, velocity.y, velocity.z)
+      .multiplyScalar(0.7)
+      .addScaledVector(side, 3 + r() * 2)
+      .addScaledVector(this.outward(dir), 1 + speed * 0.05)
+      .add(new THREE.Vector3(0, 2.5 + r() * 2, 0))
+    this.env.debris.throw(cap.object, vel, new THREE.Vector3((r() - 0.5) * 6, (r() - 0.5) * 6, 15 + r() * 10))
+    this.env.audio.clunk(0.4)
   }
 
   detachWheel(index, dir, speed) {
@@ -280,12 +354,14 @@ export class Damage {
 
   crackGlass(g) {
     g.state = 'cracked'
+    this.separate(g.object)
     g.meshes.forEach((m) => (m.material = this.crackedGlass))
     this.env.audio.glass(0.5)
   }
 
   shatterGlass(g, dir) {
     g.state = 'gone'
+    this.cut(g.object.name)
     g.object.visible = false
     const world = g.center.clone().applyMatrix4(this.root.matrixWorld)
     const v = this.car.body.velocity
@@ -307,6 +383,13 @@ export class Damage {
       if (part.kind === 'door') o.rotateY(part.angle)
       else if (part.kind === 'hood') o.rotateX(part.angle)
       else o.rotateZ(part.angle) // bumpers sag, mirrors droop
+      if (part.pivot) {
+        // Swing about the pivot instead of the part's middle: keep the pivot where it was.
+        _v.copy(part.pivot).applyQuaternion(part.rest.quaternion)
+        o.position.copy(part.rest.position).add(_v)
+        _v.copy(part.pivot).applyQuaternion(o.quaternion)
+        o.position.sub(_v)
+      }
     }
     if (this.level > 0.45) {
       this.smokeTimer -= dt
@@ -350,12 +433,18 @@ export class Damage {
       part.health = 1
       part.angle = 0
       part.swingVel = 0
+      part.pivot = null
       part.object.position.copy(part.rest.position)
       part.object.quaternion.copy(part.rest.quaternion)
     }
+    for (const cap of this.hubcaps) {
+      if (cap.state === 'gone') this.env.debris.recall(cap.object, cap.wheel.object)
+      cap.state = 'ok'
+      cap.object.position.copy(cap.rest.position)
+      cap.object.quaternion.copy(cap.rest.quaternion)
+    }
     for (const g of this.glass) {
       g.state = 'ok'
-      g.object.visible = true
       g.meshes.forEach((m, i) => (m.material = g.materials[i]))
     }
     for (const l of this.lights) {
@@ -372,6 +461,7 @@ export class Damage {
       wheel.bent = 0
       this.car.restoreWheel(i)
     })
+    this.rejoin()
   }
 }
 
@@ -419,14 +509,13 @@ export class Debris {
     if (this.items.length > this.max) this.remove(this.items[0])
   }
 
-  /** Puts a part back on its car (used by repair). */
+  /** Puts a part back on its car (used by repair, which decides what shows). */
   recall(object, root) {
     const item = this.items.find((it) => it.object === object)
     if (item) {
       this.world.removeBody(item.body)
       this.items.splice(this.items.indexOf(item), 1)
     }
-    object.visible = true
     object.scale.setScalar(1)
     root.add(object)
   }
@@ -438,7 +527,7 @@ export class Debris {
   remove(item) {
     this.world.removeBody(item.body)
     item.object.removeFromParent()
-    item.object.traverse((o) => o.isMesh && o.geometry.dispose())
+    item.object.traverse((o) => o.isMesh && !o.userData.mergedOnly && o.geometry.dispose())
     this.items.splice(this.items.indexOf(item), 1)
   }
 

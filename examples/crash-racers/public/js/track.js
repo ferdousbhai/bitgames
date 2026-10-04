@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, STATIC_MASK, rng, wrap } from './util.js'
+import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, STATIC_MASK, ensureIndexed, rng, wrap } from './util.js'
 
 let boostMat
 /**
@@ -52,6 +52,11 @@ export class Track {
     this.props = []
     this.ramps = []
     this.boostPads = []
+    /** Jumps in detail (take-off lip, gap, landing), for placing star arcs over them. */
+    this.jumps = []
+    /** Scenery that moves (flags, dinosaurs, the ferry...): `fn(dt, time)` each frame, on the race's clock. */
+    this.animators = []
+    this.time = 0
     this.mergeBuckets = new Map() // material -> geometries, merged into one mesh at the end
 
     this.curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal')
@@ -130,6 +135,15 @@ export class Track {
   sampleAt(dist) {
     const i = Math.floor((wrap(dist, this.length) / this.length) * this.samples.length)
     return this.samples[i % this.samples.length]
+  }
+
+  /**
+   * A point `lateral` metres to the side of the road at `dist` (positive = the
+   * road's right): `pos`, the road sample `s`, and `toRoad`, the way back to the road.
+   */
+  beside(dist, lateral) {
+    const s = this.sampleAt(dist)
+    return { pos: s.p.clone().addScaledVector(s.side, lateral), s, toRoad: s.side.clone().multiplyScalar(-Math.sign(lateral)) }
   }
 
   /** Start positions: two columns behind the start line. */
@@ -211,9 +225,14 @@ export class Track {
     return body
   }
 
+  /** The collider for addStaticBox (scenery may override it to group or drop boxes; null means no box). */
+  staticCollider(center, size, yaw) {
+    return this.staticBox(center, size.clone().multiplyScalar(0.5), new CANNON.Quaternion().setFromEuler(0, yaw, 0))
+  }
+
   addStaticBox(center, size, yaw, material, { visual = true, castShadow = true } = {}) {
-    const body = this.staticBox(center, size.clone().multiplyScalar(0.5), new CANNON.Quaternion().setFromEuler(0, yaw, 0))
-    if (visual && material) {
+    const body = this.staticCollider(center, size, yaw)
+    if (body && visual && material) {
       const geo = new THREE.BoxGeometry(size.x, size.y, size.z)
       geo.rotateY(yaw)
       geo.translate(center.x, center.y, center.z)
@@ -222,29 +241,23 @@ export class Track {
     return body
   }
 
-  /** Collects static geometry per material; finish() merges each bucket into one draw call. */
+  /**
+   * Collects static geometry per material; finish() merges each bucket into one
+   * draw call. Takes ownership of `geometry`. Everything is kept indexed (a
+   * merge needs all or none), so shared vertices aren't expanded into copies.
+   */
   addGeometry(geometry, material, castShadow = true) {
-    const key = material.uuid + (castShadow ? 's' : '')
-    if (!this.mergeBuckets.has(key)) this.mergeBuckets.set(key, { material, castShadow, geometries: [] })
-    const g = geometry.index ? geometry.toNonIndexed() : geometry
+    const g = ensureIndexed(geometry)
     if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2))
     for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name)
+    const { key, shadow } = this.bucket(g, material, castShadow)
+    if (!this.mergeBuckets.has(key)) this.mergeBuckets.set(key, { material, castShadow: shadow, geometries: [] })
     this.mergeBuckets.get(key).geometries.push(g)
   }
 
-  /** Adds a copy of an object's meshes (e.g. a Blender prop) as static decoration. */
-  addObject(object, position, yaw, scale = 1, castShadow = true) {
-    const holder = new THREE.Object3D()
-    holder.position.copy(position)
-    holder.rotation.y = yaw
-    holder.scale.setScalar(scale)
-    holder.updateMatrixWorld(true)
-    object.updateMatrixWorld(true)
-    object.traverse((o) => {
-      if (!o.isMesh) return
-      const g = o.geometry.clone().applyMatrix4(o.matrixWorld).applyMatrix4(holder.matrixWorld)
-      this.addGeometry(g, o.material, castShadow)
-    })
+  /** Which merged draw call a piece of geometry joins (scenery may override it to chunk by area). */
+  bucket(geometry, material, castShadow) {
+    return { key: material.uuid + (castShadow ? 's' : ''), shadow: castShadow }
   }
 
   /**
@@ -260,10 +273,25 @@ export class Track {
     return wrap(dist, this.length)
   }
 
+  /** True if `dist` is within `pad` metres of a ramp or jump. */
+  nearRamp(dist, pad) {
+    return this.ramps.some((r) => Math.abs(this.offset(dist, r.dist)) < r.half + pad)
+  }
+
   /** How much the road turns over `span` metres either side of `dist` (0 = straight). */
   bendAt(dist, span = 30) {
     const a = this.sampleAt(dist - span).t, b = this.sampleAt(dist + span).t
     return 1 - (a.x * b.x + a.z * b.z)
+  }
+
+  /** How far ahead a driver at `speed` m/s looks along the road. */
+  lookAhead(speed) {
+    return 9 + speed * 0.9
+  }
+
+  /** How sharply the road bends coming up for a driver at `dist` looking `look` metres ahead: decides the safe speed. */
+  bendAhead(dist, look) {
+    return this.bendAt(dist + look * 1.5, look * 0.5)
   }
 
   /**
@@ -279,7 +307,7 @@ export class Track {
       const fromStart = Math.min(wrap(d, this.length), this.length - wrap(d, this.length))
       if (fromStart < 70 + half) continue
       // Leave room after any ramp or jump already here.
-      if (this.ramps.some((r) => Math.abs(this.offset(d, r.dist)) < r.half + half + 20)) continue
+      if (this.nearRamp(d, half + 20)) continue
       const bend = this.bendAt(d, 30 + half)
       if (bend < bestBend) {
         bestBend = bend
@@ -384,13 +412,14 @@ export class Track {
     this.slab(frame, along + length * 0.7, { length: length * 1.4, width, rise: -height, lateral, material })
     // One entry for the whole jump: respawns land clear of it, and bots line up with it.
     this.ramps.push({ dist, lateral, half: total / 2, width })
+    this.jumps.push({ lateral, takeoff: dist - total / 2 + length, lip: height * 0.8, gap, face, height })
     return dist
   }
 
   /** A glowing strip on the road that fires a car's turbo as it drives over. */
   addBoostPad(dist, { lateral = 0, length = 5, width = 3 } = {}) {
     dist = wrap(dist, this.length)
-    if (this.ramps.some((r) => Math.abs(this.offset(dist, r.dist)) < r.half + length)) {
+    if (this.nearRamp(dist, length)) {
       throw new Error(`A boost pad at ${Math.round(dist)} m would be under a ramp or jump.`)
     }
     const s = this.sampleAt(dist)
@@ -458,12 +487,20 @@ export class Track {
     this.mergeBuckets.clear()
   }
 
-  update() {
+  /** Runs `fn(dt, time)` every frame of the race (see update). */
+  animate(fn) {
+    this.animators.push(fn)
+  }
+
+  /** Per frame: knocked props follow their bodies and the scenery moves. `dt` is game time, so it all follows slow motion. */
+  update(dt) {
     for (const p of this.props) {
       if (p.body.sleepState === CANNON.Body.SLEEPING) continue
       p.mesh.position.copy(p.body.position)
       p.mesh.quaternion.copy(p.body.quaternion)
     }
+    this.time += dt
+    for (const fn of this.animators) fn(dt, this.time)
   }
 
   /**
@@ -481,5 +518,17 @@ export class Track {
     const free = (o) => o.isMesh && !o.geometry.userData.shared && o.geometry.dispose()
     this.group.traverse(free)
     for (const p of this.props) p.mesh.traverse(free)
+  }
+
+  /**
+   * Where a car is relative to a point placed with frameAt(dist) + side * lateral:
+   * metres along the road and across it. Exact (not snapped to samples).
+   * Pass `out` to reuse an object (it runs for every pickup near every car).
+   */
+  localTo(pos, item, out = {}) {
+    const dx = pos.x - item.x, dz = pos.z - item.z
+    out.along = dx * item.tx + dz * item.tz
+    out.across = dx * -item.tz + dz * item.tx
+    return out
   }
 }

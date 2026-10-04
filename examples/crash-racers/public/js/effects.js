@@ -194,6 +194,28 @@ export class Effects {
     }
   }
 
+  /** A ring of dust and sparks rushing outwards: the horn shockwave. */
+  ring(point, radius = 12) {
+    const v = new THREE.Vector3()
+    const p = new THREE.Vector3()
+    for (let i = 0; i < 36; i++) {
+      const a = (i / 36) * Math.PI * 2
+      v.set(Math.cos(a), 0.15, Math.sin(a)).multiplyScalar(radius * 1.4)
+      p.set(point.x + Math.cos(a), 0.5, point.z + Math.sin(a))
+      this.dust.spawn(p, v, { life: 0.8, size: 1.4, color: '#fff3c4' })
+      if (i % 2) this.sparks.spawn(p, v.multiplyScalar(0.8).setY(3), { life: 0.6, size: 1.5, color: i % 4 === 1 ? '#6c63ff' : '#2ec4b6' })
+    }
+  }
+
+  /** A shower of coloured sparks where a star or box was grabbed. */
+  sparkle(point, colors = ['#fff04a', '#ffffff', '#ffbe0b']) {
+    const v = new THREE.Vector3()
+    for (let i = 0; i < 14; i++) {
+      v.set(Math.random() - 0.5, Math.random() * 0.8 + 0.4, Math.random() - 0.5).normalize().multiplyScalar(3 + Math.random() * 3)
+      this.sparks.spawn(point, v, { life: 0.5 + Math.random() * 0.4, size: 0.7 + Math.random() * 0.6, color: colors[i % colors.length] })
+    }
+  }
+
   addShake(amount) {
     this.shake = Math.min(1.2, this.shake + amount)
   }

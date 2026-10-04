@@ -1,22 +1,27 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
-import { Damage } from './damage.js'
-import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, clamp, damp, harmless } from './util.js'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { Damage, separable } from './damage.js'
+import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, clamp, damp, ensureIndexed, harmless, solidColor } from './util.js'
 
 // Scratch objects for snapshot playback, which runs every physics step.
 const _pos = new THREE.Vector3(), _pos2 = new THREE.Vector3()
 const _quat = new THREE.Quaternion(), _quat2 = new THREE.Quaternion()
 
 export const CAR_MODELS = {
-  rocket: { name: 'Rocket', emoji: '🏎️', power: 1.12, grip: 1.1 },
-  sunny: { name: 'Sunny Taxi', emoji: '🚕', power: 1.0, grip: 1.0 },
+  rocket: { name: 'Rocket', emoji: '🚀', power: 1.12, grip: 1.1 },
+  sunny: { name: 'Sunny', emoji: '😎', power: 1.0, grip: 1.0 },
   bubbles: { name: 'Bubbles', emoji: '🫧', power: 0.95, grip: 1.05 },
-  bruno: { name: 'Bruno Jeep', emoji: '🚙', power: 1.05, grip: 0.95 },
-  pickle: { name: 'Pickle Van', emoji: '🚐', power: 0.95, grip: 0.95 },
+  bruno: { name: 'Bruno Truck', emoji: '🛻', power: 1.05, grip: 0.95 },
+  pickle: { name: 'Pickle', emoji: '🥒', power: 0.95, grip: 0.95 },
   siren: { name: 'Siren', emoji: '🚓', power: 1.05, grip: 1.0 },
 }
 
 const COM_HEIGHT = 0.55
+/** Seconds upside down after which a car with no wheel on the ground is lying on its roof, not flying. */
+const ROOF_NOT_AIR = 1
+/** Milliseconds before the 🔥 turbo can be used again. */
+export const TURBO_COOLDOWN = 6000
 const WHEEL_ORDER = ['wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr']
 const WHEEL = { restLength: 0.32, stiffness: 38, frictionSlip: 2.4 }
 // cannon scales the spring by the chassis mass, so at rest each of the four
@@ -29,17 +34,262 @@ const DOWN = new CANNON.Vec3(0, -1, 0)
 const UP = new CANNON.Vec3(0, 1, 0)
 const scratch = new CANNON.Vec3()
 
-/** Makes an instance of a car template with its own geometry, so dents stay on this car. */
-function cloneTemplate(template) {
-  const root = template.clone(true)
-  root.traverse((o) => {
-    if (o.isMesh) {
-      o.geometry = o.geometry.clone()
-      o.castShadow = true
-      o.receiveShadow = true
+// Nodes that stay their own (collapsed) mesh: they spin, animate, toggle or glow.
+const OWN_MESH = /^(wheel_|light_|face_|extra_lightbar$|extra_booster$)/
+/** One shared material for everything opaque: colours live in the vertices, so a car is a handful of draw calls. */
+const toyMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.05 })
+const hiddenMaterial = new THREE.MeshBasicMaterial({ visible: false })
+const glows = (m) => m.emissive && m.emissive.r + m.emissive.g + m.emissive.b > 0.05 && m.emissiveIntensity > 0.3
+
+/** A copy of the mesh's geometry in another space, with its material colour baked into the vertices. */
+function colouredGeometry(mesh, matrix) {
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', mesh.geometry.attributes.position.clone())
+  g.setAttribute('normal', mesh.geometry.attributes.normal.clone())
+  if (mesh.geometry.index) g.setIndex(mesh.geometry.index.clone())
+  ensureIndexed(g).applyMatrix4(matrix)
+  return solidColor(g, mesh.material.color ?? new THREE.Color(1, 1, 1))
+}
+
+/** Paint that a car's tint recolours. */
+const TINTABLE = /^(paint|accent)_/
+
+/**
+ * Merges meshes into one geometry. `ranges` records which index range came
+ * from which node, so the damage system can hide a piece when it comes loose;
+ * `paints` records which vertices carry tintable paint (and its colour).
+ */
+function mergeMeshes(entries, space) {
+  const inv = space.matrixWorld.clone().invert()
+  const geometries = []
+  const ranges = []
+  const paints = []
+  let start = 0
+  let vertex = 0
+  for (const { mesh, name } of entries) {
+    const g = colouredGeometry(mesh, inv.clone().multiply(mesh.matrixWorld))
+    geometries.push(g)
+    const last = ranges[ranges.length - 1]
+    if (last?.name === name && last.start + last.count === start) last.count += g.index.count
+    else ranges.push({ name, start, count: g.index.count })
+    start += g.index.count
+    const count = g.attributes.position.count
+    const m = mesh.material
+    if (TINTABLE.test(m.name)) paints.push({ material: m.name, color: [m.color.r, m.color.g, m.color.b], start: vertex, count })
+    vertex += count
+  }
+  return { geometry: mergeGeometries(geometries), ranges, paints }
+}
+
+/**
+ * Once per template:
+ * - The GLBs ship without normals to stay small: compute smooth ones (GLTFLoader turned flat shading on for them).
+ * - Cut draw calls. Everything that only moves with the car (body, doors, hood, bumpers, mirrors,
+ *   driver, decorations) is merged into one vertex-coloured mesh, `intact`, and the glass into one
+ *   mesh per glass material (`panes_*`). Their own nodes stay hidden until the damage system
+ *   separates them (a door swings open, a window cracks). Nodes that animate keep their own mesh,
+ *   collapsed to one draw call each; a wheel's hubcap is part of its wheel's mesh until it pops off.
+ */
+const prepared = new WeakSet()
+export function prepareTemplate(template) {
+  if (prepared.has(template)) return
+  prepared.add(template)
+  template.traverse((o) => {
+    if (!o.isMesh) return
+    if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals()
+    if (o.material.flatShading) {
+      o.material.flatShading = false
+      o.material.needsUpdate = true
     }
   })
+  template.updateMatrixWorld(true)
+  const opaque = []
+  const clear = new Map() // material -> entries
+  for (const node of [...template.children]) {
+    if (OWN_MESH.test(node.name)) {
+      collapseNode(node)
+      continue
+    }
+    node.traverse((o) => {
+      if (!o.isMesh) return
+      if (o.material.transparent) {
+        if (!clear.has(o.material)) clear.set(o.material, [])
+        clear.get(o.material).push({ mesh: o, name: node.name })
+      } else opaque.push({ mesh: o, name: node.name })
+    })
+    node.visible = false
+    // Drawn only as part of the merged mesh, ever: no own copy to dent (see cloneTemplate).
+    if (!separable(node.name)) node.traverse((o) => o.isMesh && (o.userData.mergedOnly = true))
+  }
+  const proxy = (name, entries, material) => {
+    const { geometry, ranges, paints } = mergeMeshes(entries, template)
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.name = name
+    Object.assign(mesh.userData, { ranges, paints })
+    template.add(mesh)
+  }
+  proxy('intact', opaque, toyMaterial)
+  let i = 0
+  for (const [material, entries] of clear) proxy(`panes_${i++}`, entries, material)
+}
+
+/** Turns a node's plain opaque meshes (and its hubcap) into one mesh; glowing ones stay as they are. */
+function collapseNode(node) {
+  const hubcapNode = node.children.find((c) => c.name.startsWith('hubcap'))
+  const entries = []
+  node.traverse((o) => {
+    if (!o.isMesh || o.material.transparent || glows(o.material)) return
+    entries.push({ mesh: o, name: hubcapNode && isInside(o, hubcapNode) ? 'hubcap' : 'own' })
+  })
+  if (entries.length < 2) return
+  const { geometry, ranges, paints } = mergeMeshes(entries, node)
+  for (const { mesh, name } of entries) {
+    if (name === 'hubcap') continue
+    // A node that is itself a mesh stays (it is the node) but never draws; its merged copy does.
+    if (mesh === node) {
+      mesh.material = hiddenMaterial
+      mesh.userData.mergedOnly = true
+    } else mesh.removeFromParent()
+  }
+  // A hubcap is its own node under the wheel, kept hidden to throw when it pops off.
+  if (hubcapNode) hubcapNode.visible = false
+  const merged = new THREE.Mesh(geometry, toyMaterial)
+  merged.name = `${node.name}_merged`
+  Object.assign(merged.userData, { ranges, paints })
+  node.add(merged)
+}
+
+function isInside(obj, ancestor) {
+  for (let o = obj; o; o = o.parent) if (o === ancestor) return true
+  return false
+}
+
+/**
+ * A second (third…) child on the same car gets it in another colour: the paint
+ * blends towards a bright tint (works on black and white paint too, unlike a hue shift).
+ */
+const TINTS = ['#ffffff', '#1e90ff', '#ff4fa3', '#36c25b'].map((c) => new THREE.Color(c))
+const tinted = (name, color, n) => color.lerp(TINTS[n % TINTS.length], name.startsWith('paint_') ? 0.75 : 0.35)
+
+/**
+ * Repaints a car instance in tint `n`: its own copies of the paint materials
+ * (for parts drawn on their own, like a swinging door), and the paint's
+ * vertices in the merged meshes. Returns the materials it made.
+ */
+function tintCar(root, n) {
+  const copies = new Map()
+  const swap = (m) => {
+    if (!m || !TINTABLE.test(m.name)) return m
+    if (!copies.has(m)) {
+      const c = m.clone()
+      tinted(m.name, c.color, n)
+      copies.set(m, c)
+    }
+    return copies.get(m)
+  }
+  const colour = new THREE.Color()
+  root.traverse((o) => {
+    if (!o.isMesh) return
+    o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material)
+    const a = o.geometry.attributes.color?.array
+    for (const { material, color, start, count } of o.userData.paints ?? []) {
+      tinted(material, colour.fromArray(color), n)
+      for (let i = start * 3; i < (start + count) * 3; i += 3) colour.toArray(a, i)
+    }
+  })
+  return [...copies.values()]
+}
+
+/** Shadows only from the shell and the wheels: the rest would cost a shadow-pass draw each. */
+const CASTS_SHADOW = /^(intact|wheel_)/
+
+/**
+ * Makes an instance of a car template with its own geometry, so dents (and a
+ * tint) stay on this car. Meshes that never draw (`mergedOnly`) share the
+ * template's: they're never dented, and never disposed with the car.
+ */
+function cloneTemplate(template) {
+  prepareTemplate(template)
+  const root = template.clone(true)
+  for (const child of root.children) {
+    const shadow = CASTS_SHADOW.test(child.name)
+    child.traverse((o) => {
+      if (o.isMesh) {
+        if (!o.userData.mergedOnly) o.geometry = o.geometry.clone()
+        o.castShadow = shadow
+        o.receiveShadow = true
+      }
+    })
+  }
   return root
+}
+
+/**
+ * The cartoon bits: eyes that blink, squint when hurt and look where the car
+ * steers, a grin that turns to a frown, flashing police lights and the
+ * rocket's booster flame. All optional.
+ */
+class Face {
+  constructor(root) {
+    const get = (name) => root.getObjectByName(name)
+    this.lids = get('face_lids')
+    this.pupils = get('face_pupils')
+    this.pupilX = this.pupils?.position.x ?? 0
+    // How far the pupils can slide: a quarter of an eye.
+    this.pupilReach = 0
+    if (this.pupils) this.pupilReach = new THREE.Box3().setFromObject(get('light_f')).getSize(new THREE.Vector3()).y * 0.12
+    this.smile = get('face_smile')
+    this.frown = get('face_frown')
+    if (this.frown) this.frown.visible = false
+    this.flame = get('booster_flame')
+    this.flameBase = this.flame?.scale.clone()
+    this.blinkAt = 1 + Math.random() * 3
+    this.time = Math.random() * 10
+    // Police lights: this car's own copies of the red and blue materials, so they flash alone.
+    this.flashers = []
+    get('extra_lightbar')?.traverse((o) => {
+      if (o.isMesh && /light_(red|blue)/.test(o.material.name)) {
+        o.material = o.material.clone()
+        this.flashers.push({ material: o.material, red: o.material.name.includes('red'), base: o.material.emissiveIntensity })
+      }
+    })
+  }
+
+  update(dt, car) {
+    this.time += dt
+    const hurt = car.damage.level
+    // Blink every few seconds; squint more as the car gets wrecked.
+    let close = Math.min(0.6, hurt * 0.75)
+    if (this.time > this.blinkAt) {
+      const t = this.time - this.blinkAt
+      if (t < 0.16) close = Math.max(close, Math.sin((t / 0.16) * Math.PI))
+      else this.blinkAt = this.time + 2 + Math.random() * 4
+    }
+    if (this.lids) this.lids.rotation.x = -close
+    // Look into the turn (left is -x), and dizzily wander when badly hurt.
+    if (this.pupils) {
+      const look = clamp(car.steerAngle * 2.5, -1, 1) + (hurt > 0.6 ? Math.sin(this.time * 7) * 0.6 : 0)
+      this.pupils.position.x = this.pupilX - look * this.pupilReach
+    }
+    if (this.smile) {
+      const sad = hurt > 0.4
+      this.smile.visible = !sad
+      if (this.frown) this.frown.visible = sad
+    }
+    if (this.flame && this.flame.parent?.parent === car.root) {
+      const flicker = 0.85 + Math.sin(this.time * 41) * 0.1 + Math.sin(this.time * 23) * 0.08
+      const s = car.turboActive ? 2.6 : car.controls.throttle > 0 ? 1 : 0.55
+      this.flame.scale.set(this.flameBase.x * (0.8 + 0.2 * s), this.flameBase.y * (0.8 + 0.2 * s), this.flameBase.z * s * flicker)
+    }
+    if (this.flashers.length) {
+      const redOn = Math.floor(this.time * 5) % 2 === 0
+      for (const f of this.flashers) f.material.emissiveIntensity = f.base * (f.red === redOn ? 1.6 : 0.15)
+    }
+  }
+
+  dispose() {
+    for (const f of this.flashers) f.material.dispose()
+  }
 }
 
 export class Car {
@@ -48,8 +298,9 @@ export class Car {
    * @param opts.template loaded GLB root for the model
    * @param opts.env { scene, world, effects, audio, debris }
    * @param opts.remote true when another device simulates this car
+   * @param opts.tint 0 for the car's own colours, 1+ for another paint job (two children on the same car)
    */
-  constructor({ id, model, template, env, remote = false }) {
+  constructor({ id, model, template, env, remote = false, tint = 0 }) {
     this.id = id
     this.model = model
     this.spec = CAR_MODELS[model]
@@ -57,6 +308,7 @@ export class Car {
     this.remote = remote
     this.controls = { steer: 0, throttle: 0, brake: 0 }
     this.root = cloneTemplate(template)
+    this.tintMaterials = tint > 0 ? tintCar(this.root, tint) : []
     this.root.position.set(0, 0, 0)
     this.root.rotation.set(0, 0, 0)
     env.scene.add(this.root)
@@ -133,6 +385,7 @@ export class Car {
     }
 
     this.damage = new Damage(this, env)
+    this.face = new Face(this.root)
     this.lastVelocity = new CANNON.Vec3()
     this.accel = new THREE.Vector3()
     /** Front-wheel angle in radians; positive turns left. */
@@ -140,7 +393,12 @@ export class Car {
     this.turboTime = 0
     this.turboCooldown = 0
     this.hitAccumulator = null
+    /** Recovery timers (seconds): the game puts a car back on the road when one runs too long. */
     this.upsideDownTime = 0
+    this.stuckTime = 0
+    this.offRoadTime = 0
+    /** Progress along the road and when it was last made, to spot a car getting nowhere. */
+    this.headway = null
     /** Seconds with every wheel off the ground, and how far the car has spun meanwhile (radians). */
     this.airTime = 0
     this.airSpin = 0
@@ -168,12 +426,16 @@ export class Car {
     return Math.atan2(fwd.x * dz - fwd.z * dx, fwd.x * dx + fwd.z * dz)
   }
 
+  /** Puts the car down on its wheels at rest, with every recovery timer cleared. */
   place(position, yaw) {
     this.body.position.set(position.x, position.y + COM_HEIGHT + 0.2, position.z)
     this.body.quaternion.setFromEuler(0, yaw, 0)
     this.body.velocity.setZero()
     this.body.angularVelocity.setZero()
     this.body.wakeUp()
+    this.upsideDownTime = this.stuckTime = this.offRoadTime = 0
+    this.airTime = this.airSpin = 0
+    this.headway = null
     this.syncVisual()
   }
 
@@ -274,6 +536,7 @@ export class Car {
     }
   }
 
+  /** Physics and damage for a crash; onHit shows it (sparks, sound) and tells everyone. */
   applyHit({ speed, world, local, dir, normal, other }) {
     const seed = Math.floor(Math.random() * 1e9)
     // Hitting another car shares the blow; walls take it all.
@@ -289,17 +552,20 @@ export class Car {
       this.body.angularVelocity.z += (Math.random() - 0.5) * 3 * kick
       this.body.velocity.y += 1.5 * kick
     }
-    this.env.effects.sparkBurst(world, normal.negate(), effective)
-    this.env.effects.addShake(this.isPlayer ? Math.min(1, effective / 25) : 0)
-    this.env.audio.crash(effective, this.isPlayer)
-    this.onHit?.({ local, dir, speed: effective, seed, otherCar })
+    this.onHit?.({ local, dir, speed: effective, seed, otherCar, world, normal: normal.negate() })
   }
 
   /**
    * Airtime and spin for stunts. On landing after a real jump, calls
-   * onLand({ airTime, flips }); flips only count if the car lands on its wheels.
+   * onLand({ airTime, flips, upright }); flips only count if the car lands on its wheels.
    */
   trackAir(dt) {
+    // On its roof the wheels touch nothing either, but that's no jump: a real flip is upside down only briefly.
+    if (this.upsideDownTime > ROOF_NOT_AIR) {
+      this.airTime = 0
+      this.airSpin = 0
+      return
+    }
     if (!this.grounded) {
       this.airTime += dt
       // Spin around the car's own side (front flips) or nose (barrel rolls) axis.
@@ -310,7 +576,7 @@ export class Car {
     if (this.airTime > 0.45) {
       const upright = this.body.quaternion.vmult(UP, scratch).y > 0.5
       const flips = upright ? Math.floor((this.airSpin + 0.8) / (Math.PI * 2)) : 0
-      this.onLand?.({ airTime: this.airTime, flips })
+      this.onLand?.({ airTime: this.airTime, flips, upright })
     }
     this.airTime = 0
     this.airSpin = 0
@@ -320,7 +586,7 @@ export class Car {
   boost({ free = false, seconds = 2 } = {}) {
     if (!free && this.turboCooldown > performance.now()) return false
     this.turboTime = Math.max(this.turboTime, seconds)
-    if (!free) this.turboCooldown = performance.now() + 6000
+    if (!free) this.turboCooldown = performance.now() + TURBO_COOLDOWN
     return true
   }
 
@@ -360,13 +626,22 @@ export class Car {
       w.object.rotation.set(w.spin, steer + Math.sin(w.spin) * w.bent * 0.3, w.bent * 0.5, 'YXZ')
       w.center.copy(w.object.position)
     })
+    this.face.update(dt, this)
   }
 
   // --- Networking ---------------------------------------------------------
 
+  /**
+   * `n` numbers the snapshots so late, out-of-order ones can be dropped, and
+   * `t` is the sender's clock (ms) so playback follows the sender's timing
+   * rather than network jitter.
+   */
   snapshot() {
     const b = this.body
+    this.snapshotSeq = (this.snapshotSeq ?? 0) + 1
     return {
+      n: this.snapshotSeq,
+      t: Math.round(performance.now()),
       p: [b.position.x, b.position.y, b.position.z].map((n) => +n.toFixed(3)),
       q: [b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w].map((n) => +n.toFixed(4)),
       v: [b.velocity.x, b.velocity.y, b.velocity.z].map((n) => +n.toFixed(2)),
@@ -377,33 +652,64 @@ export class Car {
 
   /** `s` is a freshly decoded message, so it is stamped in place. */
   pushSnapshot(s) {
-    s.time = performance.now()
+    const now = performance.now()
+    const last = this.snapshots[this.snapshots.length - 1]
+    if (last && s.n != null && last.n != null) {
+      // Older than what we have: drop it (unless the sender clearly started counting again).
+      if (s.n <= last.n && s.n > last.n - 100) return
+      if (s.n < last.n) this.snapshots.length = 0
+    }
+    if (s.t != null) {
+      // Map the sender's clock onto ours using the least-delayed message seen, creeping up
+      // slowly so a one-off fast message (or clock drift) can't skew playback for good.
+      const offset = now - s.t
+      this.clockOffset = this.clockOffset == null ? offset : Math.min(this.clockOffset + 0.5, offset)
+      s.time = s.t + this.clockOffset
+    } else s.time = now
+    if (last && s.time <= last.time) s.time = last.time + 1
     this.snapshots.push(s)
     if (this.snapshots.length > 30) this.snapshots.shift()
   }
 
-  /** Remote cars play back snapshots ~100 ms behind, so motion stays smooth. */
+  /**
+   * Remote cars play back snapshots ~100 ms behind, so motion stays smooth.
+   * Between two snapshots: interpolate. Past the newest one (a late packet):
+   * coast along its velocity for at most 150 ms, then hold.
+   */
   followSnapshots() {
     const renderTime = performance.now() - 100
     const snaps = this.snapshots
     if (snaps.length === 0) return
-    let a = snaps[0], b = snaps[snaps.length - 1]
-    for (let i = 0; i < snaps.length - 1; i++) {
-      if (snaps[i].time <= renderTime && snaps[i + 1].time >= renderTime) {
+    const newest = snaps[snaps.length - 1]
+    const body = this.body
+    let a = null, b = null
+    for (let i = snaps.length - 2; i >= 0; i--) {
+      if (snaps[i].time <= renderTime) {
         a = snaps[i]
         b = snaps[i + 1]
         break
       }
     }
-    const span = b.time - a.time
-    const t = span > 0 ? clamp((renderTime - a.time) / span, 0, 1.5) : 1
-    const pos = _pos.fromArray(a.p).lerp(_pos2.fromArray(b.p), t)
-    const q = _quat.fromArray(a.q).slerp(_quat2.fromArray(b.q), Math.min(t, 1))
-    const body = this.body
-    // Kinematic bodies need a velocity so collisions with local cars push properly.
-    body.velocity.set(b.v[0], b.v[1], b.v[2])
-    body.position.set(pos.x, pos.y, pos.z)
-    body.quaternion.set(q.x, q.y, q.z, q.w)
+    if (a && renderTime <= b.time) {
+      const t = clamp((renderTime - a.time) / Math.max(1, b.time - a.time), 0, 1)
+      _pos.fromArray(a.p).lerp(_pos2.fromArray(b.p), t)
+      _quat.fromArray(a.q).slerp(_quat2.fromArray(b.q), t)
+    } else if (renderTime > newest.time) {
+      b = newest
+      const ahead = Math.min(renderTime - newest.time, 150) / 1000
+      _pos.fromArray(newest.p).addScaledVector(_pos2.fromArray(newest.v), ahead)
+      _quat.fromArray(newest.q)
+    } else {
+      // Still before the oldest snapshot (just joined): hold there.
+      b = snaps[0]
+      _pos.fromArray(b.p)
+      _quat.fromArray(b.q)
+    }
+    // Kinematic bodies need a velocity so collisions with local cars push properly (none while holding).
+    if (renderTime - newest.time > 150) body.velocity.setZero()
+    else body.velocity.set(b.v[0], b.v[1], b.v[2])
+    body.position.set(_pos.x, _pos.y, _pos.z)
+    body.quaternion.set(_quat.x, _quat.y, _quat.z, _quat.w)
     this.steerAngle = b.s
     this.turboTime = b.b ? 0.1 : 0
   }
@@ -414,12 +720,14 @@ export class Car {
     this.root.removeFromParent()
     // Geometry is per car (dents); materials are shared with the template except the damage system's and tags'.
     this.root.traverse((o) => {
-      if (o.isMesh) o.geometry.dispose()
+      if (o.isMesh && !o.userData.mergedOnly) o.geometry.dispose()
       if (o.isSprite) {
         o.material.map?.dispose()
         o.material.dispose()
       }
     })
     this.damage.dispose()
+    this.face.dispose()
+    for (const m of this.tintMaterials) m.dispose()
   }
 }

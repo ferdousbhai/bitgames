@@ -10,10 +10,15 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .hidden { display: none !important; }
 
 .screen {
-  position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 14px; padding: 16px; text-align: center; overflow-y: auto;
+  position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  gap: 14px; text-align: center; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+  padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
   background: radial-gradient(circle at 50% 30%, rgba(255,190,11,0.35), transparent 60%), linear-gradient(160deg, rgba(43,45,66,0.92), rgba(108,99,255,0.88));
 }
+/* Centred when it fits, scrolls from the top when it doesn't (plain centring would clip the top on phones). */
+.screen > :first-child { margin-top: auto; }
+.screen > :last-child { margin-bottom: auto; }
+.screen > * { flex-shrink: 0; }
 .screen h1 { font-size: clamp(34px, 7vw, 64px); margin: 0; text-shadow: 0 4px 0 #ff6b9d; }
 .screen h2 { margin: 4px 0; font-size: clamp(22px, 4vw, 34px); }
 .hint { opacity: 0.85; font-size: 18px; }
@@ -50,9 +55,22 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .big-go.alt { background: #2ec4b6; box-shadow: 0 7px 0 #1b8178; color: #fff; }
 .big-go:active { transform: translateY(5px); box-shadow: 0 2px 0 #b38200; }
 .big-go:disabled { opacity: .5; }
+/* GO stays on screen however far the menu scrolls. */
+#go { position: sticky; bottom: calc(6px + env(safe-area-inset-bottom)); z-index: 3; box-shadow: 0 7px 0 #b38200, 0 10px 30px rgba(0,0,0,.35); }
+
+.car-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 760px; }
+.car-pick {
+  position: relative; width: 106px; padding: 8px 6px 10px; border-radius: 22px; background: rgba(255,255,255,0.18);
+  border: 4px solid rgba(255,255,255,0.35); box-shadow: 0 5px 0 rgba(0,0,0,.25); transition: transform .12s;
+}
+.car-pick .emoji { font-size: 42px; line-height: 1.1; display: block; }
+.car-pick .name { font-size: 15px; font-weight: 800; display: block; white-space: nowrap; }
+.car-pick.selected { background: #ffbe0b; color: #2b2d42; border-color: #fff; transform: scale(1.07); }
+.car-pick .taken { position: absolute; top: -10px; right: -8px; font-size: 22px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 
 .players { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.player.me { outline: 3px solid #ffbe0b; }
 .player { background: rgba(255,255,255,0.18); border-radius: 18px; padding: 6px 14px; font-size: 20px; font-weight: 800; }
 
 #hud { position: fixed; inset: 0; pointer-events: none; }
@@ -61,7 +79,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .pill.big { font-size: 34px; color: #ffbe0b; }
 /* Below the top-right corner, which BitGames keeps for its ✕ button. */
 #minimap { position: absolute; top: calc(58px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); width: 140px; height: 140px; background: rgba(0,0,0,0.3); border-radius: 50%; }
-.speed { position: absolute; bottom: calc(150px + env(safe-area-inset-bottom)); right: calc(18px + env(safe-area-inset-right)); font-size: 44px; font-weight: 900; text-shadow: 0 3px 0 rgba(0,0,0,.4); }
+.speed { position: absolute; bottom: calc(var(--tb) + 30px + env(safe-area-inset-bottom)); right: calc(18px + env(safe-area-inset-right)); font-size: 44px; font-weight: 900; text-shadow: 0 3px 0 rgba(0,0,0,.4); }
 .speed small { font-size: 16px; margin-left: 4px; }
 .banner {
   position: absolute; top: 28%; left: 0; right: 0; text-align: center; font-size: clamp(40px, 9vw, 90px); font-weight: 900;
@@ -69,17 +87,21 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 }
 .banner.show { opacity: 1; transform: scale(1); }
 .hud-buttons { position: absolute; top: calc(64px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
-.hud-buttons button { width: 52px; height: 52px; border-radius: 16px; background: rgba(0,0,0,0.4); font-size: 26px; }
+.hud-buttons button { position: relative; overflow: hidden; width: 52px; height: 52px; border-radius: 16px; background: rgba(0,0,0,0.4); font-size: 26px; }
+/* Recharging: a dark fill that drains away as the button gets ready again. */
+.hud-buttons button::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: calc(var(--cool, 0) * 100%); background: rgba(0,0,0,0.55); pointer-events: none; }
 .hud-buttons button.pressed { background: #ffbe0b; }
 
+/* Touch button size: big, but two pairs always fit side by side with a gap, upright or sideways. */
+:root { --tb: min(20vw, 21vh, 120px); }
 .touch { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between;
-  padding: 16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); pointer-events: none; }
+  padding: 12px calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left)); pointer-events: none; }
 .touch button {
-  pointer-events: auto; width: min(22vw, 120px); height: min(22vw, 120px); border-radius: 28px; font-size: min(10vw, 52px);
+  pointer-events: auto; width: var(--tb); height: var(--tb); border-radius: 26px; font-size: calc(var(--tb) * 0.45);
   background: rgba(255,255,255,0.25); border: 4px solid rgba(255,255,255,0.6); box-shadow: 0 5px 0 rgba(0,0,0,.25);
 }
 .touch button.pressed { background: rgba(255,190,11,0.85); transform: translateY(3px); }
-.steer, .pedals { display: flex; gap: 14px; }
+.steer, .pedals { display: flex; gap: 10px; }
 .pedals .gas { background: rgba(138,201,38,0.45); }
 .pedals .brake { background: rgba(255,107,157,0.45); }
 /* Touch controls whenever there is a touchscreen, even with a mouse or trackpad attached. */
@@ -93,11 +115,62 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .podium .place { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.18); border-radius: 20px; padding: 10px 16px; font-size: 24px; font-weight: 800; }
 .podium .place .medal { font-size: 40px; }
 .podium .place.me { background: #ffbe0b; color: #2b2d42; }
-.podium .place .extra { margin-left: auto; font-size: 18px; opacity: .85; }
+.podium .place .who { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; }
+.podium .place .award { font-size: 16px; font-weight: 800; background: rgba(0,0,0,0.18); border-radius: 999px; padding: 2px 10px; }
+.podium .place .extra { margin-left: auto; font-size: 18px; opacity: .9; display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
+.podium .place .extra small { font-size: 15px; }
 
 .modes { display: flex; gap: 12px; }
 .mode { display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 900; padding: 10px 26px; border-radius: 999px; background: rgba(255,255,255,0.2); }
 .mode span { font-size: 34px; }
 .mode.on { background: #ff6b9d; box-shadow: 0 6px 0 #b8456d; }
-.hud-buttons button.cooling { opacity: 0.35; }
+.hud-buttons button.cooling { opacity: 0.6; }
 #turbo-btn { background: rgba(255,120,0,0.55); }
+
+.countdown.waiting { font-size: 90px; animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.finale {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 5; pointer-events: none;
+  background: #ff6b9d; color: #fff; border-radius: 999px; padding: 6px 22px; font-size: 34px; font-weight: 900; box-shadow: 0 5px 0 #b8456d;
+  animation: pulse 1s ease-in-out infinite;
+}
+@media (any-pointer: coarse) { .finale { bottom: calc(var(--tb) + 34px + env(safe-area-inset-bottom)); } }
+#retry { margin-top: 8px; }
+
+/* Narrow phones: smaller pills so the HUD stays on one row. */
+@media (max-width: 520px) {
+  .pill { font-size: 17px; padding: 5px 10px; border-radius: 14px; }
+  .pill.big { font-size: 24px; }
+  .hud-top { gap: 6px; }
+  #minimap { width: 110px; height: 110px; }
+  .podium .place { font-size: 18px; padding: 8px 12px; gap: 8px; }
+  .podium .place .medal { font-size: 30px; }
+  .podium .place .award { font-size: 13px; }
+  .car-pick { width: 96px; }
+}
+
+/* Phones held sideways: a compact menu, with rows that scroll sideways and GO pinned in the corner. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .screen { gap: 8px; padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .logo.small { display: none; }
+  .screen h2 { font-size: 18px; margin: 0; }
+  .screen h1 { font-size: 30px; }
+  .cities, .car-row { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; justify-content: flex-start; padding: 8px 6px; }
+  .city { flex: 0 0 auto; width: 150px; padding: 6px 6px 8px; border-radius: 18px; border-width: 4px; }
+  .city .emoji { font-size: 30px; } .city .name { font-size: 16px; } .city .blurb { display: none; }
+  .cities { padding-right: 190px; }
+  .car-pick { flex: 0 0 auto; width: 92px; padding: 4px 4px 6px; } .car-pick .emoji { font-size: 30px; } .car-pick .name { font-size: 13px; }
+  .mode { font-size: 18px; padding: 6px 16px; } .mode span { font-size: 24px; }
+  .options { font-size: 16px; } .laps button, .chip { font-size: 16px; padding: 6px 12px; }
+  .players .player { font-size: 16px; padding: 4px 10px; }
+  #go { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 28px; padding: 10px 30px; margin: 0; }
+  .podium { gap: 4px; } .podium .place { padding: 4px 12px; font-size: 18px; } .podium .place .medal { font-size: 26px; }
+  .pill { font-size: 17px; padding: 4px 10px; } .pill.big { font-size: 24px; }
+  #minimap { width: 100px; height: 100px; top: calc(50px + env(safe-area-inset-top)); }
+}
+/* Sideways phone in a race: the small buttons sit in a row between the steering and the pedals. */
+@media (max-height: 500px) and (orientation: landscape) and (any-pointer: coarse) {
+  .hud-buttons { top: auto; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom)); flex-direction: row; gap: 6px; }
+  .hud-buttons button { width: 48px; height: 48px; font-size: 24px; }
+  .finale { bottom: calc(80px + env(safe-area-inset-bottom)); font-size: 26px; }
+}

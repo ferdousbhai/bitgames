@@ -107,8 +107,9 @@ export class Input {
     }
     if (gasKey) throttle = 1
     if (brakeKey) brake = 1
-    // Gentle enough that holding 🚀 for full power feels like a real burst of speed.
-    if (this.easyGas && !brake && !throttle) throttle = 0.6
-    return { steer: clamp(steer, -1, 1), throttle: brake ? 0 : throttle, brake }
+    // Easy mode drives by itself; `cruise` lets the game pick the speed for the road ahead.
+    const cruise = this.easyGas && !brake && !throttle
+    if (cruise) throttle = 0.6
+    return { steer: clamp(steer, -1, 1), throttle: brake ? 0 : throttle, brake, cruise }
   }
 }
