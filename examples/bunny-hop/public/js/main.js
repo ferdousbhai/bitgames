@@ -52,9 +52,14 @@ function resize() {
   const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
   // Show about this much path either side of the camera's centre: a phone held
   // upright gets less, so Pip stays big enough, and Pip sits further left.
-  view.dist = clamp((aspect < 1 ? 5 : 9) / (tan * aspect), 9, 24)
+  view.dist = clamp((aspect < 1 ? 4.5 : 9) / (tan * aspect), 9, 24)
   view.halfW = view.dist * tan * aspect
-  view.lead = aspect < 1 ? 0.5 : 0.45
+  view.lead = aspect < 1 ? 0.62 : 0.45
+  // Aim so the path sits low on the screen (about 3/4 of the way down): the sky
+  // above holds the HUD and the high golden carrots, with little empty grass below.
+  view.height = 3.0 + view.dist * 0.1
+  const pathBelow = Math.atan(view.height / view.dist) - Math.atan((aspect < 1 ? 0.4 : 0.48) * tan)
+  view.aim = view.height - view.dist * Math.tan(pathBelow)
   camera.updateProjectionMatrix()
 }
 addEventListener('resize', resize)
@@ -216,7 +221,8 @@ function showResults() {
   }
   $('new-best').classList.toggle('hidden', !isBest || game.score === 0)
   $('best-line').textContent = `🏆 Best: ${game.best} 🥕`
-  $('best-line').classList.toggle('hidden', game.best === 0)
+  // a new best already says so on the tally
+  $('best-line').classList.toggle('hidden', game.best === 0 || (isBest && game.score > 0))
   show('results')
 }
 
@@ -226,7 +232,54 @@ addEventListener('pointerdown', (e) => {
   sound.unlock()
   if (e.target.closest('button')) return
   if (game.state === 'play') hop()
+  if (game.state !== 'loading') poke(e.clientX, e.clientY)
 })
+
+// Kids tap everything: Pip giggles and hops, and the scenery boings, rustles and flutters.
+const raycaster = new THREE.Raycaster()
+const ndc = new THREE.Vector2()
+const POKE = {
+  tree_round: 'tree', tree_pine: 'tree', tree_pine_snow: 'tree', bush: 'tree', grass: 'tree', flower: 'flower',
+  mushroom_red: 'boing', mushroom_blue: 'boing', toadstool: 'boing', pumpkin: 'thud', rock: 'thud', stump: 'thud',
+  snowman: 'snow', fence: 'knock', burrow: 'knock', butterfly: 'flutter',
+}
+const LEAF_MATS = ['canopy', 'pine', 'bush', 'grass', 'petal', 'cap_red', 'cap_mushroom_red', 'cap_mushroom_blue', 'pumpkin', 'wing']
+function colorOf(obj, fallback) {
+  let c = null
+  obj.traverse((o) => {
+    if (!c && o.isMesh && LEAF_MATS.includes(o.material.name)) c = `#${o.material.color.getHexString()}`
+  })
+  return c ?? fallback
+}
+function poke(sx, sy) {
+  ndc.set((sx / innerWidth) * 2 - 1, -(sy / innerHeight) * 2 + 1)
+  raycaster.setFromCamera(ndc, camera)
+  if (game.state !== 'play') {
+    // Pip, on the menu and at home: the whole bunny counts, plus a little around him
+    tmp.set(game.x, bunny.y + 0.8, 0).project(camera)
+    const near = Math.hypot(((tmp.x + 1) / 2) * innerWidth - sx, ((1 - tmp.y) / 2) * innerHeight - sy) < Math.min(innerWidth, innerHeight) * 0.12
+    if (near || raycaster.intersectObject(bunny.root, true).length) {
+      const kind = bunny.tickle()
+      if (kind) {
+        sound.hop(kind === 'double')
+        sound.giggle()
+        effects.sparkle(tmp.set(game.x, bunny.y + 1.2, 0), 10, ['#ff9fba', '#ffffff', '#ffd23f'], 3)
+      }
+      return
+    }
+  }
+  // While hopping along every tap is a hop, so scenery only wobbles when hit
+  // squarely, and quietly: the hop makes the sound.
+  const playing = game.state === 'play'
+  const hit = world.poke(raycaster, camera, sx, sy, !playing)
+  if (!hit) return
+  const kind = POKE[hit.kind] ?? 'boing'
+  if (!playing) sound.poke(kind)
+  if (kind === 'tree') effects.leaves(hit.top, hit.kind === 'tree_pine_snow' ? '#ffffff' : colorOf(hit.obj, '#7bd14b'))
+  else if (kind === 'snow') effects.puff(hit.top, 10, '#ffffff', 1.2)
+  else if (kind === 'knock' && hit.kind === 'burrow') effects.puff(world.chimney(tmp2), 6, '#ffffff', 1)
+  else effects.sparkle(hit.top, 8, [colorOf(hit.obj, '#ffd23f'), '#ffffff'], 2.5)
+}
 addEventListener('keydown', (e) => {
   if (['Space', 'ArrowUp', 'KeyW', 'Enter'].includes(e.code)) {
     e.preventDefault()
@@ -268,12 +321,12 @@ function handleEvents(events) {
       if (ev.gold) {
         sound.gold()
         effects.sparkle(ev.pos, 24, ['#ffe066', '#ffffff', '#ffb000'], 4.5)
-        popups.show('+5 ✨', ev.pos, 'gold')
+        popups.show('+5', ev.pos.setY(ev.pos.y + 0.6), 'gold')
       } else {
         sound.munch(game.combo)
         effects.crumbs(ev.pos)
         effects.sparkle(ev.pos, 5, undefined, 2)
-        popups.show(game.combo >= 4 && game.combo % 2 === 0 ? pick(YUM) : '+1', ev.pos)
+        popups.show(game.combo >= 4 && game.combo % 2 === 0 ? pick(YUM) : '+1', ev.pos.setY(ev.pos.y + 0.6))
       }
     } else if (ev.type === 'bump') {
       bunny.bonk()
@@ -313,10 +366,10 @@ function updateCamera(dt) {
   } else {
     const lead = view.halfW * view.lead
     px = game.x + lead
-    py = 3.0 + view.dist * 0.1 + bunny.y * 0.25
+    py = view.height + bunny.y * 0.25
     pz = view.dist
     lx = game.x + lead
-    ly = 1.3 + bunny.y * 0.3
+    ly = view.aim + bunny.y * 0.3
   }
   if (game.state === 'play') {
     // move with the bunny first, so the easing below doesn't trail behind at speed

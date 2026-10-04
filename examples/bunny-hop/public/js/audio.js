@@ -148,6 +148,34 @@ export class Sound {
     ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 0.9, len: 1.2, type: 'sine', gain: 0.1 }))
   }
 
+  /** Poked scenery: a rustle, a ting, a boing, a thud, a knock or a flutter. */
+  poke(kind) {
+    const r = PENTA[Math.floor(Math.random() * 5)]
+    if (kind === 'tree') {
+      this.hiss({ len: 0.28, freq: 3800, q: 0.7, gain: 0.09 })
+      this.note(hz(r), { at: 0.02, len: 0.18, type: 'triangle', gain: 0.08 })
+    } else if (kind === 'flower') {
+      this.note(hz(12 + r), { len: 0.3, gain: 0.1 })
+      this.note(hz(19 + r), { at: 0.07, len: 0.3, gain: 0.07 })
+    } else if (kind === 'boing') {
+      this.note(hz(r - 12), { len: 0.32, type: 'sine', gain: 0.2, slide: 2.2 })
+      this.note(hz(r), { at: 0.03, len: 0.2, type: 'triangle', gain: 0.05, slide: 1.8 })
+    } else if (kind === 'thud' || kind === 'snow') {
+      this.note(hz(r - 24), { len: 0.25, type: 'sine', gain: 0.22, slide: 1.6 })
+      this.hiss({ len: 0.12, freq: kind === 'snow' ? 5000 : 900, gain: 0.07 })
+    } else if (kind === 'knock') {
+      this.note(300, { len: 0.07, type: 'triangle', gain: 0.16, slide: 0.6 })
+      this.note(300, { at: 0.13, len: 0.07, type: 'triangle', gain: 0.16, slide: 0.6 })
+    } else if (kind === 'flutter') {
+      for (let i = 0; i < 5; i++) this.note(hz(24 + PENTA[(i * 2) % 8]), { at: i * 0.045, len: 0.08, gain: 0.05 })
+    }
+  }
+
+  /** Pip giggles when tickled. */
+  giggle() {
+    ;[7, 9, 7, 12].forEach((s, i) => this.note(hz(s + 12), { at: i * 0.07, len: 0.09, type: 'triangle', gain: 0.07, slide: 1.15 }))
+  }
+
   click() {
     this.note(880, { len: 0.06, type: 'triangle', gain: 0.1 })
   }

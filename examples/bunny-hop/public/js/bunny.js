@@ -94,6 +94,24 @@ export class Bunny {
     return null
   }
 
+  /** Tickled on the menu or at home: a little hop, or a flip if already up. */
+  tickle() {
+    if (this.grounded) {
+      this.vy = 7.5
+      this.grounded = false
+      this.jumps = 1
+      this.sv += 4
+      return 'hop'
+    }
+    if (this.jumps < 2 && this.flipT >= 1) {
+      this.vy = Math.max(this.vy, 5)
+      this.jumps = 2
+      this.flipT = 0
+      return 'double'
+    }
+    return null
+  }
+
   bonk() {
     this.vy = 8
     this.grounded = false

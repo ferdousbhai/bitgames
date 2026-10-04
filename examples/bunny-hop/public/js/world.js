@@ -11,7 +11,7 @@ const BEHIND = 45 // and drop it this far behind
  * far layers slide by slower than the near ones: parallax for free.
  */
 const LAYERS = [
-  { key: 'near', z: [3.0, 4.6], gap: [0.6, 1.6], shadow: false, faceCamera: true },
+  { key: 'near', z: [3.0, 6.5], gap: [0.5, 1.3], shadow: false, faceCamera: true },
   { key: 'side', z: [-2.2, -3.4], gap: [2.5, 5.5], shadow: true },
   { key: 'mid', z: [-5.5, -12], gap: [1.8, 4], shadow: true },
   { key: 'back', z: [-15, -25], gap: [3.5, 7], shadow: false },
@@ -125,6 +125,8 @@ export class World {
     this.items = []
     this.butterflies = []
     this.butterflyBiome = -1
+    this.box = new THREE.Box3()
+    this.v = new THREE.Vector3()
     this.clouds = []
     for (let i = 0; i < 7; i++) {
       const c = copy(templates.cloud)
@@ -185,12 +187,14 @@ export class World {
     const faceCamera = layer.faceCamera || name === 'flower' || name === 'snowman'
     obj.rotation.y = name === 'fence' ? rand(-0.05, 0.05) : faceCamera ? rand(-0.5, 0.5) : rand(0, Math.PI * 2)
     obj.userData.sway = name === 'flower' || name === 'grass' ? rand(0, 6) : null
+    this.tag(obj, name)
     this.add(obj)
     // fences join up into a row
     if (name === 'fence') {
       for (let k = 1; k < 3; k++) {
         const f = copy(this.templates.fence, { shadow: true })
         f.position.set(x + k * 2.05, 0, obj.position.z)
+        this.tag(f, 'fence')
         this.add(f)
       }
       return 6
@@ -226,14 +230,59 @@ export class World {
     const home = copy(this.templates.burrow, { shadow: true })
     home.scale.setScalar(1.35)
     home.position.set(HOME_X + 1.6, 0, -2.7)
+    this.tag(home, 'burrow')
     this.add(home)
     for (let k = 0; k < 8; k++) {
       const f = copy(this.templates.flower, { recolor: BIOMES[0].recolor })
       f.position.set(HOME_X - 3 + k * 0.9 + rand(-0.2, 0.2), 0, rand(-1.2, -1.6))
       f.userData.sway = rand(0, 6)
+      this.tag(f, 'flower')
       this.add(f)
     }
     this.home = home
+  }
+
+  /** Scenery a tap can poke: it remembers what it is and its size, for the wobble. */
+  tag(obj, kind) {
+    obj.userData.kind = kind
+    obj.userData.s = obj.scale.x
+    obj.userData.boing = 0
+  }
+
+  /**
+   * The bit of scenery (or butterfly) under a tap, or null. Forgiving taps
+   * that land near something still count. Pokes it into a wobble and
+   * returns { kind, obj, top } (top: a point near the top of it, for effects).
+   */
+  poke(raycaster, camera, sx, sy, forgiving = true) {
+    const list = this.items.filter((it) => it.userData.kind)
+    for (const f of this.butterflies) if (!f.userData.leaving) list.push(f)
+    const owner = (o) => {
+      while (o && !o.userData.kind) o = o.parent
+      return o
+    }
+    let obj = owner(raycaster.intersectObjects(list, true)[0]?.object)
+    const box = this.box
+    if (!obj && forgiving) {
+      // nothing right under the finger: take the nearest thing within reach
+      let best = Math.max(36, Math.min(innerWidth, innerHeight) * 0.07)
+      for (const it of list) {
+        box.setFromObject(it).getCenter(this.v).project(camera)
+        if (this.v.z > 1) continue
+        const d = Math.hypot(((this.v.x + 1) / 2) * innerWidth - sx, ((1 - this.v.y) / 2) * innerHeight - sy)
+        if (d < best) {
+          best = d
+          obj = it
+        }
+      }
+    }
+    if (!obj) return null
+    const u = obj.userData
+    if (u.kind === 'butterfly') u.scare = 1
+    else u.boing = 1
+    box.setFromObject(obj)
+    const top = new THREE.Vector3((box.min.x + box.max.x) / 2, box.min.y + (box.max.y - box.min.y) * 0.75, (box.min.z + box.max.z) / 2)
+    return { kind: u.kind, obj, top }
   }
 
   /** Smoke comes out of the chimney here. */
@@ -265,7 +314,7 @@ export class World {
       for (let i = 0; i < b.butterflies; i++) {
         const f = copy(this.templates.butterfly, { recolor: b.recolor })
         f.scale.setScalar(2.4)
-        f.userData = { phase: rand(0, 6), ox: rand(1, 7), oz: rand(-2.5, 2.5), oy: rand(1.2, 3), x: bunnyX + 25 + i * 6, rise: 0 }
+        f.userData = { kind: 'butterfly', phase: rand(0, 6), ox: rand(1, 7), oz: rand(-2.5, 2.5), oy: rand(1.2, 3), x: bunnyX + 25 + i * 6, rise: 0, scare: 0 }
         f.position.set(f.userData.x, 2, 0)
         f.userData.wings = [f.getObjectByName('butterfly_wing_L'), f.getObjectByName('butterfly_wing_R')]
         this.scene.add(f)
@@ -278,11 +327,15 @@ export class World {
       const goal = u.leaving ? f.position.x - 1 : bunnyX + u.ox + Math.sin(time * 0.4 + u.phase) * 2
       u.x = THREE.MathUtils.damp(u.x, goal, u.leaving ? 0.2 : 1.2, dt)
       if (u.leaving) u.rise += dt * 2
-      f.position.set(u.x, u.oy + Math.sin(time * 2.3 + u.phase) * 0.5 + u.rise, u.oz + Math.sin(time * 0.9 + u.phase) * 0.8)
+      // a poked butterfly darts up in a little loop, then settles back
+      u.scare = Math.max(0, u.scare - dt * 0.8)
+      const dart = Math.sin(u.scare * Math.PI) * 1.6
+      f.position.set(u.x + Math.sin(u.scare * 9) * u.scare * 0.6, u.oy + Math.sin(time * 2.3 + u.phase) * 0.5 + u.rise + dart, u.oz + Math.sin(time * 0.9 + u.phase) * 0.8)
       // body pointing at the camera, so the wings beat in a V we can see
       f.rotation.y = -Math.PI / 2 + Math.sin(time * 0.9 + u.phase) * 0.5
       // wings beat between flat-ish and raised high, so they show from the side
-      const flap = 0.9 + Math.sin(time * 20 + u.phase) * 0.65
+      u.beat = (u.beat ?? 0) + dt * (20 + u.scare * 30)
+      const flap = 0.9 + Math.sin(u.beat + u.phase) * 0.65
       u.wings[0].rotation.x = flap
       u.wings[1].rotation.x = -flap
       if (u.leaving && f.position.y > 12) {
@@ -328,7 +381,15 @@ export class World {
         this.scene.remove(it)
         return false
       }
-      if (it.userData.sway != null) it.rotation.z = Math.sin(time * 2 + it.userData.sway) * 0.08
+      const u = it.userData
+      if (u.sway != null) it.rotation.z = Math.sin(time * 2 + u.sway) * 0.08
+      if (u.boing > 0) {
+        // poked: a springy squash and stretch about the base
+        u.boing = Math.max(0, u.boing - dt * 1.3)
+        const w = Math.sin(u.boing * 26) * 0.25 * u.boing
+        it.scale.set(u.s * (1 - w * 0.5), u.s * (1 + w), u.s * (1 - w * 0.5))
+        if (u.sway == null) it.rotation.z = w * 0.25
+      }
       return true
     })
 

@@ -136,6 +136,15 @@ export class Effects {
     }
   }
 
+  /** A shake of leaves (or petals, or snow) drifting down from a poked tree. */
+  leaves(at, color, count = 14) {
+    for (let i = 0; i < count; i++) {
+      this.p.set(at.x + rand(-0.6, 0.6), at.y + rand(-0.3, 0.3), at.z + rand(-0.4, 0.4))
+      this.v.set(rand(-1.2, 1.2), rand(0.5, 2.5), rand(-0.6, 0.6))
+      this.confetti.spawn(this.p, this.v, { life: rand(1.2, 1.8), size: rand(0.2, 0.32), color, spin: 5, shrink: true })
+    }
+  }
+
   update(dt) {
     this.dust.update(dt)
     this.bits.update(dt)
@@ -251,7 +260,8 @@ export class Popups {
     const el = document.createElement('div')
     el.className = `popup ${cls}`
     el.textContent = text
-    el.style.left = `${((this.v.x + 1) / 2) * 100}%`
+    // a little sideways jiggle, so quick munches don't stack into one blob
+    el.style.left = `calc(${((this.v.x + 1) / 2) * 100}% + ${Math.round(rand(-22, 22))}px)`
     el.style.top = `${((1 - this.v.y) / 2) * 100}%`
     this.layer.appendChild(el)
     setTimeout(() => el.remove(), 1000)

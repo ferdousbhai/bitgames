@@ -1,3 +1,4 @@
+import * as THREE from 'three'
 import { BIOMES, JOURNEY, OBSTACLES, START_X, biomeIndexAt } from './biomes.js'
 import { GRAVITY, HOP } from './bunny.js'
 import { copy } from './models.js'
@@ -6,6 +7,41 @@ import { clamp, keepWhere, pick, rand } from './util.js'
 const CARROT_Y = 0.6
 const PICKUP = 1.05 // generous: a carrot this close to the bunny's middle is caught
 const MAGNET = 1.6 // and carrots this close drift towards the bunny (not golden ones: those need a flip)
+
+/** A soft golden glow with four twinkle rays, behind every golden carrot. */
+let haloMaterial
+function halo() {
+  if (!haloMaterial) {
+    const c = document.createElement('canvas')
+    c.width = c.height = 128
+    const g = c.getContext('2d')
+    const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64)
+    grad.addColorStop(0, 'rgba(255,240,150,0.95)')
+    grad.addColorStop(0.35, 'rgba(255,205,60,0.55)')
+    grad.addColorStop(1, 'rgba(255,190,40,0)')
+    g.fillStyle = grad
+    g.fillRect(0, 0, 128, 128)
+    g.fillStyle = 'rgba(255,255,220,0.9)'
+    for (let i = 0; i < 4; i++) {
+      g.save()
+      g.translate(64, 64)
+      g.rotate((i * Math.PI) / 2)
+      g.beginPath()
+      g.moveTo(0, -62)
+      g.quadraticCurveTo(4, -10, 0, 0)
+      g.quadraticCurveTo(-4, -10, 0, -62)
+      g.fill()
+      g.restore()
+    }
+    const map = new THREE.CanvasTexture(c)
+    map.colorSpace = THREE.SRGBColorSpace
+    haloMaterial = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
+  }
+  const s = new THREE.Sprite(haloMaterial)
+  s.scale.setScalar(1.6)
+  s.renderOrder = 2
+  return s
+}
 
 /** The gentle speed ramp: from a stroll to a brisk hop over the whole trip. */
 export const speedAt = (x) => 6.2 + 3.2 * clamp(x / JOURNEY, 0, 1)
@@ -25,7 +61,7 @@ export class Course {
 
   /** Clear the course; the first pattern starts START_X ahead of x. */
   reset(x = 0) {
-    for (const it of this.items) this.scene.remove(it.obj)
+    for (const it of this.items) this.scene.remove(it.obj, ...(it.glow ? [it.glow] : []))
     this.items = []
     this.nextX = x + START_X
     this.possible = 0
@@ -37,8 +73,11 @@ export class Course {
     obj.position.set(x, y, 0)
     obj.scale.setScalar(gold ? 1.45 : 1.1)
     obj.rotation.z = -0.35
+    // golden carrots glow and twinkle, so they read as special from far away
+    const glow = gold ? halo() : null
+    if (glow) this.scene.add(glow)
     this.scene.add(obj)
-    this.items.push({ kind: 'carrot', gold, obj, x, y, phase: rand(0, 6) })
+    this.items.push({ kind: 'carrot', gold, obj, glow, x, y, phase: rand(0, 6) })
     this.possible += gold ? 5 : 1
   }
 
@@ -124,6 +163,11 @@ export class Course {
       if (it.kind === 'carrot') {
         o.rotation.y += dt * (it.gold ? 4 : 2.5)
         o.position.y = it.y + Math.sin(time * 3 + it.phase) * 0.08
+        if (it.glow) {
+          it.glow.position.set(it.x, o.position.y + 0.15, -0.3)
+          it.glow.scale.setScalar(1.7 + Math.sin(time * 5 + it.phase) * 0.25)
+          it.glow.material.rotation = time * 0.8
+        }
         if (bunny && this.eat(it, bunny, dt, events)) return false
       } else {
         if (bunny) this.bump(it, bunny, events)
@@ -136,6 +180,7 @@ export class Course {
       }
       if (it.x < behindX) {
         this.scene.remove(o)
+        if (it.glow) this.scene.remove(it.glow)
         return false
       }
       return true
@@ -163,6 +208,7 @@ export class Course {
     if (Math.hypot(dx, dy) >= PICKUP) return false
     events.push({ type: 'carrot', gold: it.gold, pos: o.position.clone() })
     this.scene.remove(o)
+    if (it.glow) this.scene.remove(it.glow)
     return true
   }
 
