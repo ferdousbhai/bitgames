@@ -117,3 +117,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #intro-title { font-size: 28px; }
   #intro-sub { font-size: 16px; }
 }
+
+/* Tablets: a bigger level label and bar that read from arm's length */
+@media (min-width: 700px) and (min-height: 700px) {
+  .level-wrap { width: min(50vw, 460px); bottom: calc(20px + env(safe-area-inset-bottom)); gap: 6px; }
+  .level { font-size: 28px; text-shadow: 0 3px 0 rgba(91,63,160,.6); }
+  .bar { height: 24px; }
+  #bar-fill { background-size: min(50vw, 460px) 100%; }
+}

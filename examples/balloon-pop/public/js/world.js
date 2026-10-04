@@ -15,6 +15,9 @@ export function halfSize(camera, z = 0) {
 const WORLD_Y = -8 // the hills sit along the bottom of the screen
 const SUN_Z = -20 // in front of the clouds, so they never hide its face
 const SUN_RADIUS = 2.2 // the sun's size with its rays, in model units
+// The hot-air balloon flies just in front of the clouds (they sit at -22 to -36), so it never hides behind one.
+const HAB_Z = -21
+const HAB_FAR = (14 - HAB_Z) / 44 // keeps its old on-screen size and height from when it flew at z = -30 (camera at 14)
 const box = new THREE.Box3()
 const center = new THREE.Vector3()
 const size = new THREE.Vector3()
@@ -56,7 +59,7 @@ export class World {
     if (this.sails) this.root.add(this.sails)
     this.hab = get('hot_air_balloon')
     if (this.hab) {
-      this.hab.scale.setScalar(1.4)
+      this.hab.scale.setScalar(1.4 * HAB_FAR)
       this.root.add(this.hab)
       this.habX = -20
     }
@@ -177,7 +180,7 @@ export class World {
       // Tapped: a burner-powered bounce up, then a gentle sink back
       this.habHop = Math.max(0, this.habHop - dt * 0.5)
       const lift = Math.sin((1 - this.habHop) * Math.PI) * 3.5 * Math.min(1, this.habHop * 3)
-      this.hab.position.set(this.habX, 13 + Math.sin(t * 0.4) * 1.2 + lift, -30)
+      this.hab.position.set(this.habX * HAB_FAR, (5 + Math.sin(t * 0.4) * 1.2 + lift) * HAB_FAR - WORLD_Y, HAB_Z)
       this.hab.rotation.y = Math.sin(t * 0.3) * 0.3 + this.habHop * this.habHop * Math.PI * 2
     }
     for (const c of this.clouds) {
