@@ -6,7 +6,7 @@ A web game store built on BitChat's technology. Games are made with Blender and 
 
 - `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog and a Durable Object for multiplayer rooms). Creators host the original game files; the store plays only hash-verified files through its playback gateway and pins each reviewed shipment
 - `packages/game-sdk`: the multiplayer SDK games load from `/vendor/bitgames/multiplayer-1.js`
-- `examples/<game>`: our own games, one per folder, each a standalone creator project deployed to its own Worker (Crash Racers, Bunny Hop, Balloon Pop, Star Catcher, Memory Match, Cake Stack, Penguin Bowling, Bumper Ducks, Fish Pond, Dragon Glide, Paint Splash)
+- `examples/<game>`: our own games, one per folder, each a standalone creator project deployed to its own Worker (Crash Racers, Bunny Hop, Balloon Pop, Star Catcher, Memory Match, Cake Stack, Penguin Bowling, Bumper Ducks, Fish Pond, Dragon Glide, Paint Splash, Rocket Garage)
 - `packages/protocol`: TypeScript port of BitChat's binary packet format, padding, compression and fragmentation
 - `packages/webrtc`: peer-to-peer transport for those packets over WebRTC data channels
 - `apps/signal`: small WebSocket server that introduces peers to each other (game traffic never passes through it)
