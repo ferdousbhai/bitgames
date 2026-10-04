@@ -115,6 +115,7 @@ const game = {
   layout: null,
   paradeAnimals: [],
   time: 0,
+  idle: 0, // seconds since the last tap while playing (see frameLoop's nudge)
   cam: { pos: new THREE.Vector3(0, 9, 9), offset: new THREE.Vector2() }, // always looks at the origin
 }
 
@@ -449,6 +450,8 @@ class Card {
     this.hover = 0
     this.hoverTarget = 0
     this.lift = 0
+    this.wiggle = 0 // the idle "tap me!" wobble (see nudge)
+    this.bob = 0
     this.revealed = null
   }
 
@@ -516,6 +519,17 @@ class Card {
     tween(0.5, (t) => this.ring.scale.setScalar(ease.outBack(t) + 0.001))
   }
 
+  /** A little hop and wobble, so a child who is stuck sees the cards want to be tapped. */
+  nudge() {
+    sound.nudge()
+    tween(0.7, (t) => {
+      const fade = this.state === 'down' ? 1 - t : 0 // a tap mid-wobble flips it cleanly
+      this.bob = Math.abs(Math.sin(t * Math.PI * 2)) * 0.16 * fade
+      this.wiggle = Math.sin(t * Math.PI * 4) * 0.16 * fade
+      if (t >= 1) this.bob = this.wiggle = 0
+    })
+  }
+
   worldTop() {
     return this.group.position.clone().setY(REST_Y + FACE_TOP + 0.45)
   }
@@ -523,7 +537,8 @@ class Card {
   update(dt, time) {
     const hoverTarget = this.state === 'down' ? this.hoverTarget : 0
     this.hover = THREE.MathUtils.damp(this.hover, hoverTarget, 14, dt)
-    this.pivot.position.y = this.lift + this.hover * 0.08
+    this.pivot.position.y = this.lift + this.hover * 0.08 + this.bob
+    this.pivot.rotation.y = this.wiggle
     if (this.critter.holder.visible) poseAnimal(this.critter, time)
     if (this.ring.visible) this.ring.rotation.z += dt * 0.6
   }
@@ -826,6 +841,7 @@ function startLevel(level) {
   game.level = level
   game.matched = 0
   game.turns = 0
+  game.idle = 0
   game.state = 'dealing'
   show('play')
   const pairs = LEVELS[level]
@@ -1095,6 +1111,7 @@ function tapToy(e) {
 
 addEventListener('pointerdown', () => sound.unlock(), { capture: true })
 canvas.addEventListener('pointerdown', (e) => {
+  game.idle = 0
   if (game.state === 'menu') {
     const hit = pick(e, parade.children)
     const a = hit && tagged(hit.object, 'animal')
@@ -1199,6 +1216,16 @@ function frameLoop() {
     const rate = game.state === 'won' ? 0.35 : 0.06
     for (const card of game.cards) {
       if (card.state === 'matched' && !card.critter.busy && Math.random() < dt * rate) hopOnce(card.critter, 0.2)
+    }
+  }
+  if (game.state === 'play' && !game.busy && !game.mismatch) {
+    // Nobody has tapped for a while: one face-down card hops and knocks, to say "tap me!".
+    // The first nudge waits a little longer than the ones after it.
+    game.idle += dt
+    if (game.idle > 7) {
+      game.idle = 2 // and again every 5 s
+      const down = game.cards.filter((c) => c.state === 'down')
+      down[(Math.random() * down.length) | 0]?.nudge()
     }
   }
   effects.update(dt, camera)

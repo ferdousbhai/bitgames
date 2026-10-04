@@ -174,6 +174,13 @@ export class Sound {
     this.tone({ at: this.now, type: 'triangle', dur: 0.05, gain: 0.08, freq: 1700 + Math.random() * 500 })
   }
 
+  /** A soft knock-knock from a card asking to be flipped. */
+  nudge() {
+    const t = this.now
+    this.tone({ at: t, type: 'triangle', dur: 0.07, gain: 0.1, freq: [[0, 700], [0.07, 820]] })
+    this.tone({ at: t + 0.16, type: 'triangle', dur: 0.08, gain: 0.1, freq: [[0, 880], [0.08, 1040]] })
+  }
+
   tap() {
     this.tone({ at: this.now, type: 'sine', dur: 0.09, gain: 0.18, freq: [[0, 600], [0.09, 900]] })
   }
