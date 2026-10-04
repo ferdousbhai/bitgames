@@ -209,4 +209,15 @@ export class Popups {
     this.el.appendChild(d)
     setTimeout(() => d.remove(), 950)
   }
+
+  /** A bigger cheer that slides out to the right of a screen point (in CSS pixels). */
+  showAt(x, y, text) {
+    const d = document.createElement('div')
+    d.className = 'pop side'
+    d.textContent = text
+    d.style.left = `${x}px`
+    d.style.top = `${y}px`
+    this.el.appendChild(d)
+    setTimeout(() => d.remove(), 1500)
+  }
 }

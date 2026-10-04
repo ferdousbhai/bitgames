@@ -292,10 +292,18 @@ function catchItem(it) {
     if (it.kind === 'magnet') game.magnet = 9
     else game.double = 9
     audio.powerUp()
-    popups.show(pos, it.kind === 'magnet' ? '🧲 Magnet!' : '💖 Double stars!', true)
     particles.burst(pos, it.k.colors, 30, 7, 0.9)
     rings.spawn(pos, it.k.glow, 3.5, 0.6)
     renderPowers()
+    // The cheer pops out beside its timer bar, not over Kitty: it shows what the bar means
+    const pill = $('powers').children[it.kind === 'magnet' ? 0 : game.magnet > 0 ? 1 : 0]
+    if (pill) {
+      pill.classList.remove('bump')
+      void pill.offsetWidth
+      pill.classList.add('bump')
+      const r = pill.getBoundingClientRect()
+      popups.showAt(r.right + 8, r.top + r.height / 2, it.kind === 'magnet' ? '🧲 Magnet!' : '💖 Double stars!')
+    }
     game.joy = 0.6
     return
   }
@@ -387,7 +395,8 @@ function renderJourney() {
   const parts = [`<span class="stop done">${lap ? `🔁${lap + 1}` : '🏠'}</span>`]
   STOPS.forEach((s, i) => {
     const fill = i < at ? 1 : i === at ? progress : 0
-    const ship = i === at ? `<span class="ship" style="left:${fill * 100}%">🚀</span>` : ''
+    // The ship stays inside its track so it never sits on top of the stop before it
+    const ship = i === at ? `<span class="ship" style="left:${fill * 100}%;transform:translateX(-${fill * 100}%)">🚀</span>` : ''
     parts.push(`<span class="track"><b style="width:${fill * 100}%"></b>${ship}</span>`)
     parts.push(`<span class="stop ${i < at ? 'done' : i === at ? 'next' : ''}">${s.emoji}</span>`)
   })

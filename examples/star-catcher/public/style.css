@@ -77,7 +77,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .journey .stop.next { opacity: 1; transform: scale(1.25); }
 .journey .track { position: relative; width: clamp(14px, 4vw, 34px); height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); }
 .journey .track b { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: #ffd23f; }
-.journey .track .ship { position: absolute; top: -12px; font-size: 16px; transform: translateX(-50%); }
+.journey .track .ship { position: absolute; top: -12px; font-size: 16px; }
 
 .banner {
   position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(30px, 7vw, 60px); font-weight: 900;
@@ -94,6 +94,18 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   transform: translate(-50%, -50%); animation: rise .9s ease-out forwards; white-space: nowrap;
 }
 .pop.big { font-size: 40px; color: #ff9fd2; text-shadow: 4px 0 #2a1a5e, -4px 0 #2a1a5e, 0 4px #2a1a5e, 0 -4px #2a1a5e, 3px 3px #2a1a5e, -3px 3px #2a1a5e, 3px -3px #2a1a5e, -3px -3px #2a1a5e, 0 6px 0 #2a1a5e; }
+/* Power-up cheer beside its timer bar */
+.pop.side {
+  font-size: 30px; color: #ff9fd2; transform-origin: left center; animation: side-in 1.45s ease-out forwards;
+  text-shadow: 3px 0 #2a1a5e, -3px 0 #2a1a5e, 0 3px #2a1a5e, 0 -3px #2a1a5e, 2px 2px #2a1a5e, -2px 2px #2a1a5e, 2px -2px #2a1a5e, -2px -2px #2a1a5e, 0 5px 0 #2a1a5e;
+}
+@keyframes side-in {
+  0% { opacity: 0; transform: translate(-24px, -50%) scale(.5); }
+  14% { opacity: 1; transform: translate(0, -50%) scale(1.15); }
+  26%, 78% { opacity: 1; transform: translate(0, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(10px, -50%) scale(1); }
+}
+.power.bump { animation: bump .3s; }
 @keyframes rise { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); } 20% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -200%) scale(1); } }
 
 @media (max-width: 520px) {
@@ -121,6 +133,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .power i { width: 64px; height: 10px; }
   .pop { font-size: 38px; }
   .pop.big { font-size: 50px; }
+  .pop.side { font-size: 40px; }
   .legend span { font-size: 24px; padding: 6px 16px; }
   .hint.small { font-size: 18px; }
 }
