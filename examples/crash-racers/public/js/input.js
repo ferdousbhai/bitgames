@@ -99,7 +99,7 @@ export class Input {
     if (k.has('arrowright') || k.has('d') || this.touch.right) steer += 1
     const gasKey = k.has('arrowup') || k.has('w') || this.touch.gas
     const brakeKey = k.has('arrowdown') || k.has('s') || this.touch.brake || k.has(' ')
-    for (const pad of navigator.getGamepads?.() ?? []) {
+    for (const pad of gamepads()) {
       if (!pad) continue
       if (Math.abs(pad.axes[0]) > 0.15) steer += pad.axes[0]
       if (pad.buttons[0]?.pressed || pad.buttons[7]?.value > 0.2) throttle = Math.max(throttle, pad.buttons[7]?.value || 1)
@@ -111,5 +111,21 @@ export class Input {
     const cruise = this.easyGas && !brake && !throttle
     if (cruise) throttle = 0.6
     return { steer: clamp(steer, -1, 1), throttle: brake ? 0 : throttle, brake, cruise }
+  }
+}
+
+/**
+ * Connected gamepads, or none. iPad browsers (all WebKit) throw instead of
+ * returning an empty list when BitGames' sandboxed frame may not use gamepads,
+ * and a throw here would stop the game loop.
+ */
+let padsAllowed = true
+function gamepads() {
+  if (!padsAllowed) return []
+  try {
+    return navigator.getGamepads?.() ?? []
+  } catch {
+    padsAllowed = false
+    return []
   }
 }
