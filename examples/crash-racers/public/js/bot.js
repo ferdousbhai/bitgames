@@ -22,13 +22,14 @@ export class Bot {
    */
   update(dt, proj, prey = null) {
     const car = this.car
-    let target, look
+    let target, look, ramp
     if (prey) {
       target = { x: prey.body.position.x, z: prey.body.position.z }
     } else {
       // Line up with a ramp coming up (jumping is the fun part), otherwise keep to our lane.
-      const ramp = this.track.ramps.find((r) => wrap(r.dist - proj.dist, this.track.length) < 60)
-      const lane = ramp ? ramp.lateral : this.lane
+      ramp = this.track.ramps.find((r) => wrap(r.dist - proj.dist, this.track.length) < 60)
+      // Each bot keeps its own line across the ramp, so they jump side by side instead of piling up.
+      const lane = ramp ? ramp.lateral + clamp(this.lane, -(ramp.width / 2 - 1.2), ramp.width / 2 - 1.2) : this.lane
       look = ramp ? 6 + car.speed * 0.4 : 9 + car.speed * 0.9
       const s = this.track.sampleAt(proj.dist + look)
       target = { x: s.p.x + s.side.x * lane, z: s.p.z + s.side.z * lane }
@@ -44,7 +45,8 @@ export class Bot {
     }
     // How sharply the road ahead bends decides the safe speed.
     const bend = this.track.bendAt(proj.dist + look * 1.5, look * 0.5)
-    const safe = clamp(30 * this.skill - bend * 60, 9, 32)
+    // Lined up for a ramp, go for it: ramps sit on straight road, and a slow take-off falls short.
+    const safe = ramp && Math.abs(angle) < 0.25 ? 40 : clamp(30 * this.skill - bend * 60, 9, 32)
     car.controls = {
       steer: clamp(angle * 2.2, -1, 1),
       throttle: car.speed < safe ? 1 : 0.2,

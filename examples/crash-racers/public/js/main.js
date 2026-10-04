@@ -334,6 +334,7 @@ function startRace(setup) {
     car.isPlayer = entry.id === game.room.selfId
     if (local) {
       car.onHit = (hit) => onLocalHit(car, hit)
+      car.onLand = (land) => onLanding(car, land)
       car.controller = car.isPlayer ? humanController : botController(new Bot(car, game.track, 0.72 + i * 0.05, i + 1))
     }
     game.cars.set(entry.id, car)
@@ -391,6 +392,47 @@ function runCountdown() {
 }
 
 // --- Gameplay events -----------------------------------------------------------------------
+
+/** Boost pads, and a moment of slow motion at the top of the player's big jumps. */
+function stunts(car, proj) {
+  const pad = proj ? game.track.boostPadAt(proj) : null
+  if (pad && car.boostPad !== pad) {
+    car.boost({ free: true, seconds: 1.6 })
+    if (car.isPlayer) {
+      banner('⚡ BOOST!', 700)
+      audio.whoosh()
+    }
+  }
+  car.boostPad = pad ?? null
+  // Slow motion only when playing alone, so nobody else's race slows down.
+  if (car.isPlayer && car.airTime > 0.55 && !car.slowmoJump && game.room.solo && car.body.velocity.y > -2) {
+    car.slowmoJump = true
+    game.slowmoUntil = performance.now() + 900
+  }
+}
+
+const landingDust = new THREE.Vector3()
+const dustVelocity = new THREE.Vector3()
+/** A car came down from a jump: dust, a thump, and for the player a cheer and a full turbo. */
+function onLanding(car, { airTime, flips }) {
+  car.slowmoJump = false
+  const p = car.body.position
+  for (let i = 0; i < 6; i++) {
+    effects.puff(landingDust.set(p.x + (Math.random() - 0.5) * 2, 0.2, p.z + (Math.random() - 0.5) * 2), dustVelocity.set((Math.random() - 0.5) * 3, 1 + Math.random(), (Math.random() - 0.5) * 3), { color: '#d8c9a8', size: 1, life: 1 })
+  }
+  if (!car.isPlayer) return
+  effects.addShake(Math.min(1, airTime * 0.6))
+  audio.thump(Math.min(1, airTime * 0.8))
+  if (airTime < 0.8 && !flips) return
+  const praise = flips > 1 ? `🌀 ${flips}× FLIP!` : flips ? '🌀 FLIP!' : airTime > 1.4 ? '🚀 MEGA AIR!' : '✈️ BIG AIR!'
+  banner(`${praise} 🔥 Turbo ready!`, 1600)
+  audio.cheer()
+  car.turboCooldown = 0
+  if (game.mode === 'smash' && game.state === 'race' && flips) {
+    game.scores.set(car.id, (game.scores.get(car.id) ?? 0) + 2 * flips)
+    send({ t: 'score', id: car.id, n: game.scores.get(car.id) })
+  }
+}
 
 function onLocalHit(car, hit) {
   send({ t: 'hit', id: car.id, l: hit.local.toArray().map((n) => +n.toFixed(3)), d: hit.dir.toArray().map((n) => +n.toFixed(3)), s: +hit.speed.toFixed(1), seed: hit.seed })
@@ -629,6 +671,7 @@ function tick(dt, realDt) {
     car.damage.update(dt, car.accel)
     updateProgress(id, car)
     if (car.turboActive) exhaustFlames(car)
+    if (!car.remote) stunts(car, game.progress.get(id)?.proj)
   }
   debris.update(dt)
   game.track.update()
@@ -876,7 +919,7 @@ async function boot() {
 if (DEBUG) {
   // Hooks for automated tests: drive, crash and inspect.
   window.__crash = {
-    game, THREE, CANNON, effects, world,
+    game, THREE, CANNON, effects, world, input,
     state: () => ({
       state: game.state,
       speed: game.player?.speed,

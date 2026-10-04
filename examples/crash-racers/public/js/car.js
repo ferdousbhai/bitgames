@@ -71,8 +71,11 @@ export class Car {
       hoodHeight: hood ? new THREE.Box3().setFromObject(hood).max.y : bodyBox.max.y * 0.6,
     }
 
-    // Chassis: a low box for the body and a narrower one for the cabin.
-    const { width, length, bottom, top } = this.dims
+    // Chassis: a low box for the body and a narrower one for the cabin. The body
+    // box starts about a wheel's height up (the wheels carry the car), so its
+    // underside doesn't scrape and catch where ramps meet the road.
+    const { width, length, top } = this.dims
+    const bottom = Math.max(this.dims.bottom, 0.38)
     const belt = bottom + (top - bottom) * 0.55
     this.body = new CANNON.Body({
       mass: 1100,
@@ -138,6 +141,9 @@ export class Car {
     this.turboCooldown = 0
     this.hitAccumulator = null
     this.upsideDownTime = 0
+    /** Seconds with every wheel off the ground, and how far the car has spun meanwhile (radians). */
+    this.airTime = 0
+    this.airSpin = 0
     this.snapshots = []
     if (!remote) this.body.addEventListener('collide', (e) => this.onCollide(e))
   }
@@ -214,15 +220,22 @@ export class Car {
     const v = this.body.velocity
     const drag = 3.2 * speed
     this.body.applyForce(scratch.set(-v.x * drag, 0, -v.z * drag))
-    this.body.applyForce(this.body.quaternion.vmult(DOWN, scratch).scale(speed * speed * 4, scratch))
+    // Downforce only with wheels on the road: in the air it would act like extra gravity and cut jumps short.
+    if (this.grounded) this.body.applyForce(this.body.quaternion.vmult(DOWN, scratch).scale(speed * speed * 4, scratch))
 
     // How long the car has been on its roof, so the game can put it back on its wheels.
     if (this.body.quaternion.vmult(UP, scratch).y < 0.3) this.upsideDownTime += dt
     else this.upsideDownTime = 0
   }
 
+  /** True while any wheel touches the ground (or a ramp). */
+  get grounded() {
+    return !this.vehicle || this.vehicle.wheelInfos.some((w) => w.isInContact)
+  }
+
   /** Runs after each physics step. */
   afterStep(dt) {
+    this.trackAir(dt)
     const v = this.body.velocity
     this.accel.set((v.x - this.lastVelocity.x) / dt, (v.y - this.lastVelocity.y) / dt, (v.z - this.lastVelocity.z) / dt)
     this.lastVelocity.copy(v)
@@ -265,7 +278,9 @@ export class Car {
     const seed = Math.floor(Math.random() * 1e9)
     // Hitting another car shares the blow; walls take it all.
     const otherCar = other.car
-    const effective = otherCar ? speed * 0.85 : speed
+    // A blow from straight below is the car bottoming out on a landing: a jolt, not a crash.
+    const fromBelow = dir.y > 0.7
+    const effective = (otherCar ? speed * 0.85 : speed) * (fromBelow ? 0.4 : 1)
     this.damage.impact(local, dir, effective, seed)
     // A jolt: big hits lift and twist the car a little, like the chassis kicking back.
     if (effective > 10) {
@@ -280,11 +295,32 @@ export class Car {
     this.onHit?.({ local, dir, speed: effective, seed, otherCar })
   }
 
-  /** Two seconds of extra push. Returns false while recharging. */
-  boost() {
-    if (this.turboCooldown > performance.now()) return false
-    this.turboTime = 2
-    this.turboCooldown = performance.now() + 6000
+  /**
+   * Airtime and spin for stunts. On landing after a real jump, calls
+   * onLand({ airTime, flips }); flips only count if the car lands on its wheels.
+   */
+  trackAir(dt) {
+    if (!this.grounded) {
+      this.airTime += dt
+      // Spin around the car's own side (front flips) or nose (barrel rolls) axis.
+      const local = this.body.quaternion.conjugate().vmult(this.body.angularVelocity, scratch)
+      this.airSpin += Math.max(Math.abs(local.x), Math.abs(local.z)) * dt
+      return
+    }
+    if (this.airTime > 0.45) {
+      const upright = this.body.quaternion.vmult(UP, scratch).y > 0.5
+      const flips = upright ? Math.floor((this.airSpin + 0.8) / (Math.PI * 2)) : 0
+      this.onLand?.({ airTime: this.airTime, flips })
+    }
+    this.airTime = 0
+    this.airSpin = 0
+  }
+
+  /** Two seconds of extra push. Returns false while recharging; `free` (boost pads, stunts) ignores the recharge. */
+  boost({ free = false, seconds = 2 } = {}) {
+    if (!free && this.turboCooldown > performance.now()) return false
+    this.turboTime = Math.max(this.turboTime, seconds)
+    if (!free) this.turboCooldown = performance.now() + 6000
     return true
   }
 

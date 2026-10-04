@@ -3,6 +3,38 @@ import * as CANNON from 'cannon'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, STATIC_MASK, rng, wrap } from './util.js'
 
+let boostMat
+/**
+ * Two bold yellow arrows on orange, pointing the way you drive, drawn once and
+ * shared by every boost pad. The canvas's bottom edge is the pad's front.
+ */
+function boostMaterial() {
+  if (boostMat) return boostMat
+  const canvas = document.createElement('canvas')
+  canvas.width = 128
+  canvas.height = 256
+  const g = canvas.getContext('2d')
+  g.fillStyle = '#ff6a00'
+  g.fillRect(0, 0, 128, 256)
+  g.fillStyle = '#fff04a'
+  for (const y of [8, 136]) {
+    g.beginPath()
+    g.moveTo(10, y)
+    g.lineTo(64, y + 70)
+    g.lineTo(118, y)
+    g.lineTo(118, y + 40)
+    g.lineTo(64, y + 112)
+    g.lineTo(10, y + 40)
+    g.closePath()
+    g.fill()
+  }
+  const map = new THREE.CanvasTexture(canvas)
+  map.colorSpace = THREE.SRGBColorSpace
+  map.anisotropy = 8
+  boostMat = new THREE.MeshStandardMaterial({ map, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: 0.55, roughness: 0.5 })
+  return boostMat
+}
+
 /**
  * A closed loop road. Cities describe the path and decorate the sides; this
  * class builds the road surface, the static colliders and lap progress.
@@ -19,6 +51,7 @@ export class Track {
     this.bodies = []
     this.props = []
     this.ramps = []
+    this.boostPads = []
     this.mergeBuckets = new Map() // material -> geometries, merged into one mesh at the end
 
     this.curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal')
@@ -221,7 +254,7 @@ export class Track {
    */
   clearOfRamps(dist, margin = 3) {
     for (const ramp of this.ramps) {
-      const offset = wrap(dist - ramp.dist + this.length / 2, this.length) - this.length / 2
+      const offset = this.offset(dist, ramp.dist)
       if (Math.abs(offset) < ramp.half + margin) return wrap(ramp.dist + ramp.half + margin, this.length)
     }
     return wrap(dist, this.length)
@@ -233,34 +266,156 @@ export class Track {
     return 1 - (a.x * b.x + a.z * b.z)
   }
 
-  /** A slanted ramp on the road; drive over it to fly. Moved to the straightest road nearby. */
-  addRamp(dist, { length = 7, width = 5, height = 1.4, lateral = 0, material }) {
+  /**
+   * The straightest stretch within 90 m of `dist` for something `half` metres
+   * long either way, never on the start straight where the cars line up.
+   */
+  straightNear(dist, half = 0) {
     let best = dist, bestBend = Infinity
+    if (Math.min(wrap(dist, this.length), this.length - wrap(dist, this.length)) < 70 + half) {
+      throw new Error(`A ramp or jump at ${Math.round(dist)} m would be on the start straight; pick a spot at least ${Math.round(70 + half)} m from the start.`)
+    }
     for (let d = dist - 90; d <= dist + 90; d += 5) {
-      // Never on the start straight, where the cars line up.
       const fromStart = Math.min(wrap(d, this.length), this.length - wrap(d, this.length))
-      if (fromStart < 70) continue
-      const bend = this.bendAt(d)
+      if (fromStart < 70 + half) continue
+      // Leave room after any ramp or jump already here.
+      if (this.ramps.some((r) => Math.abs(this.offset(d, r.dist)) < r.half + half + 20)) continue
+      const bend = this.bendAt(d, 30 + half)
       if (bend < bestBend) {
         bestBend = bend
         best = d
       }
     }
-    dist = wrap(best, this.length)
-    const s = this.sampleAt(dist)
-    const yaw = this.alongAt(s)
-    const angle = Math.atan2(height, length)
+    return wrap(best, this.length)
+  }
+
+  /**
+   * The exact point and direction of the road at `dist` (not snapped to a
+   * sample). Ramp pieces are laid out along this straight line, so they meet
+   * without steps; ramps only go on straight road.
+   */
+  frameAt(dist) {
+    const u = wrap(dist, this.length) / this.length
+    const p = this.curve.getPointAt(u)
+    const t = this.curve.getTangentAt(u).setY(0).normalize()
+    return { p, t, side: new THREE.Vector3(-t.z, 0, t.x), yaw: Math.atan2(t.x, t.z) }
+  }
+
+  /**
+   * A tilted slab `along` metres from `frame` along the road: rises along the
+   * road for `rise` > 0 (a take-off ramp), falls for `rise` < 0 (a landing).
+   * `base` lifts its low end, for building curved ramps from several slabs.
+   */
+  slab(frame, along, { length, width, rise, lateral, material, base = 0 }) {
+    const height = Math.abs(rise)
     const slope = Math.hypot(height, length)
-    const center = s.p.clone().addScaledVector(s.side, lateral)
-    this.ramps.push({ dist, lateral, half: slope / 2 })
-    const q = new CANNON.Quaternion().setFromEuler(-angle, yaw, 0, 'YXZ')
-    const body = this.staticBox(new THREE.Vector3(center.x, height / 2 - 0.22, center.z), new THREE.Vector3(width / 2, 0.25, slope / 2), q)
-    const geo = new THREE.BoxGeometry(width, 0.5, slope)
-    const mesh = new THREE.Mesh(geo, material)
+    const center = frame.p.clone().addScaledVector(frame.t, along).addScaledVector(frame.side, lateral)
+    const q = new CANNON.Quaternion().setFromEuler(-Math.atan2(rise, length), frame.yaw, 0, 'YXZ')
+    const body = this.staticBox(new THREE.Vector3(center.x, base + height / 2 - 0.22, center.z), new THREE.Vector3(width / 2, 0.25, slope / 2), q)
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, 0.5, slope), material)
     mesh.position.copy(body.position)
     mesh.quaternion.set(q.x, q.y, q.z, q.w)
     mesh.castShadow = mesh.receiveShadow = true
     this.group.add(mesh)
+  }
+
+  /** A flat block `along` metres from `frame`, its top `height` up. */
+  table(frame, along, { length, width, height, lateral, material }) {
+    const center = frame.p.clone().addScaledVector(frame.t, along).addScaledVector(frame.side, lateral)
+    const q = new CANNON.Quaternion().setFromEuler(0, frame.yaw, 0)
+    this.staticBox(new THREE.Vector3(center.x, height / 2, center.z), new THREE.Vector3(width / 2, height / 2, length / 2), q)
+    const geo = new THREE.BoxGeometry(width, height, length)
+    geo.rotateY(frame.yaw)
+    geo.translate(center.x, height / 2, center.z)
+    this.addGeometry(geo, material)
+  }
+
+  /**
+   * A curved take-off ramp starting `along` metres from `frame`: three
+   * segments, each steeper than the last (like a real kicker), so a car's nose
+   * clears the start and the wheels roll on instead of the bumper catching it.
+   */
+  kicker(frame, along, { length, width, height, lateral, material }) {
+    const part = length / 3
+    let base = 0
+    for (const share of [0.2, 0.35, 0.45]) {
+      this.slab(frame, along + part / 2, { length: part, width, rise: height * share, lateral, material, base })
+      base += height * share
+      along += part
+    }
+  }
+
+  /** A take-off ramp on the road; drive over it to fly. Moved to the straightest road nearby. */
+  addRamp(dist, { length = 7, width = 5, height = 1.4, lateral = 0, material }) {
+    dist = this.straightNear(dist, length / 2)
+    this.kicker(this.frameAt(dist), -length / 2, { length, width, height, lateral, material })
+    this.ramps.push({ dist, lateral, half: length / 2, width })
+  }
+
+  /**
+   * A jump: a take-off ramp, a `gap` to fly over, and a landing ramp down.
+   * The landing's near side slopes up too, with a flat top (a tabletop), so a
+   * car that comes up short bumps onto it and drives on instead of being stuck
+   * in the gap or beached on a crest. Calls `fill(dist, center, yaw, frame)`
+   * for points along the gap, so a city can put something there to fly over
+   * (and knock flying when you fall short). Returns where the jump ended up.
+   */
+  addJump(dist, { length = 8, height = 1.8, gap = 12, width = 5, lateral = 0, material, fill }) {
+    // Gentle enough (about 14°) for a car that stopped on it to drive up.
+    const face = height * 4
+    const top = 4
+    const total = length + gap + face + top + length * 1.4
+    dist = this.straightNear(dist, total / 2)
+    const frame = this.frameAt(dist)
+    let along = -total / 2
+    // The take-off ends a little lower than the landing: plenty of air, but cars come down on the landing.
+    this.kicker(frame, along, { length, width, height: height * 0.8, lateral, material })
+    along += length
+    if (fill) {
+      for (let d = along + 2; d < along + gap - 1; d += 2.5) {
+        fill(dist + d, frame.p.clone().addScaledVector(frame.t, d).addScaledVector(frame.side, lateral), frame.yaw, frame)
+      }
+    }
+    along += gap
+    this.slab(frame, along + face / 2, { length: face, width, rise: height, lateral, material })
+    along += face
+    this.table(frame, along + top / 2, { length: top, width, height, lateral, material })
+    along += top
+    this.slab(frame, along + length * 0.7, { length: length * 1.4, width, rise: -height, lateral, material })
+    // One entry for the whole jump: respawns land clear of it, and bots line up with it.
+    this.ramps.push({ dist, lateral, half: total / 2, width })
+    return dist
+  }
+
+  /** A glowing strip on the road that fires a car's turbo as it drives over. */
+  addBoostPad(dist, { lateral = 0, length = 5, width = 3 } = {}) {
+    dist = wrap(dist, this.length)
+    if (this.ramps.some((r) => Math.abs(this.offset(dist, r.dist)) < r.half + length)) {
+      throw new Error(`A boost pad at ${Math.round(dist)} m would be under a ramp or jump.`)
+    }
+    const s = this.sampleAt(dist)
+    const geo = new THREE.PlaneGeometry(width, length)
+    geo.rotateX(-Math.PI / 2)
+    geo.rotateY(this.alongAt(s))
+    const c = s.p.clone().addScaledVector(s.side, lateral)
+    geo.translate(c.x, 0.035, c.z)
+    const mesh = new THREE.Mesh(geo, boostMaterial())
+    this.group.add(mesh)
+    this.boostPads.push({ dist, lateral, halfLength: length / 2, halfWidth: width / 2 })
+  }
+
+  /** Signed distance along the loop from `b` to `a`, the short way round. */
+  offset(a, b) {
+    return wrap(a - b + this.length / 2, this.length) - this.length / 2
+  }
+
+  /** The boost pad a car at this road position is on, if any. */
+  boostPadAt(proj) {
+    return this.boostPads.find(
+      (pad) =>
+        Math.abs(this.offset(proj.dist, pad.dist)) < pad.halfLength &&
+        Math.abs(proj.lateral - pad.lateral) < pad.halfWidth,
+    )
   }
 
   /** Knock-over props (cones, crates, snowballs). */

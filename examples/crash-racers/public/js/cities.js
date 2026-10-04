@@ -5,7 +5,7 @@ import { Track } from './track.js'
 import { canvasTexture, rng, speckle } from './util.js'
 
 /**
- * The three cities. Each one returns a Track: a looped road plus scenery and
+ * The places to race. Each one returns a Track: a looped road plus scenery and
  * colliders. Blender props (palm, gate, cathedral, tram, staircase) are used
  * when loaded; simple stand-ins are drawn otherwise.
  */
@@ -13,6 +13,8 @@ export const CITIES = {
   ubud: { name: 'Ubud', emoji: '🌾', flag: '🇮🇩', blurb: 'Rice fields and jungle roads', color: '#6fbf3a' },
   helsinki: { name: 'Helsinki', emoji: '⛪', flag: '🇫🇮', blurb: 'Cobblestones and trams', color: '#3a7bd5' },
   montreal: { name: 'Montreal', emoji: '🍁', flag: '🇨🇦', blurb: 'Staircases and orange cones', color: '#d64a2f' },
+  dino: { name: 'Dino Valley', emoji: '🦖', flag: '🌋', blurb: 'Dinosaurs, eggs and a volcano', color: '#3aa35a' },
+  stunt: { name: 'Stunt Park', emoji: '🎢', flag: '🏜️', blurb: 'Big jumps and boost pads', color: '#e08a1e' },
 }
 
 const cache = new Map()
@@ -343,7 +345,13 @@ function buildUbud(env, props) {
       crate(track, c, 0.8, std({ color: k % 2 ? '#f0a020' : '#c0392b' }))
     }
   }
-  track.addRamp(350, { length: 8, width: 4, height: 1.3, lateral: 1.2, material: std({ color: '#8a6a45' }) })
+  // Jump the fruit-stall crates, then a little kicker further on.
+  const jump = track.addJump(380, { length: 7, height: 1.6, gap: 9, width: 5.5, material: std({ color: '#8a6a45' }), fill: (d, c, yaw, s) => {
+    for (const k of [-1.4, 0, 1.4]) crate(track, c.clone().addScaledVector(s.side, k), 0.8, std({ color: (d | 0) % 2 ? '#f0a020' : '#c0392b' }))
+  } })
+  track.addBoostPad(jump - 40)
+  track.addRamp(620, { length: 8, width: 4, height: 1.3, lateral: 1.2, material: std({ color: '#8a6a45' }) })
+  track.addBoostPad(150, { lateral: -1.5 })
   mountain(track, 380, -520, 260, 280, '#5a6b4e')
   mountain(track, -300, -420, 160, 140, '#4f7a3a')
   for (let i = 0; i < 40; i++) {
@@ -442,7 +450,13 @@ function buildHelsinki(env, props) {
       track.addStaticBox(new THREE.Vector3(c.x, 1.7, c.z), new THREE.Vector3(2.6, 3.4, 26), yaw, std({ color: '#2f8f4f' }))
     }
   }
-  track.addRamp(820, { length: 9, width: 4.5, height: 1.5, lateral: -1.8, material: std({ color: '#c9c3b8' }) })
+  // Jump the blue crates on the long straight; a boost pad before it sends you higher.
+  const jump = track.addJump(430, { length: 8, height: 1.8, gap: 11, width: 6, lateral: -1.5, material: std({ color: '#c9c3b8' }), fill: (d, c, yaw, s) => {
+    for (const k of [-1.6, 0, 1.6]) crate(track, c.clone().addScaledVector(s.side, k), 0.9, std({ color: '#3a6ea5' }))
+  } })
+  track.addBoostPad(jump - 45, { lateral: -1.5 })
+  track.addBoostPad(200)
+  track.addBoostPad(560, { lateral: 2 })
   for (const d of [300, 960]) {
     const s = track.sampleAt(d)
     for (let k = 0; k < 6; k++) crate(track, s.p.clone().addScaledVector(s.side, (k - 2.5) * 1.2).addScaledVector(s.t, (k % 2) * 1.5), 0.9, std({ color: '#3a6ea5' }))
@@ -518,7 +532,12 @@ function buildMontreal(env, props) {
       track.addStaticBox(new THREE.Vector3(c.x, 0.4, c.z), new THREE.Vector3(2, 0.8, 2), 0, null, { visual: false })
     }
   }
-  track.addRamp(270, { length: 8, width: 4, height: 1.4, lateral: 1.6, material: std({ color: '#ff7a1a' }) })
+  // Fly over a row of orange cones (the city's favourite thing).
+  const jump = track.addJump(300, { length: 8, height: 1.8, gap: 11, width: 6, lateral: 0.5, material: std({ color: '#ff7a1a' }), fill: (d, c, yaw, s) => {
+    for (const k of [-1.8, -0.6, 0.6, 1.8]) cone(track, c.clone().addScaledVector(s.side, k))
+  } })
+  track.addBoostPad(jump - 42, { lateral: 0.5 })
+  track.addBoostPad(560, { lateral: -2 })
   // Mount Royal with its cross, and the Olympic Stadium's leaning tower
   mountain(track, -120, -420, 300, 150, '#4f7a3a')
   const cross = new THREE.BoxGeometry(2, 30, 2)
@@ -539,8 +558,303 @@ function buildMontreal(env, props) {
   return track
 }
 
+// --- Dino Valley ------------------------------------------------------------------
+
+/** Merges a part into the track at a position/yaw given in the dinosaur's own frame. */
+function placePart(track, geo, mat, origin, yaw, x, y, z) {
+  geo.translate(x, y, z)
+  geo.rotateY(yaw)
+  geo.translate(origin.x, 0, origin.z)
+  track.addGeometry(geo, mat)
+}
+
+/**
+ * A friendly blocky dinosaur standing at `origin`, facing `yaw`, built from
+ * simple shapes. 'longneck' arches its neck high over the road beside it.
+ */
+function dinosaur(track, origin, yaw, kind, color) {
+  const skin = std({ color, flatShading: true })
+  const belly = std({ color: '#f3e3b5', flatShading: true })
+  const eye = std({ color: '#1d1d1f' })
+  const big = kind === 'longneck' ? 1.6 : kind === 'trex' ? 1.15 : 1
+  const body = new THREE.SphereGeometry(2.4 * big, 10, 8)
+  body.scale(1, 0.75, 1.5)
+  placePart(track, body, skin, origin, yaw, 0, 3.2 * big, 0)
+  const tummy = new THREE.SphereGeometry(2 * big, 8, 6)
+  tummy.scale(0.9, 0.6, 1.3)
+  placePart(track, tummy, belly, origin, yaw, 0, 2.6 * big, 0.2)
+  for (const [lx, lz] of [[-1.3, 1.6], [1.3, 1.6], [-1.3, -1.6], [1.3, -1.6]]) {
+    if (kind === 'trex' && lz > 0) continue // T-rex stands on its back legs
+    const leg = new THREE.CylinderGeometry(0.55 * big, 0.65 * big, 2.6 * big, 7)
+    placePart(track, leg, skin, origin, yaw, lx * big, 1.3 * big, lz * big)
+  }
+  const tail = new THREE.ConeGeometry(1 * big, 6 * big, 7)
+  tail.rotateX(Math.PI / 2 + 0.25)
+  placePart(track, tail, skin, origin, yaw, 0, 3 * big, -5 * big)
+  if (kind === 'longneck') {
+    // Neck curving up and over the road (the road is on the dinosaur's +X side).
+    for (let i = 0; i < 9; i++) {
+      const t = i / 8
+      const seg = new THREE.SphereGeometry(0.9 * big - t * 0.25, 8, 6)
+      placePart(track, seg, skin, origin, yaw, t * 9, 4 * big + Math.sin(t * Math.PI * 0.85) * 9, 2 + t * 1.5)
+    }
+    const head = new THREE.BoxGeometry(1.4, 1.2, 2.2)
+    placePart(track, head, skin, origin, yaw, 9.6, 4 * big + 3.3, 4)
+  } else {
+    const neck = new THREE.CylinderGeometry(0.8 * big, 1.1 * big, 2.4 * big, 8)
+    neck.rotateX(0.5)
+    placePart(track, neck, skin, origin, yaw, 0, 5 * big, 2.6 * big)
+    const head = new THREE.BoxGeometry(1.8 * big, 1.6 * big, 2.6 * big)
+    placePart(track, head, skin, origin, yaw, 0, 6.1 * big, 3.8 * big)
+    for (const ex of [-0.9, 0.9]) placePart(track, new THREE.SphereGeometry(0.22 * big, 6, 4), eye, origin, yaw, ex * big, 6.5 * big, 4.4 * big)
+    if (kind === 'triceratops') {
+      const frill = new THREE.CylinderGeometry(1.8, 1.8, 0.3, 10)
+      frill.rotateX(Math.PI / 2 - 0.3)
+      placePart(track, frill, std({ color: '#e86a4a', flatShading: true }), origin, yaw, 0, 6.8, 2.9)
+      for (const hx of [-0.6, 0.6, 0]) {
+        const horn = new THREE.ConeGeometry(0.2, 1.4, 6)
+        horn.rotateX(Math.PI / 2 - 0.4)
+        placePart(track, horn, belly, origin, yaw, hx, hx ? 6.9 : 6.1, 5.2)
+      }
+    }
+    if (kind === 'trex') {
+      for (const ax of [-1, 1]) placePart(track, new THREE.CylinderGeometry(0.2, 0.2, 1.1, 5), skin, origin, yaw, ax * 1.5, 4.6, 2.4)
+    }
+  }
+  // Solid legs and body: drive into a dinosaur and you crash. (The long neck is high above the road.)
+  track.addStaticBox(new THREE.Vector3(origin.x, 2.5 * big, origin.z), new THREE.Vector3(4.4 * big, 5 * big, 6 * big), yaw, null, { visual: false })
+}
+
+function volcano(track, x, z) {
+  mountain(track, x, z, 170, 190, '#6b4a3a')
+  const crater = new THREE.CylinderGeometry(30, 45, 14, 10, 1, true)
+  crater.translate(x, 182, z)
+  track.addGeometry(crater, std({ color: '#ff5a1f', emissive: '#ff3a00', emissiveIntensity: 0.9, side: THREE.DoubleSide }), false)
+  for (let i = 0; i < 4; i++) {
+    const smoke = new THREE.IcosahedronGeometry(18 + i * 7, 1)
+    smoke.translate(x + i * 9, 205 + i * 22, z - i * 6)
+    track.addGeometry(smoke, std({ color: '#b8b2ad', transparent: true, opacity: 0.55 }), false)
+  }
+}
+
+function fern(track, position, r) {
+  const mat = std({ color: '#3f9a3a', side: THREE.DoubleSide })
+  for (let i = 0; i < 6; i++) {
+    const leaf = new THREE.ConeGeometry(0.6, 3.6, 3, 1, true)
+    leaf.rotateZ(Math.PI / 2 - 0.7)
+    leaf.translate(1.4, 1, 0)
+    leaf.rotateY((i / 6) * Math.PI * 2 + r())
+    leaf.translate(position.x, 0, position.z)
+    track.addGeometry(leaf, mat, false)
+  }
+}
+
+const eggMats = ['#fff3d6', '#d9f2ff', '#ffe0ef'].map((color) => std({ color, roughness: 0.5 }))
+/** A giant dinosaur egg: knock it flying. */
+function egg(track, position, k) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 9), eggMats[k % eggMats.length])
+  m.scale.set(1, 1.3, 1)
+  track.addProp(m, new CANNON.Sphere(0.6), new THREE.Vector3(position.x, 0.7, position.z), 6)
+}
+
+function buildDino(env, props) {
+  const track = new Track({
+    ...env,
+    width: 9,
+    seed: 404,
+    points: [[0, 0], [110, -20], [190, 25], [215, 115], [165, 190], [75, 180], [15, 235], [-80, 215], [-135, 145], [-115, 60], [-60, 18]],
+  })
+  const r = track.random
+  sceneryBase(track, { ground: std({ map: grassTexture('#4c9a3c') }), sky: ['#ffb978', '#ffe9c7'], fog: '#f6dcc0', sun: '#ffe2b8' })
+  track.buildRoad(std({ map: asphalt({ lines: false, patches: true, edge: '#c49a5a' }), color: '#d7b89a', roughness: 0.95 }))
+  track.buildStrip(std({ color: '#a8753f' }), track.width / 2, track.width / 2 + 1.4, 0.015) // dirt verge
+  track.lineSides({ offset: track.width / 2 + 2.5, spacing: () => 9 + r() * 8, depth: 0.6 }, ({ center }) => {
+    if (r() < 0.55) fern(track, center, r)
+    else tree(track, center, r() < 0.5 ? 'palm' : 'jungle', r)
+  })
+  // Dinosaurs along the road; the long-neck's neck arches right over it.
+  const kinds = [['longneck', '#7bc96f'], ['trex', '#e8734a'], ['triceratops', '#6aa7e0'], ['longneck', '#b08ee0'], ['trex', '#5fbf9a'], ['triceratops', '#f2b94a']]
+  kinds.forEach(([kind, color], i) => {
+    const d = (track.length / kinds.length) * (i + 0.35)
+    const s = track.sampleAt(d)
+    const sign = i % 2 ? 1 : -1
+    const reach = kind === 'longneck' ? 10 : 9
+    const origin = s.p.clone().addScaledVector(s.side, sign * (track.width / 2 + reach))
+    // Long-necks stand along the road with it on their +X side, so the neck arches over it
+    // (rotated to face along the road, +X points to the road's left); the others look at the road.
+    const yaw = kind === 'longneck' ? track.alongAt(s) + (sign < 0 ? Math.PI : 0) : Math.atan2(-sign * s.side.x, -sign * s.side.z)
+    dinosaur(track, origin, yaw, kind, color)
+  })
+  // Jump the egg nest, then the river; boost pads to get there fast.
+  const eggJump = track.addJump(260, { length: 8, height: 1.8, gap: 11, width: 6.5, material: std({ color: '#9b6b3e' }), fill: (d, c, yaw, s) => {
+    for (const k of [-1.8, -0.6, 0.6, 1.8]) egg(track, c.clone().addScaledVector(s.side, k + (r() - 0.5) * 0.4), (d | 0) + k * 3)
+  } })
+  track.addBoostPad(eggJump - 42)
+  const gapPoints = []
+  const riverJump = track.addJump(560, { length: 9, height: 2.2, gap: 14, width: 7, material: std({ color: '#9b6b3e' }), fill: (d) => gapPoints.push(d) })
+  track.addBoostPad(riverJump - 45)
+  const river = new THREE.PlaneGeometry(400, 12)
+  river.rotateX(-Math.PI / 2)
+  // Under the middle of the gap, which isn't the middle of the whole jump.
+  const rs = track.sampleAt(gapPoints.reduce((a, b) => a + b, 0) / gapPoints.length)
+  river.rotateY(track.alongAt(rs) + Math.PI / 2)
+  river.translate(rs.p.x, 0.03, rs.p.z)
+  track.addGeometry(river, std({ color: '#3fa7d6', metalness: 0.3, roughness: 0.15 }), false)
+  track.addBoostPad(80, { lateral: -2 })
+  volcano(track, 260, -420)
+  mountain(track, -320, -300, 180, 150, '#4f7a3a')
+  for (let i = 0; i < 40; i++) {
+    const a = r() * Math.PI * 2, d = 270 + r() * 260
+    tree(track, new THREE.Vector3(Math.cos(a) * d + 40, 0, Math.sin(a) * d + 100), r() < 0.5 ? 'palm' : 'jungle', r)
+  }
+  track.finish()
+  return track
+}
+
+// --- Stunt Park ------------------------------------------------------------------
+
+const sandTexture = memoTexture('sandTexture', function sandTexture() {
+  return canvasTexture(256, 256, (g, w, h) => speckle(g, w, h, '#e3b77a', 0.2, 7000, 3, rng(17)), { repeat: [60, 60] })
+})
+
+/** Red-and-white kerb stripes, like a race circuit. */
+const kerbTexture = memoTexture('kerbTexture', function kerbTexture() {
+  return canvasTexture(64, 128, (g, w, h) => {
+    g.fillStyle = '#e63946'
+    g.fillRect(0, 0, w, h)
+    g.fillStyle = '#ffffff'
+    g.fillRect(0, 0, w, h / 2)
+  })
+})
+
+function mesa(track, x, z, radius, height) {
+  const layers = ['#c8642f', '#d9814a', '#b9552a']
+  let y = 0
+  for (let i = 0; i < 3; i++) {
+    const hh = height / 3
+    const g = new THREE.CylinderGeometry(radius * (1 - i * 0.08), radius * (1.05 - i * 0.08), hh, 9)
+    g.translate(x, y + hh / 2, z)
+    track.addGeometry(g, std({ color: layers[i], flatShading: true }), false)
+    y += hh
+  }
+}
+
+function cactus(track, position, r) {
+  const mat = std({ color: '#3f8f46', flatShading: true })
+  const h = 3 + r() * 2.5
+  const trunk = new THREE.CylinderGeometry(0.45, 0.5, h, 8)
+  trunk.translate(position.x, h / 2, position.z)
+  track.addGeometry(trunk, mat)
+  for (const side of [-1, 1]) {
+    if (r() < 0.3) continue
+    const ay = 1.2 + r() * (h - 2)
+    const out = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 7)
+    out.rotateZ(Math.PI / 2)
+    out.translate(position.x + side * 0.8, ay, position.z)
+    track.addGeometry(out, mat)
+    const up = new THREE.CylinderGeometry(0.3, 0.3, 1.6, 7)
+    up.translate(position.x + side * 1.35, ay + 0.75, position.z)
+    track.addGeometry(up, mat)
+  }
+  trunkCollider(track, position, 0.6)
+}
+
+const barrelMats = ['#e63946', '#1d8fe1', '#f4c430'].map((color) => std({ color, roughness: 0.5, metalness: 0.2 }))
+/** A stunt barrel: drop onto it and it goes flying. */
+function barrel(track, position, k) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.1, 12), barrelMats[k % barrelMats.length])
+  track.addProp(m, new CANNON.Cylinder(0.45, 0.45, 1.1, 8), new THREE.Vector3(position.x, 0.56, position.z), 8)
+}
+
+/** A banner arch over the road with checkered flags. */
+function arch(track, dist, color) {
+  const s = track.sampleAt(dist)
+  const yaw = track.alongAt(s)
+  const mat = std({ color })
+  for (const sign of [-1, 1]) {
+    const c = s.p.clone().addScaledVector(s.side, sign * (track.width / 2 + 1.2))
+    const post = new THREE.BoxGeometry(0.8, 8, 0.8)
+    post.translate(c.x, 4, c.z)
+    track.addGeometry(post, mat)
+    track.addStaticBox(new THREE.Vector3(c.x, 4, c.z), new THREE.Vector3(0.8, 8, 0.8), yaw, null, { visual: false })
+  }
+  const beam = new THREE.BoxGeometry(track.width + 3.2, 1.6, 0.6)
+  beam.rotateY(yaw)
+  beam.translate(s.p.x, 8, s.p.z)
+  track.addGeometry(beam, std({ map: checkerTexture() }))
+}
+
+const checkerTexture = memoTexture('checkerTexture', function checkerTexture() {
+  return canvasTexture(256, 32, (g, w, h) => {
+    for (let x = 0; x < w; x += 16) for (let y = 0; y < h; y += 16) {
+      g.fillStyle = (x + y) % 32 ? '#111111' : '#ffffff'
+      g.fillRect(x, y, 16, 16)
+    }
+  })
+})
+
+function grandstand(track, dist, sign) {
+  const s = track.sampleAt(dist)
+  const yaw = track.alongAt(s)
+  const c = s.p.clone().addScaledVector(s.side, sign * (track.width / 2 + 10))
+  const colors = ['#e63946', '#f4c430', '#1d8fe1', '#2a9d8f']
+  for (let k = 0; k < 5; k++) {
+    const step = new THREE.BoxGeometry(30, 1, 2)
+    step.translate(0, 0.5 + k, sign * k * 2)
+    step.rotateY(yaw)
+    step.translate(c.x, 0, c.z)
+    track.addGeometry(step, std({ color: colors[k % colors.length] }))
+  }
+  track.addStaticBox(new THREE.Vector3(c.x, 2.5, c.z), new THREE.Vector3(30, 5, 4), yaw, null, { visual: false })
+}
+
+function buildStunt(env) {
+  const track = new Track({
+    ...env,
+    width: 11,
+    seed: 505,
+    points: [[0, 0], [160, 0], [225, 40], [235, 125], [185, 175], [60, 172], [-60, 172], [-135, 130], [-145, 50], [-92, 5]],
+  })
+  const r = track.random
+  sceneryBase(track, { ground: std({ map: sandTexture() }), sky: ['#5fb4f0', '#fde3b0'], fog: '#f4dcb2', sun: '#fff1d0' })
+  track.buildRoad(std({ map: asphalt({ lines: true }), roughness: 0.85 }))
+  track.buildStrip(std({ map: kerbTexture() }), track.width / 2, track.width / 2 + 1, 0.06)
+  track.lineSides({ offset: track.width / 2 + 4, spacing: () => 14 + r() * 16, depth: 0.6 }, ({ center }) => cactus(track, center, r))
+  // Three jumps: a warm-up over barrels, a mega jump, and one more to finish.
+  const fillBarrels = (d, c, yaw, s) => {
+    for (const k of [-2.4, -1.2, 0, 1.2, 2.4]) barrel(track, c.clone().addScaledVector(s.side, k), (d | 0) + Math.round(k * 2))
+  }
+  const ramps = std({ color: '#f4c430' })
+  const first = track.addJump(230, { length: 8, height: 1.8, gap: 10, width: 8, material: ramps, fill: fillBarrels })
+  track.addBoostPad(first - 40)
+  const mega = track.addJump(470, { length: 10, height: 2.6, gap: 18, width: 9, material: std({ color: '#e63946' }), fill: fillBarrels })
+  track.addBoostPad(mega - 55, { lateral: -2 })
+  track.addBoostPad(mega - 55, { lateral: 2 })
+  const last = track.addJump(720, { length: 8, height: 2, gap: 12, width: 8, material: ramps, fill: fillBarrels })
+  track.addBoostPad(last - 42)
+  track.addRamp(820, { length: 6, width: 3.5, height: 1.2, lateral: 3, material: std({ color: '#1d8fe1' }) })
+  track.addBoostPad(330, { lateral: -3 })
+  arch(track, 0, '#e63946')
+  // Between the first jump and the kicker, so nobody flies into its banner.
+  arch(track, 300, '#1d8fe1')
+  grandstand(track, 40, 1)
+  grandstand(track, track.length / 2 + 30, -1)
+  mesa(track, 320, -260, 70, 60)
+  mesa(track, -260, -200, 90, 45)
+  mesa(track, 380, 300, 60, 75)
+  mesa(track, -300, 330, 80, 55)
+  for (let i = 0; i < 30; i++) {
+    const a = r() * Math.PI * 2, d = 230 + r() * 250
+    cactus(track, new THREE.Vector3(Math.cos(a) * d + 40, 0, Math.sin(a) * d + 85), r)
+  }
+  track.finish()
+  return track
+}
+
 export function buildCity(id, env, props = {}) {
   if (id === 'ubud') return buildUbud(env, props)
   if (id === 'helsinki') return buildHelsinki(env, props)
+  if (id === 'dino') return buildDino(env, props)
+  if (id === 'stunt') return buildStunt(env, props)
   return buildMontreal(env, props)
 }

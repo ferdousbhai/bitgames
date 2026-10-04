@@ -130,6 +130,12 @@ export class Audio {
     if (intensity > 0.2) this.burst({ freq: 2500 + Math.random() * 1500, q: 6, gain: 0.08 * intensity, decay: 0.12 })
   }
 
+  /** A car landing from a jump: a deep thud and some dust noise. */
+  thump(strength = 1) {
+    this.tone({ freq: 70, type: 'sine', gain: 0.5 * strength, decay: 0.3, slide: -30 })
+    this.burst({ freq: 400, q: 0.7, gain: 0.25 * strength, decay: 0.3, type: 'lowpass' })
+  }
+
   splash() {
     this.burst({ freq: 700, q: 0.7, gain: 0.25, decay: 0.4, type: 'lowpass' })
   }
