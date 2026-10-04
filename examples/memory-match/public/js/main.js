@@ -284,11 +284,13 @@ function settleProps(view, w, d) {
     const r = el.matches('.hint, .logo') ? range.getBoundingClientRect() : el.getBoundingClientRect()
     blockers.push([(r.left / innerWidth) * 2 - 1, (r.right / innerWidth) * 2 - 1, 1 - (r.bottom / innerHeight) * 2, 1 - (r.top / innerHeight) * 2])
   }
-  // The menu's animals too, so no toy seems to sit on an animal's head (they may still pop in, so use their full size).
+  // The menu's animals too, with a little headroom, so no toy seems to sit on an animal's head
+  // like a hat (they may still pop in, so use their full size).
+  const animals = []
   for (const a of game.paradeAnimals) {
-    _box.min.set(a.holder.position.x - 0.42 * a.size, 0, -0.3 * a.size)
-    _box.max.set(a.holder.position.x + 0.42 * a.size, ANIMAL_H * a.size / ANIMAL_SIZE + 0.1, 0.3 * a.size)
-    blockers.push(ndcBox(_box))
+    _box.min.set(a.holder.position.x - 0.45 * a.size, 0, -0.3 * a.size)
+    _box.max.set(a.holder.position.x + 0.45 * a.size, ANIMAL_H * a.size / ANIMAL_SIZE + 0.3, 0.3 * a.size)
+    animals.push(ndcBox(_box))
   }
   const shown = (lo, hi, min, max) => Math.max(0, Math.min(hi, max) - Math.max(lo, min)) / (hi - lo)
   // Most of the toy (85%) must be on screen and clear of the HTML: enough to see what it is and tap it.
@@ -296,6 +298,7 @@ function settleProps(view, w, d) {
     prop.updateMatrixWorld(true)
     const [x0, x1, y0, y1] = ndcBox(_box.setFromObject(prop))
     if (shown(x0, x1, -1, 1) * shown(y0, y1, -1, 1) < 0.85) return false
+    if (!animals.every(([l, r, b, t]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < 0.02)) return false
     return blockers.every(([l, r, b, t]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < 0.15)
   }
   for (const prop of room.props) {
@@ -307,6 +310,13 @@ function settleProps(view, w, d) {
       prop.position.x -= Math.sign(prop.position.x) * 0.1
       ok = onScreen(prop)
     }
+    // Behind the mat: step further back until it is clear of the animals in front.
+    const z = prop.position.z
+    while (!ok && !side && prop.position.z > z - 2) {
+      prop.position.z -= 0.1
+      ok = onScreen(prop)
+    }
+    if (!ok) prop.position.z = z
     prop.visible = ok
   }
   fitCam.clearViewOffset()
@@ -543,8 +553,11 @@ function safeBottom() {
   return parseFloat(getComputedStyle(safeProbe).paddingBottom) || 0
 }
 
-/** Frames the box (hw, hd around the origin, up to height) in the free region, looking at the origin. */
-function frame(hw, hd, height) {
+/**
+ * Frames the box (x within hw, z from -back to hd, up to height) in the free region, looking at
+ * the origin.
+ */
+function frame(hw, hd, height, back = hd) {
   const w = innerWidth
   const h = innerHeight
   const region = freeRegion()
@@ -555,7 +568,7 @@ function frame(hw, hd, height) {
   fitCam.clearViewOffset()
   fitCam.updateProjectionMatrix()
   const pts = []
-  for (const x of [-hw, hw]) for (const z of [-hd, hd]) for (const y of [0, height]) pts.push(new THREE.Vector3(x, y, z))
+  for (const x of [-hw, hw]) for (const z of [-back, hd]) for (const y of [0, height]) pts.push(new THREE.Vector3(x, y, z))
   const allowW = (region.w / w) * 2
   const allowH = (region.h / h) * 2
   const p = new THREE.Vector3()
@@ -618,7 +631,9 @@ function relayout(animate = true) {
   if (game.state === 'menu') {
     const hw = (game.paradeAnimals.length * PARADE_GAP) / 2
     placeRoom(hw, 0.9)
-    const view = frame(hw, 0.6, 1.05)
+    // Tall screens: the toys line up behind the parade, so frame them too. That keeps the
+    // table filled from the title down to the Play button instead of leaving an empty band.
+    const view = frame(hw, 0.6, 1.05, innerWidth / innerHeight < 0.8 ? 3.4 : 0.6)
     settleProps(view, hw + 0.45, 0.9 + 0.45)
     applyCamera(view, animate)
     return
@@ -657,7 +672,7 @@ function renderLevels() {
   $('levels').innerHTML = LEVELS.map((pairs, i) => {
     const stars = progress.stars[i] ?? 0
     const row = [0, 1, 2].map((k) => `<span class="${k < stars ? '' : 'off'}">⭐</span>`).join('')
-    return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}"><span class="num">${i + 1}</span><span class="cards">🃏 ${pairs * 2}</span><span class="lstars">${row}</span></button>`
+    return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}"><span class="num">${i + 1}</span><span class="cards"><i class="mini"></i>${pairs * 2}</span><span class="lstars">${row}</span></button>`
   }).join('')
   for (const el of document.querySelectorAll('[data-level]')) {
     el.addEventListener('click', () => {

@@ -56,7 +56,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .level:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(90, 61, 122, 0.35); }
 .level .num { font-size: 26px; line-height: 1.1; }
-.level .cards { font-size: 12px; opacity: .75; }
+.level .cards { font-size: 14px; display: flex; align-items: center; gap: 4px; }
+/* A tiny face-down card, like the ones on the table (a joker emoji looked odd here). */
+.level .mini {
+  width: 11px; height: 15px; border-radius: 3px; background: #8c7cf0; box-shadow: inset 0 0 0 1.5px #fff, 0 0 0 1px #b9adff;
+  display: inline-grid; place-items: center; font-style: normal; font-size: 8px; line-height: 1; color: #ffd23f;
+}
+.level .mini::before { content: '★'; }
 .level .lstars { font-size: 13px; letter-spacing: -1px; min-height: 16px; }
 .level .lstars .off { filter: grayscale(1); opacity: .3; }
 .level.next { background: #ffe58a; outline: 4px solid #ffbe0b; }
@@ -104,6 +110,28 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .stars span.off { animation: starpop .45s forwards; filter: grayscale(1); opacity: .25; }
 @keyframes starpop { from { transform: scale(0) rotate(-90deg); } to { transform: scale(1) rotate(0); } }
 .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+@media (max-width: 420px) { .row { flex-wrap: nowrap; gap: 8px; } .row .big-go { padding-left: 20px; padding-right: 20px; } .row .big-go.alt { padding-left: 16px; padding-right: 16px; } }
+
+/* Tablets and computers: bigger buttons for little fingers, in proportion to the big screen. */
+@media (min-width: 900px) and (min-height: 700px) {
+  .round { width: 68px; height: 68px; font-size: 32px; }
+  .hud-left { gap: 12px; }
+  .pill { font-size: 26px; padding: 5px 22px; }
+  .pairs { gap: 6px; }
+  .pairs span { width: 36px; height: 36px; font-size: 22px; }
+  .hint { font-size: clamp(22px, 2.4vw, 30px); }
+  .big-go { font-size: clamp(42px, 4.4vw, 56px); padding: 14px 56px; }
+  .big-go.alt { padding: 14px 34px; }
+  .menu-bottom { gap: 18px; }
+  .levels { gap: 14px; max-width: 900px; }
+  .level { width: 112px; border-radius: 26px; padding: 8px 4px; }
+  .level .num { font-size: 36px; }
+  .level .cards { font-size: 18px; }
+  .level .mini { width: 14px; height: 19px; font-size: 10px; }
+  .level .lstars { font-size: 18px; min-height: 22px; }
+  .win-card { padding: 26px 40px 32px; border-radius: 44px; }
+  .win-card .hint { font-size: 26px; }
+}
 
 @media (max-height: 500px) {
   .logo { font-size: clamp(32px, 8vh, 60px); }
