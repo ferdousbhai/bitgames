@@ -25,6 +25,18 @@ const softDot = canvasTexture(64, 64, (g, s) => {
   g.fillRect(0, 0, s, s)
 })
 
+// A cartoon smoke puff: a soft ball, shaded underneath with a fluffy rim, so it reads against the pale sky.
+// A cartoon smoke puff: a soft ball shaded lilac underneath, so it reads against the pale sky.
+const puffTex = canvasTexture(64, 64, (g, s) => {
+  const grad = g.createRadialGradient(s * 0.4, s * 0.36, 0, s / 2, s / 2, s / 2)
+  grad.addColorStop(0, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.55, 'rgba(236,233,246,1)')
+  grad.addColorStop(0.82, 'rgba(196,190,218,0.95)')
+  grad.addColorStop(1, 'rgba(196,190,218,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, s, s)
+})
+
 const starTex = canvasTexture(64, 64, (g, s) => {
   g.translate(s / 2, s / 2)
   const grad = g.createRadialGradient(0, 0, 0, 0, 0, s / 2)
@@ -142,6 +154,14 @@ export class Effects {
       grow: 2.2,
       billboard: true,
     })
+    this.smokePuffs = new Pool(scene, {
+      count: 40,
+      geometry: new THREE.PlaneGeometry(1, 1),
+      material: new THREE.MeshBasicMaterial({ map: puffTex, transparent: true, depthWrite: false }),
+      drag: 0.4,
+      grow: 1.8,
+      billboard: true,
+    })
     this.sparkles = new Pool(scene, {
       count: 300,
       geometry: new THREE.PlaneGeometry(1, 1),
@@ -222,11 +242,12 @@ export class Effects {
   /** A tapped house: soft puffs of smoke rise from its chimney. */
   smoke(pos) {
     const v = this.tmp.clone()
-    for (let i = 0; i < 5; i++) {
+    // A little trail of growing puffs that drifts up and away with the breeze
+    for (let i = 0; i < 6; i++) {
       setTimeout(() => {
-        v.set((Math.random() - 0.5) * 0.6, 2.5 + Math.random(), 0)
-        this.puffs.spawn(pos, v, { life: 1.2, size: 1.5 + Math.random() * 0.6, color: '#ffffff' })
-      }, i * 120)
+        v.set(0.9 + Math.random() * 0.4, 2.6 + Math.random() * 0.6, 0)
+        this.smokePuffs.spawn(pos, v, { life: 2.2, size: 0.75 + Math.random() * 0.25 })
+      }, i * 230)
     }
   }
 
@@ -268,6 +289,7 @@ export class Effects {
     this.confetti.update(dt, this.camera)
     this.shreds.update(dt, this.camera)
     this.puffs.update(dt, this.camera)
+    this.smokePuffs.update(dt, this.camera)
     this.sparkles.update(dt, this.camera)
     for (const r of this.rings) {
       if (!r.visible) continue
