@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#4aa8ff" />
+<title>Dragon Glide</title>
+<link rel="icon" href="data:," />
+<script type="importmap">
+{ "imports": {
+  "three": "https://bitgames.store/vendor/three/build/three.module.js",
+  "three/addons/": "https://bitgames.store/vendor/three/examples/jsm/"
+} }
+</script>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="popups"></div>
+
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <button id="home" class="round" title="Home (Esc)" aria-label="Home">🏠</button>
+    <div id="score" class="pill"><span class="icon">💎</span><b id="score-num">0</b></div>
+  </div>
+  <div class="trip" aria-hidden="true">
+    <div class="trip-track"><div id="trip-fill" class="trip-fill"></div></div>
+    <div id="trip-stops" class="trip-stops"></div>
+    <div id="trip-dragon" class="trip-dragon"><span>🐉</span></div>
+  </div>
+  <div id="combo" class="combo"></div>
+  <div id="power" class="power hidden">🌈<i><b id="power-bar"></b></i></div>
+  <div id="banner" class="banner"></div>
+  <div id="tip" class="tip"></div>
+  <button id="fire" class="fire" title="Fire (Space)" aria-label="Puff fire">🔥</button>
+</div>
+
+<div id="corner" class="corner hidden">
+  <button id="music" class="round" title="Music" aria-label="Music on or off">🎵</button>
+  <button id="sound" class="round" title="Sound (M)" aria-label="Sound on or off">🔊</button>
+</div>
+
+<div id="loading" class="screen">
+  <div class="logo"><span>D</span><span>r</span><span>a</span><span>g</span><span>o</span><span>n</span> <span>G</span><span>l</span><span>i</span><span>d</span><span>e</span></div>
+  <div class="flyer">🐉</div>
+  <div class="bar"><div id="load-bar"></div></div>
+</div>
+
+<div id="title" class="screen clear hidden">
+  <div class="logo"><span>D</span><span>r</span><span>a</span><span>g</span><span>o</span><span>n</span> <span>G</span><span>l</span><span>i</span><span>d</span><span>e</span></div>
+  <p class="sub">Fly Ember home to the nest! 🪺</p>
+  <div class="spacer"></div>
+  <div class="menu-bottom">
+    <div id="worlds" class="worlds"></div>
+    <button id="play" class="big-go">▶ Let's fly!</button>
+    <div id="best" class="best hidden"></div>
+    <p class="hint">👆 Drag to fly · tap for 🔥</p>
+  </div>
+</div>
+
+<div id="results" class="screen clear hidden">
+  <div class="results-top">
+    <h1>Home sweet nest!</h1>
+    <div id="stars" class="stars"></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="menu-bottom">
+    <div class="tally"><span>💎</span><b id="final">0</b><span id="new-best" class="new-best hidden">🏆 New best!</span></div>
+    <div id="best-line" class="best"></div>
+    <div class="row">
+      <button id="again" class="big-go">🔁 Fly again</button>
+      <button id="to-title" class="big-go alt" aria-label="Home">🏠</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

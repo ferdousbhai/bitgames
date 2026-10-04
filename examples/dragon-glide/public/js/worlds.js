@@ -1,0 +1,75 @@
+/**
+ * The four places Ember flies through, one after another, each ending at a nest.
+ * Distances are in world units along the flight (Ember flies toward -Z).
+ */
+export const WORLD_LENGTH = 760
+
+export const WORLDS = [
+  {
+    name: 'Meadow Isles',
+    emoji: '🌼',
+    top: '#4aa8ff', bottom: '#cdeeff', fog: '#bfe4ff', sun: '#fff6c9',
+    hemi: ['#ffffff', '#7fbf6a', 1.5], key: ['#fff1d6', 2.4],
+    island: { island_grass: ['#79d65a', '#8be06a', '#6ccf55'], island_dirt: '#c98b52', island_rock: ['#b08a6a', '#a8826a'], island_flower: ['#ffe066', '#ff8fc7', '#ffffff'] },
+    decor: [['tree', 3], ['pine', 1], ['windmill', 1]],
+    hoop: { hoop_cloud: { color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 0.35 } },
+    rock: { rock: '#a99bc9', rock_grass: '#7bd14b' },
+    obstacles: ['windmill', 'rock'],
+    gem: 'blue',
+    lanterns: 0,
+    waterfalls: 0.25,
+    speed: 15,
+    music: { tempo: 112, chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], wave: 'triangle' },
+  },
+  {
+    name: 'Candy Clouds',
+    emoji: '🍭',
+    top: '#ff8fd0', bottom: '#ffe3f4', fog: '#ffd6ee', sun: '#fff0f8',
+    hemi: ['#fff0fa', '#d98ac0', 1.55], key: ['#fff0f6', 2.3],
+    island: { island_grass: ['#ff9ecf', '#ffd1e8', '#bfa2ff'], island_dirt: '#fff5e6', island_rock: ['#8a5a3a', '#a06a44'], island_flower: ['#ff5c8a', '#4cc9f0', '#ffd23f', '#8ef0c8'] },
+    decor: [['lollipop', 3], ['gumdrop', 3]],
+    hoop: { hoop_cloud: { color: '#ffc2e2', emissive: '#ffc2e2', emissiveIntensity: 0.35 } },
+    rock: { rock: '#c49bff', rock_grass: '#ff9ecf' },
+    obstacles: ['lollipop', 'rock'],
+    gem: 'pink',
+    lanterns: 0,
+    waterfalls: 0.35,
+    speed: 16.5,
+    music: { tempo: 120, chords: [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]], wave: 'square' },
+  },
+  {
+    name: 'Sunset Castles',
+    emoji: '🏰',
+    top: '#6b4fd8', bottom: '#ffb36b', fog: '#ffc58f', sun: '#ffd27a',
+    hemi: ['#ffe0c2', '#8a5aa8', 1.4], key: ['#ffc78a', 2.6],
+    island: { island_grass: ['#8fcf5a', '#a6d65a'], island_dirt: '#d9905a', island_rock: ['#9a6a7a', '#8a6070'], island_flower: ['#ffd23f', '#ff8a5c'] },
+    decor: [['castle', 2], ['tree', 2], ['pine', 2]],
+    hoop: { hoop_cloud: { color: '#ffe08a', emissive: '#ffe08a', emissiveIntensity: 0.35 } },
+    rock: { rock: '#b48ab0', rock_grass: '#8fcf5a' },
+    obstacles: ['tower', 'rock'],
+    gem: 'gold',
+    lanterns: 0.35,
+    waterfalls: 0.3,
+    speed: 17.5,
+    music: { tempo: 104, chords: [[0, 4, 7], [-3, 0, 4], [5, 9, 12], [7, 11, 14]], wave: 'triangle' },
+  },
+  {
+    name: 'Night Sky',
+    emoji: '🌙',
+    top: '#0b1240', bottom: '#3a3f8f', fog: '#2a2f6f', sun: '#fff3c4',
+    hemi: ['#b8c4ff', '#3a2a7a', 1.35], key: ['#c9d4ff', 1.6],
+    island: { island_grass: ['#3f8f8a', '#4a9f7a'], island_dirt: '#5a4a7a', island_rock: ['#4a4470', '#55507a'], island_flower: [{ color: '#fff3a0', emissive: '#ffd23f', emissiveIntensity: 1.5 }, { color: '#8ef0ff', emissive: '#45d8ff', emissiveIntensity: 1.5 }] },
+    decor: [['mushroom', 3], ['pine', 2]],
+    hoop: { hoop_cloud: { color: '#b8c8ff', emissive: '#6f8cff', emissiveIntensity: 0.6 } },
+    rock: { rock: '#7a74b0', rock_grass: '#3f8f8a' },
+    obstacles: ['rock', 'tower'],
+    gem: 'blue',
+    lanterns: 0.75,
+    waterfalls: 0.2,
+    night: true,
+    speed: 18,
+    music: { tempo: 92, chords: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]], wave: 'sine' },
+  },
+]
+
+export const worldAt = (z) => Math.max(0, Math.min(WORLDS.length - 1, Math.floor(z / WORLD_LENGTH)))
