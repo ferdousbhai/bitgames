@@ -220,14 +220,16 @@ function placeRoom(hw, hd) {
   const w = hw + 0.45
   const d = hd + 0.45
   room.mat.scale.set((w * 2) / 6, 1, (d * 2) / 6)
-  // Wide screens: toys beside the mat. Tall screens have room above the mat instead, so the toys line up behind it.
-  const at = innerWidth / innerHeight < 0.8
+  // Wide screens: toys beside the mat. Tall screens (and the menu, whose parade leaves the table
+  // behind it empty) have room above the mat instead, so the toys line up behind it.
+  const back = game.state === 'menu' ? 0.35 : 0 // a step further back, so no toy looks perched on an animal's head
+  const at = game.state === 'menu' || innerWidth / innerHeight < 0.8
     ? {
-        prop_crayons: [-w + 0.45, -d - 0.75, 0.3],
-        prop_bear: [-w * 0.33, -d - 0.7, 0.2],
-        prop_ball: [w * 0.25, -d - 0.75, 0],
-        prop_rings: [w - 0.4, -d - 0.7, 0],
-        prop_blocks: [0, -d - 1.7, 0.5],
+        prop_crayons: [-w + 0.45, -d - 0.75 - back, 0.3],
+        prop_bear: [-w * 0.33, -d - 0.7 - back, 0.2],
+        prop_ball: [w * 0.25, -d - 0.75 - back, 0],
+        prop_rings: [w - 0.4, -d - 0.7 - back, 0],
+        prop_blocks: [0, -d - 1.7 - back * 0.5, 0.5],
       }
     : {
         prop_blocks: [-w - 0.75, d - 0.1, 0.5],
@@ -259,6 +261,16 @@ function placeRoom(hw, hd) {
 const _box = new THREE.Box3()
 const _corner = new THREE.Vector3()
 function settleProps(view, w, d) {
+  /** A world box's screen rectangle in NDC: [left, right, bottom, top]. */
+  const ndcBox = (box) => {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity
+    for (let i = 0; i < 8; i++) {
+      _corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(fitCam)
+      x0 = Math.min(x0, _corner.x); x1 = Math.max(x1, _corner.x)
+      y0 = Math.min(y0, _corner.y); y1 = Math.max(y1, _corner.y)
+    }
+    return [x0, x1, y0, y1]
+  }
   fitCam.position.copy(view.pos)
   fitCam.lookAt(0, 0, 0)
   fitCam.setViewOffset(innerWidth, innerHeight, view.offset.x, view.offset.y, innerWidth, innerHeight)
@@ -272,17 +284,17 @@ function settleProps(view, w, d) {
     const r = el.matches('.hint, .logo') ? range.getBoundingClientRect() : el.getBoundingClientRect()
     blockers.push([(r.left / innerWidth) * 2 - 1, (r.right / innerWidth) * 2 - 1, 1 - (r.bottom / innerHeight) * 2, 1 - (r.top / innerHeight) * 2])
   }
+  // The menu's animals too, so no toy seems to sit on an animal's head (they may still pop in, so use their full size).
+  for (const a of game.paradeAnimals) {
+    _box.min.set(a.holder.position.x - 0.42 * a.size, 0, -0.3 * a.size)
+    _box.max.set(a.holder.position.x + 0.42 * a.size, ANIMAL_H * a.size / ANIMAL_SIZE + 0.1, 0.3 * a.size)
+    blockers.push(ndcBox(_box))
+  }
   const shown = (lo, hi, min, max) => Math.max(0, Math.min(hi, max) - Math.max(lo, min)) / (hi - lo)
   // Most of the toy (85%) must be on screen and clear of the HTML: enough to see what it is and tap it.
   const onScreen = (prop) => {
     prop.updateMatrixWorld(true)
-    _box.setFromObject(prop)
-    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity
-    for (let i = 0; i < 8; i++) {
-      _corner.set(i & 1 ? _box.max.x : _box.min.x, i & 2 ? _box.max.y : _box.min.y, i & 4 ? _box.max.z : _box.min.z).project(fitCam)
-      x0 = Math.min(x0, _corner.x); x1 = Math.max(x1, _corner.x)
-      y0 = Math.min(y0, _corner.y); y1 = Math.max(y1, _corner.y)
-    }
+    const [x0, x1, y0, y1] = ndcBox(_box.setFromObject(prop))
     if (shown(x0, x1, -1, 1) * shown(y0, y1, -1, 1) < 0.85) return false
     return blockers.every(([l, r, b, t]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < 0.15)
   }
@@ -425,7 +437,12 @@ class Card {
   }
 
   /** Animal ducks back into the card, which flips face down. */
-  async close(fast = false) {
+  close(fast = false) {
+    this.closing = this.shut(fast)
+    return this.closing
+  }
+
+  async shut(fast) {
     this.state = 'closing'
     const a = this.critter
     a.excited = false
@@ -785,6 +802,14 @@ async function tapCard(card) {
     hopOnce(card.critter)
     sound.voice(card.animal)
     return
+  }
+  if (card.state === 'closing') {
+    // Still flipping back after a miss: little fingers are quick, so flip it again once it lands.
+    if (card.wanted) return
+    card.wanted = true
+    await card.closing
+    card.wanted = false
+    return tapCard(card)
   }
   if (card.state !== 'down' || game.busy) return
   if (game.mismatch) closeMismatch(true)
