@@ -58,12 +58,17 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* GO stays on screen however far the menu scrolls. */
 #go { position: sticky; bottom: calc(6px + env(safe-area-inset-bottom)); z-index: 3; box-shadow: 0 7px 0 #b38200, 0 10px 30px rgba(0,0,0,.35); }
 
-.car-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 760px; }
+.car-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 820px; }
 .car-pick {
-  position: relative; width: 106px; padding: 8px 6px 10px; border-radius: 22px; background: rgba(255,255,255,0.18);
+  position: relative; width: 122px; padding: 8px 6px 10px; border-radius: 22px; background: rgba(255,255,255,0.18);
   border: 4px solid rgba(255,255,255,0.35); box-shadow: 0 5px 0 rgba(0,0,0,.25); transition: transform .12s;
 }
 .car-pick .emoji { font-size: 42px; line-height: 1.1; display: block; }
+/* The real car, rendered from its Blender model (see portraits.js). */
+.pic { display: block; width: 100%; height: auto; aspect-ratio: 240 / 168; pointer-events: none; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
+.car-pick .pic { margin: -4px 0 -2px; }
+.car-pick.selected .pic { animation: hop .9s ease-in-out infinite; }
+@keyframes hop { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-7px) rotate(-3deg); } 60% { transform: translateY(0) rotate(2deg); } }
 .car-pick .name { font-size: 15px; font-weight: 800; display: block; white-space: nowrap; }
 .car-pick.selected { background: #ffbe0b; color: #2b2d42; border-color: #fff; transform: scale(1.07); }
 .car-pick .taken { position: absolute; top: -10px; right: -8px; font-size: 22px; }
@@ -114,6 +119,20 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .podium { display: flex; flex-direction: column; gap: 8px; width: min(520px, 92vw); }
 .podium .place { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.18); border-radius: 20px; padding: 10px 16px; font-size: 24px; font-weight: 800; }
 .podium .place .medal { font-size: 40px; }
+.podium .podium-pic { width: 84px; flex: 0 0 auto; margin: -6px -4px; }
+.podium .place .emoji { font-size: 34px; }
+/* The rows arrive one by one, and the child's own row gives a little bounce. */
+.podium .place { animation: arrive .45s cubic-bezier(.3,1.6,.5,1) both; }
+.podium .place:nth-child(2) { animation-delay: .12s; } .podium .place:nth-child(3) { animation-delay: .24s; } .podium .place:nth-child(4) { animation-delay: .36s; }
+.podium .place.me .podium-pic { animation: hop .9s ease-in-out .6s infinite; }
+@keyframes arrive { from { opacity: 0; transform: translateX(-40px) scale(.9); } to { opacity: 1; transform: none; } }
+/* Paper confetti over the results screen (the 3D confetti is behind it). */
+.party { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 20; }
+.party i { position: absolute; top: -30px; width: 12px; height: 18px; border-radius: 3px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translate3d(var(--dx), 110vh, 0) rotate(var(--spin)); } }
+/* A gentle nudge towards GO for a child who hasn't tapped anything for a while. */
+#go.nudge { animation: nudge 1.4s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: scale(1) rotate(0); } 15% { transform: scale(1.1) rotate(-4deg); } 30% { transform: scale(1.1) rotate(4deg); } 45% { transform: scale(1) rotate(0); } }
 .podium .place.me { background: #ffbe0b; color: #2b2d42; }
 .podium .place .who { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; }
 .podium .place .award { font-size: 16px; font-weight: 800; background: rgba(0,0,0,0.18); border-radius: 999px; padding: 2px 10px; }
@@ -137,6 +156,31 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @media (any-pointer: coarse) { .finale { bottom: calc(var(--tb) + 34px + env(safe-area-inset-bottom)); } }
 #retry { margin-top: 8px; }
 
+/* Wide screens (tablets held sideways, desktops): all five places fit in one row. */
+@media (min-width: 900px) {
+  .cities { flex-wrap: nowrap; }
+  .city { width: min(18vw, 220px); }
+  .city .name { font-size: min(26px, 2.3vw); }
+}
+/* Tablets held sideways (4:3) and short desktop windows: a tighter menu, so the places sit clear of GO. */
+@media (min-width: 900px) and (max-height: 820px) {
+  .screen { gap: 10px; }
+  .logo.small { font-size: 46px; }
+  .screen h2 { font-size: 26px; margin: 0; }
+  .mode { padding: 8px 24px; }
+  .city { padding: 8px 8px 10px; }
+  .city .emoji { font-size: 46px; }
+  .city .blurb { font-size: 13px; }
+}
+/* Tablets: bigger in-race buttons and labels for small fingers and eyes. */
+@media (any-pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
+  .hud-buttons { top: calc(84px + env(safe-area-inset-top)); gap: 10px; }
+  .hud-buttons button { width: 72px; height: 72px; border-radius: 20px; font-size: 36px; }
+  .pill { font-size: 28px; padding: 8px 16px; border-radius: 22px; }
+  .pill.big { font-size: 40px; }
+  #minimap { width: 170px; height: 170px; top: calc(64px + env(safe-area-inset-top)); }
+}
+
 /* Narrow phones: smaller pills so the HUD stays on one row. */
 @media (max-width: 520px) {
   .pill { font-size: 17px; padding: 5px 10px; border-radius: 14px; }
@@ -146,7 +190,24 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .podium .place { font-size: 18px; padding: 8px 12px; gap: 8px; }
   .podium .place .medal { font-size: 30px; }
   .podium .place .award { font-size: 13px; }
-  .car-pick { width: 96px; }
+  .podium .podium-pic { width: 58px; margin: -6px -6px; }
+  .car-pick { width: calc((100vw - 52px) / 3); max-width: 118px; padding: 6px 4px 8px; }
+  .car-pick .name { font-size: 14px; }
+  /* Three small places to a row, so every place shows without scrolling. */
+  .screen { gap: 10px; }
+  .cities { gap: 8px; }
+  .city { width: calc((100vw - 48px) / 3); padding: 8px 4px 10px; border-radius: 20px; border-width: 4px; }
+  .city .emoji { font-size: 40px; }
+  .city .name { font-size: 16px; }
+  .city .blurb { display: none; }
+}
+
+/* Short phones held upright: the headings make way so the places clear GO. */
+@media (max-width: 520px) and (max-height: 740px) {
+  .logo.small { font-size: 30px; }
+  #menu h2 { display: none; }
+  .mode { font-size: 20px; padding: 6px 18px; } .mode span { font-size: 26px; }
+  .car-pick .pic { width: 82%; margin: -4px auto -2px; }
 }
 
 /* Phones held sideways: a compact menu, with rows that scroll sideways and GO pinned in the corner. */
@@ -154,12 +215,16 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .screen { gap: 8px; padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   .logo.small { display: none; }
   .screen h2 { font-size: 18px; margin: 0; }
+  /* The car and place pictures speak for themselves: their headings make way so every place clears GO. */
+  #menu h2 { display: none; }
+  #menu .options { align-self: flex-start; margin-left: 4px; }
   .screen h1 { font-size: 30px; }
   .cities, .car-row { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; justify-content: flex-start; padding: 8px 6px; }
-  .city { flex: 0 0 auto; width: 150px; padding: 6px 6px 8px; border-radius: 18px; border-width: 4px; }
+  .city { flex: 0 0 auto; width: 142px; padding: 6px 6px 8px; border-radius: 18px; border-width: 4px; }
   .city .emoji { font-size: 30px; } .city .name { font-size: 16px; } .city .blurb { display: none; }
-  .cities { padding-right: 190px; }
-  .car-pick { flex: 0 0 auto; width: 92px; padding: 4px 4px 6px; } .car-pick .emoji { font-size: 30px; } .car-pick .name { font-size: 13px; }
+  .car-pick { flex: 0 0 auto; width: 104px; padding: 2px 4px 6px; } .car-pick .emoji { font-size: 30px; } .car-pick .name { font-size: 13px; }
+  .car-pick .pic { width: 84px; margin: -4px auto -4px; }
+  .podium .podium-pic { width: 60px; }
   .mode { font-size: 18px; padding: 6px 16px; } .mode span { font-size: 24px; }
   .options { font-size: 16px; } .laps button, .chip { font-size: 16px; padding: 6px 12px; }
   .players .player { font-size: 16px; padding: 4px 10px; }

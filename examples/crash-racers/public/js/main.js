@@ -11,6 +11,7 @@ import { Debris } from './damage.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
 import { Pickups } from './pickups.js'
+import { carPortraits } from './portraits.js'
 import { GROUP_CAR, GROUP_PROP, GROUP_STATIC, STATIC_MASK, canvasTexture, clamp, damp, escapeHtml, harmless, rng, smoothing } from './util.js'
 
 const params = new URLSearchParams(location.search)
@@ -135,6 +136,7 @@ applyQuality()
 const game = {
   room: null,
   templates: {},
+  portraits: {}, // car model -> picture (data URL) for the picker and podium
   props: {},
   state: 'loading', // loading | menu | waiting | syncing | countdown | race | results
   city: 'ubud',
@@ -205,6 +207,13 @@ async function loadCars() {
       $('loading-text').textContent = `Building cars… ${++done}/${models.length}`
     }),
   )
+  game.portraits = carPortraits(renderer, game.templates)
+}
+
+/** A car's picture, or its emoji if the pictures couldn't be made. */
+function carPic(model, cls = 'pic') {
+  const src = game.portraits[model]
+  return src ? `<img class="${cls}" src="${src}" alt="" draggable="false">` : `<span class="emoji">${CAR_MODELS[model].emoji}</span>`
 }
 
 /** The scenery (every place's Blender props): loads behind the lobby; a race waits for it. */
@@ -262,7 +271,7 @@ function renderCarPicker() {
   for (const p of game.players.values()) if (p.id !== self && validModel(p.model)) friends.set(p.model, (friends.get(p.model) ?? '') + escapeHtml(p.emoji))
   const html = CAR_IDS.map(
     (id) => `<button class="car-pick ${id === game.myModel ? 'selected' : ''}" data-car="${id}">
-      <span class="emoji">${CAR_MODELS[id].emoji}</span><span class="name">${CAR_MODELS[id].name}</span>${friends.has(id) ? `<span class="taken">${friends.get(id)}</span>` : ''}</button>`,
+      ${carPic(id)}<span class="name">${CAR_MODELS[id].name}</span>${friends.has(id) ? `<span class="taken">${friends.get(id)}</span>` : ''}</button>`,
   ).join('')
   for (const el of [$('cars'), $('cars-waiting')]) el.innerHTML = html
   for (const el of document.querySelectorAll('[data-car]')) el.onclick = () => pickCar(el.dataset.car)
@@ -1193,7 +1202,8 @@ function renderResults() {
         game.mode === 'smash' ? `💥 ${e.score}` : e.left ? '👋 left' : e.time != null ? `${e.time.toFixed(1)}s` : e.prog?.dnf ? '🏁 almost!' : '🏎️ still racing'
       const award = awards.get(e.id)
       return `<div class="place ${e.id === self ? 'me' : ''}"><span class="medal">${MEDAL[i]}</span>
-      <span class="who"><span>${escapeHtml(e.emoji)} ${car.emoji} ${car.name}</span>${award ? `<span class="award">${award}</span>` : ''}</span>
+      ${carPic(validModel(e.model) ? e.model : CAR_IDS[0], 'pic podium-pic')}
+      <span class="who"><span>${escapeHtml(e.emoji)} ${car.name}</span>${award ? `<span class="award">${award}</span>` : ''}</span>
       <span class="extra">${extra}<small>⭐ ${game.stats.get(e.id)?.stars ?? 0}</small></span></div>`
     })
     .join('')
@@ -1233,6 +1243,7 @@ function endSmash() {
 }
 
 function confetti() {
+  paperConfetti()
   for (let i = 0; i < 60; i++) {
     const p = game.player?.body.position ?? { x: 0, y: 0, z: 0 }
     effects.sparks.spawn(new THREE.Vector3(p.x, p.y + 4, p.z), new THREE.Vector3((Math.random() - 0.5) * 10, 6 + Math.random() * 6, (Math.random() - 0.5) * 10), {
@@ -1241,6 +1252,31 @@ function confetti() {
     })
   }
 }
+
+/** Paper confetti over the results screen, where everyone can see it (the 3D confetti is behind the overlay). */
+function paperConfetti() {
+  document.querySelector('.party')?.remove()
+  const party = document.createElement('div')
+  party.className = 'party'
+  for (let i = 0; i < 46; i++) {
+    const piece = document.createElement('i')
+    const fall = 2.2 + Math.random() * 1.6
+    piece.style.cssText = `left:${Math.random() * 100}%;background:${RAINBOW[i % RAINBOW.length]};animation-duration:${fall}s;animation-delay:${Math.random() * 0.8}s;--dx:${(Math.random() - 0.5) * 160}px;--spin:${(Math.random() - 0.5) * 1440}deg`
+    party.append(piece)
+  }
+  document.body.append(party)
+  setTimeout(() => party.remove(), 4800)
+}
+
+/** A child on the menu who hasn't tapped anything for a while: GO wiggles to show where to tap. */
+let lastTouch = performance.now()
+addEventListener('pointerdown', () => {
+  lastTouch = performance.now()
+  $('go').classList.remove('nudge')
+}, { capture: true, passive: true })
+setInterval(() => {
+  if (game.state === 'menu' && performance.now() - lastTouch > 9000) $('go').classList.add('nudge')
+}, 1000)
 
 // --- Main loop ------------------------------------------------------------------------------------
 
