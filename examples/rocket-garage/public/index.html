@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#8fd3ff" />
+<title>Rocket Garage</title>
+<link rel="icon" href="data:," />
+<script type="importmap">
+{ "imports": {
+  "three": "https://bitgames.store/vendor/three/build/three.module.js",
+  "three/addons/": "https://bitgames.store/vendor/three/examples/jsm/"
+} }
+</script>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body class="landscape">
+<canvas id="view"></canvas>
+<div id="safe" aria-hidden="true"></div>
+<div id="popups"></div>
+
+<div id="loading" class="screen">
+  <div class="logo"><span>R</span><span>O</span><span>C</span><span>K</span><span>E</span><span>T</span> <span>G</span><span>A</span><span>R</span><span>A</span><span>G</span><span>E</span></div>
+  <div class="spinner">🚀</div>
+  <div id="loading-text">Opening the garage…</div>
+</div>
+
+<div id="title" class="hidden">
+  <div class="title-top">
+    <div class="logo"><span>R</span><span>O</span><span>C</span><span>K</span><span>E</span><span>T</span> <span>G</span><span>A</span><span>R</span><span>A</span><span>G</span><span>E</span></div>
+    <p class="tag">Build a rocket. Blast off! 🚀🌙🪐</p>
+  </div>
+  <div class="title-bottom">
+    <button id="play" class="big-go">▶ Play</button>
+    <div id="visited" class="visited"></div>
+  </div>
+</div>
+
+<div id="topbar" class="hidden">
+  <button id="home" class="round-btn" title="Home (Esc)" aria-label="Home">🏠</button>
+  <div id="reach" class="reach"></div>
+  <div id="flightbar" class="flightbar hidden">
+    <div id="stars" class="pill stars">⭐ 0</div>
+    <div id="turbo" class="turbo"><b>⚡</b><i><span id="turbo-fill"></span></i></div>
+  </div>
+  <div class="right">
+    <button id="music" class="round-btn" title="Music" aria-label="Music on or off">🎵</button>
+    <button id="sound" class="round-btn" title="Sound (M)" aria-label="Sound on or off">🔊</button>
+  </div>
+</div>
+
+<div id="tray" class="hidden">
+  <div id="tabs" class="tabs"></div>
+  <div id="items" class="items"></div>
+  <div id="paints" class="paints"></div>
+</div>
+
+<div id="actions" class="hidden">
+  <button id="dice" class="dice" title="Surprise me (R)" aria-label="Surprise rocket">🎲</button>
+  <button id="launch" class="launch" title="Launch (Enter)" aria-label="Launch"><span class="em">🚀</span><span class="go">GO!</span></button>
+</div>
+
+<div id="journey" class="journey hidden"><div id="journey-track" class="track"><b id="journey-fill"></b></div></div>
+<div id="countdown" class="countdown"></div>
+<div id="banner" class="banner"></div>
+
+<div id="reward" class="hidden">
+  <div class="card">
+    <div id="reward-head" class="reward-head"></div>
+    <div id="reward-stars" class="reward-stars"></div>
+    <div id="reward-new" class="reward-new"></div>
+    <div class="btns">
+      <button id="to-garage" class="btn garage" title="Back to the garage" aria-label="Back to the garage">🔧</button>
+      <button id="again" class="btn again" title="Fly again" aria-label="Fly again">🚀</button>
+    </div>
+  </div>
+</div>
+
+<div id="wipe"><span id="wipe-emoji"></span></div>
+<div id="ghost" class="hidden"></div>
+<div id="finger" class="finger hidden">👆</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
