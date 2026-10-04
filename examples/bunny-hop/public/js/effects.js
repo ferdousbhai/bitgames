@@ -279,6 +279,15 @@ export class Popups {
     // a little sideways jiggle, so quick words don't stack into one blob
     el.style.left = `calc(${((this.v.x + 1) / 2) * 100}% + ${count ? 0 : Math.round(rand(-22, 22))}px)`
     el.style.top = `${Math.max(this.minTop, ((1 - this.v.y) / 2) * innerHeight)}px`
+    // A word that would land on the carrot count (both pushed down under the HUD
+    // on a big hop) steps out to its right, so "+3" and "Yummy!" don't mash together.
+    const c = this.counter
+    if (!count && c?.isConnected && c !== el) {
+      const gap = ((c.offsetWidth + el.offsetWidth) / 2) * 1.2 + 6 // they swell to 1.2x as they pop
+      if (Math.abs(el.offsetLeft - c.offsetLeft) < gap && Math.abs(el.offsetTop - c.offsetTop) < (c.offsetHeight + el.offsetHeight) / 2) {
+        el.style.left = `${c.offsetLeft + gap}px`
+      }
+    }
     el.timer = setTimeout(() => el.remove(), 1000)
   }
 }
