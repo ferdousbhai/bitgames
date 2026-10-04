@@ -687,9 +687,11 @@ function relayout(animate = true) {
     return
   }
   if (!game.cards.length) return
-  const grid = chooseGrid(game.cards.length, freeRegion())
+  // Once the level is won the cards stay where the child found them; only the camera moves
+  // (pulled back so the win card fits). Re-gridding would teleport the dancing animals.
+  const grid = game.state === 'won' && game.layout?.grid ? game.layout.grid : chooseGrid(game.cards.length, freeRegion())
   const s = slots(game.cards.length, grid.cols, grid.rows)
-  game.layout = { hw: s.hw, hd: s.hd }
+  game.layout = { hw: s.hw, hd: s.hd, grid }
   placeRoom(s.hw, s.hd)
   game.cards.forEach((card, i) => {
     card.slot = s.list[i]

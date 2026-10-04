@@ -64,7 +64,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .level .mini::before { content: '★'; }
 .level .lstars { font-size: 13px; letter-spacing: -1px; min-height: 16px; }
-.level .lstars .off { filter: grayscale(1); opacity: .3; }
+.level .lstars .off { filter: grayscale(1) brightness(.8); opacity: .45; }
 .level.next { background: #ffe58a; outline: 4px solid #ffbe0b; }
 
 #hud { position: fixed; inset: 0; pointer-events: none; }
