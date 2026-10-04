@@ -274,14 +274,17 @@ def rocket(m):
     # Nozzle bell
     lathe("rocket_nozzle", [(0.0, -0.9), (0.3, -0.9), (0.33, -1.0), (0.4, -1.12), (0.36, -1.14), (0.27, -1.04), (0.0, -1.04)], r, grey, seg=32)
 
-    # Porthole: gold frame, navy glass, kitten pilot inside
-    pz = 0.12
-    py = -0.635
-    frame = torus("rocket_window_frame", 0.3, 0.055, (0, py + 0.01, pz), r, gold, rot=(math.pi / 2, 0, 0), seg=40, minor_seg=10)
-    glass = cylinder("rocket_window", 0.29, 0.06, (0, py + 0.05, pz), r, navy, verts=40, rot=(math.pi / 2, 0, 0))
+    # Porthole: a big gold-rimmed window so Kitty reads at phone size. The glass and a gold
+    # collar reach back into the hull, so there is no gap when the rocket banks and rolls.
+    pz = 0.09
+    py = -0.6
+    torus("rocket_window_frame", 0.4, 0.065, (0, py, pz), r, gold, rot=(math.pi / 2, 0, 0), seg=48, minor_seg=12)
+    cylinder("rocket_window_collar", 0.45, 0.3, (0, py + 0.17, pz), r, gold, verts=48, rot=(math.pi / 2, 0, 0))
+    cylinder("rocket_window", 0.4, 0.3, (0, py + 0.15, pz), r, navy, verts=48, rot=(math.pi / 2, 0, 0))
     pilot = root("rocket_pilot")
     pilot.parent = r
-    pilot.location = (0, py - 0.02, pz - 0.02)
+    pilot.location = (0, py - 0.02, pz - 0.06)
+    pilot.scale = (1.55, 1.55, 1.55)
     fur = material("pilot_fur", "#ff9f43", roughness=0.7)
     muzzle = material("pilot_muzzle", "#fff1de", roughness=0.7)
     pink = material("pilot_pink", "#ff8fab", roughness=0.6)

@@ -525,6 +525,8 @@ function resize() {
   camera.aspect = w / h
   // Short screens (sideways phones) zoom in so Kitty and the stars stay big enough to see and catch
   view.h = clamp(h / 70, 5.2, FULL_H)
+  // Wide screens (desktops, sideways tablets) have width to spare: zoom in a little for chunkier stars and Kitty
+  if (w / h > 1.25) view.h = Math.min(view.h, FULL_H * 0.84)
   view.k = view.h / FULL_H
   camera.fov = (Math.atan(view.h / camera.position.z) * 360) / Math.PI
   camera.updateProjectionMatrix()
@@ -547,6 +549,7 @@ addEventListener('resize', resize)
 
 const EXHAUST_COLORS = ['#ffd23f', '#ff9f43', '#ff6b6b', '#fff3a0'].map((c) => new THREE.Color(c))
 const exhaust = { vx: 0, vy: 0, spread: 0.6, life: 0.45, size: 0, endSize: 0.1, color: EXHAUST_COLORS[0], drag: 1.5 }
+const sparkle = { vy: 0.6, spread: 0.5, life: 0.7, size: 0.4, endSize: 0, color: '#ffffff', drag: 1 }
 const trail = { vy: -2, spread: 0.4, life: 0.6, size: 0.35, color: new THREE.Color('#ffffff'), drag: 1 }
 
 function updateRocket(dt) {
@@ -672,6 +675,15 @@ function updateItems(dt) {
     } else {
       model.rotation.y = Math.sin(it.t * 2.2) * 0.55
       model.rotation.z = Math.sin(it.t * 1.4) * 0.2
+      // Special stars twinkle and leave a sparkly trail, so they stand out from plain ones
+      if (it.kind !== 'star') {
+        o.scale.setScalar(it.k.scale * (1 + Math.sin(it.t * 9) * 0.07))
+        if (Math.random() < dt * 22) {
+          sparkle.color = it.k.colors[(Math.random() * it.k.colors.length) | 0]
+          sparkle.size = rand(0.4, 0.7)
+          particles.emit(o.position.x + rand(-0.35, 0.35), o.position.y + rand(0, 0.4), 0.1, sparkle)
+        }
+      }
     }
 
     // Catch!
