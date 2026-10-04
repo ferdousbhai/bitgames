@@ -59,7 +59,10 @@ const glowTex = makeGlowTexture(false)
 
 // --- Game state ----------------------------------------------------------------------
 
-const view = { w: 10, h: 7.5, xMin: -9, xMax: 9, yMin: -6, yMax: 1 }
+// `k` is the visible height compared with a roomy screen: falling speeds scale with it, so a
+// zoomed-in sideways phone gives little hands just as long to reach each star
+const FULL_H = Math.tan((50 * Math.PI) / 360) * 16
+const view = { w: 10, h: 7.5, k: 1, xMin: -9, xMax: 9, yMin: -6, yMax: 1 }
 const game = {
   state: 'loading', // loading | title | play
   score: 0,
@@ -76,6 +79,7 @@ const game = {
   joy: 0,
   cruise: 4,
   time: 0,
+  idle: 0, // seconds since the player last steered (see the nudge in frame)
 }
 const items = []
 const pools = {}
@@ -252,7 +256,7 @@ function spawnSomething() {
   const L = leg(game.stops)
   const x = rand(view.xMin + 0.5, view.xMax - 0.5)
   const y = view.h + 1.5
-  const vy = -L.speed * rand(0.85, 1.15)
+  const vy = -L.speed * view.k * rand(0.85, 1.15)
   const r = Math.random()
   let acc = 0
   if (r < (acc += L.wave)) return spawnWave(L)
@@ -272,7 +276,7 @@ function spawnWave(L) {
   const n = 5
   const amp = Math.min(1.6, (view.xMax - view.xMin) * 0.2)
   const x0 = rand(view.xMin + amp + 0.5, view.xMax - amp - 0.5)
-  const vy = -L.speed
+  const vy = -L.speed * view.k
   const phase = Math.random() * 6
   for (let i = 0; i < n; i++) spawn('star', x0 + Math.sin(phase + i * 0.9) * amp, view.h + 1.5 + i * 1.15, vy, { sway: 0 })
 }
@@ -437,6 +441,7 @@ function aim(e) {
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
   if (!raycaster.ray.intersectPlane(plane, tmp)) return
+  game.idle = 0
   // Fingers cover what they touch, so the rocket flies a little above the finger
   const lift = e.pointerType === 'mouse' ? 0 : 1.4
   rocket.target.set(tmp.x, tmp.y + lift)
@@ -445,8 +450,27 @@ function aim(e) {
 canvas.addEventListener('pointerdown', (e) => {
   pointerDown = true
   audio.unlock()
-  if (game.state === 'play') aim(e)
+  if (game.state !== 'play') return
+  poke(e)
+  aim(e)
 })
+
+/** Tapping Kitty gets a happy meow; tapping the planet ahead makes it giggle and wobble. */
+function poke(e) {
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
+  raycaster.setFromCamera(ndc, camera)
+  if (!raycaster.ray.intersectPlane(plane, tmp)) return
+  const p = rocket.root.position
+  if (Math.hypot(tmp.x - p.x, tmp.y - p.y - 0.3) < 1.3) {
+    if (game.joy < 0.2) audio.meow()
+    game.joy = 0.6
+    return
+  }
+  const planet = world.current()
+  if (planet && raycaster.intersectObject(planet, true).length) {
+    if (world.boop(planet)) audio.boop()
+  }
+}
 addEventListener('pointermove', (e) => {
   if (game.state === 'play' && (pointerDown || e.pointerType === 'mouse')) aim(e)
 })
@@ -457,6 +481,7 @@ addEventListener('keydown', (e) => {
   if (e.key === 'm' || e.key === 'M') return toggleSound()
   if (game.state === 'title' && (e.key === 'Enter' || e.key === ' ')) return start()
   keys.add(e.key)
+  game.idle = 0
   if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault()
 })
 addEventListener('keyup', (e) => keys.delete(e.key))
@@ -484,6 +509,7 @@ function start() {
   $('hud').classList.remove('hidden')
   rocket.target.set(0, view.yMin + 1.2)
   game.spawnTimer = 0.8
+  game.idle = 0
   banner(`🚀 Blast off!`, `Fly to ${STOPS[0].emoji} ${STOPS[0].name}`)
   renderJourney()
   updateScore()
@@ -497,8 +523,11 @@ function resize() {
   const h = innerHeight
   renderer.setSize(w, h, false)
   camera.aspect = w / h
+  // Short screens (sideways phones) zoom in so Kitty and the stars stay big enough to see and catch
+  view.h = clamp(h / 70, 5.2, FULL_H)
+  view.k = view.h / FULL_H
+  camera.fov = (Math.atan(view.h / camera.position.z) * 360) / Math.PI
   camera.updateProjectionMatrix()
-  view.h = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
   view.w = view.h * camera.aspect
   // Keep the rocket clear of notches and rounded corners
   const cs = getComputedStyle($('safe'))
@@ -529,7 +558,9 @@ function updateRocket(dt) {
     r.target.x += dx * 11 * dt
     r.target.y += dy * 9 * dt
   } else {
-    r.target.set(Math.sin(game.time * 0.7) * Math.min(2, view.w * 0.3), -view.h * 0.62 + Math.sin(game.time * 1.3) * 0.3)
+    // On wide screens Kitty waits beside the title instead of hiding behind the Fly button
+    const side = camera.aspect > 1.3 ? view.w * 0.68 : 0
+    r.target.set(side + Math.sin(game.time * 0.7) * Math.min(side ? 0.8 : 2, view.w * 0.3), -view.h * 0.62 + Math.sin(game.time * 1.3) * 0.3)
   }
   r.target.x = clamp(r.target.x, view.xMin, view.xMax)
   r.target.y = clamp(r.target.y, playing ? view.yMin : -view.h, playing ? view.yMax : 3)
@@ -690,7 +721,7 @@ function updateUfo(dt) {
   ufo.dropTimer -= dt
   if (ufo.dropTimer <= 0 && o.position.x > view.xMin && o.position.x < view.xMax) {
     ufo.dropTimer = 0.75
-    spawn(Math.random() < 0.2 ? 'gem' : 'star', o.position.x, o.position.y - 0.8, -leg(game.stops).speed * 0.9, { sway: 0.2 })
+    spawn(Math.random() < 0.2 ? 'gem' : 'star', o.position.x, o.position.y - 0.8, -leg(game.stops).speed * view.k * 0.9, { sway: 0.2 })
     audio.tone(1200 + Math.random() * 400, { dur: 0.15, vol: 0.05, slide: 0.5, echo: false })
   }
   if (Math.abs(o.position.x) > view.w + 3.5 && ufo.t > 1) {
@@ -698,6 +729,22 @@ function updateUfo(dt) {
     o.visible = false
     ufo.timerLeft = rand(20, 30)
   }
+}
+
+// A hand swipes under the rocket when it has not been steered for a while: no reading needed
+const nudgeEl = $('nudge')
+let nudgeShown = false
+function updateNudge(dt) {
+  game.idle += dt
+  const show = game.idle > 4 && !pointerDown
+  if (show !== nudgeShown) {
+    nudgeShown = show
+    nudgeEl.classList.toggle('show', show)
+  }
+  if (!show) return
+  tmp.set(rocket.root.position.x, rocket.root.position.y - 1.3, 0).project(camera)
+  nudgeEl.style.left = `${clamp((tmp.x * 0.5 + 0.5) * 100, 15, 85)}%`
+  nudgeEl.style.top = `min(${(-tmp.y * 0.5 + 0.5) * 100}%, calc(100% - 82px))`
 }
 
 const timer = new THREE.Timer()
@@ -728,6 +775,7 @@ function frame() {
     if (game.magnet > 0 && (game.magnet -= dt) <= 0) audio.powerDown()
     if (game.double > 0 && (game.double -= dt) <= 0) audio.powerDown()
     if (hadPower) renderPowers()
+    updateNudge(dt)
   }
 
   updateRocket(dt)

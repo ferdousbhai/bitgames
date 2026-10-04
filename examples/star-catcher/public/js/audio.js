@@ -164,6 +164,37 @@ export class Audio {
     src.stop(t + dur + 0.05)
   }
 
+  /** Kitty's happy little meow when someone taps the rocket. */
+  meow() {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const osc = ctx.createOscillator()
+    const f = ctx.createBiquadFilter()
+    const g = ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(620, t)
+    osc.frequency.exponentialRampToValueAtTime(980, t + 0.12)
+    osc.frequency.exponentialRampToValueAtTime(560, t + 0.42)
+    f.type = 'bandpass'
+    f.Q.value = 2.5
+    f.frequency.setValueAtTime(1200, t)
+    f.frequency.exponentialRampToValueAtTime(2200, t + 0.12)
+    f.frequency.exponentialRampToValueAtTime(900, t + 0.42)
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.04)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45)
+    osc.connect(f).connect(g).connect(this.sfx)
+    osc.start(t)
+    osc.stop(t + 0.5)
+  }
+
+  /** A planet's giggle: three bouncy notes sliding up. */
+  boop() {
+    if (!this.ctx) return
+    ;[392, 494, 587.33].forEach((f, i) => this.tone(f, { when: i * 0.09, dur: 0.18, vol: 0.13, type: 'triangle', slide: 1.25, echo: false }))
+  }
+
   click() {
     this.tone(880, { dur: 0.12, vol: 0.1, echo: false })
   }

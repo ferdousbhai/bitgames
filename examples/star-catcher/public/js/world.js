@@ -134,7 +134,7 @@ export class World {
       const holder = new THREE.Group()
       holder.add(p)
       holder.visible = false
-      holder.userData = { side: i % 2 === 0 ? 1 : -1, leaving: -1, spin: p }
+      holder.userData = { side: 1, leaving: -1, spin: p, boop: 0 }
       scene.add(holder)
       return holder
     })
@@ -161,7 +161,22 @@ export class World {
     const next = this.planets[index % STOPS.length]
     next.visible = true
     next.userData.leaving = -1
+    // Alternate sides by trip count (five planets, so index parity would repeat a side at the wrap)
+    next.userData.side = index % 2 === 0 ? 1 : -1
     this.shown = 0
+  }
+
+  /** The planet gliding in ahead (null between stops). */
+  current() {
+    const p = this.planets[this.stop % STOPS.length]
+    return p.visible && p.userData.leaving < 0 ? p : null
+  }
+
+  /** Squish-and-wobble when tapped; false while it is still wobbling from the last tap. */
+  boop(p) {
+    if (p.userData.boop > 0.25) return false
+    p.userData.boop = 0.8
+    return true
   }
 
   addDrifter(view) {
@@ -202,13 +217,18 @@ export class World {
       const p = this.planets[i]
       if (!p.visible) continue
       const scale = Math.min(5, view.w * depth * 0.4)
-      p.scale.setScalar(scale)
+      const b = p.userData.boop
+      if (b > 0) {
+        p.userData.boop = Math.max(0, b - dt)
+        const w = Math.sin((0.8 - b) * 22) * b * 0.18
+        p.scale.set(scale * (1 + w), scale * (1 - w), scale)
+      } else p.scale.setScalar(scale)
       p.userData.spin.rotation.y = Math.sin(this.time * 0.25 + i) * 0.35
       const x = p.userData.side * view.w * depth * 0.6
       if (p.userData.leaving >= 0) {
         p.userData.leaving += dt
         const t = p.userData.leaving
-        p.position.set(x, view.h * depth * 0.1 - t * t * 4 - t * 3, z)
+        p.position.set(x, view.h * depth * 0.1 - t * t * 4 - t * 3, z - 3)
         if (p.position.y < -view.h * depth - scale * 2) p.visible = false
       } else if (i === this.stop % STOPS.length) {
         const e = this.shown

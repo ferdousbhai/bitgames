@@ -81,21 +81,56 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 .banner {
   position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(30px, 7vw, 60px); font-weight: 900;
-  text-shadow: 0 4px 0 rgba(0,0,0,.35), 0 0 30px rgba(255,210,63,.6); opacity: 0; transform: scale(.6); transition: opacity .3s, transform .3s;
+  /* A thick outline made of shadows (a wide text-stroke draws boxes inside some glyphs) */
+  text-shadow: 4px 0 #2a1a5e, -4px 0 #2a1a5e, 0 4px #2a1a5e, 0 -4px #2a1a5e, 3px 3px #2a1a5e, -3px 3px #2a1a5e, 3px -3px #2a1a5e, -3px -3px #2a1a5e, 0 7px 0 #2a1a5e, 0 0 30px rgba(255,210,63,.6); opacity: 0; transform: scale(.6); transition: opacity .3s, transform .3s;
   padding: 0 calc(12px + env(safe-area-inset-right)) 0 calc(12px + env(safe-area-inset-left));
 }
 .banner.show { opacity: 1; transform: scale(1); }
-.banner small { display: block; font-size: .5em; color: #ffd23f; }
+.banner small { display: block; font-size: .5em; color: #ffd23f; margin-top: 4px; }
 
 #popups { position: absolute; inset: 0; overflow: hidden; }
 .pop {
-  position: absolute; font-size: 28px; font-weight: 900; color: #fff3a0; text-shadow: 0 3px 0 rgba(0,0,0,.4);
+  position: absolute; font-size: 30px; font-weight: 900; color: #ffe066; text-shadow: 3px 0 #2a1a5e, -3px 0 #2a1a5e, 0 3px #2a1a5e, 0 -3px #2a1a5e, 2px 2px #2a1a5e, -2px 2px #2a1a5e, 2px -2px #2a1a5e, -2px -2px #2a1a5e, 0 5px 0 #2a1a5e;
   transform: translate(-50%, -50%); animation: rise .9s ease-out forwards; white-space: nowrap;
 }
-.pop.big { font-size: 40px; color: #ff8fc7; }
+.pop.big { font-size: 40px; color: #ff9fd2; text-shadow: 4px 0 #2a1a5e, -4px 0 #2a1a5e, 0 4px #2a1a5e, 0 -4px #2a1a5e, 3px 3px #2a1a5e, -3px 3px #2a1a5e, 3px -3px #2a1a5e, -3px -3px #2a1a5e, 0 6px 0 #2a1a5e; }
 @keyframes rise { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); } 20% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -200%) scale(1); } }
 
 @media (max-width: 520px) {
   .pill.big { font-size: 24px; }
   .journey { font-size: 16px; top: calc(58px + env(safe-area-inset-top)); }
 }
+
+/* Sideways phones: one slim HUD row, so the short screen is all sky */
+@media (max-height: 500px) and (orientation: landscape) {
+  .journey { top: calc(10px + env(safe-area-inset-top)); font-size: 18px; max-width: calc(100vw - 300px); }
+  .powers { top: calc(62px + env(safe-area-inset-top)); }
+  .banner { top: 26%; font-size: clamp(28px, 9vh, 44px); }
+}
+
+/* Tablets and big screens: bigger HUD and sound button */
+@media (min-width: 700px) and (min-height: 700px) {
+  .pill { font-size: 26px; padding: 6px 18px; border-radius: 24px; }
+  .pill.big { font-size: 40px; }
+  .round { width: 64px; height: 64px; font-size: 30px; }
+  .journey { font-size: 28px; top: calc(80px + env(safe-area-inset-top)); padding: 6px 14px; }
+  .journey .track { height: 8px; }
+  .journey .track .ship { font-size: 22px; top: -16px; }
+  .powers { top: calc(140px + env(safe-area-inset-top)); }
+  .power { font-size: 30px; }
+  .power i { width: 64px; height: 10px; }
+  .pop { font-size: 38px; }
+  .pop.big { font-size: 50px; }
+  .legend span { font-size: 24px; padding: 6px 16px; }
+  .hint.small { font-size: 18px; }
+}
+
+/* Gentle "drag me" hand when the rocket has not been moved for a while */
+#nudge {
+  position: absolute; font-size: 54px; pointer-events: none; transform: translate(-50%, 0); opacity: 0; transition: opacity .4s;
+  filter: drop-shadow(0 3px 2px rgba(0,0,0,.35));
+}
+#nudge.show { opacity: 1; }
+#nudge span { display: block; animation: swipe 1.4s ease-in-out infinite; }
+@keyframes swipe { 0%, 100% { transform: translateX(-60px) rotate(-12deg); } 50% { transform: translateX(60px) rotate(12deg); } }
+@media (min-width: 700px) and (min-height: 700px) { #nudge { font-size: 70px; } }
