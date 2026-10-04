@@ -4,164 +4,56 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Balloon Pop</title>
-<style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe6ff; font-family: system-ui, sans-serif; touch-action: none; user-select: none; }
-  #hud { position: fixed; top: calc(16px + env(safe-area-inset-top)); left: 0; right: 0; text-align: center; font-size: 40px; font-weight: 800; color: #fff; text-shadow: 0 3px 0 #ff6b9d, 0 6px 12px rgba(0,0,0,.2); pointer-events: none; }
-</style>
-<script type="importmap">{ "imports": { "three": "https://bitgames.store/vendor/three/build/three.module.js" } }</script>
+<link rel="icon" href="data:," />
+<script type="importmap">
+{ "imports": {
+  "three": "https://bitgames.store/vendor/three/build/three.module.js",
+  "three/addons/": "https://bitgames.store/vendor/three/examples/jsm/"
+} }
+</script>
+<link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-<div id="hud">🎈 0</div>
-<script type="module">
-import * as THREE from 'three'
+<canvas id="view"></canvas>
+<div id="labels"></div>
 
-const renderer = new THREE.WebGLRenderer({ antialias: true })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
-document.body.appendChild(renderer.domElement)
-const scene = new THREE.Scene()
-scene.background = new THREE.Color('#bfe6ff')
-const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100)
-camera.position.set(0, 0, 14)
-scene.add(new THREE.HemisphereLight('#ffffff', '#ffd6e8', 2.2))
-const sun = new THREE.DirectionalLight('#ffffff', 1.5)
-sun.position.set(3, 5, 8)
-scene.add(sun)
+<div id="loading" class="screen">
+  <div class="logo"><span>B</span><span>A</span><span>L</span><span>L</span><span>O</span><span>O</span><span>N</span> <span>P</span><span>O</span><span>P</span></div>
+  <div class="spinner">🎈</div>
+  <div id="loading-text">Blowing up balloons…</div>
+</div>
 
-// Fluffy clouds in the background
-const cloudMat = new THREE.MeshLambertMaterial({ color: '#ffffff' })
-for (let i = 0; i < 6; i++) {
-  const cloud = new THREE.Group()
-  for (let j = 0; j < 4; j++) {
-    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.8 + Math.random() * 0.5, 16, 12), cloudMat)
-    puff.position.set(j * 0.9, Math.random() * 0.4, 0)
-    cloud.add(puff)
-  }
-  cloud.position.set(-12 + i * 5, -4 + Math.random() * 9, -8)
-  scene.add(cloud)
-}
+<div id="title" class="screen card-screen hidden">
+  <div class="card">
+    <div class="logo"><span>B</span><span>A</span><span>L</span><span>L</span><span>O</span><span>O</span><span>N</span> <span>P</span><span>O</span><span>P</span></div>
+    <p class="tag">Tap the balloons before they float away!</p>
+    <div class="friends"><span>🎈</span><span>💖</span><span>🌟</span><span>🐰</span><span>⭐</span><span>🌈</span></div>
+    <button id="play" class="big-go">▶ Play</button>
+    <div class="scores"><span class="pill">🏆 Best <b id="best">0</b></span> <span id="last"></span></div>
+  </div>
+</div>
 
-const COLORS = ['#ff6b9d', '#ff9f1c', '#8ac926', '#2ec4b6', '#6c63ff', '#ff595e']
-const balloons = []
-const particles = []
-let score = 0
-let spawnTimer = 0
-const hud = document.getElementById('hud')
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <button id="home" class="round-btn" title="Home (Esc)">🏠</button>
+    <div class="pill score">🎈 <b id="score">0</b></div>
+    <div id="best-badge" class="pill badge hidden">🏆 Best!</div>
+  </div>
+  <div class="hud-right">
+    <button id="music" class="round-btn" title="Music">🎵</button>
+    <button id="sound" class="round-btn" title="Sound">🔊</button>
+  </div>
+  <div class="level-wrap">
+    <div id="level" class="level">Level 1</div>
+    <div class="bar"><div id="bar-fill"></div></div>
+  </div>
+  <div id="banner" class="banner"></div>
+  <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div><div id="intro-sub"></div></div>
+</div>
 
-function makeBalloon() {
-  const golden = Math.random() < 0.08
-  const color = golden ? '#ffd23f' : COLORS[Math.floor(Math.random() * COLORS.length)]
-  const group = new THREE.Group()
-  const body = new THREE.Mesh(
-    new THREE.SphereGeometry(0.9, 32, 24),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: golden ? 0.5 : 0.05 }),
-  )
-  body.scale.set(1, 1.2, 1)
-  group.add(body)
-  const knot = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.25, 12), body.material)
-  knot.position.y = -1.15
-  knot.rotation.x = Math.PI
-  group.add(knot)
-  const string = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.8), new THREE.MeshBasicMaterial({ color: '#666' }))
-  string.position.y = -2.1
-  group.add(string)
-  const halfWidth = visibleHalfWidth() - 1
-  group.position.set((Math.random() * 2 - 1) * halfWidth, -9, Math.random() * 2 - 1)
-  group.userData = { speed: 1.4 + Math.random() * 1.2 + score * 0.01, sway: Math.random() * 10, color, points: golden ? 5 : 1 }
-  scene.add(group)
-  balloons.push(group)
-}
+<div id="hint" class="hint-finger hidden">👆</div>
+<div id="reticle" class="reticle hidden">📍</div>
 
-function visibleHalfWidth() {
-  const h = 2 * Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
-  return (h * camera.aspect) / 2
-}
-
-let audio
-function popSound(pitch) {
-  try {
-    audio ??= new AudioContext()
-    const osc = audio.createOscillator()
-    const gain = audio.createGain()
-    osc.type = 'triangle'
-    osc.frequency.setValueAtTime(500 * pitch, audio.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(1400 * pitch, audio.currentTime + 0.08)
-    gain.gain.setValueAtTime(0.25, audio.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.15)
-    osc.connect(gain).connect(audio.destination)
-    osc.start()
-    osc.stop(audio.currentTime + 0.15)
-  } catch {}
-}
-
-function burst(position, color) {
-  for (let i = 0; i < 18; i++) {
-    const p = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color }))
-    p.position.copy(position)
-    const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
-    p.userData = { velocity: dir.multiplyScalar(6 + Math.random() * 4), life: 0.6 }
-    scene.add(p)
-    particles.push(p)
-  }
-}
-
-const raycaster = new THREE.Raycaster()
-const pointer = new THREE.Vector2()
-addEventListener('pointerdown', (e) => {
-  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
-  raycaster.setFromCamera(pointer, camera)
-  const hits = raycaster.intersectObjects(balloons, true)
-  if (!hits.length) return
-  let balloon = hits[0].object
-  while (balloon.parent !== scene) balloon = balloon.parent
-  balloons.splice(balloons.indexOf(balloon), 1)
-  scene.remove(balloon)
-  burst(balloon.position, balloon.userData.color)
-  popSound(balloon.userData.points > 1 ? 1.5 : 0.8 + Math.random() * 0.4)
-  score += balloon.userData.points
-  hud.textContent = `🎈 ${score}`
-})
-
-function resize() {
-  renderer.setSize(innerWidth, innerHeight)
-  camera.aspect = innerWidth / innerHeight
-  camera.updateProjectionMatrix()
-}
-addEventListener('resize', resize)
-resize()
-
-const timer = new THREE.Timer()
-renderer.setAnimationLoop(() => {
-  timer.update()
-  const dt = Math.min(timer.getDelta(), 0.05)
-  const t = timer.getElapsed()
-  spawnTimer -= dt
-  if (spawnTimer <= 0) {
-    makeBalloon()
-    spawnTimer = Math.max(0.35, 0.9 - score * 0.005)
-  }
-  for (let i = balloons.length - 1; i >= 0; i--) {
-    const b = balloons[i]
-    b.position.y += b.userData.speed * dt
-    b.position.x += Math.sin(t * 1.5 + b.userData.sway) * 0.3 * dt
-    b.rotation.z = Math.sin(t * 2 + b.userData.sway) * 0.1
-    if (b.position.y > 10) {
-      scene.remove(b)
-      balloons.splice(i, 1)
-    }
-  }
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i]
-    p.userData.life -= dt
-    p.position.addScaledVector(p.userData.velocity, dt)
-    p.userData.velocity.y -= 9 * dt
-    p.scale.setScalar(Math.max(p.userData.life / 0.6, 0.01))
-    if (p.userData.life <= 0) {
-      scene.remove(p)
-      particles.splice(i, 1)
-    }
-  }
-  renderer.render(scene, camera)
-})
-</script>
+<script type="module" src="./js/main.js"></script>
 </body>
 </html>
