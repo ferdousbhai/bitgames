@@ -374,7 +374,13 @@ function tapAt(x, y) {
   if (poked?.sun) audio.giggle()
   else if (poked?.sheep) audio.baa(poked.sheep)
   else if (poked?.windmill) audio.whirr()
-  else if (poked?.hab) {
+  else if (poked?.house) {
+    audio.dingDong()
+    effects.smoke(poked.house)
+  } else if (poked?.tree) {
+    audio.tweet()
+    effects.leaves(poked.tree)
+  } else if (poked?.hab) {
     audio.whoosh()
     for (let i = 0; i < 3; i++) setTimeout(() => effects.sparkleAt(poked.hab, ['#ffb347', '#ffe066', '#ff7b54'][i], 6, 4), i * 90)
   }

@@ -18,6 +18,15 @@ const SUN_RADIUS = 2.2 // the sun's size with its rays, in model units
 // The hot-air balloon flies just in front of the clouds (they sit at -22 to -36), so it never hides behind one.
 const HAB_Z = -21
 const HAB_FAR = (14 - HAB_Z) / 44 // keeps its old on-screen size and height from when it flew at z = -30 (camera at 14)
+// Houses and trees are baked into the landscape mesh, so their tap spots mirror blender/models.py
+// (Blender x, y, z -> three x, z, -y): [x, y, ground z, scale].
+const HOUSES = [[-6, 17, 3.1, 1.6], [2.5, 18.5, 3.6, 1.4], [20, 17, 3.2, 1.5], [-24, 17, 3.0, 1.4]]
+const TREES = [[-11, 16, 2.8, 1.5], [-15, 17.5, 3.4, 1.7], [8, 17, 3.6, 1.5], [13, 16, 2.6, 1.4], [26, 17, 2.6, 1.6],
+  [-30, 17, 2.4, 1.6], [33, 18, 2.4, 1.3], [-19, 5.5, 1.0, 1.4], [14, 6.5, 1.0, 1.5], [31, 5.5, 0.9, 1.3],
+  [-37, 6, 0.6, 1.4], [40, 6, 0.6, 1.4], [-3, 19, 4.6, 1.3], [16, 18.5, 3.9, 1.2],
+  [-34, 33, 7.0, 2.2], [-26, 32, 8.0, 2.0], [0, 35, 9.5, 2.3], [24, 33, 7.5, 2.1], [45, 32, 6.0, 2.0]]
+/** A tap oval around part of the landscape: centre (local to the world root) and half-size, in model units. */
+const spot = (x, y, z, w, h) => ({ center: new THREE.Vector3(x, z, -y), w, h })
 const box = new THREE.Box3()
 const center = new THREE.Vector3()
 const size = new THREE.Vector3()
@@ -45,6 +54,10 @@ export class World {
     this.sunSpin = 0
     this.habHop = 0
     this.sailSpin = 0
+    this.spots = [
+      ...HOUSES.map(([x, y, z, s]) => ({ ...spot(x, y, z + 1.0 * s, 0.95 * s, 1.05 * s), house: true, chimney: new THREE.Vector3(x + 0.42 * s, z + 2.2 * s, -y - 0.2 * s) })),
+      ...TREES.map(([x, y, z, s]) => ({ ...spot(x, y, z + 1.3 * s, 0.9 * s, 1.15 * s), tree: true })),
+    ]
     this.root = new THREE.Group()
     this.root.position.y = WORLD_Y
     scene.add(this.root)
@@ -138,6 +151,13 @@ export class World {
       [this.sails, () => ((this.sailSpin = 1), { windmill: true })],
       ...this.sheep.map((s) => [s, () => ((s.userData.hop = 1), { sheep: s.userData.pitch })]),
     ]
+    // Houses puff smoke from the chimney and trees shake out leaves (only if the landscape loaded)
+    if (this.root.children.length) {
+      for (const p of this.spots) {
+        const at = (v) => v.clone().add(this.root.position)
+        things.push([p, () => (p.house ? { house: at(p.chimney) } : { tree: at(p.center) })])
+      }
+    }
     let best = null
     let bestD = 1
     for (const [obj, react] of things) {
@@ -153,9 +173,14 @@ export class World {
 
   /** How far (x, y) is from the object's padded on-screen oval: below 1 means inside. */
   screenDistance(obj, x, y) {
-    box.setFromObject(obj)
-    box.getCenter(center)
-    box.getSize(size)
+    if (obj.isObject3D) {
+      box.setFromObject(obj)
+      box.getCenter(center)
+      box.getSize(size)
+    } else {
+      center.copy(obj.center).add(this.root.position)
+      size.set(obj.w * 2, obj.h * 2, 0)
+    }
     tmp.copy(center).project(this.camera)
     if (tmp.z > 1) return Infinity
     const sx = ((tmp.x + 1) / 2) * innerWidth

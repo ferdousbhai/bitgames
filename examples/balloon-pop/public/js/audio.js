@@ -130,6 +130,20 @@ export class Audio {
     for (let i = 0; i < 6; i++) this.tone({ freq: note(i * 2 - 2), type: 'sine', gain: 0.1, decay: 0.16, delay: i * 0.06, slide: 120 })
   }
 
+  /** A tapped house: a friendly doorbell. */
+  dingDong() {
+    this.tone({ freq: note(7), type: 'sine', gain: 0.2, decay: 0.5 })
+    this.tone({ freq: note(7) * 2, type: 'sine', gain: 0.05, decay: 0.3 })
+    this.tone({ freq: note(4), type: 'sine', gain: 0.2, decay: 0.7, delay: 0.32 })
+    this.tone({ freq: note(4) * 2, type: 'sine', gain: 0.05, decay: 0.4, delay: 0.32 })
+  }
+
+  /** A tapped tree: a leafy rustle and a little bird's tweet-tweet. */
+  tweet() {
+    this.burst({ freq: 3500, q: 0.8, gain: 0.14, decay: 0.35 })
+    for (let i = 0; i < 3; i++) this.tone({ freq: 2300 + i * 150, type: 'sine', gain: 0.09, decay: 0.07, delay: 0.12 + i * 0.11, slide: 900 })
+  }
+
   /** A soft, silly "baa" from a tapped sheep: a wobbly reedy note through a vowel-ish filter. */
   baa(pitch = 1) {
     if (!this.ready) return

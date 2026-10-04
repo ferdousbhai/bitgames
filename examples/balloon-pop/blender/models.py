@@ -639,7 +639,7 @@ def build_landscape(wm):
     bmesh.ops.transform(bm, matrix=Matrix.Translation((0, 25, -0.02)) @ Matrix.Diagonal((90, 30, 1, 1)), verts=bm.verts)
     mesh_obj("meadow", bm, wm["grass"], rt, smooth=False)
 
-    # Houses on the middle hills
+    # Houses on the middle hills (tap spots for these and the trees are mirrored in public/js/world.js)
     house(rt, "house_a", -6, 17, 3.1, 1.6, wm["white"], wm["roof_red"], wm)
     house(rt, "house_b", 2.5, 18.5, 3.6, 1.4, wm["yellow"], wm["roof_blue"], wm)
     house(rt, "house_c", 20, 17, 3.2, 1.5, wm["pink"], wm["roof_purple"], wm)

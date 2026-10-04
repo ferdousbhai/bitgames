@@ -219,6 +219,28 @@ export class Effects {
     }
   }
 
+  /** A tapped house: soft puffs of smoke rise from its chimney. */
+  smoke(pos) {
+    const v = this.tmp.clone()
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        v.set((Math.random() - 0.5) * 0.6, 2.5 + Math.random(), 0)
+        this.puffs.spawn(pos, v, { life: 1.2, size: 1.5 + Math.random() * 0.6, color: '#ffffff' })
+      }, i * 120)
+    }
+  }
+
+  /** A tapped tree: a burst of leaves (and the odd blossom) flutters out of its crown. */
+  leaves(at) {
+    const pos = at.clone().setZ(at.z + 1.2) // just in front of the leaves, so none hide inside
+    const v = this.tmp
+    for (let i = 0; i < 22; i++) {
+      v.set(Math.random() - 0.5, Math.random() * 0.7, Math.random() - 0.5).normalize().multiplyScalar(4 + Math.random() * 3)
+      const color = i % 6 === 5 ? '#ff9ec4' : pick(['#3fae4a', '#6cc551', '#8bd86a'])
+      this.confetti.spawn(pos, v, { life: 1.6 + Math.random() * 0.6, size: 2.8 + Math.random() * 1.2, color, spin: 5 })
+    }
+  }
+
   /** A popped balloon lets go of its string (or its crown, with a little hop), which tumbles down out of view. */
   dropString(mesh, hop = 1.2) {
     mesh.updateWorldMatrix(true, false)

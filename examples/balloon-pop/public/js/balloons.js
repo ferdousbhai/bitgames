@@ -13,7 +13,7 @@ export const KINDS = {
   round: { model: 'balloon_round', points: 1, colors: COLORS, hit: 1.1 },
   smile: { model: 'balloon_smile', points: 1, colors: COLORS, hit: 1.1 },
   heart: { model: 'balloon_heart', points: 2, colors: ['#ff4d6d', '#ff6b9d', '#c77dff', '#ff8fab'], hit: 1.2 },
-  gold: { model: 'balloon_gold', points: 5, colors: ['#ffc23a'], gold: true, hit: 1.2 },
+  gold: { model: 'balloon_gold', points: 5, colors: ['#ffdb58'], gold: true, hit: 1.2 },
   bunny: { model: 'balloon_bunny', points: 3, colors: ['#ffffff', '#ffd6e7', '#e0d4ff', '#d4f1ff'], hit: 1.2 },
   star: { model: 'balloon_star', points: 3, colors: ['#ffd23f'], hit: 1.35, power: 'star' },
   rainbow: { model: 'balloon_rainbow', points: 2, colors: ['#ff595e'], hit: 1.15, power: 'rainbow' },
@@ -40,6 +40,7 @@ export class Balloons {
       node.traverse((o) => {
         if (!o.isMesh) return
         if (/^(crown_gold|gem_)/.test(o.material.name)) crownParts.push(o)
+        if (o.material.name === 'crown_gold') o.material = this.crownGold(o.material)
         if (o.material.name === 'balloon_skin') {
           o.userData.skin = true
           this.baseSkin ??= o.material
@@ -84,6 +85,19 @@ export class Balloons {
     }
   }
 
+  /** The crown, brightened to match the sunny golden balloon (the same trick as its skin). */
+  crownGold(base) {
+    if (!this.crown) {
+      this.crown = base.clone()
+      this.crown.color.set('#ffd54a')
+      this.crown.metalness = 0.75
+      this.crown.roughness = 0.2
+      this.crown.emissive = new THREE.Color('#ffb000')
+      this.crown.emissiveIntensity = 0.35
+    }
+    return this.crown
+  }
+
   skin(color, gold) {
     const key = color + (gold ? 'g' : '')
     let m = this.skins.get(key)
@@ -91,11 +105,12 @@ export class Balloons {
       m = this.baseSkin ? this.baseSkin.clone() : new THREE.MeshStandardMaterial()
       m.color.set(color)
       m.roughness = gold ? 0.16 : 0.3
-      m.metalness = gold ? 0.9 : 0
+      // Gold stays only part metal, with a warm glow: fully metallic it mirrors the dim room light and looks brown.
+      m.metalness = gold ? 0.7 : 0
       m.envMapIntensity = gold ? 1.6 : 0.9
       if (gold) {
-        m.emissive = new THREE.Color('#b87c00')
-        m.emissiveIntensity = 0.6
+        m.emissive = new THREE.Color('#ffbf00')
+        m.emissiveIntensity = 0.45
       }
       this.skins.set(key, m)
     }
