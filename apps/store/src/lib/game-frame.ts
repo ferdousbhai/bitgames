@@ -14,7 +14,7 @@ export function gameFrameDocument(src: string, origin: string): string {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src ${attribute(base)}; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <style>html,body,iframe{margin:0;width:100%;height:100%;border:0;overflow:hidden}iframe{display:block}</style>
 </head><body>
-<iframe id="game" title="Game" src="${attribute(url.href)}" sandbox="allow-scripts allow-pointer-lock" allow="autoplay; gamepad" referrerpolicy="no-referrer"></iframe>
+<iframe id="game" title="Game" src="${attribute(url.href)}" sandbox="allow-scripts allow-pointer-lock" allow="autoplay; gamepad *" referrerpolicy="no-referrer"></iframe>
 <script>
 const game = document.getElementById('game');
 addEventListener('message', (event) => {
