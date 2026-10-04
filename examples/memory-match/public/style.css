@@ -79,9 +79,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .pairs span.done { background: #fff; border: 2px solid #ffbe0b; transform: scale(1.15); }
 @media (max-width: 520px) { .hud-center { left: auto; right: auto; left: calc(126px + env(safe-area-inset-left)); transform: none; align-items: flex-start; } .pairs { max-width: calc(100vw - 190px); } }
 
+/* Sits just under the HUD (main.js sets top), so it never hides the animals that just matched. */
 .banner {
-  position: fixed; top: 30%; left: 0; right: 0; text-align: center; font-size: clamp(44px, 10vw, 96px); font-weight: 900; pointer-events: none;
-  color: #ffbe0b; -webkit-text-stroke: 3px #fff; paint-order: stroke fill; text-shadow: 0 6px 0 rgba(90, 61, 122, 0.45);
+  position: fixed; top: 30%; left: 0; right: 0; text-align: center; font-size: clamp(36px, min(8vw, 10vh), 80px); line-height: 1.1; font-weight: 900; pointer-events: none;
+  color: #ffd23f; white-space: nowrap;
+  /* A thick outline made of shadows (a wide text-stroke draws boxes inside some glyphs). */
+  text-shadow: 4px 0 #5a3d7a, -4px 0 #5a3d7a, 0 4px #5a3d7a, 0 -4px #5a3d7a, 3px 3px #5a3d7a, -3px 3px #5a3d7a, 3px -3px #5a3d7a, -3px -3px #5a3d7a,
+    0 8px 0 #5a3d7a, 0 10px 16px rgba(40, 20, 60, 0.35);
   opacity: 0; transform: scale(.5); transition: opacity .25s, transform .35s cubic-bezier(.3,1.8,.5,1);
 }
 .banner.show { opacity: 1; transform: scale(1); }

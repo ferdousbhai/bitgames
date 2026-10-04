@@ -209,6 +209,7 @@ function buildRoom() {
     prop.traverse((o) => {
       if (o.isMesh) o.castShadow = o.receiveShadow = true
     })
+    prop.userData.toy = { name, prop, busy: false, size: new THREE.Box3().setFromObject(prop).getSize(new THREE.Vector3()) }
     scene.add(prop)
     room.props.push(prop)
   }
@@ -219,17 +220,28 @@ function placeRoom(hw, hd) {
   const w = hw + 0.45
   const d = hd + 0.45
   room.mat.scale.set((w * 2) / 6, 1, (d * 2) / 6)
-  const at = {
-    prop_blocks: [-w - 0.75, d - 0.1, 0.5],
-    prop_ball: [w + 0.75, d - 0.2, 0],
-    prop_rings: [w + 0.7, -d + 0.3, 0],
-    prop_crayons: [-w - 0.8, -d + 0.4, 0.3],
-    prop_bear: [-w - 0.8, 0.2, 0.5],
-  }
+  // Wide screens: toys beside the mat. Tall screens have room above the mat instead, so the toys line up behind it.
+  const at = innerWidth / innerHeight < 0.8
+    ? {
+        prop_crayons: [-w + 0.45, -d - 0.75, 0.3],
+        prop_bear: [-w * 0.33, -d - 0.7, 0.2],
+        prop_ball: [w * 0.25, -d - 0.75, 0],
+        prop_rings: [w - 0.4, -d - 0.7, 0],
+        prop_blocks: [0, -d - 1.7, 0.5],
+      }
+    : {
+        prop_blocks: [-w - 0.75, d - 0.1, 0.5],
+        prop_ball: [w + 0.75, d - 0.2, 0],
+        prop_rings: [w + 0.7, -d + 0.3, 0],
+        prop_crayons: [-w - 0.8, -d + 0.4, 0.3],
+        prop_bear: [-w - 0.8, 0.2, 0.5],
+      }
   for (const prop of room.props) {
     const [x, z, yaw] = at[prop.name]
     prop.position.set(x, 0, z)
-    prop.rotation.y = yaw
+    prop.rotation.set(0, yaw, 0)
+    prop.scale.setScalar(1)
+    prop.userData.toy.busy = false
   }
   const span = Math.max(w, d) + 2.5
   const cam = sun.shadow.camera
@@ -238,6 +250,54 @@ function placeRoom(hw, hd) {
   cam.near = 1
   cam.far = 40
   cam.updateProjectionMatrix()
+}
+
+/**
+ * Slides each toy in towards the mat until the whole toy is on screen (and below the HUD), so
+ * none is cut off at the edge; a toy that still does not fit is hidden.
+ */
+const _box = new THREE.Box3()
+const _corner = new THREE.Vector3()
+function settleProps(view, w, d) {
+  fitCam.position.copy(view.pos)
+  fitCam.lookAt(0, 0, 0)
+  fitCam.setViewOffset(innerWidth, innerHeight, view.offset.x, view.offset.y, innerWidth, innerHeight)
+  fitCam.updateProjectionMatrix()
+  fitCam.updateMatrixWorld()
+  // The HTML on top of the scene, in NDC: a toy may not hide behind it.
+  const range = document.createRange()
+  const blockers = []
+  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) #play, #menu:not(.hidden) .level')) {
+    range.selectNodeContents(el) // the text itself, not the full-width paragraph around it
+    const r = el.matches('.hint, .logo') ? range.getBoundingClientRect() : el.getBoundingClientRect()
+    blockers.push([(r.left / innerWidth) * 2 - 1, (r.right / innerWidth) * 2 - 1, 1 - (r.bottom / innerHeight) * 2, 1 - (r.top / innerHeight) * 2])
+  }
+  const shown = (lo, hi, min, max) => Math.max(0, Math.min(hi, max) - Math.max(lo, min)) / (hi - lo)
+  // Most of the toy (85%) must be on screen and clear of the HTML: enough to see what it is and tap it.
+  const onScreen = (prop) => {
+    prop.updateMatrixWorld(true)
+    _box.setFromObject(prop)
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity
+    for (let i = 0; i < 8; i++) {
+      _corner.set(i & 1 ? _box.max.x : _box.min.x, i & 2 ? _box.max.y : _box.min.y, i & 4 ? _box.max.z : _box.min.z).project(fitCam)
+      x0 = Math.min(x0, _corner.x); x1 = Math.max(x1, _corner.x)
+      y0 = Math.min(y0, _corner.y); y1 = Math.max(y1, _corner.y)
+    }
+    if (shown(x0, x1, -1, 1) * shown(y0, y1, -1, 1) < 0.85) return false
+    return blockers.every(([l, r, b, t]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < 0.15)
+  }
+  for (const prop of room.props) {
+    const { size } = prop.userData.toy
+    const side = Math.abs(prop.position.x) > w // beside the mat, so it can slide in sideways
+    const inner = w + 0.08 + Math.max(size.x, size.z) / 2
+    let ok = onScreen(prop)
+    while (!ok && side && Math.abs(prop.position.x) - 0.1 >= inner) {
+      prop.position.x -= Math.sign(prop.position.x) * 0.1
+      ok = onScreen(prop)
+    }
+    prop.visible = ok
+  }
+  fitCam.clearViewOffset()
 }
 
 // --- Animals -------------------------------------------------------------------------------
@@ -541,7 +601,9 @@ function relayout(animate = true) {
   if (game.state === 'menu') {
     const hw = (game.paradeAnimals.length * PARADE_GAP) / 2
     placeRoom(hw, 0.9)
-    applyCamera(frame(hw, 0.6, 1.05), animate)
+    const view = frame(hw, 0.6, 1.05)
+    settleProps(view, hw + 0.45, 0.9 + 0.45)
+    applyCamera(view, animate)
     return
   }
   if (!game.cards.length) return
@@ -554,7 +616,9 @@ function relayout(animate = true) {
     if (game.state !== 'dealing') card.group.position.copy(card.slot)
     card.critter.yaw = Math.atan2(-card.slot.x, 9) * 0.8
   })
-  applyCamera(frame(s.hw + 0.1, s.hd + 0.1, ANIMAL_H), animate)
+  const view = frame(s.hw + 0.1, s.hd + 0.1, ANIMAL_H)
+  settleProps(view, s.hw + 0.45, s.hd + 0.45)
+  applyCamera(view, animate)
 }
 
 // --- Screens and HUD -----------------------------------------------------------------------------
@@ -595,9 +659,39 @@ function renderPairs() {
 }
 
 let bannerTimer = 0
-function banner(text, ms = 900) {
+const _p = new THREE.Vector3()
+/**
+ * Big praise text. It goes just under the HUD, unless that would cover the animals it is
+ * cheering for (the cards in avoid): then it moves to the bottom or the middle of the screen.
+ */
+function banner(text, ms = 900, avoid = []) {
   const el = $('banner')
-  el.textContent = text
+  el.replaceChildren(Object.assign(document.createElement('span'), { textContent: text }))
+  const textW = el.firstChild.offsetWidth // layout size, unaffected by the pop-in scale
+  const h = el.offsetHeight
+  const left = (innerWidth - textW) / 2 - 10
+  const right = (innerWidth + textW) / 2 + 10
+  // Screen boxes of the cards to keep clear, animal included.
+  const boxes = avoid.map((card) => {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity
+    for (const dx of [-CARD_W / 2, CARD_W / 2]) for (const dz of [-CARD_D / 2, CARD_D / 2]) for (const y of [REST_Y, REST_Y + FACE_TOP + ANIMAL_H + 0.25]) {
+      _p.set(card.group.position.x + dx, y, card.group.position.z + dz).project(camera)
+      const sx = ((_p.x + 1) / 2) * innerWidth
+      const sy = ((1 - _p.y) / 2) * innerHeight
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy)
+    }
+    return { x0, x1, y0, y1 }
+  })
+  const hudBottom = Math.max(0, ...[...document.querySelectorAll('.hud-left, .hud-center')].map((e) => e.getBoundingClientRect().bottom))
+  const bottom = innerHeight - safeBottom() - h - 12
+  const covered = (top) => boxes.reduce((sum, b) => sum + Math.max(0, Math.min(right, b.x1) - Math.max(left, b.x0)) * Math.max(0, Math.min(top + h, b.y1) - Math.max(top, b.y0)), 0)
+  let best = hudBottom + 4
+  for (let top = hudBottom + 4; top <= bottom; top += 8) {
+    if (covered(top) < covered(best) - 1) best = top
+    if (covered(best) === 0) break
+  }
+  if (covered(best) > 0 && covered(bottom) < covered(best)) best = bottom
+  el.style.top = `${best}px`
   el.classList.add('show')
   clearTimeout(bannerTimer)
   bannerTimer = setTimeout(() => el.classList.remove('show'), ms)
@@ -725,7 +819,7 @@ function onMatch(a, b) {
   }
   renderPairs()
   const done = game.matched === LEVELS[game.level]
-  if (!done) banner(PRAISE[(Math.random() * PRAISE.length) | 0], 800)
+  if (!done) banner(PRAISE[(Math.random() * PRAISE.length) | 0], 800, [a, b])
   else wait(1.1).then(winLevel)
 }
 
@@ -809,9 +903,103 @@ const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
 
 function pick(e, objects) {
+  return pickAll(e, objects)[0]
+}
+
+function pickAll(e, objects) {
   pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
   raycaster.setFromCamera(pointer, camera)
-  return raycaster.intersectObjects(objects, true)[0]
+  return raycaster.intersectObjects(objects, true)
+}
+
+const cardPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -REST_Y)
+const _onPlane = new THREE.Vector3()
+/**
+ * The card under a tap. A face-down card wins over an animal standing in front of it (a bunny's
+ * ears would otherwise steal the tap), and a tap just outside a card, in the gap, still counts.
+ */
+function pickCard(e) {
+  let first = null
+  for (const hit of pickAll(e, board.children)) {
+    const card = tagged(hit.object, 'card')
+    if (!card) continue
+    first ??= card
+    if (card.state === 'down' && !tagged(hit.object, 'animal')) return card
+  }
+  if (first) return first
+  if (!raycaster.ray.intersectPlane(cardPlane, _onPlane)) return null
+  let best = null
+  let bestD = Infinity
+  for (const card of game.cards) {
+    const dx = Math.abs(_onPlane.x - card.group.position.x) - CARD_W / 2
+    const dz = Math.abs(_onPlane.z - card.group.position.z) - CARD_D / 2
+    const d = Math.max(dx, dz)
+    if (d < 0.2 && d < bestD) [best, bestD] = [card, d]
+  }
+  return best
+}
+
+/** Toys around the mat react when tapped, each in its own way. */
+function tapToy(e) {
+  const hit = pick(e, room.props.filter((p) => p.visible))
+  const toy = hit && tagged(hit.object, 'toy')
+  if (!toy || toy.busy) return !!toy
+  toy.busy = true
+  const { prop, name } = toy
+  const top = prop.position.clone().setY(toy.size.y + 0.15)
+  sound.toy(name)
+  effects.sparkle(top, { count: 12, speed: 1.6, up: 1.8, size: 0.07 })
+  const done = () => {
+    prop.position.y = 0
+    prop.rotation.x = prop.rotation.z = 0
+    prop.scale.setScalar(1)
+    toy.busy = false
+  }
+  const yaw = prop.rotation.y
+  const anims = {
+    // Bounces high, three times, a little lower each time.
+    prop_ball: [1.3, (t) => {
+      const k = Math.min(2, Math.floor(t * 3))
+      const ph = t * 3 - k
+      prop.position.y = Math.sin(ph * Math.PI) * 0.9 * 0.5 ** k
+      prop.rotation.y = yaw + t * Math.PI * 3
+      const squash = ph < 0.1 ? (0.1 - ph) * 2.5 : 0
+      prop.scale.set(1 + squash * 0.5, 1 - squash, 1 + squash * 0.5)
+    }],
+    // A happy hop with a full twirl.
+    prop_bear: [0.9, (t) => {
+      prop.position.y = Math.sin(t * Math.PI) * 0.45
+      prop.rotation.y = yaw + ease.inOutCubic(t) * Math.PI * 2
+      prop.rotation.z = Math.sin(t * Math.PI * 4) * 0.15 * (1 - t)
+    }],
+    // Wobbles like a jelly on its base.
+    prop_rings: [1.0, (t) => {
+      prop.rotation.z = Math.sin(t * Math.PI * 6) * 0.22 * (1 - t)
+      prop.rotation.x = Math.sin(t * Math.PI * 6 + 1.3) * 0.12 * (1 - t)
+      const s = 1 + Math.sin(t * Math.PI * 4) * 0.08 * (1 - t)
+      prop.scale.set(1 / s, s, 1 / s)
+    }],
+    // Jump up and clack back down.
+    prop_blocks: [0.7, (t) => {
+      prop.position.y = Math.sin(t * Math.PI) * 0.4
+      prop.rotation.z = Math.sin(t * Math.PI * 2) * 0.12
+      prop.rotation.y = yaw + Math.sin(t * Math.PI) * 0.3
+    }],
+    // A jiggle, like someone is about to draw.
+    prop_crayons: [0.8, (t) => {
+      prop.position.y = Math.abs(Math.sin(t * Math.PI * 4)) * 0.12 * (1 - t)
+      prop.rotation.y = yaw + Math.sin(t * Math.PI * 4) * 0.25 * (1 - t)
+    }],
+  }
+  const [dur, step] = anims[name]
+  tween(dur, (t) => {
+    step(t)
+    if (t >= 1) {
+      done()
+      prop.rotation.y = yaw
+    }
+  })
+  return true
 }
 
 addEventListener('pointerdown', () => sound.unlock(), { capture: true })
@@ -819,27 +1007,28 @@ canvas.addEventListener('pointerdown', (e) => {
   if (game.state === 'menu') {
     const hit = pick(e, parade.children)
     const a = hit && tagged(hit.object, 'animal')
-    if (a && !a.busy) {
-      dance(a, { dur: 0.9, hops: 2, height: 0.4 })
-      sound.voice(a.name)
-      effects.sparkle(a.holder.position.clone().setY(1.0), { count: 14 })
+    if (a) {
+      if (!a.busy) {
+        dance(a, { dur: 0.9, hops: 2, height: 0.4 })
+        sound.voice(a.name)
+        effects.sparkle(a.holder.position.clone().setY(1.0), { count: 14 })
+      }
+      return
     }
+    tapToy(e)
     return
   }
-  const hit = pick(e, board.children)
-  const card = hit && tagged(hit.object, 'card')
+  if (game.state === 'loading') return
+  const card = game.state === 'play' && pickCard(e)
   if (card) tapCard(card)
+  else tapToy(e)
 })
 
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType !== 'mouse') return
   let hovered = null
-  if (game.state === 'play') {
-    const hit = pick(e, board.children)
-    hovered = hit && tagged(hit.object, 'card')
-  } else if (game.state === 'menu') {
-    hovered = pick(e, parade.children) ? true : null
-  }
+  if (game.state === 'play') hovered = pickCard(e)
+  if (!hovered && game.state !== 'loading') hovered = pick(e, [...parade.children, ...room.props.filter((p) => p.visible)]) ? true : null
   for (const card of game.cards) card.hoverTarget = card === hovered && card.state === 'down' ? 1 : 0
   canvas.style.cursor = hovered ? 'pointer' : ''
 })

@@ -178,6 +178,34 @@ export class Sound {
     this.tone({ at: this.now, type: 'sine', dur: 0.09, gain: 0.18, freq: [[0, 600], [0.09, 900]] })
   }
 
+  /** Each toy around the mat has its own sound. */
+  toy(name) {
+    const t = this.now
+    if (name === 'prop_ball') {
+      // boing, boing, boing
+      for (let k = 0; k < 3; k++) {
+        const at = t + k * 0.43
+        this.tone({ at, type: 'sine', dur: 0.32, gain: 0.26 * 0.7 ** k, freq: [[0, 180], [0.08, 420], [0.32, 260]], vibrato: { rate: 18, depth: 30 } })
+      }
+    } else if (name === 'prop_bear') {
+      // a squeaky toy: squee-squee
+      for (const d of [0, 0.22]) this.tone({ at: t + d, type: 'square', dur: 0.18, gain: 0.12, freq: [[0, 900], [0.06, 1500], [0.18, 1100]], filter: { type: 'bandpass', freq: 1600, Q: 2 } })
+    } else if (name === 'prop_rings') {
+      // the rings ring: a little xylophone run
+      ;[60, 64, 67, 72, 76].forEach((n, i) => this.tone({ at: t + i * 0.07, type: 'triangle', dur: 0.35, gain: 0.18, freq: NOTE(n + 12) }))
+    } else if (name === 'prop_blocks') {
+      // wooden clacks
+      for (const d of [0, 0.62, 0.7]) {
+        this.tone({ at: t + d, type: 'sine', dur: 0.08, gain: 0.3, freq: [[0, 900], [0.08, 500]] })
+        this.noise({ at: t + d, dur: 0.04, gain: 0.12, filter: { type: 'bandpass', freq: 2500, Q: 3 } })
+      }
+    } else {
+      // crayons: a quick scribble
+      for (let k = 0; k < 4; k++) this.noise({ at: t + k * 0.09, dur: 0.08, gain: 0.14, filter: { type: 'bandpass', freq: 3000 + k * 600, Q: 4 } })
+      this.tone({ at: t + 0.38, type: 'sine', dur: 0.14, gain: 0.18, freq: [[0, 700], [0.14, 1300]] })
+    }
+  }
+
   match() {
     const t = this.now
     ;[72, 76, 79, 84].forEach((n, i) => this.tone({ at: t + i * 0.08, type: 'triangle', dur: 0.3, gain: 0.2, freq: NOTE(n) }))
