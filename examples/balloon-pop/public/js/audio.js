@@ -117,6 +117,19 @@ export class Audio {
     for (let i = 0; i < 4; i++) this.tone({ freq: 700 + i * 90, type: 'sine', gain: 0.12, decay: 0.09, delay: i * 0.08, slide: 200 })
   }
 
+  /** The hot-air balloon's burner: a soft roar of air, then a happy rising toot. */
+  whoosh() {
+    this.burst({ freq: 500, q: 0.8, gain: 0.35, decay: 0.55, type: 'lowpass' })
+    this.burst({ freq: 1400, q: 1.5, gain: 0.12, decay: 0.4, delay: 0.05 })
+    ;[0, 2, 4].forEach((s, i) => this.tone({ freq: note(s + 5), type: 'triangle', gain: 0.12, decay: 0.25, delay: 0.25 + i * 0.09 }))
+  }
+
+  /** The windmill whirling: a quick spiral of notes over a breezy swish. */
+  whirr() {
+    this.burst({ freq: 1800, q: 0.9, gain: 0.18, decay: 0.7 })
+    for (let i = 0; i < 6; i++) this.tone({ freq: note(i * 2 - 2), type: 'sine', gain: 0.1, decay: 0.16, delay: i * 0.06, slide: 120 })
+  }
+
   /** A soft, silly "baa" from a tapped sheep: a wobbly reedy note through a vowel-ish filter. */
   baa(pitch = 1) {
     if (!this.ready) return

@@ -210,11 +210,12 @@ export class Effects {
     }
   }
 
-  sparkleAt(pos, color = '#ffffff', n = 3) {
+  /** A few twinkles; `scale` makes them bigger and faster for far-away things like the hot-air balloon. */
+  sparkleAt(pos, color = '#ffffff', n = 3, scale = 1) {
     const v = this.tmp
     for (let i = 0; i < n; i++) {
-      v.set(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(1.5)
-      this.sparkles.spawn(pos, v, { life: 0.6, size: 0.3 + Math.random() * 0.3, color })
+      v.set(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(1.5 * scale)
+      this.sparkles.spawn(pos, v, { life: 0.6, size: (0.3 + Math.random() * 0.3) * scale, color })
     }
   }
 

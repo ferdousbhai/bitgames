@@ -346,29 +346,38 @@ soundBtn.addEventListener('click', (e) => {
   audio.click()
 })
 const musicBtn = $('music')
+function setMusic(on) {
+  audio.musicOn = on
+  musicBtn.classList.toggle('off', !on)
+  try {
+    localStorage.setItem('balloon-pop-music', on ? '1' : '0')
+  } catch {}
+}
+try {
+  if (localStorage.getItem('balloon-pop-music') === '0') setMusic(false)
+} catch {}
 musicBtn.addEventListener('click', (e) => {
   e.stopPropagation()
   audio.unlock()
-  audio.musicOn = !audio.musicOn
-  musicBtn.classList.toggle('off', !audio.musicOn)
+  setMusic(!audio.musicOn)
   audio.click()
 })
 
 // --- Input ------------------------------------------------------------------------
-
-const raycaster = new THREE.Raycaster()
-const ndc = new THREE.Vector2()
 
 function tapAt(x, y) {
   audio.unlock()
   if (game.state === 'loading') return
   const b = balloonAt(x, y)
   if (b) return pop(b)
-  ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1)
-  raycaster.setFromCamera(ndc, camera)
-  const poked = world.poke(raycaster)
+  const poked = world.poke(x, y)
   if (poked?.sun) audio.giggle()
   else if (poked?.sheep) audio.baa(poked.sheep)
+  else if (poked?.windmill) audio.whirr()
+  else if (poked?.hab) {
+    audio.whoosh()
+    for (let i = 0; i < 3; i++) setTimeout(() => effects.sparkleAt(poked.hab, ['#ffb347', '#ffe066', '#ff7b54'][i], 6, 4), i * 90)
+  }
 }
 
 canvas.addEventListener('pointerdown', (e) => {

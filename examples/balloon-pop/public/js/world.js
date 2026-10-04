@@ -15,6 +15,10 @@ export function halfSize(camera, z = 0) {
 const WORLD_Y = -8 // the hills sit along the bottom of the screen
 const SUN_Z = -20 // in front of the clouds, so they never hide its face
 const SUN_RADIUS = 2.2 // the sun's size with its rays, in model units
+const box = new THREE.Box3()
+const center = new THREE.Vector3()
+const size = new THREE.Vector3()
+const tmp = new THREE.Vector3()
 
 /** A tall, thin strip: the sky only changes from top to bottom. */
 const skyTexture = () =>
@@ -36,6 +40,8 @@ export class World {
     this.clouds = []
     this.sheep = []
     this.sunSpin = 0
+    this.habHop = 0
+    this.sailSpin = 0
     this.root = new THREE.Group()
     this.root.position.y = WORLD_Y
     scene.add(this.root)
@@ -117,27 +123,62 @@ export class World {
     pivot.scale.set(Math.cos(Math.atan2(Math.abs(p.x), d)), Math.cos(Math.atan2(Math.abs(p.y), d)), 1)
   }
 
-  /** Tapping the sun makes it giggle and spin; tapping a sheep makes it hop and baa. */
-  poke(raycaster) {
-    if (this.sun && raycaster.intersectObject(this.sun, true).length) {
-      this.sunSpin = 1
-      return { sun: true }
+  /**
+   * Tapping the sun makes it giggle and spin, a sheep hops and baas, the hot-air balloon
+   * bobs up with a whoosh and the windmill whirls. Forgiving like the balloons: a tap anywhere
+   * in a padded circle around the thing counts, so tiny sheep on a phone are easy to hit.
+   */
+  poke(x, y) {
+    const things = [
+      [this.sun, () => ((this.sunSpin = 1), { sun: true })],
+      [this.hab, () => ((this.habHop = 1), { hab: this.habCenter() })],
+      [this.sails, () => ((this.sailSpin = 1), { windmill: true })],
+      ...this.sheep.map((s) => [s, () => ((s.userData.hop = 1), { sheep: s.userData.pitch })]),
+    ]
+    let best = null
+    let bestD = 1
+    for (const [obj, react] of things) {
+      if (!obj) continue
+      const d = this.screenDistance(obj, x, y)
+      if (d < bestD) {
+        bestD = d
+        best = react
+      }
     }
-    for (const s of this.sheep) {
-      if (!raycaster.intersectObject(s, true).length) continue
-      s.userData.hop = 1
-      return { sheep: s.userData.pitch }
-    }
-    return null
+    return best ? best() : null
+  }
+
+  /** How far (x, y) is from the object's padded on-screen oval: below 1 means inside. */
+  screenDistance(obj, x, y) {
+    box.setFromObject(obj)
+    box.getCenter(center)
+    box.getSize(size)
+    tmp.copy(center).project(this.camera)
+    if (tmp.z > 1) return Infinity
+    const sx = ((tmp.x + 1) / 2) * innerWidth
+    const sy = ((1 - tmp.y) / 2) * innerHeight
+    const ppu = innerHeight / (2 * halfSize(this.camera, center.z).h)
+    const rx = Math.max(30, (size.x / 2) * ppu) * 1.2
+    const ry = Math.max(30, (size.y / 2) * ppu) * 1.15
+    return Math.hypot((x - sx) / rx, (y - sy) / ry)
+  }
+
+  /** Just above the basket, where the burner flame would be. */
+  habCenter() {
+    return this.hab.getWorldPosition(new THREE.Vector3()).add(tmp.set(0, 1.4 * this.hab.scale.y, 0))
   }
 
   update(dt, t) {
-    if (this.sails) this.sails.rotation.z -= dt * 0.8
+    this.sailSpin = Math.max(0, this.sailSpin - dt * 0.35)
+    if (this.sails) this.sails.rotation.z -= dt * (0.8 + 9 * this.sailSpin * this.sailSpin)
     if (this.hab) {
       this.habX += dt * 0.6
       if (this.habX > 45) this.habX = -45
-      this.hab.position.set(this.habX, 13 + Math.sin(t * 0.4) * 1.2, -30)
-      this.hab.rotation.y = Math.sin(t * 0.3) * 0.3
+      // Tapped: a burner-powered bounce up, then a gentle sink back
+      this.habHop = Math.max(0, this.habHop - dt * 0.5)
+      const lift = Math.sin((1 - this.habHop) * Math.PI) * 3.5 * Math.min(1, this.habHop * 3)
+      this.hab.position.set(this.habX, 13 + Math.sin(t * 0.4) * 1.2 + lift, -30)
+      this.hab.rotation.y = Math.sin(t * 0.3) * 0.3 + this.habHop * this.habHop * Math.PI * 2
     }
     for (const c of this.clouds) {
       c.position.x += c.userData.speed * dt
