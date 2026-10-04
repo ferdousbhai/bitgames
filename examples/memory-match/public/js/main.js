@@ -309,12 +309,18 @@ function settleProps(view, w, d) {
   // The HTML on top of the scene, in NDC: a toy may not hide behind it.
   const range = document.createRange()
   const blockers = []
-  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) #play, #menu:not(.hidden) .level')) {
+  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) #play, #menu:not(.hidden) .level, #win:not(.hidden) .win-card')) {
     range.selectNodeContents(el) // the text itself, not the full-width paragraph around it
-    const r = el.matches('.hint, .logo') ? range.getBoundingClientRect() : el.getBoundingClientRect()
+    const r = el.matches('.hint, .logo')
+      ? range.getBoundingClientRect()
+      : el.matches('.win-card') // its layout box: it is still scaled small by the pop-in
+        ? { left: el.offsetLeft, right: el.offsetLeft + el.offsetWidth, top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight }
+        : el.getBoundingClientRect()
     // The HUD buttons get a margin, so a toy never crowds the home or sound button.
     const m = el.matches('.hud-left') ? 18 : 0
-    blockers.push([((r.left - m) / innerWidth) * 2 - 1, ((r.right + m) / innerWidth) * 2 - 1, 1 - ((r.bottom + m) / innerHeight) * 2, 1 - ((r.top - m) / innerHeight) * 2])
+    // A toy peeking out from under the win card looks lost, so that one must be fully clear.
+    const tol = el.matches('.win-card') ? 0.01 : 0.15
+    blockers.push([((r.left - m) / innerWidth) * 2 - 1, ((r.right + m) / innerWidth) * 2 - 1, 1 - ((r.bottom + m) / innerHeight) * 2, 1 - ((r.top - m) / innerHeight) * 2, tol])
   }
   // The menu's animals too, with a little headroom, so no toy seems to sit on an animal's head
   // like a hat (they may still pop in, so use their full size).
@@ -331,7 +337,7 @@ function settleProps(view, w, d) {
     const [x0, x1, y0, y1] = ndcBox(_box.setFromObject(prop))
     if (shown(x0, x1, -1, 1) * shown(y0, y1, -1, 1) < 0.85) return false
     if (!animals.every(([l, r, b, t]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < 0.02)) return false
-    return blockers.every(([l, r, b, t]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < 0.15)
+    return blockers.every(([l, r, b, t, tol]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < tol)
   }
   for (const prop of room.props) {
     const { size } = prop.userData.toy
@@ -571,11 +577,21 @@ function freeRegion() {
     for (const el of document.querySelectorAll('.hud-left, .hud-center')) top = Math.max(top, el.getBoundingClientRect().bottom + 6)
     bottom = h - 10 - safeBottom()
   }
+  // The win card sits below the board (or beside it on short landscape screens), so the
+  // dancing animals stay in view instead of hiding behind it.
+  let left = 8
+  let right = w - 8
+  const el = document.querySelector('.win-card')
+  if (!$('win').classList.contains('hidden')) {
+    // Layout box, not getBoundingClientRect: the card is still scaled small by its pop-in.
+    if (el.offsetLeft > w * 0.4) right = el.offsetLeft - 10
+    else bottom = el.offsetTop - 10
+  }
   if (bottom - top < h * 0.3) {
     top = Math.min(top, h * 0.35)
     bottom = Math.max(bottom, h * 0.85)
   }
-  return { top, bottom, left: 8, right: w - 8, w: w - 16, h: bottom - top }
+  return { top, bottom, left, right, w: right - left, h: bottom - top }
 }
 
 const safeProbe = document.createElement('div')
@@ -966,6 +982,7 @@ function winLevel() {
       })
     }
     show('win')
+    relayout(true) // the camera pulls back so the party stays in view above the card
   })
 }
 
@@ -1091,6 +1108,15 @@ canvas.addEventListener('pointerdown', (e) => {
     return
   }
   if (game.state === 'loading') return
+  if (game.state === 'won') {
+    // The party goes on under the win card: tapped animals hop and say hello.
+    const card = pickCard(e)
+    if (card) {
+      hopOnce(card.critter, 0.35)
+      sound.voice(card.animal)
+    } else tapToy(e)
+    return
+  }
   const card = game.state === 'play' && pickCard(e)
   if (card) tapCard(card)
   else tapToy(e)
@@ -1166,9 +1192,11 @@ function frameLoop() {
     poseAnimal(a, game.time)
     if (!a.busy && Math.random() < dt * 0.25) hopOnce(a, 0.25)
   }
-  if (game.state === 'play') {
+  if (game.state === 'play' || game.state === 'won') {
+    // Matched animals hop now and then; once every pair is found they keep on celebrating.
+    const rate = game.state === 'won' ? 0.35 : 0.06
     for (const card of game.cards) {
-      if (card.state === 'matched' && !card.critter.busy && Math.random() < dt * 0.06) hopOnce(card.critter, 0.2)
+      if (card.state === 'matched' && !card.critter.busy && Math.random() < dt * rate) hopOnce(card.critter, 0.2)
     }
   }
   effects.update(dt, camera)
