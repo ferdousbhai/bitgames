@@ -1,0 +1,134 @@
+import * as THREE from 'three'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { CREATURES } from './creatures.js'
+import { PLACES } from './world.js'
+
+/**
+ * The collection book: one sticker per creature. Caught ones show in full
+ * colour with how many you have; the rest are mystery silhouettes with the
+ * places where they live. Pictures are rendered once from the real models.
+ */
+export class Book {
+  constructor({ el, audio, creatures, getBook }) {
+    this.el = el
+    this.audio = audio
+    this.creatures = creatures
+    this.getBook = getBook
+    this.open = false
+    this.pics = {}
+    el.querySelector('.book-close').addEventListener('click', (e) => {
+      e.stopPropagation()
+      this.audio.click()
+      this.hide()
+    })
+    el.addEventListener('pointerdown', (e) => {
+      if (e.target === el) this.hide()
+    })
+  }
+
+  /** Render a picture and a silhouette of every creature. */
+  build() {
+    let r
+    try {
+      r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+    } catch {
+      return
+    }
+    const S = 192
+    r.setPixelRatio(1)
+    r.setSize(S, S)
+    r.toneMapping = THREE.NeutralToneMapping
+    r.setClearColor(0x000000, 0)
+    const scene = new THREE.Scene()
+    scene.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture
+    scene.environmentIntensity = 0.7
+    scene.add(new THREE.HemisphereLight('#ffffff', '#b8c8ff', 2.2))
+    const key = new THREE.DirectionalLight('#fff4e0', 2.6)
+    key.position.set(2, 3, 4)
+    scene.add(key)
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50)
+    cam.position.set(0, 0.45, 2.7)
+    cam.lookAt(0, 0, 0)
+    const shadow = new THREE.MeshBasicMaterial({ color: '#46507e' })
+    for (const c of CREATURES) {
+      const m = this.creatures.make(c.id, 1.05)
+      const face = ['pufferfish', 'octopus', 'jellyfish', 'duck', 'chest', 'boot', 'crab'].includes(c.id) ? -1.0 : -0.4
+      m.group.rotation.set(0.1, face, 0)
+      scene.add(m.group)
+      r.render(scene, cam)
+      const color = r.domElement.toDataURL('image/png')
+      scene.overrideMaterial = shadow
+      r.render(scene, cam)
+      const dark = r.domElement.toDataURL('image/png')
+      scene.overrideMaterial = null
+      scene.remove(m.group)
+      this.pics[c.id] = { color, dark }
+    }
+    r.dispose()
+    r.forceContextLoss?.()
+    this.render()
+  }
+
+  render() {
+    const book = this.getBook()
+    const grid = this.el.querySelector('.book-grid')
+    grid.textContent = ''
+    let found = 0
+    for (const c of CREATURES) {
+      const n = Number(book[c.id]) || 0
+      if (n) found++
+      const tile = document.createElement('button')
+      tile.className = `tile stars${c.stars}` + (n ? ' got' : ' missing')
+      const img = document.createElement('img')
+      img.alt = n ? c.name : '?'
+      img.draggable = false
+      const pic = this.pics[c.id]
+      if (pic) img.src = n ? pic.color : pic.dark
+      tile.appendChild(img)
+      const stars = document.createElement('div')
+      stars.className = 'tile-stars'
+      stars.textContent = '⭐'.repeat(c.stars)
+      tile.appendChild(stars)
+      const label = document.createElement('div')
+      label.className = 'tile-name'
+      label.textContent = n ? c.name : Object.keys(c.places).map((p) => PLACES[p].emoji).join('')
+      tile.appendChild(label)
+      if (n) {
+        const badge = document.createElement('div')
+        badge.className = 'tile-count'
+        badge.textContent = `×${n}`
+        tile.appendChild(badge)
+      } else {
+        const q = document.createElement('div')
+        q.className = 'tile-q'
+        q.textContent = '?'
+        tile.appendChild(q)
+      }
+      tile.addEventListener('click', (e) => {
+        e.stopPropagation()
+        tile.classList.remove('wiggle')
+        void tile.offsetWidth
+        tile.classList.add('wiggle')
+        if (n) {
+          this.audio.newOne()
+          this.audio.say(c.name)
+        } else this.audio.bubbles()
+      })
+      grid.appendChild(tile)
+    }
+    this.el.querySelector('.book-count').textContent = `${found} / ${CREATURES.length}`
+    this.el.querySelector('.book-fill').style.width = `${(found / CREATURES.length) * 100}%`
+  }
+
+  show() {
+    this.render()
+    this.open = true
+    this.el.classList.remove('hidden')
+  }
+
+  hide() {
+    this.open = false
+    this.audio.hush()
+    this.el.classList.add('hidden')
+  }
+}

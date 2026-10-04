@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#4aa8f0" />
+<title>Fish Pond</title>
+<link rel="icon" href="data:," />
+<script type="importmap">
+{ "imports": {
+  "three": "https://bitgames.store/vendor/three/build/three.module.js",
+  "three/addons/": "https://bitgames.store/vendor/three/examples/jsm/"
+} }
+</script>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="labels"></div>
+
+<div id="loading" class="screen">
+  <div class="logo"><span>F</span><span>I</span><span>S</span><span>H</span> <span>P</span><span>O</span><span>N</span><span>D</span></div>
+  <div class="spinner">🎣</div>
+  <div id="loading-text">Filling the pond…</div>
+</div>
+
+<div id="title" class="screen card-screen hidden">
+  <div class="card">
+    <div class="logo"><span>F</span><span>I</span><span>S</span><span>H</span> <span>P</span><span>O</span><span>N</span><span>D</span></div>
+    <p class="tag">Go fishing with Bear! 🐻🎣</p>
+    <div class="places">
+      <button class="place lake" data-place="lake" aria-label="Sunny Lake"><span class="pe">☀️</span><span class="pf">🐠</span></button>
+      <button class="place river" data-place="river" aria-label="Sunset River"><span class="pe">🌅</span><span class="pf">🐟</span></button>
+      <button class="place night" data-place="night" aria-label="Starry Night"><span class="pe">🌙</span><span class="pf">✨</span></button>
+      <button class="place ice" data-place="ice" aria-label="Frozen Pond"><span class="pe">❄️</span><span class="pf">🐧</span></button>
+    </div>
+    <button id="title-book" class="book-big" aria-label="Fish book">📖 <b id="title-count">0/15</b></button>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <button id="home" class="round-btn" title="Home (Esc)" aria-label="Home">🏠</button>
+    <button id="book-btn" class="round-btn book-btn" title="Fish book (B)" aria-label="Fish book">📖<span id="count" class="badge-count">0/15</span></button>
+    <div class="pill score">🐟 <b id="session">0</b></div>
+  </div>
+  <div class="hud-right">
+    <button id="music" class="round-btn" title="Music" aria-label="Music on or off">🎵</button>
+    <button id="sound" class="round-btn" title="Sound" aria-label="Sound on or off">🔊</button>
+  </div>
+  <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div><div id="intro-sub"></div></div>
+</div>
+
+<div id="card" class="card-catch">
+  <div id="card-new" class="new hidden">NEW!</div>
+  <div id="card-stars" class="cstars"></div>
+  <div id="card-name" class="cname"></div>
+</div>
+
+<div id="bang" class="bang hidden"><span>!</span></div>
+<div id="hint" class="hint-finger hidden">👆</div>
+
+<div id="book" class="book hidden">
+  <div class="book-card">
+    <div class="book-head">
+      <div class="book-title">📖 <span class="book-count">0 / 15</span></div>
+      <div class="book-bar"><div class="book-fill"></div></div>
+      <button class="book-close round-btn" aria-label="Close">✖</button>
+    </div>
+    <div class="book-grid"></div>
+  </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
