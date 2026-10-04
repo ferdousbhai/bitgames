@@ -23,6 +23,7 @@ balloons.glb top-level nodes:
   balloon_star     puffy five-point star (the "pop everything" power-up)
   balloon_bunny    bunny head with ears and a face
   balloon_rainbow  striped balloon (splits into little balloons)
+  balloon_gold     smiling teardrop balloon wearing a crown (worth 5)
 Materials (looked up by name in the game):
   balloon_skin     the rubber; the game tints it per balloon
   (every other material keeps its baked colour: string, face, stripes, ears)
@@ -281,6 +282,9 @@ def mats():
         **face_mats(),
         "ear": material("bunny_ear_pink", "#ffc2d6", roughness=0.5),
         "nose": material("bunny_nose", "#ff6b9d", roughness=0.4),
+        "crown": material("crown_gold", "#ffc83d", metallic=0.85, roughness=0.22),
+        "gems": [material("gem_pink", "#ff3d8b", roughness=0.15, emission="#ff3d8b", strength=0.25),
+                 material("gem_blue", "#3d8bff", roughness=0.15, emission="#3d8bff", strength=0.25)],
         "stripes": [material(f"rainbow_{i}", c, roughness=0.22) for i, c in
                     enumerate(["#ff595e", "#ff9f1c", "#ffd23f", "#8ac926", "#2ec4b6", "#6c63ff"])],
     }
@@ -357,6 +361,52 @@ def balloon_rainbow(m):
     lathe("balloon_rainbow_body", prof, m["stripes"], rt, segments=30,
           mats_by_ring=lambda i: min(bands - 1, int(i / (len(prof) - 1) * bands)))
     knot_and_string(rt, m, -1.24, wiggle_seed=1.2)
+    return rt
+
+
+def crown(rt, m, base_z, r=0.54, band=0.26, spike=0.34, points=5, tilt=12.0, segs=60, thick=0.045):
+    """A little king's crown: a zigzag band with balls on the tips and gems on the front."""
+    bm = bmesh.new()
+    front = -math.pi / 2  # one tip faces the camera (-Y)
+
+    def top(k):
+        u = ((k / segs - front / (2 * math.pi)) * points + 0.5) % 1.0  # 0 between points, 0.5 on a tip
+        return band + spike * (1 - abs(u * 2 - 1))
+
+    rings = []
+    for (rad, at_top) in ((r, False), (r, True), (r - thick, True), (r - thick, False)):
+        ring = []
+        for k in range(segs):
+            a = 2 * math.pi * k / segs
+            rr = rad + (0.04 * top(k) / (band + spike) if at_top else 0.0)  # flares outward a little
+            ring.append(bm.verts.new((rr * math.cos(a), rr * math.sin(a), (top(k) if at_top else 0.0))))
+        rings.append(ring)
+    for i in range(4):
+        a_, b_ = rings[i], rings[(i + 1) % 4]
+        for k in range(segs):
+            k2 = (k + 1) % segs
+            bm.faces.new((a_[k], a_[k2], b_[k2], b_[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    tilt_m = Matrix.Translation((0, 0, base_z)) @ Matrix.Rotation(math.radians(tilt), 4, "Y")
+    bmesh.ops.transform(bm, matrix=tilt_m, verts=bm.verts)
+    mesh_obj(f"{rt.name}_crown", bm, m["crown"], rt, smooth=True)
+    for p in range(points):
+        a = front + 2 * math.pi * p / points  # where top() peaks
+        tip = Vector(((r + 0.04) * math.cos(a), (r + 0.04) * math.sin(a), band + spike + 0.03))
+        uv_sphere(f"{rt.name}_crown_tip_{p}", 0.07, tilt_m @ tip, m["crown"], rt, segs=10, rings=6)
+    # Gems around the band, the biggest one facing the camera (-Y)
+    for j, deg in enumerate((-90, -90 - 50, -90 + 50)):
+        a = math.radians(deg)
+        p = tilt_m @ Vector(((r + 0.012) * math.cos(a), (r + 0.012) * math.sin(a), band * 0.52))
+        size = 0.09 if j == 0 else 0.065
+        uv_sphere(f"{rt.name}_gem_{j}", size, p, m["gems"][j % 2 if j else 0], rt, scale=(1, 0.55, 1),
+                  rot=Matrix.Rotation(a + math.pi / 2, 3, "Z"), segs=10, rings=6)
+
+
+def balloon_gold(m):
+    """The 5-point balloon: shiny gold (tinted in the game) with a smile and a crown."""
+    rt = balloon_round(m, "balloon_gold", with_face=True)
+    crown(rt, m, 0.92)
     return rt
 
 
@@ -467,7 +517,7 @@ def balloon_bunny(m):
 def build_balloons():
     m = mats()
     roots = [balloon_round(m), balloon_round(m, "balloon_smile", with_face=True), balloon_heart(m),
-             balloon_star(m), balloon_bunny(m), balloon_rainbow(m)]
+             balloon_star(m), balloon_bunny(m), balloon_rainbow(m), balloon_gold(m)]
     for rt in roots:
         join_children(rt)
     return roots
@@ -733,11 +783,11 @@ def main():
     if PREVIEW:
         os.makedirs(PREVIEW, exist_ok=True)
         for i, rt in enumerate(balloons):
-            rt.location = ((i - 2.5) * 2.6, 0, 0)
+            rt.location = ((i - (len(balloons) - 1) / 2) * 2.6, 0, 0)
         # Tint the shared skin for the preview only (the game tints per balloon).
         skin = next(n for n in bpy.data.materials["balloon_skin"].node_tree.nodes if n.type == "BSDF_PRINCIPLED")
         skin.inputs["Base Color"].default_value = (*rgb("#ff6b9d"), 1)
-        render(os.path.join(PREVIEW, "balloons.png"), (0, -16, 0.2), (0, 0, -0.4), lens=40)
+        render(os.path.join(PREVIEW, "balloons.png"), (0, -21, 0.2), (0, 0, -0.4), lens=40)
     for rt in balloons:
         for o in [rt, *rt.children_recursive]:
             bpy.data.objects.remove(o)

@@ -37,7 +37,7 @@ const effects = new Effects(scene, camera)
 const LEVELS = [
   { goal: 8, speed: 1.0, every: 1.3, kinds: { round: 3, smile: 2 } },
   { goal: 10, speed: 1.1, every: 1.2, kinds: { round: 3, smile: 2, heart: 2 }, intro: ['💖', 'Heart balloons!', 'They are worth 2'], show: 'heart' },
-  { goal: 12, speed: 1.15, every: 1.1, kinds: { round: 3, smile: 2, heart: 1.5, gold: 0.7 }, intro: ['🌟', 'Golden balloons!', 'They are worth 5'], show: 'gold' },
+  { goal: 12, speed: 1.15, every: 1.1, kinds: { round: 3, smile: 2, heart: 1.5, gold: 0.7 }, intro: ['👑', 'Golden balloons!', 'They are worth 5'], show: 'gold' },
   { goal: 12, speed: 1.2, every: 1.05, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 2 }, intro: ['🐰', 'Bunny balloons!', 'Boing boing! Worth 3'], show: 'bunny' },
   { goal: 14, speed: 1.25, every: 1.0, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 1.2, star: 0.35 }, intro: ['⭐', 'Star balloon!', 'Pop it to pop them ALL'], show: 'star' },
   { goal: 15, speed: 1.3, every: 0.95, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 1.2, star: 0.3, rainbow: 0.45 }, intro: ['🌈', 'Rainbow balloon!', 'It makes baby balloons'], show: 'rainbow' },
@@ -180,6 +180,7 @@ function pop(b, { chain = false } = {}) {
   const pos = b.group.position.clone()
   balloons.remove(b)
   if (b.string) effects.dropString(b.string)
+  if (b.crown) effects.dropString(b.crown, 4)
   const playing = game.state === 'play'
   if (!chain) {
     game.combo = t - game.lastPop < 1.1 ? game.combo + 1 : 0

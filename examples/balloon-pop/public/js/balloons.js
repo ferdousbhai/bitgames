@@ -6,12 +6,14 @@ import * as THREE from 'three'
  * stripes and strings keep their baked colours.
  */
 export const PALETTE = ['#ff595e', '#ff9f1c', '#ffd23f', '#8ac926', '#2ec4b6', '#4d96ff', '#9b5de5', '#ff6b9d']
+/** Everyday balloons skip plain yellow, so only the crowned golden ones look golden. */
+const COLORS = PALETTE.filter((c) => c !== '#ffd23f')
 
 export const KINDS = {
-  round: { model: 'balloon_round', points: 1, colors: PALETTE, hit: 1.1 },
-  smile: { model: 'balloon_smile', points: 1, colors: PALETTE, hit: 1.1 },
+  round: { model: 'balloon_round', points: 1, colors: COLORS, hit: 1.1 },
+  smile: { model: 'balloon_smile', points: 1, colors: COLORS, hit: 1.1 },
   heart: { model: 'balloon_heart', points: 2, colors: ['#ff4d6d', '#ff6b9d', '#c77dff', '#ff8fab'], hit: 1.2 },
-  gold: { model: 'balloon_round', points: 5, colors: ['#ffd23f'], gold: true, hit: 1.15 },
+  gold: { model: 'balloon_gold', points: 5, colors: ['#ffc23a'], gold: true, hit: 1.2 },
   bunny: { model: 'balloon_bunny', points: 3, colors: ['#ffffff', '#ffd6e7', '#e0d4ff', '#d4f1ff'], hit: 1.2 },
   star: { model: 'balloon_star', points: 3, colors: ['#ffd23f'], hit: 1.35, power: 'star' },
   rainbow: { model: 'balloon_rainbow', points: 2, colors: ['#ff595e'], hit: 1.15, power: 'rainbow' },
@@ -32,8 +34,10 @@ export class Balloons {
       if (this.templates[kind.model]) continue
       const node = gltf.scene.getObjectByName(kind.model)
       if (!node) continue
+      const crownParts = []
       node.traverse((o) => {
         if (!o.isMesh) return
+        if (/^(crown_gold|gem_)/.test(o.material.name)) crownParts.push(o)
         if (o.material.name === 'balloon_skin') {
           o.userData.skin = true
           this.baseSkin ??= o.material
@@ -46,6 +50,19 @@ export class Balloons {
           o.userData.string = true
         }
       })
+      // Gather the crown and its gems under one pivot so it can tumble off when the balloon pops.
+      if (crownParts.length) {
+        const box = new THREE.Box3()
+        for (const o of crownParts) box.union(o.geometry.boundingBox ?? (o.geometry.computeBoundingBox(), o.geometry.boundingBox))
+        const crown = new THREE.Group()
+        box.getCenter(crown.position)
+        crown.userData.crown = true
+        crownParts[0].parent.add(crown)
+        for (const o of crownParts) {
+          o.position.sub(crown.position)
+          crown.add(o)
+        }
+      }
       node.position.set(0, 0, 0)
       this.templates[kind.model] = node
     }
@@ -57,10 +74,13 @@ export class Balloons {
     if (!m) {
       m = this.baseSkin ? this.baseSkin.clone() : new THREE.MeshStandardMaterial()
       m.color.set(color)
-      m.roughness = gold ? 0.2 : 0.3
-      m.metalness = gold ? 0.45 : 0
-      m.envMapIntensity = gold ? 1.4 : 0.9
-      if (gold) m.emissive = new THREE.Color('#8a5c00')
+      m.roughness = gold ? 0.16 : 0.3
+      m.metalness = gold ? 0.9 : 0
+      m.envMapIntensity = gold ? 1.6 : 0.9
+      if (gold) {
+        m.emissive = new THREE.Color('#b87c00')
+        m.emissiveIntensity = 0.6
+      }
       this.skins.set(key, m)
     }
     return m
@@ -73,7 +93,9 @@ export class Balloons {
     const group = template ? template.clone(true) : this.fallback()
     color ??= kind.colors[(Math.random() * kind.colors.length) | 0]
     let string = null
+    let crown = null
     group.traverse((o) => {
+      if (o.userData.crown) crown = o
       if (!o.isMesh) return
       if (o.userData.skin) o.material = this.skin(color, kind.gold)
       if (o.userData.string) string = o
@@ -81,7 +103,7 @@ export class Balloons {
     const s = scale * (kind.scale ?? 1)
     group.scale.setScalar(s)
     const b = {
-      group, kindName, kind, color, string, scale: s,
+      group, kindName, kind, color, string, crown, scale: s,
       speed: 1, phase: Math.random() * 10, age: 0, vx: 0, vy: 0, alive: true,
     }
     this.scene.add(group)

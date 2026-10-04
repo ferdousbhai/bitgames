@@ -87,7 +87,8 @@ export class World {
     const { w, h } = halfSize(this.camera, z)
     const portrait = this.camera.aspect < 1
     this.sunScale = 2.2 * Math.min(1, Math.max(0.6, this.camera.aspect))
-    this.sun.position.set(-w + (portrait ? 6 : 10), h - (portrait ? 10 : 8), z)
+    // Below and right of the score pill, so the HUD never covers its face
+    this.sun.position.set(-w + (portrait ? 6 : 14), h - (portrait ? 10 : 11), z)
   }
 
   /** The sun giggles and spins when tapped. */

@@ -218,13 +218,13 @@ export class Effects {
     }
   }
 
-  /** A popped balloon lets go of its string, which tumbles down out of view. */
-  dropString(mesh) {
+  /** A popped balloon lets go of its string (or its crown, with a little hop), which tumbles down out of view. */
+  dropString(mesh, hop = 1.2) {
     mesh.updateWorldMatrix(true, false)
     mesh.matrixWorld.decompose(mesh.position, mesh.quaternion, mesh.scale)
     mesh.removeFromParent()
     this.scene.add(mesh)
-    mesh.userData.fall = { vy: 1.2, spin: (Math.random() - 0.5) * 3, age: 0 }
+    mesh.userData.fall = { vy: hop, spin: (Math.random() - 0.5) * 3, age: 0 }
     this.falling.push(mesh)
   }
 
