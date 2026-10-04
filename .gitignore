@@ -1,6 +1,7 @@
 node_modules/
 dist/
 *.tsbuildinfo
+__pycache__/
 .DS_Store
 
 # Ship the shared review skill even when a user's global ignore excludes .agents.
