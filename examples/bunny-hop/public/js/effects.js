@@ -281,3 +281,59 @@ export class Popups {
     el.timer = setTimeout(() => el.remove(), 1000)
   }
 }
+
+/**
+ * Sunlight glinting on fresh snow: little stars lying about on the ground near
+ * the camera that wink on and off. Shown only while `on` (the snowy hills).
+ */
+export class Glints {
+  constructor(scene, count = 50) {
+    this.count = count
+    this.mesh = new THREE.InstancedMesh(
+      starGeometry(),
+      new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, fog: false }),
+      count,
+    )
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+    this.mesh.frustumCulled = false
+    this.mesh.renderOrder = 1
+    this.mesh.visible = false
+    scene.add(this.mesh)
+    this.items = Array.from({ length: count }, () => ({ p: new THREE.Vector3(), phase: rand(0, 6), rate: rand(0.5, 1.1), size: rand(0.2, 0.32), color: Math.random() < 0.5 ? '#ffffff' : '#9fdcff' }))
+    this.items.forEach((it, i) => this.mesh.setColorAt(i, colorOf(it.color)))
+    this.dummy = new THREE.Object3D()
+    this.fade = 0
+    this.placed = false
+  }
+
+  /** Scatter a glint across the snow in front of the path, and behind it a little. */
+  place(it, x) {
+    it.p.set(x, 0.06, Math.random() < 0.7 ? rand(1.8, 7) : rand(-4, -1.8))
+  }
+
+  update(dt, camera, time, on) {
+    this.fade = THREE.MathUtils.clamp(this.fade + (on ? dt : -dt) * 0.6, 0, 1)
+    this.mesh.visible = this.fade > 0
+    if (!this.mesh.visible) {
+      this.placed = false
+      return
+    }
+    const cx = camera.position.x
+    const d = this.dummy
+    this.items.forEach((it, i) => {
+      if (!this.placed) this.place(it, cx + rand(-WRAP / 2, WRAP / 2))
+      else if (it.p.x < cx - WRAP / 2) this.place(it, cx + WRAP / 2 - rand(0, 3))
+      // mostly hidden, then a quick bright wink
+      const s = Math.max(0, Math.sin(time * 2.2 * it.rate + it.phase))
+      const wink = s ** 4
+      d.position.copy(it.p)
+      d.quaternion.copy(camera.quaternion)
+      d.rotateZ(time * 0.6 + it.phase)
+      d.scale.setScalar(it.size * (0.15 + wink * 1.4) * this.fade)
+      d.updateMatrix()
+      this.mesh.setMatrixAt(i, d.matrix)
+    })
+    this.placed = true
+    this.mesh.instanceMatrix.needsUpdate = true
+  }
+}

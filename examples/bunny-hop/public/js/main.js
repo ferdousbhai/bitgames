@@ -4,7 +4,7 @@ import { Sound } from './audio.js'
 import { BIOME_LENGTH, BIOMES, HOME_X, biomeIndexAt } from './biomes.js'
 import { Bunny } from './bunny.js'
 import { Course, speedAt } from './course.js'
-import { Effects, Popups, Weather } from './effects.js'
+import { Effects, Glints, Popups, Weather } from './effects.js'
 import { loadModels } from './models.js'
 import { clamp, easeStep, pick } from './util.js'
 import { World } from './world.js'
@@ -90,7 +90,7 @@ try {
   game.best = Number(localStorage.getItem('bunnyhop.best')) || 0
 } catch {}
 
-let bunny, world, course, effects, weather, popups
+let bunny, world, course, effects, weather, glints, popups
 const camPos = new THREE.Vector3(1.2, 2, 8)
 const camLook = new THREE.Vector3(0.3, 1.1, 0)
 const tmp = new THREE.Vector3()
@@ -115,6 +115,7 @@ async function init() {
   effects = new Effects(scene)
   weather = new Weather(scene)
   weather.setKind(BIOMES[0].weather)
+  glints = new Glints(scene)
   popups = new Popups($('popups'), camera)
   if (window.game) Object.assign(window, { course, view })
   applyQuality()
@@ -475,6 +476,7 @@ function frame(now) {
   updateCamera(dt)
   world.update(dt, camera.position.x, game.x, game.time)
   weather.update(dt, camera.position, game.time)
+  glints.update(dt, camera, game.time, weather.kind === 'snow' && game.state !== 'menu')
   effects.update(dt)
   renderer.render(scene, camera)
 }

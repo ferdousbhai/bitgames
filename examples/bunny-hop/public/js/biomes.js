@@ -102,12 +102,13 @@ export const BIOMES = [
     id: 'snow',
     name: 'Snowy Hills',
     emoji: '❄️',
-    sky: ['#8fcfff', '#f4faff'],
-    fog: '#eef6ff',
-    ground: '#f2f7ff',
-    path: '#b4cfe8',
-    hills: ['#ffffff', '#e6f1fb', '#d8e9f7'],
-    hemi: ['#ffffff', '#9fb8d0'],
+    // a deep blue sky and cool blue snow, so white snowmen and snowy trees stand out
+    sky: ['#4aa8f5', '#e2f2ff'],
+    fog: '#e4f0fc',
+    ground: '#cfe0f4',
+    path: '#9fc4ea',
+    hills: ['#ffffff', '#e3eefa', '#cfe2f5'],
+    hemi: ['#ffffff', '#88a9d0'],
     sun: ['#ffffff', 2.3],
     recolor: {
       bush: ['#a6cdb8'],
@@ -122,7 +123,7 @@ export const BIOMES = [
     hillTrees: ['tree_pine_snow', 'tree_pine_snow', 'tree_round_snow'], // dotted on the near hills (picked at random)
     butterflies: 0,
     obstacles: ['snowman', 'rock', 'snowman'],
-    near: [['grass', 2, 0.8, 1.2]],
+    near: [['grass', 3, 0.8, 1.2], ['rock', 1, 0.35, 0.5], ['snowman', 1, 0.4, 0.5]],
     side: [['snowman', 2, 0.6, 0.85], ['rock', 2, 0.6, 1], ['tree_pine_snow', 1, 0.4, 0.55]],
     mid: [['tree_pine_snow', 6, 0.8, 1.25], ['tree_round_snow', 2, 0.9, 1.1]],
     back: [['tree_pine_snow', 4, 1.1, 1.6]],
