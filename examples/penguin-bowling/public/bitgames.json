@@ -1,0 +1,19 @@
+{
+  "files": {
+    "cover.jpg": "d042b4fed4c9708e5391c1860a5d79467e38cbb624fc86faf170a7487930a037",
+    "index.html": "cd3ecd4c9e8f7eea444a90f1d217b3637dcaa4b6cf70c8a4574874ffc76187d7",
+    "js/audio.js": "a1f28bb3089c31981a838cc9083e8770e2ac47b00022e7950486147a4be3081b",
+    "js/effects.js": "f80cb8f9ae68ebb240f5e56948403e71f87048df62a8fdcf0ebc40b82403db49",
+    "js/lane.js": "74948967b0530d9a577c9187570e1b3476f49fa68d06dce1a1c1ad6ebce7a8eb",
+    "js/main.js": "ad4055856bf3c4f533ce4fd85e023986de535bed6e71f8d8282dba801ddde1c7",
+    "js/penguin.js": "bb92d190040a568d6dc81946b14c71332b654209cf4786332bd970ea3714b4e1",
+    "js/scenery.js": "316241419ec6500be115e9b107526ecd0cb252c5260bde9eb545f60bc1b13ac3",
+    "js/score.js": "d5d4e61cdbe89f6347783e5bae4845bf472f42c83946291d5172327d4cab6cd2",
+    "lib/cannon-es.LICENSE.txt": "4714d0272f50cb21fe46fe29333c7c600d3c85b5ebd2a80f4db07e8cfccbf5b2",
+    "lib/cannon-es.js": "c37afcda95c58f0395602f556af7ef9d04cecc1f83376502f723464d5455d14b",
+    "models/penguin.glb": "3d7525aa484dfa6fbdb8cf1b05ada13abb29a607c4f622563c9208af82289a6e",
+    "models/pins.glb": "1de5c2d906b516d89c12ed4d728132c5fb28716669679ee2067cfb6204738f0c",
+    "models/world.glb": "6de504776579a93860147090353740eb4de296412a31b0ac82dc097c74a40f3b",
+    "style.css": "fa97f0f8e3cada88e2a9c458fde8a6fadff76bd8a6a1fef73129da49ae2718a3"
+  }
+}

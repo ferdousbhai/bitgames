@@ -1,0 +1,12 @@
+{
+  "id": "penguin-bowling",
+  "title": "Penguin Bowling",
+  "tagline": "Belly-slide a chubby penguin down the ice and knock over snowmen and fish!",
+  "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides. ◀ ▶ move the penguin. Turn on bumpers 🛟 so every slide reaches the pins. Every roll gets a cheer, and a strike gets fireworks!",
+  "emoji": "🐧",
+  "color": "#4cc9f0",
+  "category": "pop",
+  "together": false,
+  "featured": false,
+  "url": ""
+}

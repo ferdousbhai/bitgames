@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Penguin Bowling</title>
+<link rel="icon" href="data:," />
+<script type="importmap">
+{ "imports": {
+  "three": "https://bitgames.store/vendor/three/build/three.module.js",
+  "three/addons/": "https://bitgames.store/vendor/three/examples/jsm/",
+  "cannon": "./lib/cannon-es.js"
+} }
+</script>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="labels"></div>
+
+<div id="loading" class="screen">
+  <div class="logo"><span>P</span><span>E</span><span>N</span><span>G</span><span>U</span><span>I</span><span>N</span><br /><span>B</span><span>O</span><span>W</span><span>L</span><span>I</span><span>N</span><span>G</span></div>
+  <div class="spinner">🐧</div>
+  <div id="loading-text">Polishing the ice…</div>
+</div>
+
+<div id="title" class="screen card-screen hidden">
+  <div class="card">
+    <div class="logo"><span>P</span><span>E</span><span>N</span><span>G</span><span>U</span><span>I</span><span>N</span><br /><span>B</span><span>O</span><span>W</span><span>L</span><span>I</span><span>N</span><span>G</span></div>
+    <div id="lanes" class="lanes">
+      <button data-theme="village" class="lane-btn"><span>🏠</span><small>Igloos</small></button>
+      <button data-theme="aurora" class="lane-btn"><span>🌌</span><small>Night</small></button>
+      <button data-theme="bay" class="lane-btn"><span>🐟</span><small>Fishy</small></button>
+    </div>
+    <button id="bumpers" class="chip on" title="Bumpers keep the penguin on the ice"><span class="chip-icon">🛟</span> Bumpers <b id="bumpers-state">ON</b></button>
+    <button id="play" class="big-go">▶ Play</button>
+    <div class="scores"><span class="pill">🏆 Best <b id="best">0</b></span> <span id="last"></span></div>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div class="hud-left">
+      <button id="home" class="round-btn" title="Home (Esc)">🏠</button>
+      <div class="pill score">🎳 <b id="score">0</b></div>
+    </div>
+    <div id="card" class="scorecard"></div>
+    <div class="hud-right">
+      <button id="music" class="round-btn" title="Music">🎵</button>
+      <button id="sound" class="round-btn" title="Sound">🔊</button>
+    </div>
+  </div>
+  <div id="rack" class="rack"></div>
+  <div id="banner" class="banner"></div>
+  <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div></div>
+  <div id="controls" class="controls">
+    <div class="ctl-group">
+      <button id="left" class="ctl" title="Move left (A)">◀</button>
+      <button id="right" class="ctl" title="Move right (D)">▶</button>
+    </div>
+    <div class="ctl-group">
+      <button id="curve" class="ctl small" title="Curve (C)">⬆️</button>
+      <button id="go" class="go" title="Slide! (Space)">🐧💨</button>
+    </div>
+  </div>
+  <div id="hint" class="hint-swipe hidden">👆</div>
+</div>
+
+<div id="results" class="screen card-screen hidden">
+  <div class="card">
+    <div class="trophy">🏆</div>
+    <div class="big-score"><span id="final">0</span></div>
+    <div id="stars" class="stars"></div>
+    <div id="new-best" class="pill badge hidden">🎉 New best!</div>
+    <div class="row">
+      <button id="again" class="big-go">🔁</button>
+      <button id="to-home" class="big-go alt">🏠</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
