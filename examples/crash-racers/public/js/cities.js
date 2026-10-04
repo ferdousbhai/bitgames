@@ -306,6 +306,44 @@ const floatGeometry = (() => {
   }
 })()
 
+// --- See-through foliage: trees never hide the child's car -------------------
+
+/** Where the camera and the child's car are (main.js updates them every frame). */
+export const seeThrough = { camera: { value: new THREE.Vector3() }, car: { value: new THREE.Vector3(0, -1e4, 0) } }
+const FOLIAGE = new Set(['palm', 'banana', 'fern', 'tree_birch', 'tree_jungle', 'tree_maple', 'tree_round'])
+
+/**
+ * A copy of a tree's material that thins out (a fine dither, no transparency
+ * sorting) wherever it stands between the camera and the car, or right in front
+ * of the camera: a palm frond or a maple's canopy never fills the screen.
+ * Shadows are drawn separately, so trees still cast whole ones.
+ */
+const seeThroughMaterial = (material) =>
+  cached('see' + material.uuid, () => {
+    const m = material.clone()
+    m.onBeforeCompile = (shader) => {
+      shader.uniforms.seeCamera = seeThrough.camera
+      shader.uniforms.seeCar = seeThrough.car
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vSeeWorld;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvSeeWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;')
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vSeeWorld;\nuniform vec3 seeCamera;\nuniform vec3 seeCar;')
+        .replace(
+          '#include <clipping_planes_fragment>',
+          `#include <clipping_planes_fragment>
+          vec3 seeRay = seeCar - seeCamera;
+          float seeT = dot(vSeeWorld - seeCamera, seeRay) / max(dot(seeRay, seeRay), 0.001);
+          float seeD = length(vSeeWorld - seeCamera - seeRay * clamp(seeT, 0.0, 1.0));
+          float seeFade = (1.0 - smoothstep(1.8, 3.4, seeD)) * step(0.0, seeT) * (1.0 - smoothstep(0.8, 1.0, seeT));
+          seeFade = max(seeFade, 1.0 - smoothstep(3.5, 6.0, distance(vSeeWorld, seeCamera)));
+          if (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) < seeFade * 0.92) discard;`,
+        )
+    }
+    m.customProgramCacheKey = () => 'seeThrough'
+    return m
+  })
+
 /** The game paints a prop's 'tint' faces (walls, dinosaur skin...) with this colour. */
 const tintMat = (color = '#ffffff') => std({ color, roughness: 0.8 })
 const materialFor = (material, tint) => (material.name === 'tint' ? tintMat(tint) : material)
@@ -338,7 +376,8 @@ function place(track, name, position, yaw = 0, scale = 1, { tint, shadow = true,
     // One copy, still indexed (the merge keeps it that way), moved into place in one go.
     const g = floatGeometry(o.geometry).clone()
     g.applyMatrix4(local.multiplyMatrices(toRoot, o.matrixWorld).premultiply(m))
-    track.addGeometry(g, materialFor(o.material, tint), shadow)
+    const material = materialFor(o.material, tint)
+    track.addGeometry(g, FOLIAGE.has(name) ? seeThroughMaterial(material) : material, shadow)
   })
 }
 

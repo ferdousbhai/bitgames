@@ -6,7 +6,7 @@ import { joinRoom } from 'https://bitgames.store/vendor/bitgames/multiplayer-1.j
 import { Audio } from './audio.js'
 import { Bot } from './bot.js'
 import { CAR_MODELS, Car, TURBO_COOLDOWN, prepareTemplate } from './car.js'
-import { CITIES, buildCity } from './cities.js'
+import { CITIES, buildCity, seeThrough } from './cities.js'
 import { Debris } from './damage.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
@@ -981,7 +981,7 @@ function recover(car, dt) {
   car.offRoadTime = proj && proj.distance > game.track.width / 2 + 30 ? car.offRoadTime + dt : 0
   car.stuckTime = car.speed < 1.5 && !finished ? car.stuckTime + dt : 0
   if (!car.headway || finished || prog.total - car.headway.total > 4) car.headway = { total: prog?.total ?? 0, time: game.raceTime }
-  const lost = car.offRoadTime > limits.offRoad || car.upsideDownTime > limits.roof || car.backOuts >= 3
+  const lost = car.offRoadTime > limits.offRoad || car.upsideDownTime > limits.roof || car.backOuts >= 2
   // The child is only rescued while still racing (not behind the podium).
   if (car.isPlayer && lost && game.state === 'race') {
     respawn(car)
@@ -1296,7 +1296,7 @@ const humanController = {
   update(car, dt) {
     const controls = input.read()
     if (!input.easyGas) return (car.controls = controls)
-    const gentle = { ...controls, steer: rampSteer(car, controls.steer, dt) }
+    const gentle = { ...controls, steer: rampSteer(car, controls.steer, dt) * fastSteer(car) }
     car.controls = backOut(car, steeringHelper(car, controls.cruise ? cruise(car, gentle) : gentle), dt)
   },
 }
@@ -1312,6 +1312,13 @@ function rampSteer(car, steer, dt) {
   car.lastSteer = steer
   return steer * Math.min(1, 0.4 + car.steerHeld * 1.2)
 }
+
+/**
+ * Easy mode: the faster the car, the less a held ◀ ▶ turns it, so holding a
+ * button down a city street drifts across the road instead of into the houses.
+ * Slow (a bend, turning round after a crash) it still turns fully.
+ */
+const fastSteer = (car) => clamp(1 - (car.speed - 6) * 0.04, 0.4, 1)
 
 /** Seconds of pushing against something without moving before Easy mode backs the car out, and how long it reverses. */
 const WEDGED_SECONDS = 0.9
@@ -1539,6 +1546,9 @@ function updateCamera(dt) {
   camera.lookAt(camLook)
   camera.fov = damp(camera.fov, (camera.aspect < 1 ? 75 : 62) + clamp(p.speed - 15, 0, 20) * 0.5, 3, dt)
   camera.updateProjectionMatrix()
+  // Trees between the camera and the car thin out (see cities.js).
+  seeThrough.camera.value.copy(camera.position)
+  seeThrough.car.value.copy(pos).y += 0.8
   sun.position.set(pos.x + 40, 80, pos.z + 25)
   sun.target.position.copy(pos)
   sky.position.copy(camera.position)
