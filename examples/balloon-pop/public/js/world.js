@@ -9,10 +9,12 @@ export function halfSize(camera, z = 0) {
 
 /**
  * The countryside behind the balloons (models/world.glb, built by
- * blender/models.py): hills, houses, a windmill, a drifting hot-air balloon,
- * clouds and a smiling sun, under a soft gradient sky.
+ * blender/models.py): hills, houses, a windmill, grazing sheep, a drifting
+ * hot-air balloon, clouds and a smiling sun, under a soft gradient sky.
  */
 const WORLD_Y = -8 // the hills sit along the bottom of the screen
+const SUN_Z = -20 // in front of the clouds, so they never hide its face
+const SUN_RADIUS = 2.2 // the sun's size with its rays, in model units
 
 /** A tall, thin strip: the sky only changes from top to bottom. */
 const skyTexture = () =>
@@ -32,6 +34,7 @@ export class World {
     scene.background = skyTexture()
     scene.fog = new THREE.Fog('#cfeaff', 55, 140)
     this.clouds = []
+    this.sheep = []
     this.sunSpin = 0
     this.root = new THREE.Group()
     this.root.position.y = WORLD_Y
@@ -52,7 +55,19 @@ export class World {
       this.habX = -20
     }
     this.sun = get('sun')
-    if (this.sun) this.scene.add(this.sun)
+    if (this.sun) {
+      // The pivot faces the camera; the sun wobbles and spins inside it.
+      this.sunPivot = new THREE.Group()
+      this.sunPivot.add(this.sun)
+      this.sun.position.set(0, 0, 0)
+      this.scene.add(this.sunPivot)
+    }
+    for (let i = 0; get(`sheep_${i}`); i++) {
+      const s = get(`sheep_${i}`)
+      s.userData = { base: s.position.clone(), hop: 0, phase: i * 2.1, pitch: 0.9 + ((i * 37) % 5) * 0.06 }
+      this.root.add(s)
+      this.sheep.push(s)
+    }
     for (let i = 0; i < 3; i++) {
       const c = get(`cloud_${i}`)
       if (!c) continue
@@ -66,11 +81,11 @@ export class World {
       }
     }
     // Materials from glTF are lit; give them a softer, toy-like finish.
-    for (const root of [land, this.sails, this.hab, this.sun, ...this.clouds]) {
+    for (const root of [land, this.sails, this.hab, this.sun, ...this.clouds, ...this.sheep]) {
       root?.traverse((o) => {
         if (!o.isMesh) return
         o.material.envMapIntensity = 0.25
-        if (o.material.name === 'cloud') {
+        if (o.material.name === 'cloud' || o.material.name === 'wool') {
           o.material.emissive.set('#ffffff')
           o.material.emissiveIntensity = 0.35
         }
@@ -83,22 +98,37 @@ export class World {
     // Clouds wrap just past the screen edge at their own depth.
     for (const c of this.clouds) c.userData.wrap = halfSize(this.camera, c.position.z).w + 8
     if (!this.sun) return
-    const z = -45
-    const { w, h } = halfSize(this.camera, z)
-    const portrait = this.camera.aspect < 1
-    this.sunScale = 2.2 * Math.min(1, Math.max(0.6, this.camera.aspect))
-    // Below and right of the score pill, so the HUD never covers its face
-    this.sun.position.set(-w + (portrait ? 6 : 14), h - (portrait ? 10 : 11), z)
+    // Placed in screen pixels, tucked under the home button and score pill so the HUD never touches it.
+    const W = innerWidth
+    const H = innerHeight
+    const { w, h } = halfSize(this.camera, SUN_Z)
+    const px = H / (2 * h) // pixels per unit at the sun's depth
+    const r = Math.min(80, Math.max(30, Math.min(W, H) * 0.1))
+    const x = 18 + r
+    const y = 66 + r * 1.08
+    this.sunScale = r / (SUN_RADIUS * px)
+    const pivot = this.sunPivot
+    pivot.position.set(-w + x / px, h - y / px, SUN_Z)
+    // Face the camera squarely wherever it sits, and narrow it a touch near the screen edge,
+    // where a wide landscape view would stretch it.
+    pivot.lookAt(this.camera.position)
+    const p = pivot.position
+    const d = this.camera.position.z - p.z
+    pivot.scale.set(Math.cos(Math.atan2(Math.abs(p.x), d)), Math.cos(Math.atan2(Math.abs(p.y), d)), 1)
   }
 
-  /** The sun giggles and spins when tapped. */
+  /** Tapping the sun makes it giggle and spin; tapping a sheep makes it hop and baa. */
   poke(raycaster) {
-    if (!this.sun) return false
-    if (raycaster.intersectObject(this.sun, true).length) {
+    if (this.sun && raycaster.intersectObject(this.sun, true).length) {
       this.sunSpin = 1
-      return true
+      return { sun: true }
     }
-    return false
+    for (const s of this.sheep) {
+      if (!raycaster.intersectObject(s, true).length) continue
+      s.userData.hop = 1
+      return { sheep: s.userData.pitch }
+    }
+    return null
   }
 
   update(dt, t) {
@@ -119,6 +149,16 @@ export class World {
       this.sun.rotation.z = Math.sin(t * 0.8) * 0.08 + this.sunSpin * this.sunSpin * Math.PI * 4
       const s = this.sunScale * (1 + Math.sin(t * 2) * 0.03 + this.sunSpin * 0.3)
       this.sun.scale.setScalar(s)
+    }
+    for (const s of this.sheep) {
+      const u = s.userData
+      u.hop = Math.max(0, u.hop - dt * 1.4)
+      // A happy double bounce when tapped; otherwise a slow grazing sway
+      const hop = u.hop > 0 ? Math.abs(Math.sin((1 - u.hop) * Math.PI * 2)) * 0.9 * u.hop : 0
+      s.position.set(u.base.x, u.base.y + hop, u.base.z)
+      s.rotation.z = Math.sin(t * 0.7 + u.phase) * 0.04 + (u.hop > 0 ? Math.sin((1 - u.hop) * Math.PI * 4) * 0.15 * u.hop : 0)
+      const squash = u.hop > 0 ? 0 : Math.sin(t * 1.6 + u.phase) * 0.02
+      s.scale.set(1 - squash, 1 + squash, 1)
     }
   }
 }

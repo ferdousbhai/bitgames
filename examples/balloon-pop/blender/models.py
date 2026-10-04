@@ -34,6 +34,7 @@ world.glb top-level nodes:
   hot_air_balloon  drifting background balloon with basket
   cloud_0..cloud_2 puffy clouds to drift across the sky
   sun              smiling sun with rays (faces the camera)
+  sheep_0..sheep_3 fluffy sheep on the near hills, origin at their feet (they hop when tapped)
 """
 import math
 import os
@@ -525,6 +526,25 @@ def build_balloons():
 
 # --- World ----------------------------------------------------------------------------
 
+# Far, middle and near rows of hills: (x, y, radius x, radius y, height). +Y is away from the camera.
+HILLS_FAR = [(-30, 34, 16, 6, 9), (-8, 38, 18, 6, 11), (16, 36, 16, 6, 9.5), (38, 34, 15, 6, 8.5), (-48, 36, 14, 6, 8)]
+HILLS_MID = [(-22, 18, 11, 5, 4.5), (-2, 20, 12, 5, 5.2), (19, 18, 11, 5, 4.6), (38, 19, 10, 5, 4.2), (-40, 19, 10, 5, 4.0)]
+HILLS_NEAR = [(-14, 6, 10, 4, 2.0), (6, 7, 11, 4, 2.4), (26, 6, 10, 4, 2.0), (-32, 6, 9, 4, 1.8), (44, 6, 9, 4, 1.8)]
+# Sheep grazing on the near hills: (x, y, facing +1 right / -1 left). Two sit near the
+# middle so they show on a phone held upright too.
+SHEEP = [(-2.4, 5.0, 1), (2.4, 5.6, -1), (-9.5, 4.9, 1), (20.5, 4.8, -1)]
+
+
+def ground_z(x, y):
+    """Height of the hill surface at (x, y): the hills are squashed half-spheres."""
+    z = 0.0
+    for cx, cy, rx, ry, h in HILLS_FAR + HILLS_MID + HILLS_NEAR:
+        d = 1 - ((x - cx) / rx) ** 2 - ((y - cy) / ry) ** 2
+        if d > 0:
+            z = max(z, h * math.sqrt(d))
+    return z
+
+
 def hill(name, cx, cy, rx, ry, h, mat, parent, segs=32):
     """A smooth mound: a squashed half-sphere sunk into the ground."""
     bm = bmesh.new()
@@ -591,6 +611,10 @@ def world_mats():
         "sunny": material("sun_yellow", "#ffd23f", roughness=0.5, emission="#ffcf3a", strength=1.2),
         "sun_ray": material("sun_ray", "#ffb22e", roughness=0.5, emission="#ffa51f", strength=1.0),
         "fence": material("fence", "#fff1dc", roughness=0.8),
+        "wool": material("wool", "#fffdf6", roughness=0.95),
+        "sheep_face": material("sheep_face", "#ffe2cc", roughness=0.7),
+        "sheep_ear": material("sheep_ear", "#ffc4c4", roughness=0.7),
+        "hoof": material("hoof", "#5a4a5e", roughness=0.7),
         "basket": material("basket", "#b27a45", roughness=0.9),
         "rope": material("rope", "#7a5a3a", roughness=0.9),
         "hab": [material(f"hab_{i}", c, roughness=0.5) for i, c in
@@ -603,14 +627,11 @@ def world_mats():
 def build_landscape(wm):
     rt = root("landscape")
     # Far, middle and near rows of hills. +Y is away from the camera.
-    far = [(-30, 34, 16, 6, 9), (-8, 38, 18, 6, 11), (16, 36, 16, 6, 9.5), (38, 34, 15, 6, 8.5), (-48, 36, 14, 6, 8)]
-    for i, (x, y, rx, ry, h) in enumerate(far):
+    for i, (x, y, rx, ry, h) in enumerate(HILLS_FAR):
         hill(f"hill_far_{i}", x, y, rx, ry, h, wm["grass2"], rt)
-    mid = [(-22, 18, 11, 5, 4.5), (-2, 20, 12, 5, 5.2), (19, 18, 11, 5, 4.6), (38, 19, 10, 5, 4.2), (-40, 19, 10, 5, 4.0)]
-    for i, (x, y, rx, ry, h) in enumerate(mid):
+    for i, (x, y, rx, ry, h) in enumerate(HILLS_MID):
         hill(f"hill_mid_{i}", x, y, rx, ry, h, wm["grass"], rt)
-    near = [(-14, 6, 10, 4, 2.0), (6, 7, 11, 4, 2.4), (26, 6, 10, 4, 2.0), (-32, 6, 9, 4, 1.8), (44, 6, 9, 4, 1.8)]
-    for i, (x, y, rx, ry, h) in enumerate(near):
+    for i, (x, y, rx, ry, h) in enumerate(HILLS_NEAR):
         hill(f"hill_near_{i}", x, y, rx, ry, h, wm["grass3"], rt)
     # A flat meadow under it all
     bm = bmesh.new()
@@ -649,7 +670,50 @@ def build_landscape(wm):
     for i in range(26):
         x = rnd.uniform(-36, 36)
         flower(rt, f"flower_{i}", x, rnd.uniform(0.6, 1.6), 0, wm["petals"][i % 4], wm, s=rnd.uniform(1.0, 1.5))
+    # More flowers dotted over the near hills, so the meadow under the balloons isn't bare
+    placed = 0
+    while placed < 34:
+        x, y = rnd.uniform(-30, 30), rnd.uniform(3.4, 6.2)
+        z = ground_z(x, y)
+        if z < 0.4 or any(abs(x - sx) < 1.6 and abs(y - sy) < 1.2 for sx, sy, _ in SHEEP):
+            continue
+        flower(rt, f"hill_flower_{placed}", x, y, z - 0.05, wm["petals"][placed % 4], wm, s=rnd.uniform(1.5, 2.1))
+        placed += 1
     join_children(rt)
+    return rt
+
+
+def build_sheep(wm, i, x, y, facing):
+    """A fluffy cartoon sheep (tap it: it hops and says baa). Origin at its feet."""
+    rt = root(f"sheep_{i}")
+    rt.location = (x, y, ground_z(x, y) - 0.1)
+    rnd = random.Random(11 + i)
+    # Built three times too big (so the shared face helper fits the head), then shrunk.
+    els = []
+    for k in range(9):
+        a = k / 9 * 2 * math.pi
+        els.append(("BALL", (math.cos(a) * 1.3, rnd.uniform(-0.4, 0.4), 1.75 + math.sin(a) * 0.5), rnd.uniform(0.8, 0.95), None, None))
+    els.append(("ELLIPSOID", (0, 0, 1.75), 1.0, (1.5, 0.9, 0.8), None))
+    metaball_mesh(f"sheep_{i}_wool", els, wm["wool"], rt, resolution=0.2)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cylinder(f"sheep_{i}_leg_{sx}_{sy}", 0.27, 0.23, 1.0, (sx * 0.95, sy * 0.45, 0.5), wm["hoof"], rt, segs=8)
+    before = set(rt.children)
+    # Head with a woolly tuft, ears and a happy face, all built at the origin then moved.
+    uv_sphere(f"sheep_{i}_head", 0.95, (0, 0, 0), wm["sheep_face"], rt, scale=(0.9, 0.85, 1.05), segs=18, rings=12)
+    uv_sphere(f"sheep_{i}_tuft", 0.5, (0, 0.15, 0.85), wm["wool"], rt, scale=(1.2, 1, 0.75), segs=12, rings=8)
+    for sx in (-1, 1):
+        uv_sphere(f"sheep_{i}_ear_{sx}", 0.36, (sx * 0.95, 0.1, 0.35), wm["sheep_ear"], rt, scale=(1.3, 0.45, 0.6), segs=10, rings=6,
+                  rot=Matrix.Rotation(sx * -0.45, 3, "Y"))
+
+    def surface(px, pz):
+        return -0.85 * 0.95 * math.sqrt(max(1 - (px / 0.855) ** 2 - (pz / 0.9975) ** 2, 0.0))
+    face(rt, face_mats(), -0.05, -0.8, spread=0.3, size=0.12, smile_w=0.2, surface=surface)
+    head_at = Matrix.Translation((facing * 1.9, -0.6, 2.45)) @ Matrix.Rotation(facing * -0.35, 4, "Z")
+    for o in set(rt.children) - before:
+        o.data.transform(head_at)
+    j = join_children(rt)
+    j.data.transform(Matrix.Diagonal((0.4, 0.4, 0.4, 1)))
     return rt
 
 
@@ -727,6 +791,7 @@ def build_world():
     rnd = random.Random(3)
     roots = [build_landscape(wm), build_windmill_sails(wm), build_hot_air_balloon(wm), build_sun(wm)]
     roots += [build_cloud(wm, i, rnd) for i in range(3)]
+    roots += [build_sheep(wm, i, x, y, f) for i, (x, y, f) in enumerate(SHEEP)]
     return roots
 
 

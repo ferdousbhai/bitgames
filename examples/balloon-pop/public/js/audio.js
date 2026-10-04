@@ -117,6 +117,37 @@ export class Audio {
     for (let i = 0; i < 4; i++) this.tone({ freq: 700 + i * 90, type: 'sine', gain: 0.12, decay: 0.09, delay: i * 0.08, slide: 200 })
   }
 
+  /** A soft, silly "baa" from a tapped sheep: a wobbly reedy note through a vowel-ish filter. */
+  baa(pitch = 1) {
+    if (!this.ready) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const osc = ctx.createOscillator()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(330 * pitch, t)
+    osc.frequency.linearRampToValueAtTime(300 * pitch, t + 0.55)
+    const lfo = ctx.createOscillator()
+    lfo.frequency.value = 9
+    const depth = ctx.createGain()
+    depth.gain.value = 14 * pitch
+    lfo.connect(depth).connect(osc.frequency)
+    const vowel = ctx.createBiquadFilter()
+    vowel.type = 'bandpass'
+    vowel.frequency.setValueAtTime(700, t)
+    vowel.frequency.linearRampToValueAtTime(1100, t + 0.12)
+    vowel.Q.value = 1.6
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.35, t + 0.05)
+    g.gain.setValueAtTime(0.35, t + 0.35)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6)
+    osc.connect(vowel).connect(g).connect(this.master)
+    osc.start(t)
+    lfo.start(t)
+    osc.stop(t + 0.65)
+    lfo.stop(t + 0.65)
+  }
+
   /** A gentle music-box loop, scheduled a little ahead each frame. */
   updateMusic(playing) {
     if (!this.ready || !this.musicOn || !playing) return

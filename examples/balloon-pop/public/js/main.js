@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
-import { Balloons, KINDS, PALETTE } from './balloons.js'
+import { Balloons, COLORS, KINDS } from './balloons.js'
 import { Effects } from './effects.js'
 import { World, halfSize as viewSize } from './world.js'
 
@@ -152,20 +152,27 @@ function spawnTick(dt) {
 const v3 = new THREE.Vector3()
 const center = new THREE.Vector3()
 
-/** Forgiving hit test in screen space: little fingers don't have to be exact. */
+/**
+ * Forgiving hit test in screen space: little fingers don't have to be exact.
+ * Each balloon is an oval around its whole shape (bunny ears and crown included), padded a little.
+ */
 function balloonAt(px, py) {
   let best = null
   let bestD = Infinity
   const rect = canvas.getBoundingClientRect()
   for (const b of balloons.list) {
+    const shape = balloons.shapes[b.kind.model] ?? { x: 0, y: 0, rx: b.kind.hit, ry: b.kind.hit }
     center.copy(b.group.position)
+    center.x += shape.x * b.scale
+    center.y += shape.y * b.scale
     v3.copy(center).project(camera)
     const sx = rect.left + ((v3.x + 1) / 2) * rect.width
     const sy = rect.top + ((1 - v3.y) / 2) * rect.height
-    // Pixel radius of the balloon body
     const { h } = halfSize(center.z)
-    const r = (b.kind.hit * b.scale * rect.height) / (2 * h)
-    const d = Math.hypot(px - sx, py - sy) / (r * 1.3)
+    const ppu = (b.scale * rect.height) / (2 * h) // pixels per model unit
+    const rx = Math.max(30, shape.rx * ppu) * 1.2
+    const ry = Math.max(30, shape.ry * ppu) * 1.15
+    const d = Math.hypot((px - sx) / rx, (py - sy) / ry)
     if (d < 1 && d < bestD) {
       best = b
       bestD = d
@@ -215,7 +222,7 @@ function pop(b, { chain = false } = {}) {
   } else if (b.kind.power === 'rainbow') {
     audio.rainbow()
     for (let i = 0; i < 6; i++) {
-      const m = balloons.make('mini', { color: PALETTE[i], scale: balloonScale() })
+      const m = balloons.make('mini', { color: COLORS[i], scale: balloonScale() })
       const a = (i / 6) * Math.PI * 2
       m.group.position.copy(pos)
       m.vx = Math.cos(a) * 6
@@ -359,7 +366,9 @@ function tapAt(x, y) {
   if (b) return pop(b)
   ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
-  if (world.poke(raycaster)) audio.giggle()
+  const poked = world.poke(raycaster)
+  if (poked?.sun) audio.giggle()
+  else if (poked?.sheep) audio.baa(poked.sheep)
 }
 
 canvas.addEventListener('pointerdown', (e) => {

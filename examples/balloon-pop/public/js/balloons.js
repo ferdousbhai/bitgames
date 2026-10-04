@@ -6,8 +6,8 @@ import * as THREE from 'three'
  * stripes and strings keep their baked colours.
  */
 export const PALETTE = ['#ff595e', '#ff9f1c', '#ffd23f', '#8ac926', '#2ec4b6', '#4d96ff', '#9b5de5', '#ff6b9d']
-/** Everyday balloons skip plain yellow, so only the crowned golden ones look golden. */
-const COLORS = PALETTE.filter((c) => c !== '#ffd23f')
+/** Everyday (and rainbow baby) balloons skip plain yellow, so only the crowned golden ones look golden. */
+export const COLORS = PALETTE.filter((c) => c !== '#ffd23f')
 
 export const KINDS = {
   round: { model: 'balloon_round', points: 1, colors: COLORS, hit: 1.1 },
@@ -17,7 +17,7 @@ export const KINDS = {
   bunny: { model: 'balloon_bunny', points: 3, colors: ['#ffffff', '#ffd6e7', '#e0d4ff', '#d4f1ff'], hit: 1.2 },
   star: { model: 'balloon_star', points: 3, colors: ['#ffd23f'], hit: 1.35, power: 'star' },
   rainbow: { model: 'balloon_rainbow', points: 2, colors: ['#ff595e'], hit: 1.15, power: 'rainbow' },
-  mini: { model: 'balloon_round', points: 1, colors: PALETTE, hit: 1.1, scale: 0.55 },
+  mini: { model: 'balloon_round', points: 1, colors: COLORS, hit: 1.1, scale: 0.55 },
 }
 
 export class Balloons {
@@ -25,6 +25,8 @@ export class Balloons {
     this.scene = scene
     this.list = []
     this.templates = {}
+    /** Per model: the oval the hit test uses (centre offset and radii, in model units, strings left out). */
+    this.shapes = {}
     this.skins = new Map()
     this.baseSkin = null
   }
@@ -65,6 +67,20 @@ export class Balloons {
       }
       node.position.set(0, 0, 0)
       this.templates[kind.model] = node
+      node.updateMatrixWorld(true)
+      const inv = node.matrixWorld.clone().invert()
+      const box = new THREE.Box3()
+      const part = new THREE.Box3()
+      node.traverse((o) => {
+        if (!o.isMesh || o.userData.string) return
+        o.geometry.computeBoundingBox()
+        box.union(part.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld).applyMatrix4(inv))
+      })
+      if (!box.isEmpty()) {
+        const c = box.getCenter(new THREE.Vector3())
+        const size = box.getSize(new THREE.Vector3())
+        this.shapes[kind.model] = { x: c.x, y: c.y, rx: size.x / 2, ry: size.y / 2 }
+      }
     }
   }
 
