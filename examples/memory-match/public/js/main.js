@@ -95,8 +95,10 @@ const sound = new Sound()
 sound.setMuted(progress.muted)
 const effects = new Effects(scene)
 
-const assets = { animals: {}, card: null, setting: {} }
-const room = { mat: null, props: [] }
+const assets = { animals: {}, card: null, setting: {}, felt: null }
+const room = { mat: null, felt: null, props: [] }
+/** World size of one tile of the mat's checked felt (models/mat_felt.jpg, made by blender/mat_texture.py). */
+const FELT_TILE = new THREE.Vector2(1.5, 1.5 * (864 / 1024))
 const board = new THREE.Group()
 const parade = new THREE.Group()
 scene.add(board, parade)
@@ -175,14 +177,21 @@ async function loadAssets() {
     const pct = Math.round((Object.values(bytes).reduce((a, b) => a + b, 0) / 1.1e6) * 100)
     $('loading-text').textContent = `Waking up the animals… ${Math.min(99, pct)}%`
   }
-  await Promise.all(
-    files.map(async (name) => {
+  const felt = new THREE.TextureLoader().loadAsync('./models/mat_felt.jpg').then((tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy())
+    assets.felt = tex
+  })
+  await Promise.all([
+    felt,
+    ...files.map(async (name) => {
       loaded[name] = await loader.loadAsync(`./models/${name}.glb`, (e) => {
         bytes[name] = e.loaded
         report()
       })
     }),
-  )
+  ])
   for (const name of NAMES) {
     const root = loaded.animals.scene.getObjectByName(`animal_${name}`)
     root.position.set(0, 0, 0)
@@ -203,6 +212,22 @@ function buildRoom() {
   mat.traverse((o) => (o.receiveShadow = true))
   scene.add(table, mat)
   room.mat = mat
+  // The felt gets a soft checked blanket texture. The mesh has no UVs, so map its top straight
+  // down: one unit of UV per unit of the unstretched mat, scaled to the tile in placeRoom.
+  mat.traverse((o) => {
+    if (!o.isMesh || o.material.name !== 'mat_felt' || !assets.felt) return
+    const pos = o.geometry.attributes.position
+    const uv = new Float32Array(pos.count * 2)
+    for (let i = 0; i < pos.count; i++) {
+      uv[i * 2] = pos.getX(i)
+      uv[i * 2 + 1] = pos.getZ(i)
+    }
+    o.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+    o.material.map = assets.felt
+    o.material.color.set('#ffffff')
+    o.material.needsUpdate = true
+    room.felt = assets.felt
+  })
   for (const name of ['prop_blocks', 'prop_ball', 'prop_rings', 'prop_crayons', 'prop_bear']) {
     const prop = assets.setting[name]
     if (!prop) continue
@@ -220,6 +245,11 @@ function placeRoom(hw, hd) {
   const w = hw + 0.45
   const d = hd + 0.45
   room.mat.scale.set((w * 2) / 6, 1, (d * 2) / 6)
+  // Keep the checks the same size however far the mat stretches, centred on the board.
+  if (room.felt) {
+    room.felt.repeat.set(room.mat.scale.x / FELT_TILE.x, room.mat.scale.z / FELT_TILE.y)
+    room.felt.offset.set(0.5, 0.5)
+  }
   // Wide screens: toys beside the mat. Tall screens (and the menu, whose parade leaves the table
   // behind it empty) have room above the mat instead, so the toys line up behind it.
   const back = game.state === 'menu' ? 0.35 : 0 // a step further back, so no toy looks perched on an animal's head
@@ -282,7 +312,9 @@ function settleProps(view, w, d) {
   for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) #play, #menu:not(.hidden) .level')) {
     range.selectNodeContents(el) // the text itself, not the full-width paragraph around it
     const r = el.matches('.hint, .logo') ? range.getBoundingClientRect() : el.getBoundingClientRect()
-    blockers.push([(r.left / innerWidth) * 2 - 1, (r.right / innerWidth) * 2 - 1, 1 - (r.bottom / innerHeight) * 2, 1 - (r.top / innerHeight) * 2])
+    // The HUD buttons get a margin, so a toy never crowds the home or sound button.
+    const m = el.matches('.hud-left') ? 18 : 0
+    blockers.push([((r.left - m) / innerWidth) * 2 - 1, ((r.right + m) / innerWidth) * 2 - 1, 1 - ((r.bottom + m) / innerHeight) * 2, 1 - ((r.top - m) / innerHeight) * 2])
   }
   // The menu's animals too, with a little headroom, so no toy seems to sit on an animal's head
   // like a hat (they may still pop in, so use their full size).

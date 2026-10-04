@@ -36,7 +36,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .overlay button { pointer-events: auto; }
 .menu-top { text-align: center; padding-top: 6px; }
 .menu-top .logo { -webkit-text-stroke: 2px rgba(255,255,255,0.9); paint-order: stroke fill; }
-.hint { margin: 6px 0 0; font-size: clamp(16px, 2.6vw, 22px); font-weight: 800; color: #5a3d7a; text-shadow: 0 2px 0 rgba(255,255,255,.7); }
+.hint { text-wrap: balance; margin: 6px 0 0; font-size: clamp(16px, 2.6vw, 22px); font-weight: 800; color: #5a3d7a; text-shadow: 0 2px 0 rgba(255,255,255,.7); }
 .menu-bottom { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 
 .big-go {

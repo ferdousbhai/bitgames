@@ -1,0 +1,4 @@
+curly_teddy_checkered_diff_1k.jpg
+  "Curly Teddy Checkered" by Rico Cilliers and colormass, Poly Haven
+  https://polyhaven.com/a/curly_teddy_checkered
+  License: CC0 1.0 (public domain). Used by mat_texture.py for the play mat.
