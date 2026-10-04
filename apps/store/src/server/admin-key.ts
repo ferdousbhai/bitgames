@@ -4,7 +4,7 @@ import { allowedByIp } from './rate-limit'
 
 /**
  * Checks the admin key, rate-limiting guesses per IP first. Used by /admin's
- * server functions and the reviewer MCP endpoint. Kept out of admin.ts, whose
+ * server functions and the review API. Kept out of admin.ts, whose
  * route imports it: only server functions may be exported there.
  */
 export async function isAdminKey(adminKey: string, limiter: RateLimit, ip?: string) {

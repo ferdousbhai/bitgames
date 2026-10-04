@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { GameFrame } from '#/components/GameFrame'
 import { type AdminGame, listForAdmin, reviewGame } from '#/server/admin'
 import { toy } from '#/lib/ui'
+import { versionBase } from '#/lib/site'
 
 export const Route = createFileRoute('/admin')({
   head: () => ({ meta: [{ title: 'Review · BitGames' }, { name: 'robots', content: 'noindex' }] }),
@@ -45,8 +46,9 @@ function AdminPage() {
 
   async function decide(game: AdminGame, decision: 'approve' | 'reject' | 'unpublish') {
     const note = decision === 'approve' ? undefined : (window.prompt('Note for the creator (what to fix):') ?? undefined)
+    if (decision !== 'approve' && !note?.trim()) return
     try {
-      await review({ data: { adminKey, id: game.id, decision, note } })
+      await review({ data: { adminKey, id: game.id, decision, note, revision: game.revision, submissionId: game.review_version ?? undefined } })
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.')
@@ -85,7 +87,7 @@ function AdminPage() {
         <h1 className="mb-1 text-3xl font-bold">🛡️ Waiting to be listed ({waiting.length})</h1>
         <p className="mb-4 text-ink-soft">
           These games already play at their creators' links. Approving lists them in the store so other families can
-          find them. Your Claude Code agent can review them too: ask it to “review the submitted games”.
+          find them. Your coding agent can review them too: ask it to “review the submitted games”.
         </p>
         {waiting.length === 0 && <p className="text-lg text-ink-soft">Nothing to review. 🎉</p>}
         <div className="space-y-6">
@@ -95,7 +97,7 @@ function AdminPage() {
               <GameFrame
                 gameId={game.id}
                 title={game.title}
-                src={game.review_url! + game.entry}
+                src={versionBase(game.review_version!) + game.entry}
                 className="mt-4 aspect-video w-full overflow-hidden rounded-2xl bg-ink"
               />
               <p className="mt-3 text-sm text-ink-soft">

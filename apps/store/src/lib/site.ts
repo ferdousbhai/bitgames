@@ -7,14 +7,17 @@ export const PUBLIC_ORIGIN = 'https://bitgames.store'
 
 export const VENDOR_BASE = `${PUBLIC_ORIGIN}/vendor`
 
+// Older reviewed games import the store's original Worker address. It serves
+// the same trusted libraries; never add creator-supplied origins to this list.
+const LEGACY_VENDOR_BASE = 'https://bitgames-store.ferdousbd.workers.dev/vendor/'
+
 /**
- * What a game may load, enforced by the browser through the game frame's `csp`
- * attribute (the game's server opts in with Allow-CSP-From): its own files,
- * and the shared libraries under /vendor/. Nothing else, so what a reviewer
- * plays is everything the game can ever run or show.
+ * What a game may load. Playback uses the exact /game-assets/<version>/ prefix
+ * in gateway response headers. A separate wrapper constrains navigation. The gateway
+ * verifies files; the browser blocks requests outside that prefix and trusted vendor libraries.
  */
 export function gameCsp(gameOrigin: string, storeOrigin: string): string {
-  const vendor = [...new Set([`${PUBLIC_ORIGIN}/vendor/`, `${storeOrigin}/vendor/`])].join(' ')
+  const vendor = [...new Set([`${PUBLIC_ORIGIN}/vendor/`, `${storeOrigin}/vendor/`, LEGACY_VENDOR_BASE])].join(' ')
   return [
     "default-src 'none'",
     `script-src ${gameOrigin} ${vendor} 'unsafe-inline'`,
@@ -30,9 +33,11 @@ export function gameCsp(gameOrigin: string, storeOrigin: string): string {
 }
 
 /**
- * The same rules, sent by every game's own server as its Content-Security-Policy
- * (from the starter project's public/_headers). Browsers that ignore the frame's
- * `csp` attribute, such as every iPad browser (all WebKit), still enforce this.
- * 'self' is the game's own site even inside the sandboxed frame.
+ * Direct-preview policy supplied by the starter on the creator's own deployment.
+ * BitGames ignores upstream headers and supplies its own path-restricted CSP,
+ * including for browsers that ignore the iframe csp attribute.
  */
 export const GAME_CSP_HEADER = gameCsp("'self'", PUBLIC_ORIGIN)
+
+/** Browser-safe, immutable playback path for one shipment. */
+export const versionBase = (id: string) => `/game-assets/${id}/`

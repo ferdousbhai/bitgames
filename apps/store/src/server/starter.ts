@@ -6,6 +6,7 @@
  * Kept free of Worker and path-alias imports so Node scripts can load it.
  */
 import { GAME_CSP_HEADER } from '../lib/site.ts'
+import { isGameId } from './limits.ts'
 
 /** The `cf` and `wrangler` versions the project is known to deploy with. */
 export const DEPLOY_TOOLS = { cf: '1.0.0-beta.12', wrangler: '4.147.0' }
@@ -20,6 +21,7 @@ export const workerName = (gameId: string) => `bitgames-${gameId}`
  * relative to the project folder.
  */
 export function starterProject(gameId: string): Record<string, string> {
+  if (!isGameId(gameId)) throw new Error('Invalid game id.')
   return {
     'package.json': `${JSON.stringify(
       {
@@ -57,8 +59,9 @@ export default defineWranglerConfig({
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = new URL('./public/', import.meta.url).pathname
+const root = fileURLToPath(new URL('./public/', import.meta.url))
 const SKIP = new Set(['${MANIFEST_FILE}', '_headers', '_redirects'])
 const walk = (dir) =>
   readdirSync(dir).flatMap((name) => {
@@ -69,7 +72,7 @@ const walk = (dir) =>
 
 const files = {}
 for (const file of walk(root).sort()) {
-  const path = relative(root, file)
+  const path = relative(root, file).split('\\\\').join('/')
   if (!SKIP.has(path)) files[path] = createHash('sha256').update(readFileSync(file)).digest('hex')
 }
 writeFileSync(join(root, '${MANIFEST_FILE}'), JSON.stringify({ files }, null, 2) + '\\n')
@@ -77,10 +80,9 @@ console.log(\`${MANIFEST_FILE}: \${Object.keys(files).length} files\`)
 `,
     '.gitignore': 'node_modules/\n.cloudflare/\n.wrangler/\npublic/bitgames.json\n',
     'public/_headers': `# BitGames plays the game in a sandboxed frame with no origin of its own, and
-# locks down what it may load: only the game's own files and BitGames' shared
-# libraries. The Content-Security-Policy enforces that in every browser (BitGames
-# checks it when a version is submitted); Allow-CSP-From lets the frame apply the
-# same rules; CORS lets the sandboxed page load the game's own scripts and models.
+# This policy protects direct previews on your own Cloudflare version URL.
+# BitGames playback supplies its own stricter policy through the verified file
+# gateway. CORS also allows tools to inspect scripts and models in direct previews.
 /*
   Content-Security-Policy: ${GAME_CSP_HEADER}
   Allow-CSP-From: *

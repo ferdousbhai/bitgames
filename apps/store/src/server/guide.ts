@@ -8,10 +8,10 @@ import { MANIFEST_FILE, workerName } from './starter'
 const THREE_VERSION = pkg.dependencies.three
 const THREE_BASE = `${VENDOR_BASE}/three`
 
-/** Sent to the agent when it connects. Kept short; get_guide has the details. */
+/** Sent to the agent when it connects. Kept short; get_context has the details. */
 export const INSTRUCTIONS = `BitGames is a game store for young children (about 4 to 8 years old).
 Games run on the creator's own Cloudflare account. Once shipped, a game plays right away at its own link on BitGames, and an adult reviews it before it is listed in the store for other families.
-Call get_guide once before building. The workflow is: create_game, get_starter_project, build the game in public/, deploy it to Cloudflare, then ship_version with the version preview URL and give the user the play link it returns.`
+Call get_context once before building. Use your filesystem, shell and browser tools to build and test locally. The workflow is: get_context, save_game, get_context with gameId and includeStarter=true for starter files, build in public/, deploy to Cloudflare, then publish_game with the version URL. Give the user its playUrl. Keep destructive deletion and withdrawal explicit.`
 
 export const GUIDE = `# Making a BitGames game
 
@@ -25,13 +25,13 @@ Children of about 4 to 8. Many can't read well yet. An adult reviews every versi
 - Original or properly licensed art. If you use a CC-BY model, credit its creator in the game.
 
 ## Where a game lives
-Each game is a folder of static files deployed as a Worker on the creator's own Cloudflare account. BitGames keeps the catalog (title, tile, reviews) and plays the game in a frame on its pages.
-1. create_game registers the game and gives you its id.
-2. get_starter_project returns a project to write into an empty folder: \`cloudflare.config.ts\` and \`wrangler.config.ts\` (the Worker \`${workerName('<id>')}\`, static files from \`public/\`), \`bitgames.mjs\`, \`public/_headers\` and a working starter \`public/index.html\`. Change the starter rather than starting from nothing, and keep \`_headers\` as it is.
+Each game is a folder of static files deployed to the creator's Cloudflare account. BitGames records its file hashes and plays it through a gateway that serves only those files after verifying their bytes. Use relative paths for your own files; upstream absolute URLs are blocked. A Worker backend or unlisted endpoint is not available to the game inside BitGames.
+1. save_game with all info fields registers the game and returns its id and stable playUrl. Later, pass gameId and partial info to edit its details. Metadata edits withdraw pending review; publish again when ready.
+2. get_context with gameId and includeStarter=true returns a project to write into an empty folder: \`cloudflare.config.ts\` and \`wrangler.config.ts\` (the Worker \`${workerName('<id>')}\`, static files from \`public/\`), \`bitgames.mjs\`, \`public/_headers\` and a working starter \`public/index.html\`. Change the starter rather than starting from nothing, and keep \`_headers\` as it is.
 3. Build the game in \`public/\`. \`index.html\` is the entry point.
 4. Deploy with \`npm install\` then \`npm run deploy\`. It runs \`node bitgames.mjs\`, which lists every file in \`public/\` with its SHA-256 in \`public/${MANIFEST_FILE}\`, then \`cf deploy\`. The creator logs in once with \`npx cf auth login\`.
 5. Every deploy is a new version with its own preview URL that never changes: \`https://<first 8 characters of the "Current Version ID">-${workerName('<id>')}.<account>.workers.dev/\`. Open it to check the game.
-6. ship_version with that URL. BitGames downloads every file and checks it against ${MANIFEST_FILE}. The game then plays right away at its own link (/try/<token>), which the user can share with anyone, and the version goes to a reviewer to be listed in the store. Once approved, exactly that version is what the store shows. To update a game, deploy again and ship the new version: the link plays it at once, while the store keeps its current version until the update is approved. BitGames re-checks listed versions and takes a game out of the store if its files change.
+6. Optionally call publish_game with checkOnly=true to validate without changing anything. Then publish_game with that URL. BitGames downloads every file and checks it against ${MANIFEST_FILE}. The game then plays right away at its own link (/try/<token>), which the user can share with anyone, and the version goes to a reviewer to be listed in the store. Once approved, exactly that version is what the store shows. To update a game, deploy again and ship the new version: the link plays it at once, while the store keeps its current version until the update is approved. The gateway refuses changed or unlisted files. BitGames also re-checks listed versions. get_context with gameId returns version history and review notes (pass nextHistoryCursor as historyCursor to read older versions); publish_game with a previous versionId restores those files at your link and submits them for review again. withdraw_submission cancels only the listing request; delete_game removes the game and history from BitGames.
 
 BitGames hosts three.js ${THREE_VERSION} with all of its addons (\`examples/jsm\`). Use exactly this import map:
 
@@ -50,10 +50,10 @@ On BitGames, games run in a locked-down frame:
 - There are no cookies, and \`localStorage\` throws. Keep all state in memory.
 - \`alert\`, \`prompt\`, popups, forms and links that open other pages don't work.
 - Start sounds with Web Audio inside a pointer or key event, because browsers block audio until the player interacts.
-- Use static files only: no Worker code, so a reviewed version can't behave differently later.
+- Use static files only. BitGames serves the recorded bytes and rejects mismatches; backend requests and files absent from the manifest are unavailable.
 
 ## Limits
-- Up to ${MAX_FILES_PER_GAME} files and ${mb(MAX_GAME_BYTES)} per game (bundle code into a few modules).
+- Up to ${MAX_FILES_PER_GAME} files and ${mb(MAX_GAME_BYTES)} per game, with at most 25 MB per file (bundle code into a few modules).
 
 ## Playing together (multiplayer)
 Games can let up to 8 people in the same home play together, each on their own device. BitGames shows the lobby: one device taps "Start a family game" and gets a code made of three animals, and the others tap "Join" and pick the same animals. Game data then goes directly between the devices over WebRTC.
@@ -105,7 +105,7 @@ Don't use Draco or meshopt compression: their decoders need extra permissions th
 Add a cover so children can recognise the game: a 1280x720 screenshot of an exciting moment, saved as \`public/cover.jpg\`, \`cover.webp\` or \`cover.png\`. Without one, the tile shows the game's emoji.
 
 ## Checking your work
-Open the version URL from the deploy, or have the user open it, and play the game; fix every console error. After ship_version, the game's link (/try/<token>, also in list_my_games) plays the shipped version inside BitGames with the real sandbox and the multiplayer lobby. Query parameters on the link are passed to the game, so /try/<token>?debug reaches your game as location.search. Use list_my_games to see whether it is listed in the store, and any review notes.
+Open the version URL from the deploy, or have the user open it, and play the game; fix every console error. After publish_game, the game's link (/try/<token>, also in get_context) plays the shipped version inside BitGames with the real sandbox and the multiplayer lobby. Query parameters on the link are passed to the game, so /try/<token>?debug reaches your game as location.search. Use get_context to see whether it is listed in the store, and any review notes.
 
 ## Categories
 ${CATEGORIES.map((c) => `- ${c.slug}: ${c.name} ${c.emoji}`).join('\n')}

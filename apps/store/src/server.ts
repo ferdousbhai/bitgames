@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers'
 import { recheckLive } from './server/games-store'
 import { isGameId } from './server/limits'
 import { allowedByIp } from './server/rate-limit'
+import { serveGameAsset } from './server/game-assets'
 
 export { GameRoom } from './server/room'
 
@@ -35,6 +36,10 @@ const entry = createServerEntry({
 
 export default {
   ...entry,
+  fetch(request: Request, _env: Env, ctx: ExecutionContext) {
+    if (new URL(request.url).pathname.startsWith('/game-assets/')) return serveGameAsset(request, ctx)
+    return entry.fetch(request)
+  },
   /** Every few minutes: re-check one published game's files (see recheckLive). */
   scheduled(_controller: ScheduledController, _env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(recheckLive())

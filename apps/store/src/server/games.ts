@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import type { Game } from '#/lib/types'
+import { versionBase } from '#/lib/site'
 import { isGameId } from './limits'
 import { allowedByIp } from './rate-limit'
 
@@ -20,7 +21,7 @@ interface GameRow {
   likes: number
   created_at: number
   cover: string | null
-  live_url: string
+  live_version: string
 }
 
 function toGame(row: GameRow): Game {
@@ -38,16 +39,16 @@ function toGame(row: GameRow): Game {
     plays: row.plays,
     likes: row.likes,
     createdAt: row.created_at,
-    url: row.live_url,
-    cover: row.cover ? row.live_url + row.cover : null,
+    url: versionBase(row.live_version),
+    cover: row.cover ? versionBase(row.live_version) + row.cover : null,
   }
 }
 
 export const listGames = createServerFn({ method: 'GET' }).handler(async () => {
   const { results } = await env.DB.prepare(
     `SELECT id, title, tagline, how_to_play, emoji, color, category, together, entry,
-            featured, plays, likes, created_at, cover, live_url
-       FROM games WHERE live = 1 ORDER BY created_at DESC LIMIT 500`,
+            featured, plays, likes, created_at, cover, live_version
+       FROM games WHERE live = 1 AND live_version IS NOT NULL ORDER BY created_at DESC LIMIT 500`,
   ).all<GameRow>()
   return results.map(toGame)
 })

@@ -8,8 +8,9 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const examples = new URL('.', import.meta.url).pathname
+const examples = fileURLToPath(new URL('.', import.meta.url))
 
 for (const id of process.argv.slice(2)) {
   const dir = join(examples, id)

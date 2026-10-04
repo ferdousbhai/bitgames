@@ -5,8 +5,9 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = new URL('./public/', import.meta.url).pathname
+const root = fileURLToPath(new URL('./public/', import.meta.url))
 const SKIP = new Set(['bitgames.json', '_headers', '_redirects'])
 const walk = (dir) =>
   readdirSync(dir).flatMap((name) => {
@@ -17,7 +18,7 @@ const walk = (dir) =>
 
 const files = {}
 for (const file of walk(root).sort()) {
-  const path = relative(root, file)
+  const path = relative(root, file).split('\\').join('/')
   if (!SKIP.has(path)) files[path] = createHash('sha256').update(readFileSync(file)).digest('hex')
 }
 writeFileSync(join(root, 'bitgames.json'), JSON.stringify({ files }, null, 2) + '\n')

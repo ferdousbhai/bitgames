@@ -1,4 +1,7 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
@@ -15,4 +18,19 @@ describe('examples match the starter project', () => {
       }
     })
   }
+})
+
+it('generates manifests in paths with spaces and rejects unsafe game ids', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'bitgames project '))
+  try {
+    mkdirSync(join(dir, 'public', 'models'), { recursive: true })
+    writeFileSync(join(dir, 'public', 'index.html'), '<html>Happy game</html>')
+    writeFileSync(join(dir, 'public', 'models', 'toy.glb'), 'model')
+    writeFileSync(join(dir, 'bitgames.mjs'), starterProject('happy-game')['bitgames.mjs']!)
+    execFileSync(process.execPath, ['bitgames.mjs'], { cwd: dir })
+    const manifest = JSON.parse(readFileSync(join(dir, 'public', 'bitgames.json'), 'utf8')) as { files: Record<string, string> }
+    assert.equal(manifest.files['models/toy.glb'], createHash('sha256').update('model').digest('hex'))
+    assert.equal(Object.keys(manifest.files).length, 2)
+    assert.throws(() => starterProject('bad"id'), /Invalid game id/)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })

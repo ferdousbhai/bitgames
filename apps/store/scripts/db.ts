@@ -11,17 +11,19 @@
  * Migrations are tracked in the same d1_migrations table that cf and Wrangler use.
  */
 import { execFileSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import config from '../cloudflare.config.ts'
 import { parseVersionUrl } from '../src/server/limits.ts'
-import { MANIFEST_FILE } from '../src/server/starter.ts'
+import { checkVersion } from '../src/server/versions.ts'
+import { backfillVersions, literal } from './backfill-versions.ts'
 
 const DATABASE_ID = config.worker.env.DB.id!
 const LOCAL_API = `${process.env.DEV_URL ?? 'http://localhost:3030'}/cdn-cgi/local/explorer/api`
 
-const root = new URL('..', import.meta.url).pathname
+const root = fileURLToPath(new URL('..', import.meta.url))
 const remote = process.argv.includes('--remote')
 const command = process.argv[2]
 
@@ -60,6 +62,7 @@ async function sql(query: string): Promise<Record<string, unknown>[]> {
 async function migrate() {
   if (remote) {
     console.log(cf(['d1', 'migrations', 'apply', DATABASE_ID, '--dir', 'migrations']))
+    await backfillVersions(sql)
     return
   }
   await sql(`CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -72,6 +75,7 @@ async function migrate() {
     await sql(`INSERT INTO d1_migrations (name) VALUES ('${file}')`)
     console.log(`applied ${file}`)
   }
+  await backfillVersions(sql)
   console.log('local database is up to date')
 }
 
@@ -88,11 +92,6 @@ interface ExampleGame {
   /** The deployed version to list, written by examples/publish.mjs. */
   url?: string
 }
-
-const literal = (value: string | number | boolean | null) =>
-  value === null ? 'NULL' : typeof value === 'string' ? `'${value.replaceAll("'", "''")}'` : String(Number(value))
-
-const COVER_FILES = ['cover.webp', 'cover.jpg', 'cover.png']
 
 /**
  * Lists the games in ../../examples as BitGames-made, already-approved games,
@@ -111,21 +110,23 @@ async function seed() {
       console.log(`skipped ${game.id}: deploy it first (node examples/publish.mjs ${game.id})`)
       continue
     }
-    const manifestText = await (await fetch(game.url + MANIFEST_FILE)).text()
-    const files = (JSON.parse(manifestText) as { files: Record<string, string> }).files
-    const manifest = createHash('sha256').update(manifestText).digest('hex')
-    const cover = COVER_FILES.find((name) => name in files) ?? null
+    const checked = await checkVersion(game.url)
+    const versionId = randomUUID()
+    const info = { title: game.title, tagline: game.tagline, howToPlay: game.howToPlay, emoji: game.emoji, color: game.color, category: game.category, together: game.together }
     const values = [game.id, game.title, game.tagline, game.howToPlay, game.emoji, game.color, game.category, game.together, game.featured,
-      now - index * 60_000, now, game.url, manifest, cover]
+      now - index * 60_000, now, checked.url, checked.manifest, checked.cover]
     await sql(
       `INSERT INTO games (id, title, tagline, how_to_play, emoji, color, category, together, featured, created_at, updated_at,
-                          live_url, live_manifest, cover, verified_at, status, live, preview_token, play_url)
-       VALUES (${values.map(literal).join(', ')}, ${now}, 'public', 1, lower(hex(randomblob(16))), ${literal(game.url)})
+                          live_url, live_manifest, cover, verified_at, status, live, preview_token, play_url, live_version, play_version, revision)
+       VALUES (${values.map(literal).join(', ')}, ${now}, 'public', 1, lower(hex(randomblob(16))), ${literal(checked.url)}, ${literal(versionId)}, ${literal(versionId)}, ${literal(randomUUID())})
        ON CONFLICT (id) DO UPDATE SET title = excluded.title, tagline = excluded.tagline, how_to_play = excluded.how_to_play,
          emoji = excluded.emoji, color = excluded.color, category = excluded.category, together = excluded.together,
          featured = excluded.featured, updated_at = excluded.updated_at, live_url = excluded.live_url,
          live_manifest = excluded.live_manifest, cover = excluded.cover, verified_at = excluded.verified_at, live = 1, status = 'public',
-         play_url = excluded.play_url, review_note = NULL`,
+         play_url = excluded.play_url, play_version = excluded.play_version, live_version = excluded.live_version,
+         review_version = NULL, review_url = NULL, review_manifest = NULL, review_cover = NULL, review_note = NULL, pending_info = NULL, revision = excluded.revision;
+       INSERT INTO game_versions (id, game_id, upstream_url, manifest_hash, manifest_json, info_json, cover, file_count, bytes, created_at, decision)
+       VALUES (${[versionId, game.id, checked.url, checked.manifest, checked.manifestJson, JSON.stringify(info), checked.cover, checked.files, checked.bytes, now, 'approved'].map(literal).join(', ')})`
     )
     seeded++
     console.log(`listed ${game.id} at ${game.url}`)

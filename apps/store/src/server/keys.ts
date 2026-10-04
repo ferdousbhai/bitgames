@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
-import { createCreator } from './creators'
+import { createCreator, manageCredentials } from './creators'
 import { allowedByIp } from './rate-limit'
 
 const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
@@ -30,5 +30,14 @@ export const createCreatorKey = createServerFn({ method: 'POST' })
     if (!(await passedTurnstile(data.turnstileToken, ip))) {
       throw new Error("We couldn't check that you're a person. Please try again.")
     }
-    return { key: await createCreator() }
+    return createCreator()
+  })
+
+/** Rotation preserves ownership. Recovery also works after the creator key was revoked. */
+export const manageCreatorKey = createServerFn({ method: 'POST' })
+  .validator(z.object({ credential: z.string().min(1).max(100), action: z.enum(['rotate', 'revoke']) }))
+  .handler(async ({ data }) => {
+    const ip = getRequestHeader('cf-connecting-ip') ?? 'unknown'
+    if (!(await allowedByIp(env.KEY_LIMITER, ip))) throw new Error('Too many attempts. Wait a minute.')
+    return manageCredentials(data.credential, data.action)
   })

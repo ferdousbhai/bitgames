@@ -1,6 +1,6 @@
 import { BRIDGE, isBridgeMessage, newPeerId, type GameToPage, type PageToGame, type Unbridged } from '@bitgames/game-sdk/bridge'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { gameCsp } from '#/lib/site'
+import { gameFrameDocument } from '#/lib/game-frame'
 import { toy } from '#/lib/ui'
 
 /** Room codes are three of these animals, so children can share them without reading. */
@@ -20,9 +20,9 @@ const emojiCode = (code: number[]) => code.map((i) => ROOM_ANIMALS[i]).join('')
  * multiplayer SDK. The game asks for a room; this page connects to the
  * room's signaling WebSocket and relays connection setup to the game.
  *
- * `src` is the game's page on its creator's Cloudflare account. The frame's
- * `csp` attribute limits what it may load (see gameCsp); browsers refuse to
- * show a page that doesn't accept those limits with Allow-CSP-From.
+ * `src` is the exact shipped gateway page. A sandboxed wrapper relays the
+ * bridge and restricts child navigation to this shipment with frame-src CSP;
+ * the gateway's response policy constrains the game's own resource loads.
  */
 export function GameFrame({ gameId, src, title, className }: { gameId: string; src: string; title: string; className?: string }) {
     const frame = useRef<HTMLIFrameElement | null>(null)
@@ -116,10 +116,8 @@ export function GameFrame({ gameId, src, title, className }: { gameId: string; s
             el?.focus()
           }}
           title={title}
-          src={src}
-          // Games are untrusted: scripts only, no same-origin access to their own site or the store.
-          sandbox="allow-scripts allow-pointer-lock"
-          {...{ csp: gameCsp(new URL(src).origin, window.location.origin) }}
+          srcDoc={gameFrameDocument(src, window.location.origin)}
+          // The wrapper is trusted app code. Its child has the opaque-origin sandbox.
           referrerPolicy="no-referrer"
           allow="autoplay; gamepad"
           className="h-full w-full"

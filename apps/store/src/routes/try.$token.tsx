@@ -8,9 +8,11 @@ import { getPreview } from '#/server/preview'
 
 /** A creator's private preview inside the store page, so "play together" works while testing. */
 export const Route = createFileRoute('/try/$token')({
-  loader: async ({ params }) => {
+  validateSearch: (search: Record<string, unknown>) => ({ submission: typeof search.submission === 'string' && /^[0-9a-f-]{36}$/.test(search.submission) ? search.submission : undefined }),
+  loaderDeps: ({ search }) => ({ submissionId: search.submission }),
+  loader: async ({ params, deps }) => {
     if (!isPreviewToken(params.token)) throw notFound()
-    const game = await getPreview({ data: { token: params.token } })
+    const game = await getPreview({ data: { token: params.token, submissionId: deps.submissionId } })
     if (!game) throw notFound()
     return game
   },
@@ -25,7 +27,9 @@ function TryPage() {
   const game = Route.useLoaderData()
   const [fullscreen, setFullscreen] = useState(false)
   // Query parameters on the preview page (e.g. ?debug) are passed to the game for testing.
-  const src = game.url ? game.url + game.entry + window.location.search : null
+  const query = new URLSearchParams(window.location.search)
+  query.delete('submission')
+  const src = game.url ? game.url + game.entry + (query.size ? '?' + query.toString() : '') : null
   return (
     <>
       <p className="mt-2 rounded-2xl bg-sun/30 px-4 py-2 text-center font-semibold">
@@ -59,7 +63,7 @@ function TryPage() {
         </>
       ) : (
         <p className="rounded-[32px] border-4 border-white bg-cloud p-8 text-center text-xl">
-          Nothing to play yet: deploy the game and ship its version with ship_version. 🛠️
+          Nothing to play yet: deploy the game and ship its version with publish_game. 🛠️
         </p>
       )}
       <p className="mt-3 text-lg text-ink-soft">🕹️ {game.howToPlay}</p>

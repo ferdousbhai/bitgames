@@ -1,27 +1,13 @@
 import { env } from 'cloudflare:workers'
-import { randomHex, sha256Hex } from './crypto'
-import { MAX_FILES_PER_GAME, MAX_GAMES_PER_CREATOR, MAX_GAME_BYTES, MAX_MANIFEST_BYTES, isFilePath, mb, parseVersionUrl } from './limits'
-import { GAME_CSP_HEADER } from '#/lib/site'
-import { MANIFEST_FILE } from './starter'
+import { randomHex } from './crypto'
+import { MAX_GAMES_PER_CREATOR } from './limits'
+import { CreatorError, UnreachableError } from './errors'
+import { checkVersion } from './versions'
+import { findVersion, versionBase, type StoredVersion } from './game-assets'
 
-/** Thrown for anything the creator can fix; the message is shown to their agent. */
-export class CreatorError extends Error {}
-
-/** A version that couldn't be fetched (yet): new version URLs take a little while to go live. */
-class UnreachableError extends CreatorError {}
-
-/**
- * Shipping a version makes it playable right away at the creator's link
- * (play_url). Review only decides whether it is listed in the store, so other
- * families can find it. `status` is the state of that listing request:
- * - draft: nothing waiting (never shipped, withdrawn, or details changed since)
- * - review: the latest shipped version is waiting to be listed
- * - public: the store lists the latest shipped version
- * - rejected: not listed, or taken down; see review_note
- * Whether a game is in the store at all is the separate `live` flag.
- */
+export { CreatorError } from './errors'
+export { checkVersion } from './versions'
 export type GameStatus = 'draft' | 'review' | 'public' | 'rejected'
-
 export interface GameInfo {
   title: string
   tagline: string
@@ -31,14 +17,9 @@ export interface GameInfo {
   category: string
   together: boolean
 }
-
-/** GameInfo field -> games column. */
 const INFO_COLUMNS: Record<keyof GameInfo, string> = {
-  title: 'title', tagline: 'tagline', howToPlay: 'how_to_play', emoji: 'emoji',
-  color: 'color', category: 'category', together: 'together',
+  title: 'title', tagline: 'tagline', howToPlay: 'how_to_play', emoji: 'emoji', color: 'color', category: 'category', together: 'together',
 }
-
-/** `col = ?` assignments and their values for the fields present in `info`. */
 function infoSets(info: Partial<GameInfo>) {
   const sets: string[] = []
   const values: (string | number)[] = []
@@ -50,10 +31,16 @@ function infoSets(info: Partial<GameInfo>) {
   }
   return { sets, values }
 }
-
-interface OwnedGameRow {
+export interface OwnedGameRow {
   id: string
+  creator_id: string | null
   title: string
+  tagline: string
+  how_to_play: string
+  emoji: string
+  color: string
+  category: string
+  together: number
   live: number
   status: GameStatus
   review_note: string | null
@@ -62,273 +49,138 @@ interface OwnedGameRow {
   live_url: string | null
   review_url: string | null
   play_url: string | null
+  play_version: string | null
+  review_version: string | null
+  live_version: string | null
+  revision: string
   updated_at: number
 }
-
-const OWNED_COLUMNS = 'id, title, live, status, review_note, preview_token, pending_info, live_url, review_url, play_url, updated_at'
-
-const COVER_FILES = ['cover.webp', 'cover.jpg', 'cover.png']
-
-/** The creator's own link to their game: the latest shipped version inside BitGames, so "play together" works too. */
-export function previewUrl(origin: string, token: string) {
-  return `${origin}/try/${token}`
-}
-
-function slugify(title: string) {
-  return (
-    title
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 40) || 'game'
-  )
-}
-
-async function ownedGame(creatorId: string, gameId: string) {
-  const game = await env.DB.prepare(`SELECT ${OWNED_COLUMNS} FROM games WHERE id = ? AND creator_id = ?`)
-    .bind(gameId, creatorId)
-    .first<OwnedGameRow>()
-  if (!game) throw new CreatorError(`You have no game with id "${gameId}". Use list_my_games to see your games.`)
+const OWNED_COLUMNS = `id, creator_id, title, tagline, how_to_play, emoji, color, category, together, live, status,
+  review_note, preview_token, pending_info, live_url, review_url, play_url, play_version, review_version, live_version, revision, updated_at`
+export function previewUrl(origin: string, token: string) { return `${origin}/try/${token}` }
+export async function ownedGame(creatorId: string, gameId: string) {
+  const game = await env.DB.prepare(`SELECT ${OWNED_COLUMNS} FROM games WHERE id = ? AND creator_id = ?`).bind(gameId, creatorId).first<OwnedGameRow>()
+  if (!game) throw new CreatorError('You do not own that game. Read get_context to see your games.')
   return game
 }
-
+export function gameInfo(game: OwnedGameRow): GameInfo {
+  return { title: game.title, tagline: game.tagline, howToPlay: game.how_to_play, emoji: game.emoji, color: game.color, category: game.category, together: Boolean(game.together), ...(game.pending_info ? JSON.parse(game.pending_info) : {}) }
+}
+function changed() { return new CreatorError('The game changed during this request. Read get_context and try again.') }
+function requireChange(result: D1Result) { if (result.meta.changes !== 1) throw changed() }
+function slugify(title: string) {
+  return title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 39).replace(/-+$/, '') || 'game'
+}
 export async function createGame(creatorId: string, info: GameInfo) {
-  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM games WHERE creator_id = ?')
-    .bind(creatorId)
-    .first<{ n: number }>()
-  if ((count?.n ?? 0) >= MAX_GAMES_PER_CREATOR) {
-    throw new CreatorError(`You can have at most ${MAX_GAMES_PER_CREATOR} games. Delete one with delete_game first.`)
-  }
-
   const now = Date.now()
   const previewToken = randomHex(16)
   const base = slugify(info.title)
   for (let attempt = 0; attempt < 5; attempt++) {
+    const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM games WHERE creator_id = ?').bind(creatorId).first<{ n: number }>()
+    if ((count?.n ?? 0) >= MAX_GAMES_PER_CREATOR) throw new CreatorError(`You can have at most ${MAX_GAMES_PER_CREATOR} games.`)
     const id = attempt === 0 ? base : `${base}-${randomHex(3)}`
-    const result = await env.DB.prepare(
-      `INSERT INTO games (id, creator_id, title, tagline, how_to_play, emoji, color, category, together,
-                          status, preview_token, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)
-       ON CONFLICT (id) DO NOTHING`,
-    )
-      .bind(id, creatorId, info.title, info.tagline, info.howToPlay, info.emoji, info.color, info.category,
-        info.together ? 1 : 0, previewToken, now, now)
-      .run()
+    const result = await env.DB.prepare(`INSERT INTO games (id, creator_id, title, tagline, how_to_play, emoji, color, category, together, status, preview_token, created_at, updated_at, revision)
+      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM games WHERE creator_id = ?) < ? ON CONFLICT (id) DO NOTHING`)
+      .bind(id, creatorId, info.title, info.tagline, info.howToPlay, info.emoji, info.color, info.category, Number(info.together), previewToken, now, now, crypto.randomUUID(), creatorId, MAX_GAMES_PER_CREATOR).run()
     if (result.meta.changes === 1) return { id, previewToken }
   }
-  throw new CreatorError('Could not find a free id for that title. Try a different title.')
+  throw new CreatorError('Could not register this title. Try a different title.')
 }
-
-/**
- * Changes a game's details. Children keep seeing a live game's reviewed
- * details until the changes are approved along with the next version.
- */
+/** Editing metadata invalidates any waiting review, including its previously inspected metadata. */
 export async function updateInfo(creatorId: string, gameId: string, info: Partial<GameInfo>) {
   const game = await ownedGame(creatorId, gameId)
-  const now = Date.now()
-  if (game.live) {
-    const pending = JSON.stringify({ ...(game.pending_info ? JSON.parse(game.pending_info) : {}), ...info })
-    await env.DB.prepare(
-      `UPDATE games SET pending_info = ?, status = CASE WHEN status = 'public' THEN 'draft' ELSE status END, updated_at = ? WHERE id = ?`,
-    )
-      .bind(pending, now, gameId)
-      .run()
-    return 'pending'
-  }
-  const { sets, values } = infoSets(info)
-  if (sets.length) await env.DB.prepare(`UPDATE games SET ${sets.join(', ')}, updated_at = ? WHERE id = ?`).bind(...values, now, gameId).run()
-  return 'applied'
+  if (!infoSets(info).sets.length) return
+  // A takedown can leave edits pending from when the game was listed. Apply
+  // those edits before the latest changes, so stale pending values cannot win.
+  const { sets, values } = infoSets(!game.live && game.pending_info ? { ...gameInfo(game), ...info } : info)
+  const pending = JSON.stringify({ ...(game.pending_info ? JSON.parse(game.pending_info) : {}), ...info })
+  const update = game.live ? 'pending_info = ?' : `${sets.join(', ')}, pending_info = NULL`
+  const result = await env.DB.prepare(`UPDATE games SET ${update}, status = 'draft', review_version = NULL, review_url = NULL, review_manifest = NULL, review_cover = NULL, revision = ?, updated_at = ? WHERE id = ? AND creator_id = ? AND revision = ?`)
+    .bind(...(game.live ? [pending] : values), crypto.randomUUID(), Date.now(), gameId, creatorId, game.revision).run()
+  requireChange(result)
+  if (game.review_version) await env.DB.prepare("UPDATE game_versions SET decision = 'withdrawn' WHERE id = ? AND decision = 'pending'").bind(game.review_version).run()
 }
-
 export async function listOwned(creatorId: string) {
-  const { results } = await env.DB.prepare(`SELECT ${OWNED_COLUMNS} FROM games WHERE creator_id = ? ORDER BY updated_at DESC`)
-    .bind(creatorId)
-    .all<OwnedGameRow>()
-  return results
+  return (await env.DB.prepare(`SELECT ${OWNED_COLUMNS} FROM games WHERE creator_id = ? ORDER BY updated_at DESC`).bind(creatorId).all<OwnedGameRow>()).results
 }
-
-/** Runs `fn` over `items` with at most `limit` in flight. */
-async function inPool<T>(items: T[], limit: number, fn: (item: T) => Promise<unknown>) {
-  let next = 0
-  const worker = async () => {
-    while (next < items.length) await fn(items[next++]!)
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
-}
-
-interface CheckedVersion {
-  url: string
-  immutable: boolean
-  /** SHA-256 of the version's bitgames.json. */
-  manifest: string
-  cover: string | null
-  files: number
-  bytes: number
-}
-
-/**
- * Fetches a deployed version and checks it is a BitGames game that serves
- * exactly the files its bitgames.json lists: every file is downloaded and
- * hashed. Throws a CreatorError explaining what to fix.
- */
-export async function checkVersion(url: string): Promise<CheckedVersion> {
-  const version = parseVersionUrl(url)
-  if (!version) {
-    throw new CreatorError(
-      'Submit the version preview URL that `cf deploy` gives each deploy: https://<version>-<worker>.<account>.workers.dev/ (the first 8 characters of the "Current Version ID"). Check that previewUrls is true in cloudflare.config.ts.',
-    )
-  }
-  const get = async (path: string) => {
-    let response: Response
-    try {
-      // Static assets redirect within the site, e.g. /index.html to /.
-      response = await fetch(version.base + path, { cf: { cacheTtl: 0 } })
-    } catch {
-      throw new UnreachableError(`Could not reach ${version.base}${path}.`)
-    }
-    if (!response.url.startsWith(version.base)) throw new CreatorError(`${version.base}${path} redirects to another site.`)
-    if (response.status !== 200) {
-      throw new UnreachableError(`${version.base}${path} answered ${response.status}; it should be a file of the game. (A version deployed in the last minute may not be live yet.)`)
-    }
-    return response
-  }
-
-  const manifestText = await (await get(MANIFEST_FILE)).text()
-  if (manifestText.length > MAX_MANIFEST_BYTES) throw new CreatorError(`${MANIFEST_FILE} is too big.`)
-  let files: Record<string, string>
-  try {
-    files = (JSON.parse(manifestText) as { files: Record<string, string> }).files
-    if (typeof files !== 'object' || files === null) throw new Error()
-  } catch {
-    throw new CreatorError(`${MANIFEST_FILE} must look like {"files": {"index.html": "<sha256>", ...}}. Run \`node bitgames.mjs\` before deploying.`)
-  }
-  const entries = Object.entries(files)
-  if (!files['index.html']) throw new CreatorError(`The game needs an index.html in public/, listed in ${MANIFEST_FILE}.`)
-  if (entries.length > MAX_FILES_PER_GAME) throw new CreatorError(`A game can have at most ${MAX_FILES_PER_GAME} files; this one lists ${entries.length}.`)
-  for (const [path, hash] of entries) {
-    if (!isFilePath(path) || !/^[0-9a-f]{64}$/.test(hash)) throw new CreatorError(`${MANIFEST_FILE} has an invalid entry: ${path}.`)
-  }
-
-  let bytes = 0
-  await inPool(entries, 6, async ([path, hash]) => {
-    const response = await get(path)
-    // Pages must lock themselves down: every iPad browser ignores the frame's csp attribute.
-    if (path.endsWith('.html') && response.headers.get('content-security-policy') !== GAME_CSP_HEADER) {
-      throw new CreatorError(
-        `${path} is served without BitGames' Content-Security-Policy, so it isn't locked down on every device. Use the public/_headers file from get_starter_project unchanged.`,
-      )
-    }
-    if (path === 'index.html') {
-      if (!response.headers.has('allow-csp-from')) {
-        throw new CreatorError('index.html is served without the Allow-CSP-From header, so BitGames cannot play it. Use the public/_headers file from get_starter_project.')
-      }
-      if (response.headers.get('access-control-allow-origin') !== '*') {
-        throw new CreatorError('The game is served without Access-Control-Allow-Origin: *. Use the public/_headers file from get_starter_project.')
-      }
-    }
-    const body = await response.arrayBuffer()
-    bytes += body.byteLength
-    if (bytes > MAX_GAME_BYTES) throw new CreatorError(`A game can be at most ${mb(MAX_GAME_BYTES)}.`)
-    if ((await sha256Hex(body)) !== hash) {
-      throw new CreatorError(`${path} doesn't match ${MANIFEST_FILE}. Run \`node bitgames.mjs\` and deploy again (the deploy script does both).`)
-    }
-  })
-
-  return {
-    url: version.base,
-    immutable: version.immutable,
-    manifest: await sha256Hex(manifestText),
-    cover: COVER_FILES.find((name) => name in files) ?? null,
-    files: entries.length,
-    bytes,
-  }
-}
-
-/**
- * Checks a deployed version and ships it: it plays at the creator's link right
- * away, and waits for review to be listed in the store (replacing any version
- * already waiting).
- */
-export async function shipVersion(creatorId: string, gameId: string, url: string) {
-  const game = await ownedGame(creatorId, gameId)
-  const version = await checkVersion(url)
-  await env.DB.prepare(
-    `UPDATE games SET play_url = ?, review_url = ?, review_manifest = ?, review_cover = ?, status = 'review', review_note = NULL, updated_at = ?
-      WHERE id = ?`,
-  )
-    .bind(version.url, version.url, version.manifest, version.cover, Date.now(), gameId)
-    .run()
-  return { ...version, previewToken: game.preview_token }
-}
-
-/** Withdraws the version waiting to be listed. It still plays at the creator's link. */
-export async function withdrawVersion(creatorId: string, gameId: string) {
-  const game = await ownedGame(creatorId, gameId)
-  if (game.status !== 'review') throw new CreatorError('Nothing of this game is waiting to be listed.')
-  await env.DB.prepare(`UPDATE games SET status = 'draft', review_url = NULL, review_manifest = NULL, review_cover = NULL, updated_at = ? WHERE id = ?`)
-    .bind(Date.now(), gameId)
-    .run()
-}
-
-export async function deleteGame(creatorId: string, gameId: string) {
+export async function versionHistory(creatorId: string, gameId: string, beforeVersionId?: string) {
   await ownedGame(creatorId, gameId)
-  await env.DB.prepare('DELETE FROM games WHERE id = ? AND creator_id = ?').bind(gameId, creatorId).run()
+  const before = beforeVersionId ? await findVersion(beforeVersionId, gameId) : undefined
+  const predicate = before ? ' AND (created_at < ? OR (created_at = ? AND id < ?))' : ''
+  const params = before ? [gameId, before.created_at, before.created_at, before.id] : [gameId]
+  const { results } = await env.DB.prepare(`SELECT id, upstream_url, file_count, bytes, created_at, decision, review_note
+    FROM game_versions WHERE game_id = ?${predicate} ORDER BY created_at DESC, id DESC LIMIT 101`)
+    .bind(...params).all<Pick<StoredVersion, 'id' | 'upstream_url' | 'file_count' | 'bytes' | 'created_at' | 'decision' | 'review_note'>>()
+  const versions = results.slice(0, 100)
+  return { versions, nextHistoryCursor: results.length > 100 ? versions.at(-1)!.id : null }
 }
-
-/**
- * Approval: checks the submitted version again (it must still serve the files
- * that were submitted), pins it as the live version and applies any pending details.
- */
-export async function approveVersion(gameId: string) {
-  const row = await env.DB.prepare('SELECT review_url, review_manifest, pending_info FROM games WHERE id = ?')
-    .bind(gameId)
-    .first<{ review_url: string | null; review_manifest: string | null; pending_info: string | null }>()
-  if (!row?.review_url) throw new Error('That game has no version waiting.')
-  const version = await checkVersion(row.review_url)
-  if (version.manifest !== row.review_manifest) throw new Error('The submitted version changed since it was submitted. Send it back.')
-  const { sets, values } = infoSets(row.pending_info ? JSON.parse(row.pending_info) : {})
+/** Republish an old version by its id, or validate a deployment without changing the game. */
+export async function shipVersion(creatorId: string, gameId: string, source: { url?: string; versionId?: string; checkOnly?: boolean }) {
+  const game = await ownedGame(creatorId, gameId)
+  const old = source.versionId ? await findVersion(source.versionId, gameId) : undefined
+  const version = await checkVersion(old?.upstream_url ?? source.url!)
+  if (old && version.manifest !== old.manifest_hash) throw new CreatorError('The previous deployment changed; it cannot be restored. Deploy the original files again.')
+  if (source.checkOnly) return { ...version, checked: true }
+  const id = crypto.randomUUID()
   const now = Date.now()
-  await env.DB.prepare(
-    `UPDATE games SET live = 1, status = 'public', live_url = review_url, live_manifest = review_manifest, cover = review_cover,
-            review_url = NULL, review_manifest = NULL, review_cover = NULL, review_note = NULL, pending_info = NULL,
-            verified_at = ?, updated_at = ?${sets.length ? ', ' + sets.join(', ') : ''}
-      WHERE id = ?`,
-  )
-    .bind(now, now, ...values, gameId)
-    .run()
+  const revision = crypto.randomUUID()
+  const results = await env.DB.batch([
+    env.DB.prepare(`INSERT INTO game_versions (id, game_id, upstream_url, manifest_hash, manifest_json, info_json, cover, file_count, bytes, created_at)
+      SELECT ?, id, ?, ?, ?, ?, ?, ?, ?, ? FROM games WHERE id = ? AND creator_id = ? AND revision = ?`)
+      .bind(id, version.url, version.manifest, version.manifestJson, JSON.stringify(gameInfo(game)), version.cover, version.files, version.bytes, now, gameId, creatorId, game.revision),
+    env.DB.prepare(`UPDATE games SET play_version = ?, review_version = ?, play_url = ?, review_url = ?, review_manifest = ?, review_cover = ?, status = 'review', review_note = NULL, revision = ?, updated_at = ? WHERE id = ? AND creator_id = ? AND revision = ?`)
+      .bind(id, id, version.url, version.url, version.manifest, version.cover, revision, now, gameId, creatorId, game.revision),
+  ])
+  requireChange(results[1]!)
+  if (game.review_version) await env.DB.prepare("UPDATE game_versions SET decision = 'withdrawn' WHERE id = ? AND decision = 'pending'").bind(game.review_version).run()
+  return { checked: false, versionId: id, url: version.url, files: version.files, bytes: version.bytes, previewToken: game.preview_token }
 }
-
-/** Takes a game out of the store; it still plays at the creator's link. The creator can ship a new version. */
-export async function unpublish(gameId: string, note: string | null) {
-  await env.DB.prepare(`UPDATE games SET live = 0, status = 'rejected', review_note = ?, updated_at = ? WHERE id = ?`)
-    .bind(note, Date.now(), gameId)
-    .run()
+export async function withdrawVersion(creatorId: string, gameId: string, submissionId: string) {
+  const game = await ownedGame(creatorId, gameId)
+  if (game.status !== 'review' || game.review_version !== submissionId) throw changed()
+  requireChange(await env.DB.prepare(`UPDATE games SET status = 'draft', review_version = NULL, review_url = NULL, review_manifest = NULL, review_cover = NULL, revision = ?, updated_at = ? WHERE id = ? AND creator_id = ? AND revision = ?`)
+    .bind(crypto.randomUUID(), Date.now(), gameId, creatorId, game.revision).run())
+  await env.DB.prepare("UPDATE game_versions SET decision = 'withdrawn' WHERE id = ? AND decision = 'pending'").bind(game.review_version).run()
 }
-
-/**
- * Scheduled: re-checks the live game checked longest ago. Only versions whose
- * URL could be an alias (see parseVersionUrl) can change, and a game whose
- * content changed is taken down. Unreachable versions are left for the next run.
- */
+export async function deleteGame(creatorId: string, gameId: string) {
+  const game = await ownedGame(creatorId, gameId)
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM game_versions WHERE game_id = ? AND EXISTS (SELECT 1 FROM games WHERE id = ? AND creator_id = ? AND revision = ?)').bind(gameId, gameId, creatorId, game.revision),
+    env.DB.prepare('DELETE FROM games WHERE id = ? AND creator_id = ? AND revision = ?').bind(gameId, creatorId, game.revision),
+  ]).then(results => requireChange(results[1]!))
+}
+/** Approval compares both the inspected shipment and the exact metadata revision. */
+export async function approveVersion(gameId: string, submissionId: string, revision: string) {
+  const game = await env.DB.prepare(`SELECT ${OWNED_COLUMNS} FROM games WHERE id = ? AND status = 'review' AND review_version = ? AND revision = ?`).bind(gameId, submissionId, revision).first<OwnedGameRow>()
+  if (!game) throw changed()
+  const stored = await findVersion(submissionId, gameId)
+  const version = await checkVersion(stored.upstream_url)
+  if (version.manifest !== stored.manifest_hash) throw new CreatorError('The submitted deployment changed. Send it back.')
+  const { sets, values } = infoSets(JSON.parse(stored.info_json))
+  const newRevision = crypto.randomUUID()
+  const now = Date.now()
+  const results = await env.DB.batch([
+    env.DB.prepare(`UPDATE games SET live = 1, status = 'public', live_version = ?, live_url = ?, live_manifest = ?, cover = ?, review_version = NULL, review_url = NULL, review_manifest = NULL, review_cover = NULL, review_note = NULL, pending_info = NULL, verified_at = ?, updated_at = ?, revision = ?, ${sets.join(', ')} WHERE id = ? AND status = 'review' AND review_version = ? AND revision = ?`)
+      .bind(submissionId, stored.upstream_url, stored.manifest_hash, stored.cover, now, now, newRevision, ...values, gameId, submissionId, revision),
+    env.DB.prepare("UPDATE game_versions SET decision = 'approved', review_note = NULL WHERE id = ? AND EXISTS (SELECT 1 FROM games WHERE id = ? AND revision = ?)").bind(submissionId, gameId, newRevision),
+  ])
+  requireChange(results[0]!)
+}
+export async function unpublish(gameId: string, note: string | null, revision: string) {
+  requireChange(await env.DB.prepare("UPDATE games SET live = 0, status = CASE WHEN status = 'review' THEN status ELSE 'rejected' END, review_note = ?, updated_at = ?, revision = ? WHERE id = ? AND live = 1 AND revision = ?")
+    .bind(note, Date.now(), crypto.randomUUID(), gameId, revision).run())
+}
+/** Check all deployments, including digit-prefixed versions with dynamic Worker code. */
 export async function recheckLive() {
-  // live_url is "https://<version>-...": its 9th character is the version's first.
-  const game = await env.DB.prepare(
-    `SELECT id, live_url, live_manifest FROM games
-      WHERE live = 1 AND live_url IS NOT NULL AND substr(live_url, 9, 1) NOT BETWEEN '0' AND '9'
-      ORDER BY verified_at LIMIT 1`,
-  ).first<{ id: string; live_url: string; live_manifest: string }>()
+  const game = await env.DB.prepare('SELECT id, live_url, live_manifest, revision FROM games WHERE live = 1 AND live_url IS NOT NULL ORDER BY verified_at LIMIT 1').first<{ id: string; live_url: string; live_manifest: string; revision: string }>()
   if (!game) return
-  let changed: boolean
   try {
-    changed = (await checkVersion(game.live_url)).manifest !== game.live_manifest
+    if ((await checkVersion(game.live_url)).manifest !== game.live_manifest) throw new CreatorError('The deployment changed.')
   } catch (error) {
-    // Different or missing content is a change. A failed fetch or error status is
-    // not: a version that just deployed answers 404 for a little while.
-    changed = error instanceof CreatorError && !(error instanceof UnreachableError)
+    if (error instanceof CreatorError && !(error instanceof UnreachableError)) await unpublish(game.id, 'The approved files changed. Deploy and publish a new version.', game.revision)
   }
-  if (changed) {
-    await unpublish(game.id, 'The files of the approved version changed, so the game was taken out of the store. Deploy and ship a new version.')
-  }
-  await env.DB.prepare('UPDATE games SET verified_at = ? WHERE id = ?').bind(Date.now(), game.id).run()
+  await env.DB.prepare('UPDATE games SET verified_at = ? WHERE id = ? AND live_url = ?').bind(Date.now(), game.id, game.live_url).run()
+}
+export async function describeOwned(game: OwnedGameRow, origin: string) {
+  return { gameId: game.id, info: gameInfo(game), listed: Boolean(game.live), status: game.status, revision: game.revision, playUrl: previewUrl(origin, game.preview_token), storeUrl: game.live ? `${origin}/game/${game.id}` : null, reviewNote: game.review_note, playVersion: game.play_version, reviewVersion: game.review_version, liveVersion: game.live_version, playbackBase: game.play_version ? versionBase(game.play_version) : null }
 }

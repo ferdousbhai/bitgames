@@ -5,5 +5,5 @@ import { findPreviewGame } from './preview-lookup'
 
 /** The game behind a preview token, for the /try page. */
 export const getPreview = createServerFn({ method: 'GET' })
-  .validator(z.object({ token: z.string().refine(isPreviewToken) }))
-  .handler(({ data }) => findPreviewGame(data.token))
+  .validator(z.object({ token: z.string().refine(isPreviewToken), submissionId: z.string().uuid().optional() }))
+  .handler(({ data }) => findPreviewGame(data.token, data.submissionId))

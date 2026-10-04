@@ -10,6 +10,8 @@ export default defineConfig({
 	worker: {
 		name: "bitgames-store",
 		domains: ["bitgames.store"],
+		// Reviewed legacy games import /vendor/ from this Worker's original address.
+		workersDev: true,
 		compatibilityDate: "2026-09-30",
 		compatibilityFlags: [
 			"nodejs_compat",
@@ -29,7 +31,7 @@ export default defineConfig({
 			},
 		},
 		env: {
-			// Admin key for /admin. Locally it comes from .dev.vars.
+			// Admin key for /admin and /api/review. Locally it comes from .dev.vars.
 			ADMIN_KEY: bindings.secret(),
 			// Turnstile secret for the creator-key form. Locally it's Cloudflare's always-pass test secret.
 			TURNSTILE_SECRET: bindings.secret(),
@@ -46,7 +48,7 @@ export default defineConfig({
 			ADMIN_LIMITER: perMinute("4104", 30),
 			LIKE_LIMITER: perMinute("4105", 30),
 			ROOM_LIMITER: perMinute("4106", 30),
-			// The reviewer's MCP endpoint: an agent reading a game's files makes many calls.
+			// The review API: an agent reading a game's files makes many calls.
 			REVIEW_LIMITER: perMinute("4107", 120),
 		},
 	},

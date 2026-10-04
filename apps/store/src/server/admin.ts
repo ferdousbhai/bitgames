@@ -26,9 +26,12 @@ export const reviewGame = createServerFn({ method: 'POST' })
       id: z.string().refine(isGameId),
       decision: z.enum(['approve', 'reject', 'unpublish']),
       note: z.string().max(500).optional(),
+      revision: z.string().min(1).max(64),
+      submissionId: z.string().uuid().optional(),
     }),
   )
   .handler(async ({ data }) => {
     await requireAdmin(data.adminKey)
-    await decide(data.id, data.decision, data.note?.trim() || null)
+    if (data.decision !== 'approve' && !data.note?.trim()) throw new Error('Include a note explaining what to fix.')
+    await decide(data.id, data.decision, data.note?.trim() || null, data.revision, data.submissionId)
   })
