@@ -442,7 +442,7 @@ export class Car {
   /** Runs before each physics step. */
   drive(dt) {
     if (this.remote) return this.followSnapshots()
-    const { steer, throttle, brake } = this.controls
+    const { steer, throttle, brake, hold } = this.controls
     const fwdSpeed = this.forwardSpeed
     const speed = Math.abs(fwdSpeed)
     const damageLoss = 1 - this.damage.level * 0.3
@@ -459,7 +459,8 @@ export class Car {
     let force = 0
     let braking = 0
     if (brake > 0) {
-      if (fwdSpeed > 1) braking = 45 * brake
+      // Held (waiting for GO, or the race is over): brakes only, so the car doesn't creep backwards.
+      if (fwdSpeed > 1 || hold) braking = 45 * brake
       else force = -1500 * brake // reverse
     }
     if (throttle > 0) {

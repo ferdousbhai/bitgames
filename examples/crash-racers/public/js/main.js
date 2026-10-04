@@ -952,6 +952,9 @@ function respawn(car, ahead = 0) {
   const proj = projOf(car)
   const s = game.track.sampleAt(game.track.clearOfRamps(proj.dist + ahead))
   car.place(s.p, game.track.headingAt(s))
+  car.backOut = car.wedged = car.backOuts = 0
+  // A car that lost a wheel can't get going again: it comes back with its wheels on.
+  if (car.wheels.some((w) => w.state === 'gone')) repairCar(car)
   setGhost(car, true)
 }
 
@@ -978,7 +981,7 @@ function recover(car, dt) {
   car.offRoadTime = proj && proj.distance > game.track.width / 2 + 30 ? car.offRoadTime + dt : 0
   car.stuckTime = car.speed < 1.5 && !finished ? car.stuckTime + dt : 0
   if (!car.headway || finished || prog.total - car.headway.total > 4) car.headway = { total: prog?.total ?? 0, time: game.raceTime }
-  const lost = car.offRoadTime > limits.offRoad || car.upsideDownTime > limits.roof
+  const lost = car.offRoadTime > limits.offRoad || car.upsideDownTime > limits.roof || car.backOuts >= 3
   // The child is only rescued while still racing (not behind the podium).
   if (car.isPlayer && lost && game.state === 'race') {
     respawn(car)
@@ -1285,14 +1288,59 @@ let last = performance.now()
 const camPos = new THREE.Vector3(0, 10, 20)
 const camLook = new THREE.Vector3()
 let sparkTimer = 0
-const BRAKE = { steer: 0, throttle: 0, brake: 1 }
+/** Waiting for GO, or the race is over: brakes on, no reversing. */
+const BRAKE = { steer: 0, throttle: 0, brake: 1, hold: true }
 
 /** The child at this device: keyboard, touch or gamepad, with Easy mode's helpers. */
 const humanController = {
-  update(car) {
+  update(car, dt) {
     const controls = input.read()
-    car.controls = input.easyGas ? steeringHelper(car, controls.cruise ? cruise(car, controls) : controls) : controls
+    if (!input.easyGas) return (car.controls = controls)
+    const gentle = { ...controls, steer: rampSteer(car, controls.steer, dt) }
+    car.controls = backOut(car, steeringHelper(car, controls.cruise ? cruise(car, gentle) : gentle), dt)
   },
+}
+
+/**
+ * Easy mode: a tap on ◀ or ▶ is a gentle nudge and holding it turns harder
+ * and harder, so a quick tap at full speed doesn't fling the car into a wall.
+ * Analogue steering (a gamepad stick) passes straight through.
+ */
+function rampSteer(car, steer, dt) {
+  if (Math.abs(steer) < 1) return (car.steerHeld = 0), steer
+  car.steerHeld = Math.sign(steer) === Math.sign(car.lastSteer ?? 0) ? (car.steerHeld ?? 0) + dt : 0
+  car.lastSteer = steer
+  return steer * Math.min(1, 0.4 + car.steerHeld * 1.2)
+}
+
+/** Seconds of pushing against something without moving before Easy mode backs the car out, and how long it reverses. */
+const WEDGED_SECONDS = 0.9
+const BACK_OUT_SECONDS = 1.1
+/**
+ * Easy mode: a car nosed into a wall (or a terrace, a tent, a parked tram)
+ * backs out by itself, turning towards the road, and drives on, instead of
+ * pushing at the wall until it's put back on the road.
+ */
+function backOut(car, controls, dt) {
+  if (car.backOut > 0) {
+    car.backOut -= dt
+    const proj = game.progress.get(car.id)?.proj
+    const s = proj && game.track.sampleAt(proj.dist + 10)
+    // Reversing, the wheel turns the other way: steer away from the road to swing the nose towards it.
+    const toRoad = s ? Math.sign(car.angleTo(s.p.x, s.p.z)) : 0
+    // A firmer reverse than the 🐢 pedal's, so the car really swings round.
+    return { steer: -toRoad, throttle: 0, brake: 2.5, cruise: false }
+  }
+  const pushing = controls.throttle > 0 && !controls.brake && car.forwardSpeed < 1.2 && car.grounded && !car.upsideDownTime
+  car.wedged = pushing ? (car.wedged ?? 0) + dt : 0
+  if (car.wedged > WEDGED_SECONDS) {
+    car.wedged = 0
+    car.backOut = BACK_OUT_SECONDS
+    // Backing out keeps failing (boxed in): recover() puts the car back on the road.
+    car.backOuts = game.raceTime - (car.lastBackOut ?? -99) < 8 ? (car.backOuts ?? 0) + 1 : 1
+    car.lastBackOut = game.raceTime
+  }
+  return controls
 }
 
 /**
@@ -1474,8 +1522,14 @@ function updateCamera(dt) {
     const mode = CAMERA_MODES[game.cameraMode]
     // Use only the car's heading, so the camera doesn't flip with a rolling car.
     headingQ.setFromAxisAngle(UP_AXIS, headingE.setFromQuaternion(p.root.quaternion, 'YXZ').y)
-    camPos.lerp(want.copy(mode.offset).applyQuaternion(headingQ).add(pos), smoothing(mode.stiffness, dt))
-    camLook.lerp(want.copy(mode.look).applyQuaternion(headingQ).add(pos), smoothing(12, dt))
+    // A phone held upright sees a narrow slice of road: the chase cameras sit higher and further back.
+    const tall = mode !== CAMERA_MODES[2] && camera.aspect < 0.8
+    want.copy(mode.offset)
+    if (tall) want.set(want.x, want.y * 1.45, want.z * 1.3)
+    camPos.lerp(want.applyQuaternion(headingQ).add(pos), smoothing(mode.stiffness, dt))
+    want.copy(mode.look)
+    if (tall) want.z *= 1.6
+    camLook.lerp(want.applyQuaternion(headingQ).add(pos), smoothing(12, dt))
   }
   camera.position.copy(camPos)
   if (effects.shake > 0) {
@@ -1507,6 +1561,12 @@ function setText(id, text) {
 function setCooldown(el, fraction) {
   const v = Math.ceil(clamp(fraction, 0, 1) * 20) / 20
   if (shown.get(el) === v) return
+  // Ready again: a quick pop says "tap me".
+  if (v === 0 && shown.get(el) > 0) {
+    el.classList.remove('ready')
+    void el.offsetWidth
+    el.classList.add('ready')
+  }
   shown.set(el, v)
   el.classList.toggle('cooling', v > 0)
   el.style.setProperty('--cool', v)
@@ -1534,6 +1594,12 @@ function updateHud(now) {
   } else setText('crashes', `💥 ${game.stats.get(p.id)?.crashes ?? 0}`)
   setCooldown($('turbo-btn'), (p.turboCooldown - now) / TURBO_COOLDOWN)
   setCooldown($('fix-btn'), game.fixCooldown / FIX_COOLDOWN)
+  // A battered car (or one missing a wheel): 🔧 wobbles until it's tapped.
+  const broken = game.fixCooldown <= 0 && (p.damage.level > 0.45 || p.wheels.some((w) => w.state === 'gone'))
+  if (shown.get('broken') !== broken) {
+    shown.set('broken', broken)
+    $('fix-btn').classList.toggle('needed', broken)
+  }
   setCooldown($('reset-btn'), game.resetCooldown / RESET_COOLDOWN)
   // The finale: a big countdown for whoever is still racing.
   const finale = game.raceOn && game.finaleAt && game.state === 'race'
@@ -1562,20 +1628,31 @@ function drawMinimap() {
     const background = document.createElement('canvas')
     background.width = background.height = 160
     const bg = background.getContext('2d')
-    bg.strokeStyle = 'rgba(255,255,255,0.85)'
-    bg.lineWidth = 6
     bg.lineJoin = 'round'
+    // A dark edge under the white road, so it reads over bright scenery too.
+    bg.strokeStyle = 'rgba(30,30,50,0.55)'
+    bg.lineWidth = 11
+    bg.stroke(outline)
+    bg.strokeStyle = 'rgba(255,255,255,0.92)'
+    bg.lineWidth = 6
     bg.stroke(outline)
     minimap = { track: t, minX, minZ, scale, background, g: $('minimap').getContext('2d') }
   }
   const { g, minX, minZ, scale } = minimap
   g.clearRect(0, 0, 160, 160)
   g.drawImage(minimap.background, 0, 0)
-  for (const car of game.cars.values()) {
-    g.fillStyle = car.isPlayer ? '#ffbe0b' : '#ff6b9d'
-    g.beginPath()
-    g.arc(20 + (car.body.position.x - minX) * scale, 20 + (car.body.position.z - minZ) * scale, car.isPlayer ? 7 : 5, 0, Math.PI * 2)
-    g.fill()
+  // Everyone else first, so the child's own (bigger, yellow) dot is always on top.
+  g.lineWidth = 3
+  g.strokeStyle = '#2b2d42'
+  for (const pass of [false, true]) {
+    for (const car of game.cars.values()) {
+      if (car.isPlayer !== pass) continue
+      g.fillStyle = car.isPlayer ? '#ffbe0b' : '#ff6b9d'
+      g.beginPath()
+      g.arc(20 + (car.body.position.x - minX) * scale, 20 + (car.body.position.z - minZ) * scale, car.isPlayer ? 10 : 6.5, 0, Math.PI * 2)
+      g.fill()
+      g.stroke()
+    }
   }
 }
 

@@ -144,6 +144,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .mode span { font-size: 34px; }
 .mode.on { background: #ff6b9d; box-shadow: 0 6px 0 #b8456d; }
 .hud-buttons button.cooling { opacity: 0.6; }
+/* Ready again: a pop. Needed (a battered car): the 🔧 wobbles until tapped. */
+.hud-buttons button.ready { animation: ready .5s cubic-bezier(.3,1.8,.5,1); }
+@keyframes ready { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.hud-buttons #fix-btn.needed { background: #ffbe0b; box-shadow: 0 0 0 4px #fff; animation: wobble 1.2s ease-in-out infinite; }
+@keyframes wobble { 0%, 100% { transform: rotate(0) scale(1); } 20% { transform: rotate(-12deg) scale(1.12); } 40% { transform: rotate(12deg) scale(1.12); } 60% { transform: rotate(0) scale(1); } }
 #turbo-btn { background: rgba(255,120,0,0.55); }
 
 .countdown.waiting { font-size: 90px; animation: pulse 1s ease-in-out infinite; }
@@ -207,7 +212,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .logo.small { font-size: 30px; }
   #menu h2 { display: none; }
   .mode { font-size: 20px; padding: 6px 18px; } .mode span { font-size: 26px; }
-  .car-pick .pic { width: 82%; margin: -4px auto -2px; }
+  .car-pick .pic { width: 72%; margin: -4px auto -2px; }
+  /* Smaller place cards, so Laps and Easy mode sit above GO rather than under it. */
+  .screen { gap: 8px; }
+  .city { padding: 4px 4px 6px; }
+  .city .emoji { font-size: 32px; }
+  .options { font-size: 17px; } .laps button, .chip { font-size: 17px; padding: 6px 13px; }
 }
 
 /* Phones held sideways: a compact menu, with rows that scroll sideways and GO pinned in the corner. */
@@ -219,7 +229,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   #menu h2 { display: none; }
   #menu .options { align-self: flex-start; margin-left: 4px; }
   .screen h1 { font-size: 30px; }
-  .cities, .car-row { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; justify-content: flex-start; padding: 8px 6px; }
+  .cities, .car-row { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; justify-content: flex-start; padding: 10px 14px; }
   .city { flex: 0 0 auto; width: 142px; padding: 6px 6px 8px; border-radius: 18px; border-width: 4px; }
   .city .emoji { font-size: 30px; } .city .name { font-size: 16px; } .city .blurb { display: none; }
   .car-pick { flex: 0 0 auto; width: 104px; padding: 2px 4px 6px; } .car-pick .emoji { font-size: 30px; } .car-pick .name { font-size: 13px; }
