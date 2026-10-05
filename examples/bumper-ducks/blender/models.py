@@ -610,8 +610,15 @@ def build_bath():
         for iz in range(0, 6):
             x = (ix + 0.5) * tile
             parts.append((quad(tile * 0.96, tile * 0.96, (x, 19.0, floor_z + (iz + 0.5) * tile), vertical=True), "tile_b" if (ix + iz) % 2 else "tile_a"))
-    # Bath mat in front
-    parts.append((box((9, 4, 0.15), (0, -16.5, floor_z + 0.1), bevel=0.3), "mat_lilac"))
+    # Fluffy oval bath mat in front: pom-pom fringe and big soap-bubble dots, so it reads as a toy mat, not a slab.
+    mx, my, ma, mb = 0.0, -16.5, 5.4, 2.5
+    parts.append((cyl(1, 1, 0.3, loc=(mx, my, floor_z + 0.15), segs=48, scale=(ma, mb, 1)), "mat_lilac"))
+    for k in range(30):
+        a = 2 * math.pi * k / 30
+        parts.append((ico(0.36, (mx + math.cos(a) * (ma + 0.05), my + math.sin(a) * (mb + 0.05), floor_z + 0.3), subd=1, jitter=0.08, seed=k), "white"))
+    for (bx, by, br) in [(-3.1, 0.6, 0.75), (-1.2, -0.9, 0.55), (0.6, 0.8, 0.9), (2.6, -0.5, 0.65), (3.6, 1.0, 0.4), (-3.4, -1.1, 0.35), (1.8, 1.6, 0.3)]:
+        parts.append((cyl(br, br, 0.06, loc=(mx + bx, my + by, floor_z + 0.32), segs=24), "white"))
+        parts.append((cyl(br * 0.62, br * 0.62, 0.07, loc=(mx + bx, my + by, floor_z + 0.33), segs=20), "mat_lilac"))
     # Tap at the back of the rim
     parts.append((cyl(0.35, 0.4, 0.9, loc=(0, R + 0.9, 1.4)), "chrome"))
     tap = torus(1.0, 0.24, segs=12, sides=8, arc=math.pi)

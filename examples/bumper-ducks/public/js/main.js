@@ -19,6 +19,7 @@ const params = new URLSearchParams(location.search)
 const DEBUG = params.has('debug')
 const STEP = 1 / 60
 const READY_TIMEOUT = 5000
+const NAP_AFTER = 3 // seconds with no child paddling before the robots float and wait
 const STORE = 'bumper-ducks-'
 
 function load(key) {
@@ -148,14 +149,20 @@ const game = {
 // Optional learning missions count bubbles the children collect (all of them together; the robots'
 // don't count). A bubble's 'got' event can arrive more than once, so each one is counted once per round.
 const collectedBubbles = new Set()
+const MISSIONS = [
+  { emoji: '🦆', label: 'Free duck play' },
+  { emoji: '3️⃣', label: 'Count 3 bubbles together', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
+  { emoji: '6️⃣', label: 'Count 6 bubbles together', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
+]
+let quietMission = false
 const adventure = createAdventure({
   id: 'bumper-ducks',
   anchor: $('go'),
   hud: $('hud'),
-  isMuted: () => audio.muted,
+  isMuted: () => audio.muted || quietMission,
   celebrate: () => {
     const n = adventure.option.target
-    banner(`🎉 ${n} 🫧 🎉`, 2200)
+    banner(`🎉 ${n} 🫧 🎉`, 2400, true)
     audio.star()
     if (game.me) effects.sparkle(game.me.x, 1.6, game.me.z, '#ffd23f', 30)
   },
@@ -174,12 +181,16 @@ const adventure = createAdventure({
     goal.append(n)
     goal.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
   },
-  options: [
-    { emoji: '🦆', label: 'Free duck play' },
-    { emoji: '3️⃣', label: 'Count 3 bubbles together', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
-    { emoji: '6️⃣', label: 'Count 6 bubbles together', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
-  ],
+  options: MISSIONS,
 })
+
+/** A friend's device plays the counting mission the host picked (the choice lives on the host's menu). */
+function useMission(i) {
+  if (!Number.isInteger(i) || i < 0 || i >= MISSIONS.length) return
+  quietMission = true
+  for (let k = 0; k < MISSIONS.length && adventure.option !== MISSIONS[i]; k++) $('adventure-choice').click()
+  quietMission = false
+}
 const isBotDuck = (id) => !!game.setup?.entries.find((e) => e.id === id)?.bot
 
 /** Says the counting goal once the round starts, for children who can't read it yet. */
@@ -634,7 +645,7 @@ function hostStartRound() {
     e.tint = count.get(e.duck) ?? 0
     count.set(e.duck, e.tint + 1)
   }
-  const setup = { t: 'setup', arena: game.arena, seed, entries, host: game.room.selfId }
+  const setup = { t: 'setup', arena: game.arena, seed, entries, host: game.room.selfId, mission: MISSIONS.indexOf(adventure.option) }
   game.ready = new Set()
   send(setup)
   startRound(setup)
@@ -642,6 +653,7 @@ function hostStartRound() {
 
 function startRound(setup) {
   if (!Array.isArray(setup.entries) || !setup.entries.length || !validArena(setup.arena)) return
+  if (setup.host !== game.room.selfId) useMission(setup.mission)
   adventure.begin()
   collectedBubbles.clear()
   clearTimers()
@@ -653,6 +665,8 @@ function startRound(setup) {
   game.run = 0
   game.lastShake = 0
   game.lastSteer = 0
+  game.childActive = 0
+  game.lastZzz = -9
   const entries = setup.entries.slice(0, MAX_PLAYERS).map((e) => ({ ...e, duck: validDuck(e.duck) ? e.duck : 'sunny', emoji: String(e.emoji ?? '🙂').slice(0, 8) }))
   setup.entries = entries
   if (!entries.some((e) => e.id === game.room.selfId)) {
@@ -741,7 +755,7 @@ function hideHint() {
 function idleHint() {
   const sim = game.sim
   if (game.state !== 'play' || !game.me || game.sitOut || !sim) return
-  if (sim.time - (game.lastSteer ?? 0) < 8 || sim.time > 88) return
+  if (sim.time - (game.lastSteer ?? 0) < 6 || sim.time > 88) return
   game.lastSteer = sim.time
   const el = $(matchMedia('(any-pointer: coarse)').matches ? 'hint' : 'keys-hint')
   el.classList.remove('hidden')
@@ -909,6 +923,14 @@ function playEvent(e) {
     case 'powerEnd':
       if (mine) audio.click()
       break
+    case 'zzz':
+      // Robots napping while the children rest: a sleepy 💤 over each one.
+      if (Array.isArray(e.ids))
+        for (const id of e.ids) {
+          const d = posOf(id)
+          if (d && !d.fly) effects.label('💤', { x: d.x, y: 2.6, z: d.z }, { size: 'big' })
+        }
+      break
     case 'end':
       if (isHost()) endRound()
       break
@@ -1002,9 +1024,10 @@ function updateHud() {
 }
 
 let bannerTimer = 0
-function banner(text, ms = 1300) {
+function banner(text, ms = 1300, big = false) {
   const el = $('banner')
   el.textContent = text
+  el.classList.toggle('big', big)
   el.classList.add('show')
   clearTimeout(bannerTimer)
   bannerTimer = setTimeout(() => el.classList.remove('show'), ms)
@@ -1119,8 +1142,21 @@ function step(dt) {
   }
   if (host && game.bots.size) {
     let kids = -1
-    for (const d of sim.ducks) if (!game.bots.has(d.id)) kids = Math.max(kids, d.score)
-    for (const bot of game.bots.values()) bot.update(sim, dt, kids < 0 ? 0 : bot.duck.score - kids)
+    let napping = sim.time > 3
+    for (const d of sim.ducks) {
+      if (game.bots.has(d.id)) continue
+      kids = Math.max(kids, d.score)
+      if (Math.hypot(d.ix, d.iz) > 0.1 || d.dashT > 0) game.childActive = sim.time
+    }
+    // Every child has stopped paddling: the robots float and nap until someone paddles again.
+    napping = napping && kids >= 0 && sim.time - (game.childActive ?? 0) > NAP_AFTER
+    for (const bot of game.bots.values()) bot.update(sim, dt, kids < 0 ? 0 : bot.duck.score - kids, napping)
+    if (napping && sim.time - (game.lastZzz ?? -9) > 2.2) {
+      game.lastZzz = sim.time
+      const e = { k: 'zzz', ids: [...game.bots.keys()] }
+      playEvent(e)
+      outbox.push(e)
+    }
   }
   sim.step(dt, host)
   if (host) {

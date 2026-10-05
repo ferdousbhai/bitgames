@@ -16,13 +16,18 @@ export class Bot {
     this.moodT = 2 + seed
   }
 
-  /** `lead` is how far this robot is ahead of the best child; robots in front ease off so children win plenty. */
-  update(sim, dt, lead = 0) {
+  /**
+   * `lead` is how far this robot is ahead of the best child; robots in front ease off so children win plenty.
+   * `napping`: every child has stopped paddling, so the robots float and wait for them.
+   */
+  update(sim, dt, lead = 0, napping = false) {
     const d = this.duck
     // Gentler still in the bubble party at the end, where a quick robot could snatch the win.
-    const easy = Math.min(1, Math.max(0, sim.party ? (lead + 1) / 4 : (lead - 1) / 6))
-    if (d.fly) {
-      d.ix = d.iz = 0
+    const easy = Math.min(1, Math.max(0, sim.party ? (lead + 1) / 4 : lead / 5))
+    if (d.fly || napping) {
+      d.ix *= 0.85
+      d.iz *= 0.85
+      if (d.fly) d.ix = d.iz = 0
       return
     }
     this.think -= dt
