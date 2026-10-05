@@ -56,7 +56,7 @@ On BitGames, games run in a locked-down frame:
 - Up to ${MAX_FILES_PER_GAME} files and ${mb(MAX_GAME_BYTES)} per game, with at most 25 MB per file (bundle code into a few modules).
 
 ## Playing together (multiplayer)
-Games can let up to 8 people in the same home play together, each on their own device. BitGames shows the lobby: every device at home taps "Play together" and they meet in one room (devices on the same internet connection find each other; the first device lets the others in with one tap). Families in different places can use a code made of three animals instead. Game data then goes directly between the devices over WebRTC.
+Games can let up to 8 people in the same home play together, each on their own device. BitGames shows the lobby: one device taps "Play together" then "Start a game", and the game gets a code of three animals. Other devices on the same internet connection see it in their "Play together" list and tap it to join (the first device lets them in with one tap); a device anywhere else taps the three animals instead. Game data then goes directly between the devices over WebRTC.
 
 \`\`\`js
 import { joinRoom } from '${VENDOR_BASE}/bitgames/multiplayer-1.js'
