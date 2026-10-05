@@ -729,12 +729,12 @@ function frame(dt) {
     motion.update(t * t * (3 - 2 * t))
     if (t === 1) motions.splice(i, 1)
   }
+  // A hop ends at sin(0) = 0, back on the board; tiles that are not hopping keep their own height
+  // (an experiment lowers its object into the water).
   for (const t of targets) {
     if (t.bounce > 0) {
       t.bounce = Math.max(0, t.bounce - dt)
       t.group.position.y = Math.sin((t.bounce / 0.45) * Math.PI) * 0.28
-    } else {
-      t.group.position.y = 0
     }
   }
   for (let i = dots.length - 1; i >= 0; i--) {

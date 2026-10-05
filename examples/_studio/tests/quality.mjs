@@ -150,6 +150,19 @@ await runChecks(session, async (pass) => {
   await page.waitForFunction(() => window.__learning.api.board.getObjectByName('experiment-object').position.x < 0.4)
   pass('The steel object moves towards the approaching magnet.')
 
+  // The tank's water surface sits at y = 0.85; floaters settle across it, sinkers fall below it.
+  for (const round of [0, 1]) {
+    await open('float-boat-lab')
+    await page.evaluate((round) => window.__learning.startRound(round), round)
+    const floats = await page.evaluate(() => window.__learning.state.challenge.target)
+    await predictYesAndTest()
+    await page.waitForFunction((floats) => {
+      const y = window.__learning.api.board.getObjectByName('experiment-object').position.y
+      return floats ? Math.abs(y - 0.68) < 0.01 : y < 0.1
+    }, floats)
+  }
+  pass('A floating toy rests at the water surface and a sinking one drops below it.')
+
   await open('cuckoo-clock-garden')
   await drag(await screenPoint({ x: 0, y: 0.35, z: -1.05 }), await screenPoint({ x: 1.05, y: 0.35, z: 0 }))
   assert.equal((await boardObject('clock-hour-hand')).hour, 3)
