@@ -89,12 +89,18 @@ const game = {
   hitSoundAt: 0,
   lastScore: null,
   idle: 0, // seconds without a touch while aiming
+  walkTo: null, // with bumpers on, the penguin waddles to line up with the pins left
 }
 
 const prediction = createPrediction({
   button: $('predict-pins'),
   hud: $('hud'),
   getStanding: () => pins.countStanding(),
+  // The same triangle as the lane and the rack: back row first, knocked pins as gaps.
+  getLayout: () => {
+    const up = standingSet()
+    return [3, 2, 1, 0].map((row) => PIN_SPOTS.flatMap((s, i) => (s.row === row ? [up[i]] : [])))
+  },
   muted: () => audio.muted,
   sound: (kind) => {
     audio.unlock()
@@ -319,12 +325,42 @@ function nextRoll() {
   }
   updateRack(standingSet())
   toAim()
+  // Bumpers are the helping mode: the penguin waddles over to face the pins
+  // that are left (or back to the middle for a fresh rack). Any touch takes over.
+  if (game.bumpers) game.walkTo = r.resetPins ? 0 : lineUpX()
+}
+
+/** Where to stand for a straight slide: in front of the nearest standing pin. */
+function lineUpX() {
+  const up = pins.list.filter((p) => !p.removed && !pins.isDown(p))
+  if (!up.length) return game.x
+  const mid = up.reduce((a, p) => a + p.body.position.x, 0) / up.length
+  const row = Math.min(...up.map((p) => p.spot.row))
+  const front = up.filter((p) => p.spot.row === row).sort((a, b) => Math.abs(a.body.position.x - mid) - Math.abs(b.body.position.x - mid))[0]
+  return clamp(front.body.position.x, -MAX_X, MAX_X)
+}
+
+/** The helper waddle: small hops sideways until the penguin is lined up. */
+function walk(dt) {
+  if (game.walkTo === null) return
+  const d = game.walkTo - game.x
+  if (Math.abs(d) < 0.01) {
+    game.walkTo = null
+    return
+  }
+  game.x += Math.sign(d) * Math.min(Math.abs(d), dt * 1.8)
+  penguin.x = game.x
+  if (penguin.hop < 0.05) {
+    penguin.hop = 0.4
+    audio.squeak(0.95 + Math.random() * 0.2)
+  }
 }
 
 function toAim() {
   prediction.aim()
   game.state = 'aim'
   game.idle = 0
+  game.walkTo = null
   penguin.ready(game.x)
   effects.puff(penguin.group.position.clone().setY(0.2), 6, 0.5)
   $('controls').classList.remove('away')
@@ -548,6 +584,7 @@ musicBtn.addEventListener('click', (e) => {
 
 function move(dir) {
   if (game.state !== 'aim') return
+  game.walkTo = null
   game.x = clamp(game.x + dir * 0.35, -MAX_X, MAX_X)
   penguin.x = game.x
   penguin.hop = Math.max(penguin.hop, 0.5)
@@ -607,6 +644,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (game.state === 'title' && onPenguin && penguin.poke()) audio.squeak(1 + Math.random() * 0.3)
   if (game.state !== 'aim') return
   drag.tapPenguin = onPenguin
+  game.walkTo = null
   drag.on = true
   drag.id = e.pointerId
   drag.pts = [{ x: e.clientX, y: e.clientY }]
@@ -679,9 +717,10 @@ const wantLook = new THREE.Vector3()
  * pins at the far end look big while the penguin stays the same size.
  * [landscape, portrait] pairs; aim adds a third, for sideways phones.
  * Phones aim tighter (about 35-60% bigger pins); the lane still fits across.
+ * iPads held sideways and laptops get a longer lens too (pins about 30% bigger).
  */
 const CAM = {
-  aim: { fov: [26, 19, 16], back: [10, 12, 10], up: [3.6, 4.3, 3.6], look: [-10, -8.8, -6.6] },
+  aim: { fov: [17, 19, 16], back: [14, 12, 10], up: [4.4, 4.3, 3.6], look: [-9.5, -8.8, -6.6] },
   roll: { fov: 40, back: [5.6, 6.6], up: [2.9, 3.4] },
   deck: { fov: 40, back: [6.6, 6.2], up: [3.4, 4.1], look: [-1.4, -1.8] },
 }
@@ -799,6 +838,7 @@ function frame(fixedDt) {
     if (penguin.state === 'slide' && penguin.body.position.y < -0.3) penguin.hide()
     if ((game.timer > 1.1 && !pins.moving()) || game.timer > 3.4) finishRoll()
   } else if (game.state === 'aim' && !drag.on) {
+    walk(dt)
     // Gentle nudge for little ones who have stopped: show the swipe hand and wave.
     game.idle += dt
     if (game.idle > 6) {

@@ -45,6 +45,8 @@
   transition: transform .25s cubic-bezier(.2, 1.6, .4, 1), opacity .25s;
 }
 #pin-prediction .pin.fall::before { transform: translateY(8px) rotate(75deg) scale(.8); border-color: #ff6b9d; opacity: .75; }
+/* A pin already knocked down this frame: just its spot on the ice. */
+#pin-prediction .pin.gap::before { width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 0; border-radius: 50%; background: #e4cfa4; box-shadow: none; }
 
 .pin-counter { display: flex; justify-content: center; align-items: center; gap: 16px; }
 #pin-prediction .pin-counter button { width: 60px; height: 60px; padding: 0; border-radius: 50%; font-size: 34px; line-height: 1; }
@@ -82,6 +84,7 @@
   box-shadow: 0 4px 0 #2b4a8a40;
   font: 700 14px/1.25 ui-rounded, system-ui, sans-serif;
   text-align: left;
+  text-wrap: pretty;
   pointer-events: none;
   animation: pin-pop .45s cubic-bezier(.2, 1.7, .4, 1);
 }

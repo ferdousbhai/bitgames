@@ -1,10 +1,15 @@
 // Predictions invite counting; the actual pin result is always shown neutrally.
 // Pictures carry the meaning for children who can't read yet: the guessed pins
 // tip over in the dialog, and the line under the HUD shows 💭 guess · 💥 fell.
-export function createPrediction({ button, hud, getStanding, onOpen, sound, muted }) {
+// getLayout (optional) returns rows of pins, back row first, as true (standing) /
+// false (fallen), so the dialog shows the same pins the child can see on the lane.
+export function createPrediction({ button, hud, getStanding, getLayout, onOpen, sound, muted }) {
   let guess = null
   let value = 0
   let max = 10
+  let layout = null
+  // A no-break space keeps "10 pins" together when the result line wraps.
+  const pins = (n) => `${n}\u00a0${n === 1 ? 'pin' : 'pins'}`
 
   const dialog = document.createElement('dialog')
   dialog.id = 'pin-prediction'
@@ -52,17 +57,22 @@ export function createPrediction({ button, hud, getStanding, onOpen, sound, mute
   }
 
   // Pins in the bowling triangle (4, 3, 2, 1 from the back); tapping one picks that many.
+  // With a layout, fallen spots stay as gaps so the triangle matches the lane.
   function drawPins() {
     pick.innerHTML = ''
+    const rows = layout ?? [4, 3, 2, 1].map((size, r) => Array.from({ length: size }, (_, i) => [0, 4, 7, 9][r] + i < max))
     let n = 0
-    for (const size of [4, 3, 2, 1]) {
+    for (const spots of rows) {
       const row = document.createElement('div')
-      for (let i = 0; i < size; i++, n++) {
-        if (n >= max) break
-        const k = max - n // front pins fall first: the front pin is number 1
+      for (const up of spots) {
+        if (!up) {
+          row.append(Object.assign(document.createElement('span'), { className: 'pin gap' }))
+          continue
+        }
+        const k = max - n++ // front pins fall first: the front pin is number 1
         const b = document.createElement('button')
         b.className = 'pin' + (k <= value ? ' fall' : '')
-        b.setAttribute('aria-label', `${k} ${k === 1 ? 'pin' : 'pins'}`)
+        b.setAttribute('aria-label', pins(k))
         b.onclick = () => {
           value = value === k ? k - 1 : k
           sound?.('tap')
@@ -70,13 +80,13 @@ export function createPrediction({ button, hud, getStanding, onOpen, sound, mute
         }
         row.append(b)
       }
-      if (row.children.length) pick.append(row)
+      if (spots.some(Boolean)) pick.append(row)
     }
   }
 
   function draw() {
     $('#pin-value').textContent = value
-    $('#pin-total').textContent = `${max} pins are standing.`
+    $('#pin-total').textContent = `${pins(max)} ${max === 1 ? 'is' : 'are'} standing.`
     less.disabled = value === 0
     more.disabled = value === max
     drawPins()
@@ -84,6 +94,7 @@ export function createPrediction({ button, hud, getStanding, onOpen, sound, mute
 
   button.onclick = () => {
     max = getStanding()
+    layout = getLayout?.() ?? null
     value = Math.min(guess ?? Math.ceil(max / 2), max)
     onOpen?.()
     draw()
@@ -94,7 +105,7 @@ export function createPrediction({ button, hud, getStanding, onOpen, sound, mute
   more.onclick = () => { value = Math.min(max, value + 1); sound?.('tap'); draw() }
   $('#pin-confirm').onclick = () => {
     guess = value
-    say(`My prediction: ${guess} pins will fall.`, `💭 ${guess}`)
+    say(`My prediction: ${pins(guess)} will fall.`, `💭 ${guess}`)
     sound?.('keep')
     speak(`${guess}! Let's see.`)
     dialog.close()
@@ -117,7 +128,7 @@ export function createPrediction({ button, hud, getStanding, onOpen, sound, mute
       const exact = guess !== null && guess === knocked
       const predicted = guess === null ? '' : `I predicted ${guess}. `
       const icons = guess === null ? `💥 ${knocked}` : `💭 ${guess} · 💥 ${knocked}${exact ? ' 🎯' : ''}`
-      say(`${predicted}${knocked} fell + ${standing} standing = ${before} pins.`, icons, exact ? 'exact' : '')
+      say(`${predicted}${knocked} fell + ${standing} standing = ${pins(before)}.`, icons, exact ? 'exact' : '')
       if (guess !== null) speak(exact ? `${knocked} fell. You got it exactly!` : `${knocked} fell.`)
       if (exact) sound?.('exact')
       guess = null
