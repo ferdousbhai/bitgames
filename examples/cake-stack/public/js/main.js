@@ -78,6 +78,24 @@ const adventure = createAdventure({
   hud: $('hud'),
   isMuted: () => sound.muted,
   celebrate: (text) => banner(text, 'gold'),
+  // A row of slices to count along with the words, so non-readers can follow it too
+  renderProgress: (el, option, count) => {
+    if (!option.goal) return
+    el.replaceChildren()
+    const row = document.createElement('span')
+    row.className = 'goal-slices'
+    row.setAttribute('aria-hidden', 'true')
+    for (let i = 0; i < option.target; i++) {
+      const s = document.createElement('span')
+      s.textContent = '🍰'
+      if (i < count) s.className = 'got'
+      row.append(s)
+    }
+    const words = document.createElement('span')
+    words.className = 'goal-words'
+    words.textContent = option.goal
+    el.append(words, row, ` ${count} / ${option.target}`)
+  },
   options: [
     { emoji: '🎂', label: 'Free stacking' },
     { emoji: '🐢', label: 'Gentle layer counting', pace: 0.6, goal: 'Stack 3 layers', target: 3, reward: 'Three layers make your little cake!' },
@@ -286,6 +304,7 @@ async function drop() {
   const L = mover
   L.dropping = true
   game.firstDrop = true
+  game.idle = 0
   $('hint').classList.add('hidden')
   sound.whoosh()
   const y0 = L.group.position.y
@@ -315,8 +334,8 @@ function land(L) {
     }
   } else {
     game.streak = 0
-    const forgive = cake.layers.length === 0 ? 0.3 : 0.45
-    const loss = Math.min(ad * forgive, top.w * 0.25)
+    const forgive = cake.layers.length === 0 ? 0.3 : 0.35
+    const loss = Math.min(ad * forgive, top.w * 0.18)
     newW = top.w - loss
     newX = top.x + (dir * loss) / 2
     kind = ad < top.w * 0.3 ? 'good' : 'squish'
@@ -553,6 +572,7 @@ async function finishCake(reason) {
   if (!cake || !['play', 'intro'].includes(game.state)) return
   const run = game.run
   game.state = 'party'
+  $('hud').classList.add('partying')
   $('done').classList.add('hidden')
   $('hint').classList.add('hidden')
   $('pips').classList.add('full')
@@ -626,7 +646,8 @@ async function blowCandles() {
   const target = candleCenter()
   // Jump up to candle height, take a big breath and blow
   const base = c.group.position.clone()
-  const peak = Math.max(0, target.y - 1.0)
+  // A hop up toward tall cakes; the puff of breath carries the rest of the way.
+  const peak = clamp(target.y - 1.0, 0, 0.7)
   c.hop(0)
   await tween(0.45, (t) => {
     c.group.position.y = base.y + peak * ease.outCubic(t)
@@ -718,6 +739,7 @@ async function nextCake() {
 
 async function startLevel(run) {
   game.state = 'intro'
+  $('hud').classList.remove('partying')
   game.cakeStars = 0
   game.streak = 0
   cake = newCake(-9)
@@ -740,6 +762,7 @@ async function startLevel(run) {
   await wait(1.6)
   if (run !== game.run) return
   game.state = 'play'
+  game.idle = 0
   spawnMover()
   if (!game.firstDrop) setTimeout(() => run === game.run && !game.firstDrop && game.state === 'play' && showHintAt(null), 900)
 }
@@ -851,7 +874,10 @@ function updateHud() {
   pips.forEach((p, i) => {
     const on = i < layers.length
     p.classList.toggle('on', on)
-    p.style.background = on ? (FLAVOURS[layers[i].flavour].rainbow ? 'conic-gradient(#ff6b6b, #ffe066, #69db7c, #74c0fc, #b197fc, #ff6b6b)' : FLAVOURS[layers[i].flavour].icing) : ''
+    const f = on ? FLAVOURS[layers[i].flavour] : null
+    p.style.background = f ? (f.rainbow ? 'conic-gradient(#ff6b6b, #ffe066, #69db7c, #74c0fc, #b197fc, #ff6b6b)' : f.icing) : ''
+    // The sponge colour rings each landed layer, so pale icings (vanilla) still read as filled
+    p.style.borderColor = f ? f.sponge : ''
   })
 }
 
@@ -874,7 +900,7 @@ function showIntro(emoji, title, sub, stay = false) {
   void el.offsetWidth
   el.classList.add(stay ? 'stay' : 'show')
   clearTimeout(introTimer)
-  if (!stay) introTimer = setTimeout(() => (el.className = 'intro'), 2800)
+  if (!stay) introTimer = setTimeout(() => (el.className = 'intro'), 2000)
 }
 function hideIntro() {
   $('intro').className = 'intro'
@@ -885,6 +911,13 @@ function showHintAt(pos) {
   hintAt.pos = pos
   $('hint').classList.remove('hidden')
 }
+/** A child who stops tapping gets the finger again, pointing just under the sliding layer. */
+function updateIdle(dt) {
+  if (game.state !== 'play' || !mover || mover.dropping) return
+  game.idle = (game.idle || 0) + dt
+  if (game.idle > 6 && $('hint').classList.contains('hidden')) showHintAt(null)
+}
+
 function updateHint() {
   const el = $('hint')
   if (el.classList.contains('hidden')) return
@@ -907,6 +940,7 @@ function show(screen) {
 
 function endRun() {
   game.run++
+  $('hud').classList.remove('partying')
   clearTweens()
   clearTimeout(game.autoBlow)
   disposeCake(cake)
@@ -1069,6 +1103,7 @@ function frame(dt) {
   if (cake?.figure) cake.figure.update(dt, t, camera.position)
   updateCamera(dt)
   effects.update(dt)
+  updateIdle(dt)
   updateHint()
   sound.updateMusic(game.state !== 'loading')
   renderer.render(scene, camera)

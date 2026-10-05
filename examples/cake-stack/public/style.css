@@ -55,13 +55,15 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .round-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(176,74,122,.3); }
 .round-btn.off { opacity: .45; }
 .score b { display: inline-block; min-width: 1.2em; }
+#best-badge { position: absolute; left: 60px; top: 58px; white-space: nowrap; }
 .badge { background: #ffd23f; color: #8a3a62; font-size: 18px; text-shadow: none; animation: bob 1.4s ease-in-out infinite; }
 
 /* Layer progress: one dot per layer, then the birthday friend */
 .progress { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom)); max-width: calc(100vw - 120px); }
 .pips { display: flex; gap: 6px; align-items: center; background: rgba(255,255,255,.75); padding: 6px 12px; border-radius: 999px; box-shadow: 0 4px 0 rgba(176,74,122,.25); }
-.pip { width: 22px; height: 22px; border-radius: 50%; background: rgba(176, 74, 122, .15); border: 3px solid rgba(176, 74, 122, .25); transition: transform .3s cubic-bezier(.2, 1.8, .4, 1); flex: none; }
-.pip.on { border-color: #fff; transform: scale(1.15); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+.pip { width: 24px; height: 24px; border-radius: 50%; background: rgba(176, 74, 122, .1); border: 3px solid rgba(176, 74, 122, .3); transition: transform .3s cubic-bezier(.2, 1.8, .4, 1); flex: none;
+  display: grid; place-items: center; font: 900 12px/1 ui-rounded, system-ui, sans-serif; color: rgba(176, 74, 122, .65); text-shadow: none; }
+.pip.on { border-width: 4px; transform: scale(1.18); box-shadow: 0 2px 0 rgba(0,0,0,.18); color: rgba(90, 40, 60, .7); }
 .pip-goal { font-size: 28px; line-height: 1; margin-left: 2px; }
 .pips.full .pip-goal { animation: bob .8s ease-in-out infinite; }
 
@@ -85,7 +87,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   background: rgba(255,255,255,.92); color: #b04a7a; border-radius: 30px; padding: 14px 28px 18px; box-shadow: 0 8px 0 rgba(176,74,122,.25);
   max-width: calc(100vw - 32px);
 }
-.intro.show { animation: intro 2.8s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+.intro.show { animation: intro 2s cubic-bezier(.2, 1.6, .4, 1) forwards; }
 .intro.stay { top: calc(70px + env(safe-area-inset-top)); padding: 6px 22px 10px; animation: intro-in .5s cubic-bezier(.2, 1.6, .4, 1) forwards; }
 .intro.stay #intro-emoji { display: none; }
 .intro.stay #intro-title, .intro.stay #intro-sub { white-space: nowrap; }
@@ -149,4 +151,190 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .progress { left: calc(12px + env(safe-area-inset-left)); transform: none; max-width: calc(100vw - 110px); }
   .pips { gap: 4px; padding: 5px 9px; }
   .pip { width: 18px; height: 18px; border-width: 2px; }
+}
+
+/* --- Title buttons: the studio and the mission picker sit side by side under Play --- */
+.title-bottom { display: grid; grid-template-columns: auto auto; justify-content: center; justify-items: center; align-items: center; gap: 10px 10px; }
+.title-bottom #play { grid-column: 1 / -1; grid-row: 1; }
+.title-bottom .scores { grid-column: 1 / -1; }
+.chip, #title .adventure-choice {
+  pointer-events: auto; margin: 0; min-height: 48px; padding: 8px 18px; border-radius: 999px; border: 3px solid #fff;
+  font: 900 17px/1.15 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; white-space: nowrap;
+  background: linear-gradient(#fffdf7, #ffe6f0); color: #b04a7a; box-shadow: 0 5px 0 rgba(176, 74, 122, .35), 0 8px 16px rgba(0, 0, 0, .1);
+}
+.chip:active, #title .adventure-choice:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(176, 74, 122, .35); }
+#title .adventure-choice { background: linear-gradient(#f2fffb, #c9f3e8); color: #1f7a6d; box-shadow: 0 5px 0 rgba(31, 122, 109, .35), 0 8px 16px rgba(0, 0, 0, .1); }
+@media (max-width: 440px) {
+  .title-bottom { grid-template-columns: auto; gap: 8px; }
+  .chip, #title .adventure-choice { font-size: 15px; padding: 6px 14px; min-height: 44px; }
+}
+@media (max-height: 520px) {
+  .title-bottom { gap: 6px 10px; }
+  .chip, #title .adventure-choice { font-size: 15px; padding: 5px 14px; min-height: 44px; }
+  .scores { font-size: 15px; }
+  .scores .pill { font-size: 17px; padding: 3px 12px; }
+}
+@media (max-height: 400px) {
+  #title { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .tag { font-size: 14px; padding: 4px 14px; }
+  .title-bottom .scores { display: none; }
+}
+
+/* --- Learning mission line: under the top buttons, clear of the layer dots and the cake --- */
+#hud .adventure-goal {
+  top: calc(70px + env(safe-area-inset-top)); bottom: auto; padding: 5px 16px; border-radius: 999px; border: 3px solid #fff;
+  background: rgba(255, 253, 245, .94); color: #8a3a62; font: 900 16px/1.2 ui-rounded, system-ui, sans-serif; box-shadow: 0 4px 0 rgba(176, 74, 122, .25);
+  white-space: nowrap; display: flex; align-items: center; gap: 6px;
+}
+#hud .adventure-goal[hidden], #hud.partying .adventure-goal { display: none; }
+@media (max-width: 560px), (max-height: 420px) { .goal-words { display: none; } }
+.goal-slices { display: inline-flex; gap: 2px; font-size: 20px; }
+.goal-slices span { filter: grayscale(1) opacity(.35); transition: filter .25s, transform .3s cubic-bezier(.2, 1.8, .4, 1); }
+.goal-slices span.got { filter: none; transform: scale(1.15); }
+@media (max-height: 420px) and (min-aspect-ratio: 1/1) {
+  /* Short sideways phones: the line rides in the gap between the top buttons */
+  #hud .adventure-goal { top: calc(12px + env(safe-area-inset-top)); font-size: 14px; padding: 4px 12px; }
+  .goal-slices { font-size: 17px; }
+}
+
+/* --- Party card on very short sideways phones --- */
+@media (max-height: 330px) {
+  .card { padding: 8px 18px 12px; gap: 2px; border-radius: 26px; }
+  .card-emoji { font-size: 36px; }
+  .card-title { font-size: 24px; }
+  .card-stars, .card-next { font-size: 22px; }
+  .card .big-go { font-size: 26px; padding: 8px 26px; }
+  .row { margin-top: 4px; }
+  .intro { padding: 8px 20px 10px; }
+  #intro-emoji { font-size: 40px; }
+}
+
+/* --- Birthday recipe studio: picture recipes, colour-coded flavours, everything on screen --- */
+#birthday-studio { width: min(860px, calc(100vw - 20px)) !important; max-height: calc(100svh - 20px); padding: 10px 14px 12px !important; font-size: 15px; }
+#birthday-studio .studio-heading { top: -10px; padding: 2px 0 4px; }
+#birthday-studio h2 { font-size: 19px; }
+#birthday-studio .studio-row { gap: 6px; margin: 6px 0; }
+#birthday-studio .studio-preview { height: clamp(110px, 24svh, 230px); border-radius: 18px; }
+#birthday-studio section > p { margin: 4px 0; font-size: 14px; }
+#birthday-studio .studio-status { min-height: 40px; padding: 7px 10px; margin: 6px 0 0; font-size: 15px; }
+#birthday-studio button { padding: 6px 12px; }
+
+#birthday-studio #recipe-panel:not([hidden]) { display: grid; grid-template-columns: auto minmax(0, 400px); justify-content: center; gap: 4px 12px; align-items: center; }
+#birthday-studio #recipe-panel > p, #birthday-studio #recipe-panel > .studio-row:last-child { grid-column: 1 / -1; }
+#birthday-studio .recipe-strip { flex-direction: column-reverse; flex-wrap: nowrap; gap: 3px; margin: 0; align-items: center; }
+#birthday-studio .recipe-step {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; width: 96px; height: 30px; padding: 0 6px;
+  border-radius: 10px 10px 6px 6px; background: var(--icing); border: 2px solid #fff; border-bottom: 6px solid var(--sponge); box-shadow: 0 2px 0 #715b7a30;
+}
+#birthday-studio .recipe-step span { font-size: 18px; line-height: 1; }
+#birthday-studio .recipe-step small, #birthday-studio .flavour small { display: inline-block; font-size: 11px; line-height: 1.2; background: #fffffff0; color: #554462; border-radius: 6px; padding: 0 4px; }
+#birthday-studio .recipe-step.next { outline: 3px dashed #ff6fae; outline-offset: 1px; animation: step-pulse 1s ease-in-out infinite; }
+#birthday-studio .recipe-step.done::after, #birthday-studio .recipe-step.wrong::after {
+  content: '✓'; position: absolute; right: -10px; top: 50%; translate: 0 -50%; width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center; font: 900 13px/1 system-ui, sans-serif; color: #fff; background: #3fae6a; border: 2px solid #fff;
+}
+#birthday-studio .recipe-step.wrong::after { content: '✗'; background: #e2556f; }
+@keyframes step-pulse { 50% { scale: 1.06; } }
+
+#birthday-studio #flavour-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+#birthday-studio .flavour {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 52px; padding: 3px 4px;
+  background: var(--icing); border: 2px solid #fff; border-bottom: 6px solid var(--sponge); border-radius: 14px;
+}
+#birthday-studio .flavour span { font-size: 24px; line-height: 1; }
+#birthday-studio .flavour:active { transform: translateY(3px); border-bottom-width: 3px; }
+#birthday-studio #slice-buttons button, #birthday-studio #friend-buttons button { font-size: 17px; }
+#birthday-studio #share-check, #birthday-studio #recipe-check { background: #c4e4cd; }
+
+/* Phones held upright: shrink the preview and the words so nothing needs scrolling */
+@media (max-height: 700px) and (max-aspect-ratio: 1/1) {
+  #birthday-studio .studio-preview { height: clamp(96px, 19svh, 150px); }
+  #birthday-studio button { font-size: 14px; }
+}
+@media (max-height: 600px) and (max-aspect-ratio: 1/1) {
+  #birthday-studio section > p { display: none; }
+}
+
+/* Sideways phones and short tablets: the preview on the left, the controls on the right */
+@media (min-aspect-ratio: 5/4) and (max-height: 620px) {
+  #birthday-studio[open] {
+    display: grid !important; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); column-gap: 14px;
+    grid-template-areas: "head head" "prev tabs" "prev panel" "status panel"; grid-template-rows: auto auto 1fr auto;
+  }
+  #birthday-studio .studio-heading { grid-area: head; position: static; }
+  #birthday-studio > .studio-row { grid-area: tabs; margin-top: 0; }
+  #birthday-studio .studio-preview { grid-area: prev; height: auto; min-height: 0; align-self: stretch; }
+  #birthday-studio #recipe-panel, #birthday-studio #share-panel { grid-area: panel; }
+  #birthday-studio .studio-status { grid-area: status; margin: 6px 0 0; font-size: 14px; }
+  #birthday-studio button { font-size: 14px; }
+}
+@media (min-aspect-ratio: 5/4) and (max-height: 430px) {
+  #birthday-studio { max-height: calc(100svh - 12px); padding: 6px 12px 8px !important; }
+  #birthday-studio h2 { font-size: 16px; }
+  #birthday-studio .studio-close { min-height: 44px; height: 44px; }
+  #birthday-studio section > p { display: none; }
+  #birthday-studio .studio-row { margin: 4px 0; }
+  #birthday-studio .recipe-step { height: 24px; }
+  #birthday-studio .recipe-step span { font-size: 15px; }
+  #birthday-studio .flavour { min-height: 46px; }
+  #birthday-studio .flavour span { font-size: 20px; }
+  #birthday-studio button { min-height: 44px; padding: 4px 10px; }
+  #birthday-studio .studio-status { min-height: 0; padding: 5px 8px; font-size: 13px; }
+}
+@media (max-height: 600px) and (max-aspect-ratio: 1/1) {
+  #birthday-studio .studio-preview { height: clamp(84px, 16svh, 120px); }
+}
+@media (max-width: 360px) {
+  #birthday-studio h2 { font-size: 17px; }
+}
+/* Very short sideways phones: tabs join the preview column, the title steps aside for the close button */
+@media (min-aspect-ratio: 5/4) and (max-height: 330px) {
+  #birthday-studio[open] { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); grid-template-areas: "tabs panel" "prev panel" "status panel"; grid-template-rows: auto 1fr auto; }
+  #birthday-studio .studio-heading { position: absolute; right: 8px; top: 6px; width: auto; padding: 0; background: none; }
+  #birthday-studio h2 { display: none; }
+  #birthday-studio #recipe-panel, #birthday-studio #share-panel { padding-right: 52px; }
+  #birthday-studio > .studio-row { justify-content: flex-start; }
+  #birthday-studio button { font-size: 13px; padding: 3px 8px; }
+  #birthday-studio .studio-row { margin: 3px 0; gap: 4px; }
+  #birthday-studio #share-check { min-height: 44px; }
+}
+@media (min-height: 700px) and (min-width: 700px) {
+  #birthday-studio .recipe-step { width: 124px; height: 38px; }
+  #birthday-studio { font-size: 18px; }
+  #birthday-studio h2 { font-size: 24px; }
+  #birthday-studio button { font-size: 18px; }
+  #birthday-studio section > p { font-size: 17px; }
+  #birthday-studio .studio-status { font-size: 18px; }
+  #birthday-studio .recipe-step span { font-size: 22px; }
+  #birthday-studio .flavour { min-height: 66px; }
+  #birthday-studio .flavour span { font-size: 30px; }
+  #birthday-studio .recipe-step small, #birthday-studio .flavour small { font-size: 13px; }
+}
+
+/* The intro bubble sizes to its words instead of squeezing into half the screen */
+.intro { width: max-content; }
+/* Short sideways phones: Play between the two chips, and the wish bubble beside the cake, not on it */
+@media (max-height: 420px) and (min-aspect-ratio: 5/4) {
+  .title-bottom { grid-template-columns: auto auto auto; }
+  .title-bottom #play { grid-column: 2; }
+  .title-bottom #recipe-open { grid-column: 1; grid-row: 1; }
+  .title-bottom .adventure-choice { grid-column: 3; grid-row: 1; }
+  .intro.stay { left: calc(12px + env(safe-area-inset-left)); top: calc(66px + env(safe-area-inset-top)); animation-name: intro-in-left; }
+  .intro.stay #intro-title { font-size: 26px; }
+  .intro.stay #intro-sub { font-size: 18px; }
+}
+@keyframes intro-in-left { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+/* Tablets and desktops: a HUD sized for the bigger screen */
+@media (min-width: 768px) and (min-height: 700px) {
+  .round-btn { width: 64px; height: 64px; font-size: 32px; }
+  .pill { font-size: 30px; padding: 8px 20px; }
+  #best-badge { left: 74px; top: 74px; font-size: 22px; }
+  .pip { width: 32px; height: 32px; font-size: 15px; }
+  .pips { gap: 9px; padding: 8px 16px; }
+  .pip-goal { font-size: 36px; }
+  .done-btn { width: 90px; height: 90px; font-size: 48px; }
+  #hud .adventure-goal { top: calc(88px + env(safe-area-inset-top)); font-size: 20px; }
+  .goal-slices { font-size: 26px; }
+  .intro.stay { top: calc(88px + env(safe-area-inset-top)); }
+  .chip, #title .adventure-choice { font-size: 21px; padding: 10px 24px; }
 }

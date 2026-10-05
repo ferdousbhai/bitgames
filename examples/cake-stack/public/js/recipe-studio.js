@@ -56,6 +56,9 @@ export function createRecipeStudio({ cakeKit, openButton }) {
 
   // The kit's fallback pieces are built fresh, so the view owns (and disposes) them.
   function drawCake() {
+    // The recipe cake fills the preview; the sharing table keeps the wide view.
+    view.root.scale.setScalar(1.8)
+    view.root.position.set(0, -0.5, 0)
     const stand = cakeKit.stand()
     if (!cakeKit.src.cake_stand) view.own(stand)
     view.root.add(stand)
@@ -63,7 +66,8 @@ export function createRecipeStudio({ cakeKit, openButton }) {
       const layer = cakeKit.layer(flavour)
       if (!cakeKit.src.cake_layer) view.own(layer.group)
       layer.group.position.y = STAND_TOP + i * STEP
-      layer.body.scale.set(2.6, 1, 2.6)
+      // Game-sized layers: wide enough to see each flavour, tall enough to count them
+      layer.body.scale.set(1.5, 1, 1.5)
       view.root.add(layer.group)
     })
     if (!layers.length) {
@@ -103,6 +107,8 @@ export function createRecipeStudio({ cakeKit, openButton }) {
   }
 
   function drawSharing() {
+    view.root.scale.setScalar(1)
+    view.root.position.set(0, 0, 0)
     const cakePlate = view.mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.08, 40), '#eed6e8')
     cakePlate.position.y = 0.04
     for (let f = 0; f < friends; f++) {
@@ -130,7 +136,10 @@ export function createRecipeStudio({ cakeKit, openButton }) {
     const last = recipe().length - 1
     $('.recipe-strip').replaceChildren(...recipe().map((flavour, i) => {
       const step = document.createElement('span')
-      step.className = 'recipe-step'
+      const built = layers[i]
+      step.className = `recipe-step${built === flavour ? ' done' : built ? ' wrong' : i === layers.length ? ' next' : ''}`
+      step.style.setProperty('--icing', FLAVOURS[flavour].icing)
+      step.style.setProperty('--sponge', FLAVOURS[flavour].sponge)
       step.setAttribute('aria-label', `${i + 1}: ${flavour}`)
       step.innerHTML = `<span>${FLAVOURS[flavour].emoji}</span><small>${i === 0 ? 'Bottom' : i === last ? 'Top' : `Layer ${i + 1}`}</small>`
       return step
@@ -152,7 +161,7 @@ export function createRecipeStudio({ cakeKit, openButton }) {
 
     $('#friend-buttons').replaceChildren(...FRIENDS.slice(0, friends).map((friend, f) => {
       const b = document.createElement('button')
-      b.textContent = `${friend.emoji} ${slicesOf(f)} slices`
+      b.textContent = `${friend.emoji} ${slicesOf(f)} slice${slicesOf(f) === 1 ? '' : 's'}`
       b.setAttribute('aria-label', `Friend ${f + 1} plate`)
       b.onclick = () => {
         if (selected === null) {
@@ -174,7 +183,11 @@ export function createRecipeStudio({ cakeKit, openButton }) {
 
   for (const flavour of PANTRY) {
     const b = document.createElement('button')
-    b.textContent = `${FLAVOURS[flavour].emoji} ${flavour}`
+    b.className = 'flavour'
+    b.style.setProperty('--icing', FLAVOURS[flavour].icing)
+    b.style.setProperty('--sponge', FLAVOURS[flavour].sponge)
+    b.setAttribute('aria-label', `${FLAVOURS[flavour].emoji} ${flavour}`)
+    b.innerHTML = `<span>${FLAVOURS[flavour].emoji}</span><small>${flavour}</small>`
     b.onclick = () => {
       if (layers.length === MAX_LAYERS) {
         say('Five layers is our tallest cake. Undo a layer to change it.')
@@ -194,7 +207,7 @@ export function createRecipeStudio({ cakeKit, openButton }) {
   }
   $('#recipe-check').onclick = () => {
     const matches = layers.length === recipe().length && layers.every((f, i) => f === recipe()[i])
-    say(matches ? 'The cake matches every picture, from bottom to top!' : 'Compare each layer with the pictures, starting at the bottom. Undo lets you change it.')
+    say(matches ? '🎉 The cake matches every picture, from bottom to top!' : '🔎 Compare each layer with the pictures, starting at the bottom. Undo lets you change it.')
   }
   $('#recipe-next').onclick = () => {
     recipeIndex = (recipeIndex + 1) % RECIPES.length
@@ -237,8 +250,8 @@ export function createRecipeStudio({ cakeKit, openButton }) {
   $('#share-check').onclick = () => {
     const fair = owners.every((o) => o !== null) && FRIENDS.slice(0, friends).every((_, f) => slicesOf(f) === slices / friends)
     say(fair
-      ? `Everyone has 2 of ${slices} equal slices: ${friends === 2 ? 'one half' : 'one third'} of the cake each!`
-      : 'Count the slices on every plate. Share all the slices and give everyone the same number.')
+      ? `🎉 Everyone has 2 of ${slices} equal slices: ${friends === 2 ? 'one half' : 'one third'} of the cake each!`
+      : '🔎 Count the slices on every plate. Share all the slices and give everyone the same number.')
   }
 
   resetShares()

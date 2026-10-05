@@ -1,6 +1,6 @@
 """
 Cake Stack models: cake layers, toppers, a cake stand, birthday customers and a
-cosy bakery, all built procedurally (no textures) and exported to ../public/models/:
+cosy bakery, all built procedurally (the only texture is the counter cloth, see below) and exported to ../public/models/:
 
   cake.glb       cake layers, the cake stand and every topper
   animals.glb    the birthday customers and their party hat
@@ -43,7 +43,12 @@ animals.glb top-level nodes:
 bakery.glb top-level nodes:
   bakery              floor (z = FLOOR_Z = -1.2), back wall, shelves and treats, window,
                       bunting and lamps
-  counter             the shop counter, top surface at z = 0, front edge at y = -0.8
+  counter             the shop counter, top surface at z = 0, front edge at y = -0.8.
+                      Child counter_cloth is a pink gingham runner lying on the top: the
+                      one textured piece, a recoloured copy of Poly Haven's CC0
+                      "Gingham Check" by Rico Cilliers / colormass
+                      (https://polyhaven.com/a/gingham_check, CC0), kept as
+                      assets/gingham_check_diff_1k.jpg.
 """
 import math
 import os
@@ -965,9 +970,60 @@ def build_counter():
     trim = mat("counter_trim", "#ff9ec4", rough=0.45)
     for k in range(-20, 21):
         P.sphere(trim, (k * 0.3, -0.86, -0.13), (0.15, 0.03, 0.08), segs=10, rings=6)
-    root_ = root("counter", P.build("counter_mesh"))
+    root_ = root("counter", P.build("counter_mesh"), counter_cloth())
     DETAIL = 0.75
     return root_
+
+
+ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+CLOTH_TILE = 2.2  # one texture repeat (about nine checks) per 2.2 units
+
+
+def gingham_image(size=512):
+    """Poly Haven's green gingham, recoloured to bakery pink and cream."""
+    import numpy as np
+    src = bpy.data.images.load(os.path.join(ASSETS, "gingham_check_diff_1k.jpg"))
+    src.scale(size, size)
+    px = np.empty(size * size * 4, np.float32)
+    src.pixels.foreach_get(px)
+    px = px.reshape(-1, 4)
+    lum = px[:, :3] @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    t = np.clip((lum - 0.12) / 0.62, 0, 1)[:, None]
+    dark = np.array([int("ff7fb0"[i:i + 2], 16) / 255 for i in (0, 2, 4)], np.float32)
+    light = np.array([int("fffaf5"[i:i + 2], 16) / 255 for i in (0, 2, 4)], np.float32)
+    px[:, :3] = dark * (1 - t) + light * t
+    img = bpy.data.images.new("counter_cloth", size, size)
+    img.pixels.foreach_set(px.ravel())
+    img.file_format = "JPEG"
+    img.pack()
+    bpy.data.images.remove(src)
+    return img
+
+
+def counter_cloth():
+    m = bpy.data.materials.new("counter_cloth")
+    if not m.node_tree:
+        m.use_nodes = True
+    nt = m.node_tree
+    bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+    bsdf.inputs["Roughness"].default_value = 0.85
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = gingham_image()
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new("UVMap")
+    w, d, z = 12.2, 1.66, 0.004
+    vs = [bm.verts.new((x, y, z)) for x, y in ((-w / 2, -d / 2), (w / 2, -d / 2), (w / 2, d / 2), (-w / 2, d / 2))]
+    f = bm.faces.new(vs)
+    for loop in f.loops:
+        loop[uv].uv = (loop.vert.co.x / CLOTH_TILE, loop.vert.co.y / CLOTH_TILE)
+    mesh = bpy.data.meshes.new("counter_cloth")
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.materials.append(m)
+    obj = bpy.data.objects.new("counter_cloth", mesh)
+    bpy.context.collection.objects.link(obj)
+    return obj
 
 
 # --- Export and preview -----------------------------------------------------------------------
@@ -984,7 +1040,8 @@ def export(roots, filename):
     select_tree(roots)
     path = os.path.join(OUT, filename)
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=True,
-                              export_yup=True, export_texcoords=False)
+                              export_yup=True, export_texcoords=any(o.type == "MESH" and o.data.uv_layers for r in roots for o in r.children_recursive),
+                              export_image_format="JPEG", export_jpeg_quality=82)
     polys = sum(len(o.data.polygons) for r in roots for o in [r, *r.children_recursive] if o.type == "MESH")
     print(f"exported {path}: {polys} faces, {os.path.getsize(path) // 1024} KB")
 
