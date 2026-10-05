@@ -133,9 +133,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .intro.show { animation: intro 1.8s cubic-bezier(.2, 1.6, .4, 1) forwards; }
 @keyframes intro {
-  0% { transform: translate(-50%, -20px) scale(0); opacity: 0; }
-  15%, 75% { transform: translate(-50%, 0) scale(1); opacity: 1; }
-  100% { transform: translate(-50%, -30px) scale(.9); opacity: 0; }
+  0% { transform: translate(var(--ix, -50%), -20px) scale(0); opacity: 0; }
+  15%, 75% { transform: translate(var(--ix, -50%), 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--ix, -50%), -30px) scale(.9); opacity: 0; }
 }
 #intro-emoji { font-size: clamp(34px, 6vw, 48px); line-height: 1.1; }
 #intro-title { font-size: clamp(26px, 5vw, 40px); font-weight: 900; }
@@ -202,8 +202,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .go { height: 60px; }
   /* The swipe hand stays on the penguin's side of the lane, below the pins */
   .hint-swipe { --swipe-up: -12vh; font-size: 50px; }
-  /* Sideways phones: a slim "Frame 2" pill that leaves the arch and pins clear */
-  .intro { top: calc(62px + env(safe-area-inset-top)); padding: 0 16px 0 10px; gap: 6px; }
+  /* Sideways phones: a slim "Frame 2" pill top-left, under the home button, clear of the pins */
+  .intro { top: calc(64px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); --ix: 0; transform-origin: left center; padding: 0 16px 0 10px; gap: 6px; }
   #intro-emoji { font-size: 24px; }
   #intro-title { font-size: 20px; }
 }
@@ -234,4 +234,21 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 /* Narrow tablets: the scorecard squeezes so the top bar stays on one row */
 @media (min-width: 761px) and (max-width: 900px) {
   .frame { width: 32px; } .frame.wide { width: 44px; }
+}
+/* Small phones held sideways (iPhone SE, small Androids): the scorecard stays in the
+   top bar instead of dropping to a second row that would cover the pins. */
+@media (max-width: 760px) and (max-height: 520px) and (orientation: landscape) {
+  .scorecard { order: 0; width: auto; flex: 0 1 auto; gap: 2px; padding: 3px; }
+  .frame { flex: none; width: 26px; } .frame.wide { flex: none; width: 36px; }
+  .frame .rolls { font-size: 12px; height: 16px; } .frame .rolls span { line-height: 16px; }
+  .frame .tot { font-size: 14px; height: 18px; line-height: 18px; }
+  .hud-top .pill.score { font-size: 20px; padding: 6px 12px; }
+  .hud-left, .hud-right { gap: 6px; }
+  .rack { top: calc(66px + env(safe-area-inset-top)); }
+  .intro { left: calc(10px + env(safe-area-inset-left)); }
+}
+@media (max-width: 600px) and (max-height: 520px) and (orientation: landscape) {
+  .scorecard { gap: 1px; }
+  .frame { width: 21px; } .frame.wide { width: 28px; }
+  .frame .tot { font-size: 13px; }
 }

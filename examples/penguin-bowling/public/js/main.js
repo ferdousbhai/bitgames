@@ -717,10 +717,12 @@ const wantLook = new THREE.Vector3()
  * pins at the far end look big while the penguin stays the same size.
  * [landscape, portrait] pairs; aim adds a third, for sideways phones.
  * Phones aim tighter (about 35-60% bigger pins); the lane still fits across.
+ * Sideways phones stand further back with a longer lens: pins as big, and the
+ * whole penguin fits above the bottom edge.
  * iPads held sideways and laptops get a longer lens too (pins about 30% bigger).
  */
 const CAM = {
-  aim: { fov: [17, 19, 16], back: [14, 12, 10], up: [4.4, 4.3, 3.6], look: [-9.5, -8.8, -6.6] },
+  aim: { fov: [17, 19, 13], back: [14, 12, 13.5], up: [4.4, 4.3, 4.3], look: [-9.5, -8.8, -6.0] },
   roll: { fov: 40, back: [5.6, 6.6], up: [2.9, 3.4] },
   deck: { fov: 40, back: [6.6, 6.2], up: [3.4, 4.1], look: [-1.4, -1.8] },
 }
