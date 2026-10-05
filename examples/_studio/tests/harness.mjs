@@ -97,6 +97,16 @@ export async function assertRendererRests(page, drawCount) {
   assert.equal(await page.evaluate(drawCount), previous, 'The renderer must rest while the child thinks.')
 }
 
+/**
+ * Resize the viewport, then wait two frames. A page sees a resize only at its next frame, where the
+ * learning games move their buttons onto the re-projected pieces (ResizeObserver); measuring before
+ * then reads the old layout, and a tap at that point lands beside its target.
+ */
+export async function rotate(page, size) {
+  await page.setViewportSize(size)
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+}
+
 export const centreOf = (box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
 
 /** True when a touch at the button's centre would land on the button itself. */

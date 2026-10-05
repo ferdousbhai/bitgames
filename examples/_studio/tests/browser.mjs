@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import assert from 'node:assert/strict'
 import { games } from '../catalogue.mjs'
 import {
-  actionButton, origin, originalStartButton, startBrowser, tapCentre, untilPasses, waitForTurn, worldTarget,
+  actionButton, origin, originalStartButton, rotate, startBrowser, tapCentre, untilPasses, waitForTurn, worldTarget,
 } from './harness.mjs'
 import { findRoute } from './route.mjs'
 
@@ -260,7 +260,7 @@ const layoutCheck = (label) => untilPasses(async () => {
 
 /** Rotate, check the settled layout, and optionally take a screenshot. */
 async function checkOrientation(size, label, screenshot) {
-  await page.setViewportSize(size)
+  await rotate(page, size)
   const layout = await layoutCheck(label)
   if (screenshot) await page.screenshot({ path: `${out}/${screenshot}.png` })
   return layout
