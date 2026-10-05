@@ -5,10 +5,16 @@ import { isGameId } from './server/limits'
 import { allowedByIp } from './server/rate-limit'
 import { serveGameAsset } from './server/game-assets'
 
+import { nearbyRoomName } from './server/nearby'
+import { GATE_HEADER } from './server/room'
+
 export { GameRoom } from './server/room'
 
-/** Room codes are three animals, sent as three indexes into the parent page's animal list. */
-const ROOM_PATH = /^\/rooms\/([a-z0-9-]{1,64})\/(\d{1,2}-\d{1,2}-\d{1,2})$/
+/**
+ * Room codes are three animals, sent as three indexes into the parent page's
+ * animal list; "near" is the room for devices on the same internet connection.
+ */
+const ROOM_PATH = /^\/rooms\/([a-z0-9-]{1,64})\/(\d{1,2}-\d{1,2}-\d{1,2}|near)$/
 
 /**
  * Multiplayer signaling: /rooms/<gameId>/<code>?peer=<id> upgrades to a
@@ -19,11 +25,18 @@ async function handleRoom(request: Request, gameId: string, code: string): Promi
   const url = new URL(request.url)
   if (request.headers.get('origin') !== url.origin) return new Response('Forbidden', { status: 403 })
   if (!isGameId(gameId)) return new Response('Not found', { status: 404 })
-  if (!(await allowedByIp(env.ROOM_LIMITER, request.headers.get('cf-connecting-ip') ?? 'unknown'))) {
+  // Local development has no cf-connecting-ip; every local device is one network there.
+  const ip = request.headers.get('cf-connecting-ip') ?? (url.hostname === 'localhost' ? '127.0.0.1' : '')
+  if (!(await allowedByIp(env.ROOM_LIMITER, ip || 'unknown'))) {
     return new Response('Too many rooms', { status: 429 })
   }
-  const room = env.ROOMS.get(env.ROOMS.idFromName(`${gameId}/${code}`))
-  return room.fetch(request)
+  const name = code === 'near' ? await nearbyRoomName(gameId, ip) : `${gameId}/${code}`
+  if (!name) return new Response('Network not recognised', { status: 422 })
+  // Only the Worker decides whether a room is gated; a client can't set this.
+  const headers = new Headers(request.headers)
+  headers.set(GATE_HEADER, code === 'near' ? '1' : '0')
+  const room = env.ROOMS.get(env.ROOMS.idFromName(name))
+  return room.fetch(new Request(request, { headers }))
 }
 
 const entry = createServerEntry({
