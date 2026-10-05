@@ -81,7 +81,7 @@ Set together=true in the game info for multiplayer games.
 Pressing Play on BitGames fills the whole screen (true fullscreen where the browser allows it), on tablets and phones in either orientation, and often on an iPad with only a touchscreen. Make the game fit that:
 - Fill the window: a canvas sized to \`innerWidth\` × \`innerHeight\`, re-sized on \`resize\` (which also fires when the device turns).
 - Use the viewport tag from the starter (\`viewport-fit=cover\`, no zooming), and keep HUD and buttons at least 16px from the edges with \`calc(16px + env(safe-area-inset-*))\`.
-- BitGames shows a ✕ button in the top-right corner. Keep about 60×60px there free of buttons and important HUD.
+- BitGames shows a ✕ button in the top-right corner, and in a family game a small 🏠 room-code button just left of it (it shows the room's animals for a few seconds, then shrinks). Keep a strip about 120×60px in the top-right corner free of buttons and important HUD.
 - Show touch controls whenever there's a touchscreen (\`@media (any-pointer: coarse)\`), even if a mouse or keyboard is also connected. For held buttons (steer, gas), use touch events with \`preventDefault()\` (\`{ passive: false }\`): on an iPad, every browser is WebKit, and it cancels a held touch for its press-and-hold menu otherwise.
 
 ## Making 3D models in Blender

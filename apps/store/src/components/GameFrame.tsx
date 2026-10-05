@@ -202,6 +202,14 @@ export function GameFrame({ gameId, src, title, className }: { gameId: string; s
     const [knocks, setKnocks] = useState<string[]>([])
     const [selfAnimal, setSelfAnimal] = useState('')
 
+    // The room badge shows the code for a few seconds, then shrinks to just 🏠 so it stays out of play.
+    const codeShown = lobby.step === 'in-room' && lobby.showCode
+    useEffect(() => {
+      if (!codeShown) return
+      const timer = setTimeout(() => setLobby((l) => (l.step === 'in-room' ? { ...l, showCode: false } : l)), 8000)
+      return () => clearTimeout(timer)
+    }, [codeShown])
+
     const toGame = useCallback((message: Unbridged<PageToGame>) => {
       frame.current?.contentWindow?.postMessage({ bridge: BRIDGE, ...message }, '*')
     }, [])
@@ -264,8 +272,6 @@ export function GameFrame({ gameId, src, title, className }: { gameId: string; s
             // The game now shows in the family list of every screen on this network.
             if (isHost) nearby.current?.host({ peer: selfId, code: code.join('-'), animal: animalIndex(selfId), max: maxPlayers.current })
             else stopListening()
-            // Collapse the hint to just the animals after a few seconds.
-            setTimeout(() => setLobby((l) => (l.step === 'in-room' ? { ...l, showCode: false } : l)), 8000)
           } else if (msg.t === 'denied' || msg.t === 'ended') {
             closeSocket()
             setLobby({ step: 'together', note: msg.t === 'denied' ? 'Not this time 🙈' : 'That game ended 👋' })
@@ -375,7 +381,7 @@ export function GameFrame({ gameId, src, title, className }: { gameId: string; s
           />
         )}
         {knocks[0] && (
-          <div className="absolute inset-x-0 top-3 z-10 flex justify-center px-3">
+          <div className="absolute inset-x-0 top-3 z-20 flex justify-center px-3">
             <div className="flex items-center gap-2 rounded-[28px] bg-white px-3 py-2 text-ink shadow-2xl sm:gap-3 sm:px-5 sm:py-3">
               <span className="text-4xl sm:text-5xl">{peerAnimal(knocks[0])}</span>
               <span className="text-lg font-bold whitespace-nowrap sm:text-xl">wants to play!</span>
@@ -392,13 +398,16 @@ export function GameFrame({ gameId, src, title, className }: { gameId: string; s
           <button
             type="button"
             onClick={() => setLobby({ ...lobby, showCode: !lobby.showCode })}
-            // Bottom centre: the space games usually leave free between their touch controls.
-            className="absolute bottom-3 left-1/2 min-h-11 -translate-x-1/2 rounded-full bg-white/85 px-3 py-1 text-base font-semibold whitespace-nowrap text-ink shadow-lg"
+            // Top right, just left of the store's ✕: games keep that strip free (see the guide). A tap shows the animals again
+            // for a grown-up joining from another screen.
+            className="absolute top-2.5 right-[58px] z-10 flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full bg-white/85 px-2 text-ink shadow-lg"
             title="Room code"
+            aria-label={`Room code ${emojiCode(lobby.code)}`}
+            aria-expanded={lobby.showCode}
           >
-            <span className="text-xl">🏠 {emojiCode(lobby.code)}</span>
+            <span className="text-xl leading-none">🏠{lobby.showCode && ` ${emojiCode(lobby.code)}`}</span>
             {lobby.showCode && lobby.isHost && (
-              <span className="ml-2 hidden text-sm text-ink-soft sm:inline">Other screens: “Play together” → {selfAnimal}</span>
+              <span className="hidden pr-1 text-sm font-semibold whitespace-nowrap text-ink-soft sm:inline">Other screens: “Play together” → {selfAnimal}</span>
             )}
           </button>
         )}
