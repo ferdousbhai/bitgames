@@ -193,9 +193,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .place .award { white-space: nowrap; }
   #results .big-go { white-space: nowrap; padding: 10px 30px; }
 }
-/* Upright phones: smaller counting bubbles. */
+/* Upright phones: smaller counting bubbles, lifted over the store's room code. */
 @media (max-width: 560px) and (orientation: portrait) {
-  #hud .adventure-goal { padding: 3px 10px 3px 6px; font-size: 17px; }
+  #hud .adventure-goal { padding: 3px 10px 3px 6px; font-size: 17px; bottom: calc(66px + env(safe-area-inset-bottom)); }
   .goal-bubble { font-size: 24px; }
 }
 /* Phones held sideways: a compact menu with rows that scroll sideways and GO pinned in the corner. */
@@ -235,3 +235,4 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .place { padding: 1px 10px; gap: 6px; } .place .medal { font-size: 22px; } .place img { width: 32px; height: 32px; }
   .place .who { flex-direction: row; align-items: center; gap: 6px; } .place .award { font-size: 13px; } .place .pts { font-size: 20px; }
 }
+@media (max-width: 420px) and (orientation: portrait) { .goal-bubble { font-size: 19px; } #hud .adventure-goal { font-size: 15px; gap: 0; } #hud .adventure-goal b { margin-left: 3px; } }
