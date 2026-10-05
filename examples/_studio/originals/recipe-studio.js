@@ -16,6 +16,8 @@ const FRIENDS = [
   { emoji: '🦊', name: 'Fox', plate: '#e6caea' },
 ]
 const PLATE_GAP = 2.9
+// Horizontal axis across the studio camera's line of sight (the camera looks from +x, +z).
+const TIP_AXIS = new THREE.Vector3(11.4, 0, -7).normalize()
 
 // Each friend's face floats over their plate, so a child can match a plate to its button without reading.
 const faces = new Map()
@@ -118,6 +120,8 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null }) {
     // The recipe cake fills the preview; the sharing table keeps the wide view.
     view.root.scale.setScalar(2.3)
     view.root.position.set(0, -0.9, 0)
+    // Tipped back a little, so the preview looks at the cake more from the side and every layer shows its side colours like the recipe pictures.
+    view.root.quaternion.setFromAxisAngle(TIP_AXIS, -0.36)
     const stand = cakeKit.stand()
     if (!cakeKit.src.cake_stand) view.own(stand)
     view.root.add(stand)
@@ -168,6 +172,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null }) {
   function drawSharing() {
     view.root.scale.setScalar(1)
     view.root.position.set(0, 0, 0)
+    view.root.quaternion.identity()
     const cakePlate = view.mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.08, 40), '#eed6e8')
     cakePlate.position.y = 0.04
     for (let f = 0; f < friends; f++) {

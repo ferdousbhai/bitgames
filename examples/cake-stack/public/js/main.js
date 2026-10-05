@@ -138,9 +138,51 @@ const camTarget = new THREE.Vector3()
 const tanHalf = () => Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
 const distFor = (halfW, halfH) => Math.max(halfH / tanHalf(), halfW / (tanHalf() * camera.aspect))
 
+/** The visible half height once the width rule (wide cakes on narrow screens) is applied. */
+const effHalfH = (halfW, halfH) => Math.max(halfH, halfW / camera.aspect)
+
+/**
+ * The title's birthday cake and friends fit the free band between the logo and the buttons,
+ * so Play never covers the cake stand on short sideways phones, small phones or iPads.
+ */
+function aimTitle() {
+  Object.assign(camGoal, { x: 0, y: 1.25, halfW: 2.8, halfH: 2.5, pitch: 0.16 })
+  const top = document.querySelector('.title-top')
+  const bottom = document.querySelector('.title-bottom')
+  if ($('title').classList.contains('hidden') || !top?.offsetHeight) return
+  const h = innerHeight
+  const a = top.offsetTop + top.offsetHeight + 4
+  const b = bottom.offsetTop - 6
+  if (b - a < 60) return
+  const y0 = -0.3 // the front of the doily and the friends' feet, which sit nearer the camera
+  const y1 = 2.62 // the candle flames
+  const halfH = Math.max(1.9, ((y1 - y0) * h) / (2 * (b - a)))
+  const H = effHalfH(camGoal.halfW, halfH)
+  camGoal.halfH = halfH
+  camGoal.y = (y0 + y1) / 2 + (((a + b) / 2 - h / 2) / (h / 2)) * H
+}
+
+/**
+ * While stacking, keep the cake stand clear of the layer dots at the bottom (short sideways
+ * phones), without pushing the sliding layer up under the top buttons or the mission line.
+ */
+function liftForDots(y) {
+  const bar = $('pips').parentElement
+  if (!bar.offsetHeight) return y
+  const h = innerHeight
+  const H = effHalfH(camGoal.halfW, camGoal.halfH)
+  const fB = (h - bar.offsetTop + 6) / h
+  const goal = document.getElementById('adventure-goal')
+  const goalBottom = goal && !goal.hidden && goal.offsetHeight ? goal.offsetTop + goal.offsetHeight : 0
+  const fT = (Math.max(goalBottom, 0.15 * h) + 6) / h
+  const baseClear = H * (1 - 2 * fB) - 0.02 // the stand's foot sits just above the dots
+  const moverClear = topY() + HOVER + 0.2 - H * (1 - 2 * fT) // the sliding layer stays below the top HUD
+  return Math.min(y, Math.max(moverClear, baseClear))
+}
+
 function aimCamera(snap = false) {
   if (game.state === 'title' || game.state === 'loading') {
-    Object.assign(camGoal, { x: 0, y: 1.25, halfW: 2.8, halfH: 2.5, pitch: 0.16 })
+    aimTitle()
   } else if (['party', 'candles', 'card'].includes(game.state) && cake) {
     const top = topY() + 0.6
     const cx = cake.group.position.x
@@ -163,6 +205,7 @@ function aimCamera(snap = false) {
   } else {
     const t = topLayer()
     Object.assign(camGoal, { x: t.x * 0.4, y: topY() + 0.3, halfW: view.R + START_W / 2 + 0.25, halfH: 2.1, pitch: 0.22 })
+    camGoal.y = liftForDots(camGoal.y)
   }
   const dist = distFor(camGoal.halfW, camGoal.halfH)
   if (snap) Object.assign(camNow, { x: camGoal.x, y: camGoal.y, dist, pitch: camGoal.pitch })

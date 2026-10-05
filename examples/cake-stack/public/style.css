@@ -393,3 +393,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @media (max-height: 760px) and (max-aspect-ratio: 1/1) {
   #birthday-studio #share-panel > .studio-row:first-of-type button { font-size: 13px; padding: 4px 8px; }
 }
+
+/* --- Pass 3: at the party on short sideways phones the full dots step aside for the cake and its friend --- */
+@media (max-height: 420px) and (min-aspect-ratio: 1/1) {
+  #hud.partying .progress { display: none; }
+}
+/* Very short sideways phones: the tagline steps aside so the title's birthday cake can be bigger */
+@media (max-height: 330px) and (min-aspect-ratio: 5/4) {
+  #title .tag { display: none; }
+}
