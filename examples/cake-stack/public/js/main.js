@@ -443,9 +443,10 @@ function land(L) {
   }
   if (n >= 3) $('done').classList.remove('hidden')
   if (n % 3 === 0) setTimeout(() => run === game.run && decorateSide(layer, n / 3 - 1), 300)
+  // A finished mission gets its moment: the next layer waits until the ribbon has gone, so it never slides hidden behind it.
   setTimeout(() => {
     if (run === game.run && game.state === 'play' && !mover) spawnMover()
-  }, 320)
+  }, Math.max(320, missionUntil - performance.now() - 200))
 }
 
 /** A trimmed piece of cake that flies off and plops onto the counter. */
@@ -761,6 +762,7 @@ function showCard() {
   const fresh = next.unlock && game.level + 1 <= CUSTOMERS.length ? ` ${FLAVOURS[next.unlock].emoji}` : ''
   $('card-next').textContent = `➡️ ${next.emoji}${fresh}`
   $('card').classList.remove('hidden')
+  $('hud').classList.add('carding')
   if (saveBest()) $('best-badge').classList.remove('hidden')
 }
 
@@ -770,6 +772,7 @@ async function nextCake() {
   const run = game.run
   sound.click()
   $('card').classList.add('hidden')
+  $('hud').classList.remove('carding')
   game.state = 'intro'
   const old = cake
   const oldC = customer
@@ -1015,7 +1018,7 @@ function show(screen) {
 function endRun() {
   game.run++
   missionUntil = 0
-  $('hud').classList.remove('partying')
+  $('hud').classList.remove('partying', 'carding')
   clearTweens()
   clearTimeout(game.autoBlow)
   disposeCake(cake)

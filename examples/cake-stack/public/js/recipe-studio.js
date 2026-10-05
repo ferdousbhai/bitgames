@@ -115,13 +115,25 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null }) {
     history.length = 0
   }
 
+  // The view's tabletop is the one box in its scene.
+  function showTable(visible) {
+    const table = view.root.parent.children.find((o) => o.isMesh && o.geometry.type === 'BoxGeometry')
+    if (table) table.visible = visible
+  }
+
   // The kit's fallback pieces are built fresh, so the view owns (and disposes) them.
   function drawCake() {
     // The recipe cake fills the preview; the sharing table keeps the wide view.
-    view.root.scale.setScalar(2.3)
-    view.root.position.set(0, -0.9, 0)
+    // Four- and five-layer cakes shrink and sit lower, so the top layer always stays in the picture.
+    const extra = Math.max(0, layers.length - 3)
+    view.root.scale.setScalar(2.3 - extra * 0.3)
+    view.root.position.set(0, -0.9 - extra * 0.3, 0)
     // Tipped back a little, so the preview looks at the cake more from the side and every layer shows its side colours like the recipe pictures.
     view.root.quaternion.setFromAxisAngle(TIP_AXIS, -0.36)
+    // The flat studio table would cut through the tipped stand, so the cake gets its own round party board instead.
+    showTable(false)
+    const board = view.mesh(new THREE.CylinderGeometry(1.25, 1.25, 0.06, 48), '#ffc9dc')
+    board.position.y = -0.03
     const stand = cakeKit.stand()
     if (!cakeKit.src.cake_stand) view.own(stand)
     view.root.add(stand)
@@ -135,7 +147,9 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null }) {
     })
     if (!layers.length) {
       const candle = cakeKit.topper('topper_star')
+      // A big gold star marks the empty stand where the first layer goes
       candle.position.y = STAND_TOP
+      candle.scale.setScalar(2.2)
       view.root.add(candle)
     }
   }
@@ -173,6 +187,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null }) {
     view.root.scale.setScalar(1)
     view.root.position.set(0, 0, 0)
     view.root.quaternion.identity()
+    showTable(true)
     const cakePlate = view.mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.08, 40), '#eed6e8')
     cakePlate.position.y = 0.04
     for (let f = 0; f < friends; f++) {

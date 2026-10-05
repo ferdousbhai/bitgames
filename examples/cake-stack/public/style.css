@@ -419,3 +419,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @media (max-width: 400px) and (max-aspect-ratio: 1/1) {
   .banner.mission { font-size: 22px; padding: 6px 14px 9px; border-width: 3px; border-radius: 20px; top: max(26%, calc(166px + env(safe-area-inset-top))); }
 }
+
+/* --- Pass 5: on short sideways phones the party card sits where the music and sound buttons are, so they step aside --- */
+@media (max-height: 420px) and (min-aspect-ratio: 6/5) {
+  #hud.carding .hud-right { visibility: hidden; }
+}
