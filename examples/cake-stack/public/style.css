@@ -338,3 +338,58 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .intro.stay { top: calc(88px + env(safe-area-inset-top)); }
   .chip, #title .adventure-choice { font-size: 21px; padding: 10px 24px; }
 }
+
+/* --- Pass 2: mission banner, banner clear of the mission line, colour-coded sharing plates --- */
+.banner.mission {
+  white-space: normal; width: max-content; max-width: min(92vw, 680px); text-align: center; line-height: 1.12;
+  font-size: clamp(26px, 5.4vw, 46px); top: 26%;
+}
+.banner.mission.show { transform: translate(-50%, -50%) scale(1) rotate(-2deg); }
+@media (max-width: 560px) and (max-aspect-ratio: 1/1) {
+  .banner { top: max(20%, calc(132px + env(safe-area-inset-top))); }
+  .banner.mission { top: max(26%, calc(150px + env(safe-area-inset-top))); }
+}
+@media (max-height: 420px) and (min-aspect-ratio: 1/1) {
+  .banner { top: calc(66px + env(safe-area-inset-top)); font-size: 30px; }
+  .banner.mission { top: 34%; font-size: 24px; max-width: min(70vw, 520px); }
+}
+#birthday-studio #friend-buttons { gap: 8px; }
+#birthday-studio #friend-buttons button.plate {
+  display: inline-flex; align-items: center; gap: 4px; min-width: 104px; background: var(--plate); border: 3px solid #fff;
+  border-radius: 999px; box-shadow: 0 4px 0 #715b7a30;
+}
+#birthday-studio #friend-buttons .plate span { font-size: 1.5em; line-height: 1; }
+#birthday-studio #friend-buttons .plate b { font-size: .95em; letter-spacing: -2px; }
+#birthday-studio #friend-buttons .plate small { font: 900 .9em/1 ui-rounded, system-ui, sans-serif; background: #fff; border-radius: 999px; padding: 2px 7px; }
+#birthday-studio #friend-buttons .plate:active { transform: translateY(3px); box-shadow: 0 1px 0 #715b7a30; }
+#birthday-studio #recipe-next.ready { background: #ffd23f; box-shadow: 0 4px 0 #d89a00; animation: step-pulse 1s ease-in-out infinite; }
+/* Sharing with three friends fits phones too: slices in one compact row, the three plates side by side */
+#birthday-studio #slice-buttons { gap: 4px; }
+#birthday-studio #slice-buttons button { min-width: 44px; padding: 4px 7px; }
+#birthday-studio #friend-buttons button.plate { min-width: 0; padding: 4px 10px; }
+@media (max-width: 420px) {
+  #birthday-studio #friend-buttons { gap: 5px; }
+  #birthday-studio #friend-buttons .plate b { display: none; }
+  #birthday-studio #friend-buttons button.plate { padding: 4px 8px; }
+}
+@media (max-height: 760px) and (max-aspect-ratio: 1/1) {
+  #birthday-studio #share-panel > p { display: none; }
+}
+@media (min-aspect-ratio: 5/4) and (max-height: 430px) {
+  #birthday-studio #share-panel .studio-row { margin: 3px 0; }
+  #birthday-studio #friend-buttons .plate b { display: none; }
+}
+@media (max-width: 360px) {
+  #birthday-studio { padding-left: 10px !important; padding-right: 10px !important; }
+  #birthday-studio #slice-buttons { gap: 2px; }
+  #birthday-studio #slice-buttons button { font-size: 13px; padding: 2px 4px; }
+}
+/* Very short sideways phones: tapping a plate hands over the next slice, so the slice row steps aside */
+@media (min-aspect-ratio: 5/4) and (max-height: 330px) {
+  #birthday-studio #slice-buttons { display: none; }
+  #birthday-studio #friend-buttons { gap: 4px; }
+  #birthday-studio #friend-buttons button.plate { padding: 3px 7px; }
+}
+@media (max-height: 760px) and (max-aspect-ratio: 1/1) {
+  #birthday-studio #share-panel > .studio-row:first-of-type button { font-size: 13px; padding: 4px 8px; }
+}

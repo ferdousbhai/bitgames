@@ -48,7 +48,7 @@ const sound = new Sound()
 const effects = new Effects(scene, camera)
 const cakeKit = new CakeKit()
 const animals = new AnimalKit()
-const recipeStudio = createRecipeStudio({ cakeKit, openButton: $('recipe-open') })
+const recipeStudio = createRecipeStudio({ cakeKit, openButton: $('recipe-open'), sound })
 
 // --- Game state -----------------------------------------------------------------------------
 
@@ -77,7 +77,7 @@ const adventure = createAdventure({
   anchor: $('play'),
   hud: $('hud'),
   isMuted: () => sound.muted,
-  celebrate: (text) => banner(text, 'gold'),
+  celebrate: (text) => celebrateMission(text),
   // A row of slices to count along with the words, so non-readers can follow it too
   renderProgress: (el, option, count) => {
     if (!option.goal) return
@@ -114,6 +114,7 @@ const customerDef = (level) => {
   return { ...def, layers: level > CUSTOMERS.length ? 10 : def.layers }
 }
 const unlockedFlavours = (level) => ['vanilla', ...CUSTOMERS.slice(0, Math.min(level, CUSTOMERS.length)).map((c) => c.unlock).filter(Boolean)]
+const FLOOR_W = MIN_W + 0.12 // the slimmest a layer gets
 const perfectWindow = (w) => Math.max(0.12, w * 0.12)
 const topY = () => STAND_TOP + (cake ? cake.layers.length : 0) * STEP
 const topLayer = () => (cake && cake.layers.length ? cake.layers[cake.layers.length - 1] : { x: 0, w: START_W })
@@ -336,8 +337,10 @@ function land(L) {
     game.streak = 0
     const forgive = cake.layers.length === 0 ? 0.3 : 0.35
     const loss = Math.min(ad * forgive, top.w * 0.18)
-    newW = top.w - loss
-    newX = top.x + (dir * loss) / 2
+    // Layers stop shrinking at a slim floor, so even a child who taps as fast as possible
+    // always stacks every layer the birthday friend asked for.
+    newW = Math.max(Math.min(top.w, FLOOR_W), top.w - loss)
+    newX = top.x + (dir * (top.w - newW)) / 2
     kind = ad < top.w * 0.3 ? 'good' : 'squish'
   }
   mover = null
@@ -391,8 +394,8 @@ function land(L) {
 
   const n = cake.layers.length
   const target = customerDef(game.level).layers
-  if (n >= target || newW < MIN_W + 0.02) {
-    setTimeout(() => run === game.run && finishCake(n >= target ? 'done' : 'narrow'), 450)
+  if (n >= target) {
+    setTimeout(() => run === game.run && finishCake('done'), 450)
     return
   }
   if (n >= 3) $('done').classList.remove('hidden')
@@ -878,16 +881,31 @@ function updateHud() {
     p.style.background = f ? (f.rainbow ? 'conic-gradient(#ff6b6b, #ffe066, #69db7c, #74c0fc, #b197fc, #ff6b6b)' : f.icing) : ''
     // The sponge colour rings each landed layer, so pale icings (vanilla) still read as filled
     p.style.borderColor = f ? f.sponge : ''
+    // Dark icing (chocolate) gets a white number so it can still be counted
+    p.style.color = f && !f.rainbow && new THREE.Color(f.icing).getHSL({}).l < 0.35 ? '#fff' : ''
   })
 }
 
 let bannerTimer = 0
+let missionUntil = 0
 function banner(text, kind = '') {
+  const mission = kind.includes('mission')
+  // A finished mission keeps the stage for a moment: 'Yummy!' and 'Perfect!' wait their turn.
+  if (!mission && performance.now() < missionUntil) return
   const el = $('banner')
   el.textContent = text
   el.className = `banner show ${kind}`
   clearTimeout(bannerTimer)
-  bannerTimer = setTimeout(() => (el.className = 'banner'), 1100)
+  bannerTimer = setTimeout(() => (el.className = 'banner'), mission ? 2600 : 1100)
+}
+
+/** The counting mission is done: a big wrapped banner, a cheer and a little confetti. */
+function celebrateMission(text) {
+  banner(`🎉 ${text}`, 'gold mission')
+  missionUntil = performance.now() + 2600
+  sound.grow()
+  if (cake) effects.shower(2.2, topY() + 2.2, 90, cake.group.position.x)
+  customer?.cheer(1.5)
 }
 
 let introTimer = 0
@@ -940,6 +958,7 @@ function show(screen) {
 
 function endRun() {
   game.run++
+  missionUntil = 0
   $('hud').classList.remove('partying')
   clearTweens()
   clearTimeout(game.autoBlow)

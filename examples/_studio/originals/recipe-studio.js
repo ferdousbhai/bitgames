@@ -11,13 +11,41 @@ const RECIPES = [
 const PANTRY = ['vanilla', 'strawberry', 'chocolate', 'lemon', 'mint', 'blueberry']
 const MAX_LAYERS = 5
 const FRIENDS = [
-  { emoji: '🐻', plate: '#bedacc' },
-  { emoji: '🐰', plate: '#bed4ed' },
-  { emoji: '🦊', plate: '#e6caea' },
+  { emoji: '🐻', name: 'Bear', plate: '#bedacc' },
+  { emoji: '🐰', name: 'Bunny', plate: '#bed4ed' },
+  { emoji: '🦊', name: 'Fox', plate: '#e6caea' },
 ]
 const PLATE_GAP = 2.9
 
-export function createRecipeStudio({ cakeKit, openButton }) {
+// Each friend's face floats over their plate, so a child can match a plate to its button without reading.
+const faces = new Map()
+function faceSprite(emoji) {
+  if (!faces.has(emoji)) {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 128
+    const g = canvas.getContext('2d')
+    g.fillStyle = '#ffffff'
+    g.beginPath()
+    g.arc(64, 64, 60, 0, Math.PI * 2)
+    g.fill()
+    g.font = '84px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText(emoji, 64, 70)
+    const map = new THREE.CanvasTexture(canvas)
+    map.colorSpace = THREE.SRGBColorSpace
+    faces.set(emoji, new THREE.SpriteMaterial({ map, depthTest: false }))
+  }
+  const sprite = new THREE.Sprite(faces.get(emoji))
+  sprite.renderOrder = 2
+  return sprite
+}
+
+/**
+ * sound (optional) is the game's synth: pop, perfect, cheer, click, good, wobble, muted.
+ * Feedback is also spoken, so a child who cannot read yet still hears what happened.
+ */
+export function createRecipeStudio({ cakeKit, openButton, sound = null }) {
   let view = null
   let recipeIndex = 0
   let layers = []
@@ -37,12 +65,43 @@ export function createRecipeStudio({ cakeKit, openButton }) {
     <div class="studio-row"><button id="recipe-tab" aria-pressed="true">Build a recipe</button><button id="share-tab" aria-pressed="false">Share the cake</button></div>
     <canvas class="studio-preview" role="img" aria-label="Your cake and equal portions"></canvas>
     <section id="recipe-panel"><p>Follow the pictures from the bottom layer to the top.</p><div class="recipe-strip" aria-label="Recipe from bottom to top"></div><div id="flavour-buttons" class="studio-row"></div><div class="studio-row"><button id="recipe-undo">⌫ Undo layer</button><button id="recipe-check">Check recipe ✓</button><button id="recipe-next">Next recipe →</button></div></section>
-    <section id="share-panel" hidden><p>Choose a slice, then a friend's plate. Give everyone the same number.</p><div class="studio-row"><button id="share-size">Try 3 friends</button><button id="share-undo">⌫ Undo share</button><button id="share-reset">Start sharing again</button></div><div id="slice-buttons" class="studio-row"></div><div id="friend-buttons" class="studio-row"></div><button id="share-check">Check equal shares ✓</button></section>
+    <section id="share-panel" hidden><p>Tap a friend's plate to give them a slice. Give everyone the same number.</p><div class="studio-row"><button id="share-size">Try 3 friends</button><button id="share-undo">⌫ Undo</button><button id="share-reset">↺ Start again</button></div><div id="slice-buttons" class="studio-row"></div><div id="friend-buttons" class="studio-row"></div><button id="share-check">Check equal shares ✓</button></section>
     <p class="studio-status" role="status" aria-live="polite">Choose the first layer.</p>`,
   })
   const $ = (selector) => studio.dialog.querySelector(selector)
   const status = $('.studio-status')
   const say = (text) => { status.textContent = text }
+  const play = (name, ...args) => {
+    sound?.unlock?.()
+    sound?.[name]?.(...args)
+  }
+  const canSpeak = 'speechSynthesis' in window
+  function speak(text) {
+    if (!canSpeak || sound?.muted) return
+    speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'en-US'
+    utterance.rate = 0.85
+    speechSynthesis.speak(utterance)
+  }
+  studio.dialog.addEventListener('close', () => { if (canSpeak) speechSynthesis.cancel() })
+  const stillMotion = matchMedia('(prefers-reduced-motion: reduce)')
+  let hop = 0
+  /** A happy bounce of the preview cake, drawn for a moment and then the view rests again. */
+  function bounce() {
+    if (stillMotion.matches || !view) return
+    cancelAnimationFrame(hop)
+    const start = performance.now()
+    const base = view.root.scale.x
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / 700)
+      const s = Math.sin(t * Math.PI * 3) * (1 - t) * 0.12
+      view.root.scale.set(base * (1 - s * 0.5), base * (1 + s), base * (1 - s * 0.5))
+      view.render()
+      hop = t < 1 ? requestAnimationFrame(step) : 0
+    }
+    hop = requestAnimationFrame(step)
+  }
   const recipe = () => RECIPES[recipeIndex]
   const slicesOf = (friend) => owners.filter((owner) => owner === friend).length
   const plateX = (friend) => (friend - (friends - 1) / 2) * PLATE_GAP
@@ -57,8 +116,8 @@ export function createRecipeStudio({ cakeKit, openButton }) {
   // The kit's fallback pieces are built fresh, so the view owns (and disposes) them.
   function drawCake() {
     // The recipe cake fills the preview; the sharing table keeps the wide view.
-    view.root.scale.setScalar(1.8)
-    view.root.position.set(0, -0.5, 0)
+    view.root.scale.setScalar(2.3)
+    view.root.position.set(0, -0.9, 0)
     const stand = cakeKit.stand()
     if (!cakeKit.src.cake_stand) view.own(stand)
     view.root.add(stand)
@@ -114,11 +173,17 @@ export function createRecipeStudio({ cakeKit, openButton }) {
     for (let f = 0; f < friends; f++) {
       const plate = view.mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.08, 32), FRIENDS[f].plate)
       plate.position.set(plateX(f), 0.04, 2.6)
+      const face = faceSprite(FRIENDS[f].emoji)
+      face.scale.setScalar(0.85)
+      face.position.set(plateX(f) + 0.95, 0.55, 3.35)
+      view.root.add(face)
     }
     for (let i = 0; i < slices; i++) drawWedge(i)
   }
 
   function draw() {
+    cancelAnimationFrame(hop)
+    hop = 0
     view ??= createStudioView($('.studio-preview'))
     view.clear()
     if (sharing) drawSharing()
@@ -153,6 +218,7 @@ export function createRecipeStudio({ cakeKit, openButton }) {
       b.disabled = owner !== null
       b.onclick = () => {
         selected = i
+        play('click')
         updateControls()
         say(`Slice ${i + 1} is ready. Choose a friend's plate.`)
       }
@@ -161,23 +227,33 @@ export function createRecipeStudio({ cakeKit, openButton }) {
 
     $('#friend-buttons').replaceChildren(...FRIENDS.slice(0, friends).map((friend, f) => {
       const b = document.createElement('button')
-      b.textContent = `${friend.emoji} ${slicesOf(f)} slice${slicesOf(f) === 1 ? '' : 's'}`
+      b.className = 'plate'
+      b.style.setProperty('--plate', friend.plate)
+      b.innerHTML = `<span>${friend.emoji}</span> <b>${'🍰'.repeat(slicesOf(f)) || '·'}</b> <small>${slicesOf(f)}</small>`
       b.setAttribute('aria-label', `Friend ${f + 1} plate`)
       b.onclick = () => {
-        if (selected === null) {
-          say('Choose an unshared slice first.')
+        // Tapping a plate with no slice chosen hands over the next slice still on the cake.
+        if (selected === null) selected = owners.indexOf(null)
+        if (selected === -1) {
+          selected = null
+          checkShares()
           return
         }
         history.push(selected)
         owners[selected] = f
         selected = null
-        say(`${owners.filter((o) => o !== null).length} of ${slices} slices shared.`)
+        play('pop', 0, slicesOf(f) * 2)
+        const shared = owners.filter((o) => o !== null).length
+        say(`${shared} of ${slices} slices shared.`)
+        speak(`${friend.name}: ${slicesOf(f)}`)
         draw()
+        if (shared === slices) setTimeout(() => sharing && owners.every((o) => o !== null) && checkShares(), 500)
       }
       return b
     }))
 
     $('#recipe-undo').disabled = !layers.length
+    $('#recipe-next').classList.toggle('ready', layers.length === recipe().length && layers.every((f, i) => f === recipe()[i]))
     $('#share-undo').disabled = !history.length
   }
 
@@ -194,37 +270,63 @@ export function createRecipeStudio({ cakeKit, openButton }) {
         return
       }
       layers.push(flavour)
+      const i = layers.length - 1
+      const right = recipe()[i] === flavour
       say(`${layers.length} layers: ${layers.map((f) => FLAVOURS[f].emoji).join(' → ')}`)
       draw()
+      // A right layer chimes higher each time; a layer that differs from its picture gets a soft wobble.
+      if (right) play('perfect', i * 2)
+      else play('wobble')
+      if (layers.length === recipe().length) setTimeout(checkRecipe, 450)
+      else speak(flavour)
     }
     $('#flavour-buttons').append(b)
   }
 
   $('#recipe-undo').onclick = () => {
     layers.pop()
+    play('click')
     say('Try a different layer.')
     draw()
   }
-  $('#recipe-check').onclick = () => {
+  function checkRecipe() {
+    if (sharing) return
     const matches = layers.length === recipe().length && layers.every((f, i) => f === recipe()[i])
-    say(matches ? '🎉 The cake matches every picture, from bottom to top!' : '🔎 Compare each layer with the pictures, starting at the bottom. Undo lets you change it.')
+    if (matches) {
+      say('🎉 The cake matches every picture, from bottom to top!')
+      play('perfect', 6)
+      play('cheer')
+      speak('Yummy! Your cake matches the recipe!')
+      bounce()
+      return
+    }
+    say('🔎 Compare each layer with the pictures, starting at the bottom. Undo lets you change it.')
+    play('wobble')
+    const wrong = layers.findIndex((f, i) => f !== recipe()[i])
+    speak(wrong >= 0 ? `Oops! Look at layer ${wrong + 1}.` : `This recipe has ${recipe().length} layers.`)
   }
+  $('#recipe-check').onclick = checkRecipe
   $('#recipe-next').onclick = () => {
     recipeIndex = (recipeIndex + 1) % RECIPES.length
     layers = []
+    play('click')
     say('A new recipe! Choose the bottom layer first.')
+    speak('A new recipe! Start at the bottom.')
     draw()
   }
 
   $('#recipe-tab').onclick = () => {
     sharing = false
+    play('click')
     say('Build from bottom to top.')
     draw()
   }
   $('#share-tab').onclick = () => {
     sharing = true
+    play('click')
     resetShares()
     say(`${slices} equal slices for ${friends} friends.`)
+    speak(`Share the cake with ${friends} friends. Tap a plate!`)
     draw()
   }
   // Two slices each: 4 slices for 2 friends (halves) or 6 for 3 friends (thirds).
@@ -233,26 +335,40 @@ export function createRecipeStudio({ cakeKit, openButton }) {
     slices = friends * 2
     $('#share-size').textContent = `Try ${friends === 2 ? 3 : 2} friends`
     resetShares()
+    play('click')
     say(`${slices} equal slices for ${friends} friends.`)
+    speak(`${friends} friends.`)
     draw()
   }
   $('#share-undo').onclick = () => {
     if (history.length) owners[history.pop()] = null
     selected = null
+    play('click')
     say('The last slice is back on the cake.')
     draw()
   }
   $('#share-reset').onclick = () => {
     resetShares()
+    play('click')
     say('Try another way to share equally.')
     draw()
   }
-  $('#share-check').onclick = () => {
+  function checkShares() {
     const fair = owners.every((o) => o !== null) && FRIENDS.slice(0, friends).every((_, f) => slicesOf(f) === slices / friends)
     say(fair
       ? `🎉 Everyone has 2 of ${slices} equal slices: ${friends === 2 ? 'one half' : 'one third'} of the cake each!`
       : '🔎 Count the slices on every plate. Share all the slices and give everyone the same number.')
+    if (fair) {
+      play('perfect', 6)
+      play('cheer')
+      speak(`Fair share! Everyone has two slices: ${friends === 2 ? 'one half' : 'one third'} each!`)
+      bounce()
+    } else {
+      play('wobble')
+      speak(owners.includes(null) ? 'Some slices are still on the cake.' : 'Not fair yet! Count the slices on every plate.')
+    }
   }
+  $('#share-check').onclick = checkShares
 
   resetShares()
   return {
