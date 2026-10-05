@@ -1,0 +1,16 @@
+{
+  "id": "drum-beat-builder",
+  "title": "Drum Beat Builder",
+  "tagline": "Rebuild a drum pattern using beats and quiet rests.",
+  "howToPlay": "Listen to the rhythm. Set each step to a beat or a rest, then play your pattern. Three gentle difficulty settings. Ages 4–8. Learning: Rhythmic patterns.",
+  "emoji": "🥁",
+  "color": "#fbc985",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Rhythmic patterns"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "sleepy-owl-lullaby",
+  "title": "Sleepy Owl Lullaby",
+  "tagline": "Repeat a gentle bedtime song for a sleepy owl.",
+  "howToPlay": "Watch and listen to the song, then tap the pads in the same order. Replay whenever you like. Three gentle difficulty settings. Ages 2–5. Learning: Short sequence recall.",
+  "emoji": "🦉",
+  "color": "#f2b36f",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    2,
+    5
+  ],
+  "learning": "Short sequence recall"
+}

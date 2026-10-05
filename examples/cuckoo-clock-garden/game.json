@@ -1,0 +1,16 @@
+{
+  "id": "cuckoo-clock-garden",
+  "title": "Cuckoo Clock Garden",
+  "tagline": "Turn the clock hands for a tiny garden concert.",
+  "howToPlay": "Turn the hour and minute hands using the buttons. Match the requested time, then Check. Three gentle difficulty settings. Ages 5–8. Learning: Telling time.",
+  "emoji": "🕰️",
+  "color": "#f7a8c3",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Telling time"
+}

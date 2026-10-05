@@ -1,0 +1,16 @@
+{
+  "id": "constellation-code",
+  "title": "Constellation Code",
+  "tagline": "Repair a star map by finding the missing number.",
+  "howToPlay": "Look for the repeating rule. Tap the piece that fills the empty place. Three gentle difficulty settings. Ages 5–8. Learning: Number sequences.",
+  "emoji": "🌌",
+  "color": "#ffd179",
+  "category": "space",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Number sequences"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "snowflake-studio",
+  "title": "Snowflake Studio",
+  "tagline": "Copy a glittering snowflake across its mirror line.",
+  "howToPlay": "Tap squares on the empty side to reflect the pattern across the dotted line. Press Check. Three gentle difficulty settings. Ages 4–8. Learning: Symmetrical patterns.",
+  "emoji": "❄️",
+  "color": "#edbedc",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Symmetrical patterns"
+}

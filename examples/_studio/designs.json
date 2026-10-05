@@ -1,0 +1,2924 @@
+[
+  {
+    "id": "firefly-lanterns",
+    "title": "Firefly Lanterns",
+    "emoji": "✨",
+    "ages": [
+      2,
+      4
+    ],
+    "theme": "forest",
+    "mode": "collect",
+    "skill": "One-to-one counting",
+    "tagline": "Light a woodland lantern with just enough fireflies.",
+    "sky": "#263c50",
+    "ground": "#4a745c",
+    "item": "firefly",
+    "noun": "fireflies",
+    "verb": "Catch",
+    "reward": "The lantern is glowing!",
+    "accent": "#f2b36f",
+    "scenery": [
+      "tree",
+      "mushroom",
+      "acorn",
+      "fox"
+    ],
+    "seed": 4217
+  },
+  {
+    "id": "orchard-baskets",
+    "title": "Orchard Baskets",
+    "emoji": "🍎",
+    "ages": [
+      2,
+      5
+    ],
+    "theme": "orchard",
+    "mode": "collect",
+    "skill": "Counting and quantity",
+    "tagline": "Pick a tiny picnic from a candy-coloured orchard.",
+    "item": "apple",
+    "noun": "apples",
+    "verb": "Pick",
+    "reward": "A delicious picnic!",
+    "sky": "#ffe5cf",
+    "ground": "#b8d58b",
+    "accent": "#ef796e",
+    "scenery": [
+      "tree",
+      "apple",
+      "pear",
+      "basket"
+    ],
+    "seed": 4290
+  },
+  {
+    "id": "moon-pebbles",
+    "title": "Moon Pebbles",
+    "emoji": "🌙",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "space",
+    "mode": "collect",
+    "skill": "Counting and stopping at a target",
+    "tagline": "Gather moon gems for a friendly astronaut.",
+    "item": "gem",
+    "noun": "moon gems",
+    "verb": "Gather",
+    "reward": "The moon rover is ready!",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 4363
+  },
+  {
+    "id": "coral-cleanup",
+    "title": "Coral Cleanup",
+    "emoji": "🪸",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "ocean",
+    "mode": "collect",
+    "skill": "Environmental care and classification",
+    "tagline": "Help sea turtles by collecting litter and leaving shells.",
+    "item": "bottle",
+    "distractor": "shell",
+    "noun": "bottles",
+    "verb": "Recycle",
+    "reward": "A cleaner reef for everyone!",
+    "sky": "#d3f3f5",
+    "ground": "#79ced2",
+    "accent": "#ffb0bc",
+    "scenery": [
+      "coral",
+      "shell",
+      "fish",
+      "turtle"
+    ],
+    "seed": 4436
+  },
+  {
+    "id": "rainbow-postoffice",
+    "title": "Rainbow Post Office",
+    "emoji": "📮",
+    "ages": [
+      2,
+      4
+    ],
+    "theme": "village",
+    "mode": "match",
+    "skill": "Colour recognition",
+    "tagline": "Deliver rainbow parcels to their matching mailboxes.",
+    "variant": "colour",
+    "sky": "#e9dff7",
+    "ground": "#b6a7d3",
+    "accent": "#f2b572",
+    "scenery": [
+      "house",
+      "tree",
+      "parcel",
+      "flower"
+    ],
+    "seed": 4509
+  },
+  {
+    "id": "shape-locksmith",
+    "title": "Shape Locksmith",
+    "emoji": "🔑",
+    "ages": [
+      2,
+      5
+    ],
+    "theme": "castle",
+    "mode": "match",
+    "skill": "Shape recognition",
+    "tagline": "Open a fairy castle with wonderfully shaped keys.",
+    "variant": "shape",
+    "sky": "#f4dcef",
+    "ground": "#c6a7d1",
+    "accent": "#ffd786",
+    "scenery": [
+      "castle",
+      "flower",
+      "gem",
+      "tree"
+    ],
+    "seed": 4582
+  },
+  {
+    "id": "footprint-detective",
+    "title": "Footprint Detective",
+    "emoji": "🐾",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "forest",
+    "mode": "match",
+    "skill": "Observation and animal tracks",
+    "tagline": "Follow curious tracks to their woodland owners.",
+    "variant": "tracks",
+    "sky": "#dcebd6",
+    "ground": "#4e8060",
+    "accent": "#f2b36f",
+    "scenery": [
+      "tree",
+      "mushroom",
+      "acorn",
+      "fox"
+    ],
+    "seed": 4655
+  },
+  {
+    "id": "shadow-theatre",
+    "title": "Shadow Theatre",
+    "emoji": "🎭",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "theatre",
+    "mode": "match",
+    "skill": "Visual discrimination",
+    "tagline": "Find the toy behind each magical silhouette.",
+    "variant": "shadow",
+    "sky": "#f9d9dc",
+    "ground": "#d19bae",
+    "accent": "#fbc985",
+    "scenery": [
+      "star",
+      "drum",
+      "kite",
+      "gem"
+    ],
+    "seed": 4728
+  },
+  {
+    "id": "habitat-hotel",
+    "title": "Habitat Hotel",
+    "emoji": "🏨",
+    "ages": [
+      3,
+      7
+    ],
+    "theme": "village",
+    "mode": "sort",
+    "skill": "Animal habitats",
+    "tagline": "Give every animal a room that feels like home.",
+    "bins": [
+      "Ocean",
+      "Forest",
+      "Garden"
+    ],
+    "items": [
+      [
+        "fish",
+        "Ocean"
+      ],
+      [
+        "turtle",
+        "Ocean"
+      ],
+      [
+        "fox",
+        "Forest"
+      ],
+      [
+        "bear",
+        "Forest"
+      ],
+      [
+        "bee",
+        "Garden"
+      ],
+      [
+        "butterfly",
+        "Garden"
+      ]
+    ],
+    "props": {},
+    "sky": "#e9dff7",
+    "ground": "#b6a7d3",
+    "accent": "#f2b572",
+    "scenery": [
+      "house",
+      "tree",
+      "parcel",
+      "flower"
+    ],
+    "seed": 4801
+  },
+  {
+    "id": "recycling-robots",
+    "title": "Recycling Robots",
+    "emoji": "♻️",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "workshop",
+    "mode": "sort",
+    "skill": "Materials and recycling",
+    "tagline": "Sort toy recyclables with a cheerful robot team.",
+    "bins": [
+      "Paper",
+      "Glass",
+      "Metal"
+    ],
+    "items": [
+      [
+        "📦",
+        "Paper"
+      ],
+      [
+        "📰",
+        "Paper"
+      ],
+      [
+        "🍾",
+        "Glass"
+      ],
+      [
+        "🫙",
+        "Glass"
+      ],
+      [
+        "🥫",
+        "Metal"
+      ],
+      [
+        "🥄",
+        "Metal"
+      ]
+    ],
+    "props": {
+      "📦": {
+        "model": "parcel",
+        "label": "Cardboard box"
+      },
+      "📰": {
+        "model": "newspaper",
+        "label": "Newspaper"
+      },
+      "🍾": {
+        "model": "bottle",
+        "label": "Glass bottle"
+      },
+      "🫙": {
+        "model": "jar",
+        "label": "Glass jar"
+      },
+      "🥫": {
+        "model": "can",
+        "label": "Metal can"
+      },
+      "🥄": {
+        "model": "spoon",
+        "label": "Metal spoon"
+      }
+    },
+    "sky": "#e0ebed",
+    "ground": "#99bfc3",
+    "accent": "#f8c974",
+    "scenery": [
+      "robot",
+      "house",
+      "gear",
+      "parcel"
+    ],
+    "seed": 4874
+  },
+  {
+    "id": "fruit-veggie-ferry",
+    "title": "Fruit & Veggie Ferry",
+    "emoji": "⛵",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "harbour",
+    "mode": "sort",
+    "skill": "Food classification",
+    "tagline": "Load two tiny ferries for a healthy island picnic.",
+    "bins": [
+      "Fruit",
+      "Vegetables"
+    ],
+    "items": [
+      [
+        "apple",
+        "Fruit"
+      ],
+      [
+        "pear",
+        "Fruit"
+      ],
+      [
+        "strawberry",
+        "Fruit"
+      ],
+      [
+        "carrot",
+        "Vegetables"
+      ],
+      [
+        "🥦",
+        "Vegetables"
+      ],
+      [
+        "🥬",
+        "Vegetables"
+      ]
+    ],
+    "props": {
+      "🥦": {
+        "model": "broccoli",
+        "label": "Broccoli"
+      },
+      "🥬": {
+        "model": "cabbage",
+        "label": "Cabbage"
+      }
+    },
+    "sky": "#daedf8",
+    "ground": "#7dbbd3",
+    "accent": "#f6c784",
+    "scenery": [
+      "boat",
+      "house",
+      "shell",
+      "tree"
+    ],
+    "seed": 4947
+  },
+  {
+    "id": "season-suitcase",
+    "title": "Season Suitcase",
+    "emoji": "🧳",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "village",
+    "mode": "sort",
+    "skill": "Seasons and weather",
+    "tagline": "Pack sunny-day and snowy-day adventures.",
+    "bins": [
+      "Warm day",
+      "Cold day"
+    ],
+    "items": [
+      [
+        "🧤",
+        "Cold day"
+      ],
+      [
+        "🧣",
+        "Cold day"
+      ],
+      [
+        "🧥",
+        "Cold day"
+      ],
+      [
+        "🩴",
+        "Warm day"
+      ],
+      [
+        "🕶️",
+        "Warm day"
+      ],
+      [
+        "👒",
+        "Warm day"
+      ]
+    ],
+    "props": {
+      "🧤": {
+        "model": "gloves",
+        "label": "Gloves"
+      },
+      "🧣": {
+        "model": "scarf",
+        "label": "Scarf"
+      },
+      "🧥": {
+        "model": "coat",
+        "label": "Winter coat"
+      },
+      "🩴": {
+        "model": "sandal",
+        "label": "Sandal"
+      },
+      "🕶️": {
+        "model": "glasses",
+        "label": "Sunglasses"
+      },
+      "👒": {
+        "model": "hat",
+        "label": "Sun hat"
+      }
+    },
+    "sky": "#e9dff7",
+    "ground": "#b6a7d3",
+    "accent": "#f2b572",
+    "scenery": [
+      "house",
+      "tree",
+      "parcel",
+      "flower"
+    ],
+    "seed": 5020
+  },
+  {
+    "id": "butterfly-patterns",
+    "title": "Butterfly Patterns",
+    "emoji": "🦋",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "garden",
+    "mode": "pattern",
+    "skill": "Repeating colour patterns",
+    "tagline": "Grow a dancing line of patterned butterfly wings.",
+    "tokens": [
+      "🦋",
+      "🌸",
+      "🌿"
+    ],
+    "kind": "repeat",
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 5093
+  },
+  {
+    "id": "bead-bridge",
+    "title": "Bead Bridge",
+    "emoji": "📿",
+    "ages": [
+      3,
+      7
+    ],
+    "theme": "castle",
+    "mode": "pattern",
+    "skill": "AB, AAB and ABC sequences",
+    "tagline": "Finish a jewel bridge for the royal snail.",
+    "tokens": [
+      "🔴",
+      "🔵",
+      "🟡"
+    ],
+    "kind": "repeat",
+    "sky": "#f4dcef",
+    "ground": "#c6a7d1",
+    "accent": "#ffd786",
+    "scenery": [
+      "castle",
+      "flower",
+      "gem",
+      "tree"
+    ],
+    "seed": 5166
+  },
+  {
+    "id": "train-carriage-rhythm",
+    "title": "Train Carriage Rhythm",
+    "emoji": "🚂",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "railway",
+    "mode": "pattern",
+    "skill": "Pattern prediction",
+    "tagline": "Complete the toy train’s changing carriage pattern.",
+    "tokens": [
+      "🚃",
+      "📦",
+      "🌳"
+    ],
+    "kind": "repeat",
+    "sky": "#fbe8d3",
+    "ground": "#a4c4b0",
+    "accent": "#efae72",
+    "scenery": [
+      "train",
+      "tree",
+      "house",
+      "parcel"
+    ],
+    "seed": 5239
+  },
+  {
+    "id": "constellation-code",
+    "title": "Constellation Code",
+    "emoji": "🌌",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "space",
+    "mode": "pattern",
+    "skill": "Number sequences",
+    "tagline": "Repair a star map by finding the missing number.",
+    "kind": "number",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 5312
+  },
+  {
+    "id": "sprout-sunflower",
+    "title": "Sprout to Sunflower",
+    "emoji": "🌻",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "garden",
+    "mode": "order",
+    "skill": "Plant life cycle",
+    "tagline": "Help a seed tell the story of how it grows.",
+    "stages": [
+      "🌰 Seed",
+      "🌱 Sprout",
+      "🌿 Leaves",
+      "🌻 Flower"
+    ],
+    "fact": "Plants use light and water to grow.",
+    "lifeModels": [
+      "sunflowerseed",
+      "sprout",
+      "leaf",
+      "sunflower"
+    ],
+    "stageFacts": [
+      "A seed holds the beginnings of a plant.",
+      "A sprout grows roots and a shoot.",
+      "Leaves collect light.",
+      "The sunflower blooms and can make new seeds."
+    ],
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 5385
+  },
+  {
+    "id": "breakfast-story",
+    "title": "Breakfast Story",
+    "emoji": "🥣",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "bakery",
+    "mode": "order",
+    "skill": "Everyday sequencing",
+    "tagline": "Put a bear’s cosy morning in a sensible order.",
+    "stages": [
+      "🛏️ Wake up",
+      "🧼 Wash hands",
+      "🥣 Eat breakfast",
+      "🪥 Brush teeth"
+    ],
+    "fact": "Washing hands before eating helps keep us healthy.",
+    "lifeModels": [
+      "bed",
+      "washstand",
+      "bowl",
+      "toothbrush"
+    ],
+    "stageFacts": [
+      "The bear wakes up.",
+      "Wash hands before eating.",
+      "Breakfast gives the bear energy.",
+      "Brush teeth to care for them."
+    ],
+    "sky": "#f9e1cc",
+    "ground": "#d4ac8a",
+    "accent": "#f3a8aa",
+    "scenery": [
+      "bread",
+      "house",
+      "strawberry",
+      "bear"
+    ],
+    "seed": 5458
+  },
+  {
+    "id": "frog-life-lab",
+    "title": "Frog Life Lab",
+    "emoji": "🐸",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "pond",
+    "mode": "order",
+    "skill": "Frog metamorphosis",
+    "tagline": "Watch pond eggs grow into a hopping frog.",
+    "stages": [
+      "🥚 Eggs",
+      "🐟 Tadpole",
+      "🦵 Tadpole with legs",
+      "🐸 Frog"
+    ],
+    "fact": "A tadpole grows legs as it becomes a frog.",
+    "lifeModels": [
+      "frogspawn",
+      "tadpole",
+      "froglet",
+      "frog"
+    ],
+    "stageFacts": [
+      "Frog eggs hatch in water.",
+      "A tadpole swims with a tail.",
+      "The tadpole grows legs.",
+      "The young frog’s tail shrinks."
+    ],
+    "sky": "#e0efd9",
+    "ground": "#91c4ad",
+    "accent": "#f5c17c",
+    "scenery": [
+      "leaf",
+      "flower",
+      "frog",
+      "snail"
+    ],
+    "seed": 5531
+  },
+  {
+    "id": "butterfly-life-lab",
+    "title": "Butterfly Life Lab",
+    "emoji": "🐛",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "garden",
+    "mode": "order",
+    "skill": "Butterfly metamorphosis",
+    "tagline": "Unfold a caterpillar’s remarkable transformation.",
+    "stages": [
+      "🥚 Egg",
+      "🐛 Caterpillar",
+      "🟤 Chrysalis",
+      "🦋 Butterfly"
+    ],
+    "fact": "A butterfly changes inside its chrysalis.",
+    "lifeModels": [
+      "leafeggs",
+      "caterpillar",
+      "chrysalis",
+      "butterfly"
+    ],
+    "stageFacts": [
+      "A butterfly lays eggs on a plant.",
+      "A caterpillar hatches and eats leaves.",
+      "Inside the chrysalis, the body changes.",
+      "The butterfly emerges and its wings expand."
+    ],
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 5604
+  },
+  {
+    "id": "dinosaur-size-parade",
+    "title": "Dinosaur Size Parade",
+    "emoji": "🦕",
+    "ages": [
+      2,
+      5
+    ],
+    "theme": "prehistoric",
+    "mode": "compare",
+    "skill": "Relative size",
+    "tagline": "Find the tiny and towering friends in a dinosaur parade.",
+    "variant": "size",
+    "item": "dino",
+    "sky": "#efe9cf",
+    "ground": "#adbb85",
+    "accent": "#e7aa74",
+    "scenery": [
+      "dino",
+      "tree",
+      "egg",
+      "stone"
+    ],
+    "seed": 5677
+  },
+  {
+    "id": "cloud-number-race",
+    "title": "Cloud Number Race",
+    "emoji": "☁️",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "sky",
+    "mode": "compare",
+    "skill": "Comparing numbers",
+    "tagline": "Choose the bigger or smaller number on floating clouds.",
+    "variant": "number",
+    "sky": "#dfeefa",
+    "ground": "#a9c9e4",
+    "accent": "#f6bfd7",
+    "scenery": [
+      "cloud",
+      "kite",
+      "star",
+      "bird"
+    ],
+    "seed": 5750
+  },
+  {
+    "id": "ribbon-tailor",
+    "title": "Ribbon Tailor",
+    "emoji": "🎀",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "theatre",
+    "mode": "compare",
+    "skill": "Length comparison",
+    "tagline": "Choose just the right ribbon for a toy costume.",
+    "variant": "length",
+    "sky": "#f9d9dc",
+    "ground": "#d19bae",
+    "accent": "#fbc985",
+    "scenery": [
+      "star",
+      "drum",
+      "kite",
+      "gem"
+    ],
+    "seed": 5823
+  },
+  {
+    "id": "deep-sea-divers",
+    "title": "Deep Sea Divers",
+    "emoji": "🤿",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "ocean",
+    "mode": "compare",
+    "skill": "Spatial vocabulary and depth",
+    "tagline": "Spot the diver nearest the surface or deepest in the sea.",
+    "variant": "depth",
+    "item": "fish",
+    "sky": "#d3f3f5",
+    "ground": "#79ced2",
+    "accent": "#ffb0bc",
+    "scenery": [
+      "coral",
+      "shell",
+      "fish",
+      "turtle"
+    ],
+    "seed": 5896
+  },
+  {
+    "id": "picnic-pairs",
+    "title": "Picnic Pairs",
+    "emoji": "🧺",
+    "ages": [
+      2,
+      5
+    ],
+    "theme": "orchard",
+    "mode": "memory",
+    "skill": "Visual working memory",
+    "tagline": "Uncover matching snacks beneath picnic blankets.",
+    "pairs": [
+      [
+        "🍎",
+        "🍎"
+      ],
+      [
+        "🍐",
+        "🍐"
+      ],
+      [
+        "🍓",
+        "🍓"
+      ],
+      [
+        "🥕",
+        "🥕"
+      ],
+      [
+        "🍋",
+        "🍋"
+      ],
+      [
+        "🍇",
+        "🍇"
+      ]
+    ],
+    "sky": "#ffe5cf",
+    "ground": "#b8d58b",
+    "accent": "#ef796e",
+    "scenery": [
+      "tree",
+      "apple",
+      "pear",
+      "basket"
+    ],
+    "seed": 5969
+  },
+  {
+    "id": "planet-pairs",
+    "title": "Planet Pairs",
+    "emoji": "🪐",
+    "ages": [
+      3,
+      7
+    ],
+    "theme": "space",
+    "mode": "memory",
+    "skill": "Visual memory",
+    "tagline": "Remember where the little space souvenirs are hiding.",
+    "pairs": [
+      [
+        "Mercury",
+        "Mercury"
+      ],
+      [
+        "Venus",
+        "Venus"
+      ],
+      [
+        "Earth",
+        "Earth"
+      ],
+      [
+        "Mars",
+        "Mars"
+      ],
+      [
+        "Jupiter",
+        "Jupiter"
+      ],
+      [
+        "Saturn",
+        "Saturn"
+      ]
+    ],
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 6042
+  },
+  {
+    "id": "tool-twins",
+    "title": "Tool Twins",
+    "emoji": "🛠️",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "workshop",
+    "mode": "memory",
+    "skill": "Jobs and their tools",
+    "tagline": "Pair a helper with the tool they use.",
+    "pairs": [
+      [
+        "🧑‍🍳",
+        "🥣"
+      ],
+      [
+        "🧑‍🌾",
+        "🌱"
+      ],
+      [
+        "🧑‍🎨",
+        "🖌️"
+      ],
+      [
+        "🧑‍🚒",
+        "🚒"
+      ],
+      [
+        "🧑‍🔧",
+        "🔧"
+      ],
+      [
+        "🧑‍✈️",
+        "✈️"
+      ]
+    ],
+    "sky": "#e0ebed",
+    "ground": "#99bfc3",
+    "accent": "#f8c974",
+    "scenery": [
+      "robot",
+      "house",
+      "gear",
+      "parcel"
+    ],
+    "seed": 6115
+  },
+  {
+    "id": "letter-buddies",
+    "title": "Letter Buddies",
+    "emoji": "🔤",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "library",
+    "mode": "memory",
+    "skill": "Uppercase and lowercase letters",
+    "tagline": "Introduce big letters to their little-letter buddies.",
+    "pairs": [
+      [
+        "A",
+        "a"
+      ],
+      [
+        "B",
+        "b"
+      ],
+      [
+        "D",
+        "d"
+      ],
+      [
+        "E",
+        "e"
+      ],
+      [
+        "M",
+        "m"
+      ],
+      [
+        "R",
+        "r"
+      ]
+    ],
+    "sky": "#f6e7d1",
+    "ground": "#c3aa92",
+    "accent": "#e5a077",
+    "scenery": [
+      "house",
+      "tree",
+      "book",
+      "bear"
+    ],
+    "seed": 6188
+  },
+  {
+    "id": "frog-choir",
+    "title": "Frog Choir",
+    "emoji": "🎶",
+    "ages": [
+      3,
+      7
+    ],
+    "theme": "pond",
+    "mode": "echo",
+    "skill": "Auditory and sequential memory",
+    "tagline": "Echo a pond chorus on colourful lily pads.",
+    "tokens": [
+      "🐸",
+      "🌸",
+      "🐟",
+      "🍃"
+    ],
+    "notes": [
+      262,
+      330,
+      392,
+      523
+    ],
+    "sky": "#e0efd9",
+    "ground": "#91c4ad",
+    "accent": "#f5c17c",
+    "scenery": [
+      "leaf",
+      "flower",
+      "frog",
+      "snail"
+    ],
+    "seed": 6261
+  },
+  {
+    "id": "crystal-cave-echo",
+    "title": "Crystal Cave Echo",
+    "emoji": "💎",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "cave",
+    "mode": "echo",
+    "skill": "Pitch and sound sequence memory",
+    "tagline": "Remember the sparkling song of a crystal cave.",
+    "tokens": [
+      "💜",
+      "💙",
+      "💚",
+      "💛"
+    ],
+    "notes": [
+      294,
+      370,
+      440,
+      587
+    ],
+    "sky": "#e2dff6",
+    "ground": "#a59acb",
+    "accent": "#80ded5",
+    "scenery": [
+      "gem",
+      "stone",
+      "mushroom",
+      "star"
+    ],
+    "seed": 6334
+  },
+  {
+    "id": "robot-dance-code",
+    "title": "Robot Dance Code",
+    "emoji": "🤖",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "workshop",
+    "mode": "echo",
+    "skill": "Following ordered instructions",
+    "tagline": "Teach a toy robot a dance one move at a time.",
+    "tokens": [
+      "⬆️",
+      "➡️",
+      "⬇️",
+      "⬅️"
+    ],
+    "notes": [
+      220,
+      277,
+      330,
+      440
+    ],
+    "sky": "#e0ebed",
+    "ground": "#99bfc3",
+    "accent": "#f8c974",
+    "scenery": [
+      "robot",
+      "house",
+      "gear",
+      "parcel"
+    ],
+    "seed": 6407
+  },
+  {
+    "id": "sleepy-owl-lullaby",
+    "title": "Sleepy Owl Lullaby",
+    "emoji": "🦉",
+    "ages": [
+      2,
+      5
+    ],
+    "theme": "forest",
+    "mode": "echo",
+    "skill": "Short sequence recall",
+    "tagline": "Repeat a gentle bedtime song for a sleepy owl.",
+    "night": true,
+    "sky": "#34364f",
+    "ground": "#7a8b79",
+    "tokens": [
+      "🌙",
+      "⭐",
+      "☁️"
+    ],
+    "notes": [
+      262,
+      330,
+      392
+    ],
+    "accent": "#f2b36f",
+    "scenery": [
+      "tree",
+      "mushroom",
+      "acorn",
+      "fox"
+    ],
+    "seed": 6480
+  },
+  {
+    "id": "bee-pollen-trail",
+    "title": "Bee Pollen Trail",
+    "emoji": "🐝",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "garden",
+    "mode": "path",
+    "skill": "Route planning and pollination",
+    "tagline": "Guide a bee around stones to a waiting flower.",
+    "hero": "bee",
+    "goal": "flower",
+    "obstacle": "stone",
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 6553
+  },
+  {
+    "id": "turtle-treasure-map",
+    "title": "Turtle Treasure Map",
+    "emoji": "🐢",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "harbour",
+    "mode": "path",
+    "skill": "Grid navigation",
+    "tagline": "Steer a turtle through a reef to a secret pearl.",
+    "hero": "turtle",
+    "goal": "shell",
+    "obstacle": "stone",
+    "sky": "#daedf8",
+    "ground": "#7dbbd3",
+    "accent": "#f6c784",
+    "scenery": [
+      "boat",
+      "house",
+      "shell",
+      "tree"
+    ],
+    "seed": 6626
+  },
+  {
+    "id": "rover-rescue",
+    "title": "Rover Rescue",
+    "emoji": "🛸",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "space",
+    "mode": "path",
+    "skill": "Algorithms and obstacle avoidance",
+    "tagline": "Program a moon rover to rescue a stranded rocket.",
+    "hero": "robot",
+    "goal": "rocket",
+    "obstacle": "gem",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 6699
+  },
+  {
+    "id": "penguin-ice-path",
+    "title": "Penguin Ice Path",
+    "emoji": "🐧",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "arctic",
+    "mode": "path",
+    "skill": "Direction and planning",
+    "tagline": "Lead a penguin across safe ice to a fish picnic.",
+    "hero": "penguin",
+    "goal": "fish",
+    "obstacle": "stone",
+    "sky": "#e3effb",
+    "ground": "#a6cfe2",
+    "accent": "#edbedc",
+    "scenery": [
+      "penguin",
+      "stone",
+      "fish",
+      "cloud"
+    ],
+    "seed": 6772
+  },
+  {
+    "id": "snail-spiral",
+    "title": "Snail Spiral",
+    "emoji": "🐌",
+    "ages": [
+      2,
+      5
+    ],
+    "theme": "garden",
+    "mode": "trace",
+    "skill": "Fine motor control and curves",
+    "tagline": "Follow a glimmering spiral to the snail’s flower.",
+    "trace": "spiral",
+    "hero": "snail",
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 6845
+  },
+  {
+    "id": "kite-flight-school",
+    "title": "Kite Flight School",
+    "emoji": "🪁",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "sky",
+    "mode": "trace",
+    "skill": "Hand-eye coordination",
+    "tagline": "Draw swooping sky trails for a rainbow kite.",
+    "trace": "wave",
+    "hero": "kite",
+    "sky": "#dfeefa",
+    "ground": "#a9c9e4",
+    "accent": "#f6bfd7",
+    "scenery": [
+      "cloud",
+      "kite",
+      "star",
+      "bird"
+    ],
+    "seed": 6918
+  },
+  {
+    "id": "letter-trails",
+    "title": "Letter Trails",
+    "emoji": "✏️",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "library",
+    "mode": "trace",
+    "skill": "Letter formation",
+    "tagline": "Trace large glowing letters with a friendly firefly.",
+    "trace": "letter",
+    "hero": "firefly",
+    "sky": "#f6e7d1",
+    "ground": "#c3aa92",
+    "accent": "#e5a077",
+    "scenery": [
+      "house",
+      "tree",
+      "book",
+      "bear"
+    ],
+    "seed": 6991
+  },
+  {
+    "id": "number-spark-trails",
+    "title": "Number Spark Trails",
+    "emoji": "🔢",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "space",
+    "mode": "trace",
+    "skill": "Numeral formation",
+    "tagline": "Draw sparkling numerals across a moon garden.",
+    "trace": "number",
+    "hero": "star",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 7064
+  },
+  {
+    "id": "acorn-addition",
+    "title": "Acorn Addition",
+    "emoji": "🐿️",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "forest",
+    "mode": "arithmetic",
+    "skill": "Concrete addition",
+    "tagline": "Combine two acorn stashes for a woodland feast.",
+    "operation": "add",
+    "item": "acorn",
+    "sky": "#dcebd6",
+    "ground": "#4e8060",
+    "accent": "#f2b36f",
+    "scenery": [
+      "tree",
+      "mushroom",
+      "acorn",
+      "fox"
+    ],
+    "seed": 7137
+  },
+  {
+    "id": "submarine-subtraction",
+    "title": "Submarine Subtraction",
+    "emoji": "🐠",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "ocean",
+    "mode": "arithmetic",
+    "skill": "Concrete subtraction",
+    "tagline": "See how many fish remain after friends swim away.",
+    "operation": "subtract",
+    "item": "fish",
+    "sky": "#d3f3f5",
+    "ground": "#79ced2",
+    "accent": "#ffb0bc",
+    "scenery": [
+      "coral",
+      "shell",
+      "fish",
+      "turtle"
+    ],
+    "seed": 7210
+  },
+  {
+    "id": "bakery-bundles",
+    "title": "Bakery Bundles",
+    "emoji": "🥐",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "bakery",
+    "mode": "arithmetic",
+    "skill": "Equal groups and multiplication",
+    "tagline": "Count buns arranged in equal bakery trays.",
+    "operation": "multiply",
+    "item": "bread",
+    "sky": "#f9e1cc",
+    "ground": "#d4ac8a",
+    "accent": "#f3a8aa",
+    "scenery": [
+      "bread",
+      "house",
+      "strawberry",
+      "bear"
+    ],
+    "seed": 7283
+  },
+  {
+    "id": "star-share",
+    "title": "Star Share",
+    "emoji": "⭐",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "space",
+    "mode": "arithmetic",
+    "skill": "Fair sharing and division",
+    "tagline": "Share star biscuits equally between space explorers.",
+    "operation": "divide",
+    "item": "star",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 7356
+  },
+  {
+    "id": "bear-balance",
+    "title": "Bear Balance",
+    "emoji": "⚖️",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "forest",
+    "mode": "balance",
+    "skill": "Equality and weights",
+    "tagline": "Balance a bear’s seesaw with numbered acorns.",
+    "unit": "acorns",
+    "item": "acorn",
+    "sky": "#dcebd6",
+    "ground": "#4e8060",
+    "accent": "#f2b36f",
+    "scenery": [
+      "tree",
+      "mushroom",
+      "acorn",
+      "fox"
+    ],
+    "seed": 7429
+  },
+  {
+    "id": "parcel-weights",
+    "title": "Parcel Weights",
+    "emoji": "📦",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "village",
+    "mode": "balance",
+    "skill": "Missing addends",
+    "tagline": "Find the parcel that balances a delivery scale.",
+    "unit": "weight units",
+    "item": "parcel",
+    "sky": "#e9dff7",
+    "ground": "#b6a7d3",
+    "accent": "#f2b572",
+    "scenery": [
+      "house",
+      "tree",
+      "parcel",
+      "flower"
+    ],
+    "seed": 7502
+  },
+  {
+    "id": "pebble-equations",
+    "title": "Pebble Equations",
+    "emoji": "🪨",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "pond",
+    "mode": "balance",
+    "skill": "Number decomposition",
+    "tagline": "Build equal pebble piles on a pond seesaw.",
+    "unit": "pebbles",
+    "item": "stone",
+    "sky": "#e0efd9",
+    "ground": "#91c4ad",
+    "accent": "#f5c17c",
+    "scenery": [
+      "leaf",
+      "flower",
+      "frog",
+      "snail"
+    ],
+    "seed": 7575
+  },
+  {
+    "id": "colour-cauldron",
+    "title": "Colour Cauldron",
+    "emoji": "🧙",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "castle",
+    "mode": "mix",
+    "skill": "Primary and secondary colours",
+    "tagline": "Brew bright new colours in a friendly witch’s pot.",
+    "vessel": "cauldron",
+    "sky": "#f4dcef",
+    "ground": "#c6a7d1",
+    "accent": "#ffd786",
+    "scenery": [
+      "castle",
+      "flower",
+      "gem",
+      "tree"
+    ],
+    "seed": 7648
+  },
+  {
+    "id": "rainbow-smoothies",
+    "title": "Rainbow Smoothies",
+    "emoji": "🥤",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "bakery",
+    "mode": "mix",
+    "skill": "Colour mixing",
+    "tagline": "Mix two pretend fruit colours into a rainbow smoothie.",
+    "vessel": "smoothie",
+    "sky": "#f9e1cc",
+    "ground": "#d4ac8a",
+    "accent": "#f3a8aa",
+    "scenery": [
+      "bread",
+      "house",
+      "strawberry",
+      "bear"
+    ],
+    "seed": 7721
+  },
+  {
+    "id": "jellyfish-glow-lab",
+    "title": "Jellyfish Glow Lab",
+    "emoji": "🪼",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "ocean",
+    "mode": "mix",
+    "skill": "Predicting colour combinations",
+    "tagline": "Blend paint colours for a glowing jellyfish costume.",
+    "vessel": "jellyfish",
+    "sky": "#d3f3f5",
+    "ground": "#79ced2",
+    "accent": "#ffb0bc",
+    "scenery": [
+      "coral",
+      "shell",
+      "fish",
+      "turtle"
+    ],
+    "seed": 7794
+  },
+  {
+    "id": "paint-a-planet",
+    "title": "Paint a Planet",
+    "emoji": "🎨",
+    "ages": [
+      3,
+      7
+    ],
+    "theme": "space",
+    "mode": "mix",
+    "skill": "Colour experimentation",
+    "tagline": "Mix a paint colour for a tiny new planet.",
+    "vessel": "planet",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 7867
+  },
+  {
+    "id": "pizza-moon",
+    "title": "Pizza Moon",
+    "emoji": "🍕",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "bakery",
+    "mode": "fraction",
+    "skill": "Equal parts and fractions",
+    "tagline": "Share moon-shaped pizzas in equal slices.",
+    "food": "pizza",
+    "symbol": "🍕",
+    "sky": "#f9e1cc",
+    "ground": "#d4ac8a",
+    "accent": "#f3a8aa",
+    "scenery": [
+      "bread",
+      "house",
+      "strawberry",
+      "bear"
+    ],
+    "seed": 7940
+  },
+  {
+    "id": "watermelon-picnic",
+    "title": "Watermelon Picnic",
+    "emoji": "🍉",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "orchard",
+    "mode": "fraction",
+    "skill": "Part-whole reasoning",
+    "tagline": "Colour equal slices of a picnic watermelon.",
+    "food": "watermelon",
+    "symbol": "🍉",
+    "sky": "#ffe5cf",
+    "ground": "#b8d58b",
+    "accent": "#ef796e",
+    "scenery": [
+      "tree",
+      "apple",
+      "pear",
+      "basket"
+    ],
+    "seed": 8013
+  },
+  {
+    "id": "rainbow-quilt",
+    "title": "Rainbow Quilt",
+    "emoji": "🧵",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "theatre",
+    "mode": "fraction",
+    "skill": "Fractions of a collection",
+    "tagline": "Sew the right fraction of patches into a quilt.",
+    "food": "quilt",
+    "symbol": "🟪",
+    "sky": "#f9d9dc",
+    "ground": "#d19bae",
+    "accent": "#fbc985",
+    "scenery": [
+      "star",
+      "drum",
+      "kite",
+      "gem"
+    ],
+    "seed": 8086
+  },
+  {
+    "id": "cuckoo-clock-garden",
+    "title": "Cuckoo Clock Garden",
+    "emoji": "🕰️",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "garden",
+    "mode": "clock",
+    "skill": "Telling time",
+    "tagline": "Turn the clock hands for a tiny garden concert.",
+    "event": "The birds sing at",
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 8159
+  },
+  {
+    "id": "space-station-schedule",
+    "title": "Space Station Schedule",
+    "emoji": "🛰️",
+    "ages": [
+      6,
+      8
+    ],
+    "theme": "space",
+    "mode": "clock",
+    "skill": "Hours and half hours",
+    "tagline": "Set a station clock for the next rocket launch.",
+    "event": "The rocket leaves at",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 8232
+  },
+  {
+    "id": "bunny-bedtime",
+    "title": "Bunny Bedtime",
+    "emoji": "🐰",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "village",
+    "mode": "clock",
+    "skill": "Clock reading and daily routines",
+    "tagline": "Set a cosy clock for bunny’s daily routine.",
+    "event": "Bunny reads a story at",
+    "sky": "#e9dff7",
+    "ground": "#b6a7d3",
+    "accent": "#f2b572",
+    "scenery": [
+      "house",
+      "tree",
+      "parcel",
+      "flower"
+    ],
+    "seed": 8305
+  },
+  {
+    "id": "bakery-alarm",
+    "title": "Bakery Alarm",
+    "emoji": "⏰",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "bakery",
+    "mode": "clock",
+    "skill": "Hours and quarter hours",
+    "tagline": "Set the kitchen clock for a pretend bake.",
+    "event": "The bread is ready at",
+    "sky": "#f9e1cc",
+    "ground": "#d4ac8a",
+    "accent": "#f3a8aa",
+    "scenery": [
+      "bread",
+      "house",
+      "strawberry",
+      "bear"
+    ],
+    "seed": 8378
+  },
+  {
+    "id": "butterfly-mirrors",
+    "title": "Butterfly Mirrors",
+    "emoji": "🪞",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "garden",
+    "mode": "mirror",
+    "skill": "Reflection symmetry",
+    "tagline": "Give a butterfly two beautifully matching wings.",
+    "subject": "butterfly wings",
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 8451
+  },
+  {
+    "id": "castle-window-symmetry",
+    "title": "Castle Window Symmetry",
+    "emoji": "🏰",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "castle",
+    "mode": "mirror",
+    "skill": "Grid reflection",
+    "tagline": "Restore mirrored jewel panes in a fairy castle.",
+    "subject": "castle windows",
+    "sky": "#f4dcef",
+    "ground": "#c6a7d1",
+    "accent": "#ffd786",
+    "scenery": [
+      "castle",
+      "flower",
+      "gem",
+      "tree"
+    ],
+    "seed": 8524
+  },
+  {
+    "id": "robot-reflections",
+    "title": "Robot Reflections",
+    "emoji": "🤖",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "workshop",
+    "mode": "mirror",
+    "skill": "Spatial reasoning",
+    "tagline": "Light both halves of a robot’s panel symmetrically.",
+    "subject": "robot lights",
+    "sky": "#e0ebed",
+    "ground": "#99bfc3",
+    "accent": "#f8c974",
+    "scenery": [
+      "robot",
+      "house",
+      "gear",
+      "parcel"
+    ],
+    "seed": 8597
+  },
+  {
+    "id": "snowflake-studio",
+    "title": "Snowflake Studio",
+    "emoji": "❄️",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "arctic",
+    "mode": "mirror",
+    "skill": "Symmetrical patterns",
+    "tagline": "Copy a glittering snowflake across its mirror line.",
+    "subject": "snowflake crystals",
+    "sky": "#e3effb",
+    "ground": "#a6cfe2",
+    "accent": "#edbedc",
+    "scenery": [
+      "penguin",
+      "stone",
+      "fish",
+      "cloud"
+    ],
+    "seed": 8670
+  },
+  {
+    "id": "gem-turner",
+    "title": "Gem Turner",
+    "emoji": "🔷",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "cave",
+    "mode": "rotate",
+    "skill": "Mental rotation",
+    "tagline": "Turn a crystal key until it fits the glowing lock.",
+    "subject": "crystal key",
+    "shape": "triangle",
+    "sky": "#e2dff6",
+    "ground": "#a59acb",
+    "accent": "#80ded5",
+    "scenery": [
+      "gem",
+      "stone",
+      "mushroom",
+      "star"
+    ],
+    "seed": 8743
+  },
+  {
+    "id": "rocket-docking",
+    "title": "Rocket Docking",
+    "emoji": "🚀",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "space",
+    "mode": "rotate",
+    "skill": "Rotation and direction",
+    "tagline": "Turn a rocket’s docking key into the correct position.",
+    "subject": "docking key",
+    "shape": "arrow",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 8816
+  },
+  {
+    "id": "tangram-turntable",
+    "title": "Tangram Turntable",
+    "emoji": "🔺",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "theatre",
+    "mode": "rotate",
+    "skill": "Tangram composition and rotation",
+    "tagline": "Fit five triangles, a square, and a parallelogram into a complete tangram.",
+    "subject": "triangle",
+    "shape": "triangle",
+    "sky": "#f9d9dc",
+    "ground": "#d19bae",
+    "accent": "#fbc985",
+    "scenery": [
+      "star",
+      "drum",
+      "kite",
+      "gem"
+    ],
+    "seed": 8889
+  },
+  {
+    "id": "giraffe-ruler",
+    "title": "Giraffe Ruler",
+    "emoji": "🦒",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "prehistoric",
+    "mode": "measure",
+    "skill": "Measuring with equal units",
+    "tagline": "Measure a toy giraffe with colourful cube units.",
+    "subject": "giraffe’s height",
+    "unit": "cubes",
+    "sky": "#efe9cf",
+    "ground": "#adbb85",
+    "accent": "#e7aa74",
+    "scenery": [
+      "dino",
+      "tree",
+      "egg",
+      "stone"
+    ],
+    "seed": 8962
+  },
+  {
+    "id": "bridge-builder",
+    "title": "Bridge Builder",
+    "emoji": "🌉",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "harbour",
+    "mode": "measure",
+    "skill": "Length and unit iteration",
+    "tagline": "Lay equal planks across a little harbour gap.",
+    "subject": "bridge",
+    "unit": "planks",
+    "sky": "#daedf8",
+    "ground": "#7dbbd3",
+    "accent": "#f6c784",
+    "scenery": [
+      "boat",
+      "house",
+      "shell",
+      "tree"
+    ],
+    "seed": 9035
+  },
+  {
+    "id": "garden-fence",
+    "title": "Garden Fence",
+    "emoji": "🌷",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "garden",
+    "mode": "measure",
+    "skill": "Length estimation",
+    "tagline": "Measure a flower bed before making its tiny fence.",
+    "subject": "flower bed",
+    "unit": "fence pieces",
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 9108
+  },
+  {
+    "id": "comet-tail-measure",
+    "title": "Comet Tail Measure",
+    "emoji": "☄️",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "space",
+    "mode": "measure",
+    "skill": "Measuring with consistent units",
+    "tagline": "Measure sparkling comet tails without gaps.",
+    "subject": "comet tail",
+    "unit": "star units",
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 9181
+  },
+  {
+    "id": "word-rocket",
+    "title": "Word Rocket",
+    "emoji": "🔠",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "space",
+    "mode": "spell",
+    "skill": "CVC word building",
+    "tagline": "Build short words to power a reading rocket.",
+    "words": [
+      [
+        "CAT",
+        "🐱"
+      ],
+      [
+        "SUN",
+        "☀️"
+      ],
+      [
+        "DOG",
+        "🐶"
+      ],
+      [
+        "HAT",
+        "🎩"
+      ],
+      [
+        "MAP",
+        "🗺️"
+      ],
+      [
+        "CUP",
+        "☕"
+      ]
+    ],
+    "sky": "#282955",
+    "ground": "#7c7bbb",
+    "accent": "#ffd179",
+    "scenery": [
+      "planet",
+      "rocket",
+      "gem",
+      "star"
+    ],
+    "seed": 9254
+  },
+  {
+    "id": "animal-alphabet",
+    "title": "Animal Alphabet",
+    "emoji": "🦊",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "forest",
+    "mode": "spell",
+    "skill": "Beginning sounds and spelling",
+    "tagline": "Build names for tiny animal friends.",
+    "words": [
+      [
+        "FOX",
+        "🦊"
+      ],
+      [
+        "CAT",
+        "🐱"
+      ],
+      [
+        "PIG",
+        "🐷"
+      ],
+      [
+        "HEN",
+        "🐔"
+      ],
+      [
+        "BAT",
+        "🦇"
+      ],
+      [
+        "DOG",
+        "🐶"
+      ]
+    ],
+    "sky": "#dcebd6",
+    "ground": "#4e8060",
+    "accent": "#f2b36f",
+    "scenery": [
+      "tree",
+      "mushroom",
+      "acorn",
+      "fox"
+    ],
+    "seed": 9327
+  },
+  {
+    "id": "picnic-word-basket",
+    "title": "Picnic Word Basket",
+    "emoji": "🧺",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "orchard",
+    "mode": "spell",
+    "skill": "Food word spelling",
+    "tagline": "Pack a picnic by spelling simple snack words.",
+    "words": [
+      [
+        "JAM",
+        "🫙"
+      ],
+      [
+        "EGG",
+        "🥚"
+      ],
+      [
+        "NUT",
+        "🌰"
+      ],
+      [
+        "BUN",
+        "🥯"
+      ],
+      [
+        "PEA",
+        "🫛"
+      ],
+      [
+        "HAM",
+        "🍖"
+      ]
+    ],
+    "sky": "#ffe5cf",
+    "ground": "#b8d58b",
+    "accent": "#ef796e",
+    "scenery": [
+      "tree",
+      "apple",
+      "pear",
+      "basket"
+    ],
+    "seed": 9400
+  },
+  {
+    "id": "rhyming-river",
+    "title": "Rhyming River",
+    "emoji": "📖",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "pond",
+    "mode": "rhyme",
+    "skill": "Rhyming word families",
+    "tagline": "Hop between lily pads with words that rhyme.",
+    "sets": [
+      [
+        "CAT",
+        "HAT",
+        "DOG",
+        "SUN"
+      ],
+      [
+        "LOG",
+        "DOG",
+        "HEN",
+        "CUP"
+      ],
+      [
+        "BEE",
+        "TREE",
+        "CAT",
+        "MAP"
+      ],
+      [
+        "FOX",
+        "BOX",
+        "SUN",
+        "PIG"
+      ],
+      [
+        "STAR",
+        "CAR",
+        "BED",
+        "HEN"
+      ],
+      [
+        "BOAT",
+        "GOAT",
+        "FISH",
+        "CAT"
+      ]
+    ],
+    "sky": "#e0efd9",
+    "ground": "#91c4ad",
+    "accent": "#f5c17c",
+    "scenery": [
+      "leaf",
+      "flower",
+      "frog",
+      "snail"
+    ],
+    "seed": 9473
+  },
+  {
+    "id": "weather-wardrobe",
+    "title": "Weather Wardrobe",
+    "emoji": "🌦️",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "village",
+    "mode": "choice",
+    "skill": "Weather and practical reasoning",
+    "tagline": "Dress a toy explorer for sun, rain, and snow.",
+    "challenges": [
+      [
+        "🌧️ Rain! What keeps us dry?",
+        "☂️ Umbrella",
+        "🕶️ Sunglasses",
+        "🩴 Sandals"
+      ],
+      [
+        "❄️ Snow! What keeps hands warm?",
+        "🧤 Mittens",
+        "🪭 Fan",
+        "🩴 Sandals"
+      ],
+      [
+        "☀️ Sunshine! What shades our head?",
+        "👒 Sun hat",
+        "🧣 Scarf",
+        "🛷 Sled"
+      ],
+      [
+        "🌧️ Puddles! What keeps feet dry?",
+        "🥾 Rain boots",
+        "🩴 Sandals",
+        "🧦 Socks"
+      ]
+    ],
+    "storyToys": [
+      "umbrella",
+      "gloves",
+      "hat",
+      "boots",
+      "glasses",
+      "sandal",
+      "scarf"
+    ],
+    "sky": "#e9dff7",
+    "ground": "#b6a7d3",
+    "accent": "#f2b572",
+    "scenery": [
+      "house",
+      "tree",
+      "parcel",
+      "flower"
+    ],
+    "seed": 9546
+  },
+  {
+    "id": "kindness-cafe",
+    "title": "Kindness Café",
+    "emoji": "💛",
+    "ages": [
+      3,
+      7
+    ],
+    "theme": "bakery",
+    "mode": "choice",
+    "skill": "Empathy and cooperation",
+    "tagline": "Choose caring actions at a tiny toy café.",
+    "challenges": [
+      [
+        "Bear is sad. What could you ask?",
+        [
+          "Would you like company?",
+          "Would you like quiet time?"
+        ],
+        "Let me give advice first"
+      ],
+      [
+        "Bunny needs a cup now. What could help?",
+        [
+          "Offer a spare cup",
+          "Ask where clean cups are"
+        ],
+        "Finish my drink first"
+      ],
+      [
+        "Fox spills juice. What could help?",
+        [
+          "Help clean together",
+          "Offer a cloth"
+        ],
+        "Tell fox to be more careful"
+      ],
+      [
+        "Turtle is waiting to play. What is kind?",
+        [
+          "Agree to take turns",
+          "Ask to play together"
+        ],
+        "Start another game alone"
+      ]
+    ],
+    "storyToys": [
+      "bear",
+      "rabbit",
+      "fox",
+      "turtle",
+      "cup"
+    ],
+    "sky": "#f9e1cc",
+    "ground": "#d4ac8a",
+    "accent": "#f3a8aa",
+    "scenery": [
+      "bread",
+      "house",
+      "strawberry",
+      "bear"
+    ],
+    "seed": 9619
+  },
+  {
+    "id": "healthy-plate-party",
+    "title": "Healthy Plate Party",
+    "emoji": "🥗",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "orchard",
+    "mode": "choice",
+    "skill": "Food variety and healthy routines",
+    "tagline": "Help toy friends choose varied snacks and routines.",
+    "challenges": [
+      [
+        "What is a good everyday drink?",
+        [
+          "💧 Water",
+          "🥛 Milk"
+        ],
+        "🍬 Sweets"
+      ],
+      [
+        "What adds a vegetable to lunch?",
+        "🥦 Broccoli",
+        "🍞 Bread",
+        "🧀 Cheese"
+      ],
+      [
+        "What do we do before eating?",
+        "👐 Wash hands",
+        "🥤 Fill a cup",
+        "🪑 Choose a seat"
+      ],
+      [
+        "What adds a fruit to our snack?",
+        "🍐 Pear",
+        "🥨 Pretzel",
+        "🧀 Cheese"
+      ]
+    ],
+    "storyToys": [
+      "broccoli",
+      "pear",
+      "bread",
+      "cup"
+    ],
+    "sky": "#ffe5cf",
+    "ground": "#b8d58b",
+    "accent": "#ef796e",
+    "scenery": [
+      "tree",
+      "apple",
+      "pear",
+      "basket"
+    ],
+    "seed": 9692
+  },
+  {
+    "id": "senses-safari",
+    "title": "Senses Safari",
+    "emoji": "👂",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "forest",
+    "mode": "choice",
+    "skill": "The five senses",
+    "tagline": "Discover how our senses help us explore.",
+    "challenges": [
+      [
+        "🎵 Which body part hears music?",
+        "👂 Ears",
+        "👀 Eyes",
+        "👃 Nose"
+      ],
+      [
+        "🌸 Which body part smells flowers?",
+        "👃 Nose",
+        "👂 Ears",
+        "🦶 Feet"
+      ],
+      [
+        "🌈 Which body part sees colours?",
+        "👀 Eyes",
+        "👃 Nose",
+        "👂 Ears"
+      ],
+      [
+        "🧸 How can we feel a soft toy?",
+        "🖐️ Touch",
+        "👀 Look only",
+        "👂 Listen only"
+      ],
+      [
+        "🍋 Which body part tastes lemon?",
+        "👅 Tongue",
+        "👂 Ears",
+        "👃 Nose"
+      ]
+    ],
+    "storyToys": [
+      "drum",
+      "flower",
+      "butterfly",
+      "teddy",
+      "lemon"
+    ],
+    "sky": "#dcebd6",
+    "ground": "#4e8060",
+    "accent": "#f2b36f",
+    "scenery": [
+      "tree",
+      "mushroom",
+      "acorn",
+      "fox"
+    ],
+    "seed": 9765
+  },
+  {
+    "id": "magnet-discovery",
+    "title": "Magnet Discovery",
+    "emoji": "🧲",
+    "ages": [
+      5,
+      8
+    ],
+    "theme": "workshop",
+    "mode": "experiment",
+    "skill": "Testing magnetic attraction",
+    "tagline": "Predict, test, and discover what a magnet attracts.",
+    "property": "magnet",
+    "sets": [
+      [
+        "🔩 Steel screw",
+        true,
+        "screw"
+      ],
+      [
+        "📎 Steel paperclip",
+        true,
+        "paperclip"
+      ],
+      [
+        "🪵 Wood",
+        false,
+        "wood"
+      ],
+      [
+        "🍎 Apple",
+        false,
+        "apple"
+      ],
+      [
+        "🧲 Iron nail",
+        true,
+        "nail"
+      ],
+      [
+        "🧸 Cloth teddy",
+        false,
+        "teddy"
+      ]
+    ],
+    "sky": "#e0ebed",
+    "ground": "#99bfc3",
+    "accent": "#f8c974",
+    "scenery": [
+      "robot",
+      "house",
+      "gear",
+      "parcel"
+    ],
+    "seed": 9838
+  },
+  {
+    "id": "float-boat-lab",
+    "title": "Float Boat Lab",
+    "emoji": "🛁",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "harbour",
+    "mode": "experiment",
+    "skill": "Prediction and buoyancy",
+    "tagline": "Test toy objects in a tiny water tank.",
+    "property": "float",
+    "sets": [
+      [
+        "🪵 Dry wood",
+        true,
+        "wood"
+      ],
+      [
+        "🪨 Stone",
+        false,
+        "stone"
+      ],
+      [
+        "🦆 Hollow rubber duck",
+        true,
+        "duck"
+      ],
+      [
+        "🔩 Solid steel screw",
+        false,
+        "screw"
+      ],
+      [
+        "🧽 Dry sponge",
+        true,
+        "sponge"
+      ],
+      [
+        "🫙 Solid glass marble",
+        false,
+        "marble"
+      ]
+    ],
+    "sky": "#daedf8",
+    "ground": "#7dbbd3",
+    "accent": "#f6c784",
+    "scenery": [
+      "boat",
+      "house",
+      "shell",
+      "tree"
+    ],
+    "seed": 9911
+  },
+  {
+    "id": "sunlight-sprouts",
+    "title": "Sunlight Sprouts",
+    "emoji": "🌱",
+    "ages": [
+      4,
+      7
+    ],
+    "theme": "garden",
+    "mode": "experiment",
+    "skill": "Plants and their needs",
+    "tagline": "Discover which supplies help a garden grow.",
+    "property": "grow",
+    "sets": [
+      [
+        "💧 Water",
+        true,
+        "bottle"
+      ],
+      [
+        "☀️ Sunlight",
+        true,
+        "sun"
+      ],
+      [
+        "🍬 Sweets",
+        false,
+        "candy"
+      ],
+      [
+        "🪨 A toy rock",
+        false,
+        "stone"
+      ],
+      [
+        "🌱 Suitable soil",
+        true,
+        "soil"
+      ],
+      [
+        "🎨 Paint",
+        false,
+        "paint"
+      ]
+    ],
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 9984
+  },
+  {
+    "id": "sound-wave-lab",
+    "title": "Sound Wave Lab",
+    "emoji": "🔔",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "cave",
+    "mode": "pitch",
+    "skill": "Pitch discrimination",
+    "tagline": "Compare crystal tones and find the high or low sound.",
+    "subject": "crystals",
+    "sky": "#e2dff6",
+    "ground": "#a59acb",
+    "accent": "#80ded5",
+    "scenery": [
+      "gem",
+      "stone",
+      "mushroom",
+      "star"
+    ],
+    "seed": 10057
+  },
+  {
+    "id": "birdsong-tuner",
+    "title": "Birdsong Tuner",
+    "emoji": "🐦",
+    "ages": [
+      3,
+      7
+    ],
+    "theme": "garden",
+    "mode": "pitch",
+    "skill": "High and low sounds",
+    "tagline": "Listen closely to tune a miniature birdsong concert.",
+    "subject": "birds",
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 10130
+  },
+  {
+    "id": "drum-beat-builder",
+    "title": "Drum Beat Builder",
+    "emoji": "🥁",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "theatre",
+    "mode": "rhythm",
+    "skill": "Rhythmic patterns",
+    "tagline": "Rebuild a drum pattern using beats and quiet rests.",
+    "subject": "drum",
+    "sky": "#f9d9dc",
+    "ground": "#d19bae",
+    "accent": "#fbc985",
+    "scenery": [
+      "star",
+      "drum",
+      "kite",
+      "gem"
+    ],
+    "seed": 10203
+  },
+  {
+    "id": "rain-drop-rhythm",
+    "title": "Rain Drop Rhythm",
+    "emoji": "🌧️",
+    "ages": [
+      3,
+      7
+    ],
+    "theme": "pond",
+    "mode": "rhythm",
+    "skill": "Beat, rests and pattern memory",
+    "tagline": "Copy a gentle rain song on a lily-pad drum.",
+    "subject": "rain",
+    "sky": "#e0efd9",
+    "ground": "#91c4ad",
+    "accent": "#f5c17c",
+    "scenery": [
+      "leaf",
+      "flower",
+      "frog",
+      "snail"
+    ],
+    "seed": 10276
+  },
+  {
+    "id": "toy-town-builder",
+    "title": "Toy Town Builder",
+    "emoji": "🏘️",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "village",
+    "mode": "build",
+    "skill": "Spatial construction from plans",
+    "tagline": "Build a miniature skyline from a block blueprint.",
+    "subject": "town",
+    "sky": "#e9dff7",
+    "ground": "#b6a7d3",
+    "accent": "#f2b572",
+    "scenery": [
+      "house",
+      "tree",
+      "parcel",
+      "flower"
+    ],
+    "seed": 10349
+  },
+  {
+    "id": "castle-block-blueprints",
+    "title": "Castle Block Blueprints",
+    "emoji": "🏯",
+    "ages": [
+      4,
+      8
+    ],
+    "theme": "castle",
+    "mode": "build",
+    "skill": "Height and spatial reasoning",
+    "tagline": "Raise little castle towers to match the royal plan.",
+    "subject": "castle",
+    "sky": "#f4dcef",
+    "ground": "#c6a7d1",
+    "accent": "#ffd786",
+    "scenery": [
+      "castle",
+      "flower",
+      "gem",
+      "tree"
+    ],
+    "seed": 10422
+  },
+  {
+    "id": "dino-egg-nest",
+    "title": "Dino Egg Nest",
+    "emoji": "🥚",
+    "ages": [
+      2,
+      5
+    ],
+    "theme": "prehistoric",
+    "mode": "tenframe",
+    "skill": "Subitising and number representation",
+    "tagline": "Fill a dino’s nest with the right number of eggs.",
+    "item": "egg",
+    "noun": "eggs",
+    "sky": "#efe9cf",
+    "ground": "#adbb85",
+    "accent": "#e7aa74",
+    "scenery": [
+      "dino",
+      "tree",
+      "egg",
+      "stone"
+    ],
+    "seed": 10495
+  },
+  {
+    "id": "ladybird-dot-party",
+    "title": "Ladybird Dot Party",
+    "emoji": "🐞",
+    "ages": [
+      3,
+      6
+    ],
+    "theme": "garden",
+    "mode": "tenframe",
+    "skill": "Ten-frame counting",
+    "tagline": "Add dots to a ladybird’s ten little garden seats.",
+    "item": "gem",
+    "noun": "dots",
+    "sky": "#e4f4df",
+    "ground": "#9ccd9c",
+    "accent": "#f7a8c3",
+    "scenery": [
+      "flower",
+      "mushroom",
+      "butterfly",
+      "snail"
+    ],
+    "seed": 10568
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "id": "weather-wardrobe",
+  "title": "Weather Wardrobe",
+  "tagline": "Dress a toy explorer for sun, rain, and snow.",
+  "howToPlay": "Listen to the little story, then choose the helpful answer. Three gentle difficulty settings. Ages 3–6. Learning: Weather and practical reasoning.",
+  "emoji": "🌦️",
+  "color": "#f2b572",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    3,
+    6
+  ],
+  "learning": "Weather and practical reasoning"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "castle-window-symmetry",
+  "title": "Castle Window Symmetry",
+  "tagline": "Restore mirrored jewel panes in a fairy castle.",
+  "howToPlay": "Tap squares on the empty side to reflect the pattern across the dotted line. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Grid reflection.",
+  "emoji": "🏰",
+  "color": "#ffd786",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Grid reflection"
+}

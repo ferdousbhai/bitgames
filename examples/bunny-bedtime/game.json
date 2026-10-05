@@ -1,0 +1,16 @@
+{
+  "id": "bunny-bedtime",
+  "title": "Bunny Bedtime",
+  "tagline": "Set a cosy clock for bunny’s daily routine.",
+  "howToPlay": "Turn the hour and minute hands using the buttons. Match the requested time, then Check. Three gentle difficulty settings. Ages 5–8. Learning: Clock reading and daily routines.",
+  "emoji": "🐰",
+  "color": "#f2b572",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Clock reading and daily routines"
+}

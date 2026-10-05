@@ -1,0 +1,16 @@
+{
+  "id": "coral-cleanup",
+  "title": "Coral Cleanup",
+  "tagline": "Help sea turtles by collecting litter and leaving shells.",
+  "howToPlay": "Tap the requested number of objects, then press Done. Tap again to undo. Three gentle difficulty settings. Ages 3–6. Learning: Environmental care and classification.",
+  "emoji": "🪸",
+  "color": "#ffb0bc",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    3,
+    6
+  ],
+  "learning": "Environmental care and classification"
+}

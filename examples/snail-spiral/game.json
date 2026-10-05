@@ -1,0 +1,16 @@
+{
+  "id": "snail-spiral",
+  "title": "Snail Spiral",
+  "tagline": "Follow a glimmering spiral to the snail’s flower.",
+  "howToPlay": "Start at the glowing dot. Hold and follow the trail, or tap each dot in order. Three gentle difficulty settings. Ages 2–5. Learning: Fine motor control and curves.",
+  "emoji": "🐌",
+  "color": "#f7a8c3",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    2,
+    5
+  ],
+  "learning": "Fine motor control and curves"
+}

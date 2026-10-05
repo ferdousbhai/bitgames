@@ -1,0 +1,16 @@
+{
+  "id": "frog-choir",
+  "title": "Frog Choir",
+  "tagline": "Echo a pond chorus on colourful lily pads.",
+  "howToPlay": "Watch and listen to the song, then tap the pads in the same order. Replay whenever you like. Three gentle difficulty settings. Ages 3–7. Learning: Auditory and sequential memory.",
+  "emoji": "🎶",
+  "color": "#f5c17c",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    3,
+    7
+  ],
+  "learning": "Auditory and sequential memory"
+}

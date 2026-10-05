@@ -1,0 +1,1614 @@
+[
+  {
+    "id": "acorn-addition",
+    "title": "Acorn Addition",
+    "tagline": "Combine two acorn stashes for a woodland feast.",
+    "howToPlay": "Move the toys to tell the story. Make equal shares when sharing, then choose an answer. Three gentle difficulty settings. Ages 4–8. Learning: Concrete addition.",
+    "emoji": "🐿️",
+    "color": "#f2b36f",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Concrete addition"
+  },
+  {
+    "id": "animal-alphabet",
+    "title": "Animal Alphabet",
+    "tagline": "Build names for tiny animal friends.",
+    "howToPlay": "Look at the picture and listen to the word. Tap its letters in order. Three gentle difficulty settings. Ages 4–7. Learning: Beginning sounds and spelling.",
+    "emoji": "🦊",
+    "color": "#f2b36f",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Beginning sounds and spelling"
+  },
+  {
+    "id": "bakery-alarm",
+    "title": "Bakery Alarm",
+    "tagline": "Set the kitchen clock for a pretend bake.",
+    "howToPlay": "Turn the hour and minute hands using the buttons. Match the requested time, then Check. Three gentle difficulty settings. Ages 5–8. Learning: Hours and quarter hours.",
+    "emoji": "⏰",
+    "color": "#f3a8aa",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Hours and quarter hours"
+  },
+  {
+    "id": "bakery-bundles",
+    "title": "Bakery Bundles",
+    "tagline": "Count buns arranged in equal bakery trays.",
+    "howToPlay": "Move the toys to tell the story. Make equal shares when sharing, then choose an answer. Three gentle difficulty settings. Ages 5–8. Learning: Equal groups and multiplication.",
+    "emoji": "🥐",
+    "color": "#f3a8aa",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Equal groups and multiplication"
+  },
+  {
+    "id": "balloon-pop",
+    "title": "Balloon Pop",
+    "tagline": "Pop smiley, heart, bunny and star balloons over a sunny countryside!",
+    "howToPlay": "Tap or click a balloon to pop it (or steer the pin with the arrow keys and press Space). Fill the bar to reach the next level and meet new balloons: golden balloons with a crown are worth 5, a star pops every balloon, and a rainbow makes baby balloons. Tap the sun, a sheep, a house, a tree, the windmill or the hot-air balloon for a surprise. Nothing is ever lost, so just keep popping!",
+    "emoji": "🎈",
+    "color": "#ff6b9d",
+    "category": "pop",
+    "together": false,
+    "featured": true,
+    "url": "https://ae8ea8a8-bitgames-balloon-pop.ferdousbd.workers.dev/",
+    "ages": [
+      2,
+      6
+    ],
+    "learning": "Counting, colours and shape recognition"
+  },
+  {
+    "id": "bead-bridge",
+    "title": "Bead Bridge",
+    "tagline": "Finish a jewel bridge for the royal snail.",
+    "howToPlay": "Look for the repeating rule. Tap the piece that fills the empty place. Three gentle difficulty settings. Ages 3–7. Learning: AB, AAB and ABC sequences.",
+    "emoji": "📿",
+    "color": "#ffd786",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      7
+    ],
+    "learning": "AB, AAB and ABC sequences"
+  },
+  {
+    "id": "bear-balance",
+    "title": "Bear Balance",
+    "tagline": "Balance a bear’s seesaw with numbered acorns.",
+    "howToPlay": "Choose weights for the empty pan until both sides are equal. Press Check. Three gentle difficulty settings. Ages 4–7. Learning: Equality and weights.",
+    "emoji": "⚖️",
+    "color": "#f2b36f",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Equality and weights"
+  },
+  {
+    "id": "bee-pollen-trail",
+    "title": "Bee Pollen Trail",
+    "tagline": "Guide a bee around stones to a waiting flower.",
+    "howToPlay": "Use the arrow buttons to plan a route. Press Go to send your friend. Avoid the rocks. Three gentle difficulty settings. Ages 4–7. Learning: Route planning and pollination.",
+    "emoji": "🐝",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Route planning and pollination"
+  },
+  {
+    "id": "birdsong-tuner",
+    "title": "Birdsong Tuner",
+    "tagline": "Listen closely to tune a miniature birdsong concert.",
+    "howToPlay": "Play both sounds, then choose the higher or lower one. Replay as often as you like. Three gentle difficulty settings. Ages 3–7. Learning: High and low sounds.",
+    "emoji": "🐦",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      7
+    ],
+    "learning": "High and low sounds"
+  },
+  {
+    "id": "breakfast-story",
+    "title": "Breakfast Story",
+    "tagline": "Put a bear’s cosy morning in a sensible order.",
+    "howToPlay": "Tap the pictures in the order the story happens. Use Reset to start again. Three gentle difficulty settings. Ages 3–6. Learning: Everyday sequencing.",
+    "emoji": "🥣",
+    "color": "#f3a8aa",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Everyday sequencing"
+  },
+  {
+    "id": "bridge-builder",
+    "title": "Bridge Builder",
+    "tagline": "Lay equal planks across a little harbour gap.",
+    "howToPlay": "Place equal units along the glowing length without gaps. Press Check. Three gentle difficulty settings. Ages 4–8. Learning: Length and unit iteration.",
+    "emoji": "🌉",
+    "color": "#f6c784",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Length and unit iteration"
+  },
+  {
+    "id": "bumper-ducks",
+    "title": "Bumper Ducks",
+    "tagline": "Bonk, bounce and squeak! Up to 4 rubber ducks in bumper boats grab bubbles and stars.",
+    "howToPlay": "Drag anywhere (or use the arrow keys) to paddle your duck. Tap 💨 (or Space) to dash and BONK! Bubbles are worth 1, stars 3. 🎁 boxes make you giant, super fast or bouncy. Bonk a friend out of the water for a splash bonus. Nobody is ever out!",
+    "emoji": "🦆",
+    "color": "#ffca3a",
+    "category": "race",
+    "together": true,
+    "featured": false,
+    "url": "https://3e04a8d1-bitgames-bumper-ducks.ferdousbd.workers.dev/",
+    "ages": [
+      3,
+      8
+    ],
+    "learning": "Cooperation, counting and spatial awareness"
+  },
+  {
+    "id": "bunny-bedtime",
+    "title": "Bunny Bedtime",
+    "tagline": "Set a cosy clock for bunny’s daily routine.",
+    "howToPlay": "Turn the hour and minute hands using the buttons. Match the requested time, then Check. Three gentle difficulty settings. Ages 5–8. Learning: Clock reading and daily routines.",
+    "emoji": "🐰",
+    "color": "#f2b572",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Clock reading and daily routines"
+  },
+  {
+    "id": "bunny-hop",
+    "title": "Bunny Hop",
+    "tagline": "Hop Pip the bunny home through meadows, mushrooms, autumn woods and snow!",
+    "howToPlay": "Tap the screen or press the space bar to hop. Tap again in the air for a flippy double hop! Munch carrots, hop over logs and pumpkins, and leap for the golden carrots on the way home.",
+    "emoji": "🐰",
+    "color": "#8ac926",
+    "category": "jump",
+    "together": false,
+    "featured": false,
+    "url": "https://97b18d5e-bitgames-bunny-hop.ferdousbd.workers.dev/",
+    "ages": [
+      3,
+      8
+    ],
+    "learning": "Movement patterns, counting and timing"
+  },
+  {
+    "id": "butterfly-life-lab",
+    "title": "Butterfly Life Lab",
+    "tagline": "Unfold a caterpillar’s remarkable transformation.",
+    "howToPlay": "Tap the pictures in the order the story happens. Use Reset to start again. Three gentle difficulty settings. Ages 4–8. Learning: Butterfly metamorphosis.",
+    "emoji": "🐛",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Butterfly metamorphosis"
+  },
+  {
+    "id": "butterfly-mirrors",
+    "title": "Butterfly Mirrors",
+    "tagline": "Give a butterfly two beautifully matching wings.",
+    "howToPlay": "Tap squares on the empty side to reflect the pattern across the dotted line. Press Check. Three gentle difficulty settings. Ages 4–8. Learning: Reflection symmetry.",
+    "emoji": "🪞",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Reflection symmetry"
+  },
+  {
+    "id": "butterfly-patterns",
+    "title": "Butterfly Patterns",
+    "tagline": "Grow a dancing line of patterned butterfly wings.",
+    "howToPlay": "Look for the repeating rule. Tap the piece that fills the empty place. Three gentle difficulty settings. Ages 3–6. Learning: Repeating colour patterns.",
+    "emoji": "🦋",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Repeating colour patterns"
+  },
+  {
+    "id": "cake-stack",
+    "title": "Cake Stack",
+    "tagline": "Stack yummy cake layers into a giant birthday cake for your animal friends!",
+    "howToPlay": "A cake layer slides back and forth: tap, click or press Space to drop it on the cake. Line it up for a Perfect sparkle, and a wobbly drop just squishes a little. Stack all the layers (or tap the candle button when you are done) and an animal friend comes for a birthday party: tap to help blow out the candles! Every new friend brings a new flavour. Open Recipe studio to build pictured flavour recipes from bottom to top and share equal slices fairly among two or three friends.",
+    "emoji": "🎂",
+    "color": "#ff8fab",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "url": "https://01fa019c-bitgames-cake-stack.ferdousbd.workers.dev/",
+    "ages": [
+      3,
+      8
+    ],
+    "learning": "Counting, ordered recipes and equal sharing"
+  },
+  {
+    "id": "castle-block-blueprints",
+    "title": "Castle Block Blueprints",
+    "tagline": "Raise little castle towers to match the royal plan.",
+    "howToPlay": "Tap the towers to add blocks. Match the heights in the blueprint, then Check. Three gentle difficulty settings. Ages 4–8. Learning: Height and spatial reasoning.",
+    "emoji": "🏯",
+    "color": "#ffd786",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Height and spatial reasoning"
+  },
+  {
+    "id": "castle-window-symmetry",
+    "title": "Castle Window Symmetry",
+    "tagline": "Restore mirrored jewel panes in a fairy castle.",
+    "howToPlay": "Tap squares on the empty side to reflect the pattern across the dotted line. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Grid reflection.",
+    "emoji": "🏰",
+    "color": "#ffd786",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Grid reflection"
+  },
+  {
+    "id": "cloud-number-race",
+    "title": "Cloud Number Race",
+    "tagline": "Choose the bigger or smaller number on floating clouds.",
+    "howToPlay": "Listen to the request. Compare the objects and tap your answer. Three gentle difficulty settings. Ages 4–7. Learning: Comparing numbers.",
+    "emoji": "☁️",
+    "color": "#f6bfd7",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Comparing numbers"
+  },
+  {
+    "id": "colour-cauldron",
+    "title": "Colour Cauldron",
+    "tagline": "Brew bright new colours in a friendly witch’s pot.",
+    "howToPlay": "Tap two primary paint colours to make the target colour. Reset to try another blend. Three gentle difficulty settings. Ages 3–6. Learning: Primary and secondary colours.",
+    "emoji": "🧙",
+    "color": "#ffd786",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Primary and secondary colours"
+  },
+  {
+    "id": "comet-tail-measure",
+    "title": "Comet Tail Measure",
+    "tagline": "Measure sparkling comet tails without gaps.",
+    "howToPlay": "Place equal units along the glowing length without gaps. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Measuring with consistent units.",
+    "emoji": "☄️",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Measuring with consistent units"
+  },
+  {
+    "id": "constellation-code",
+    "title": "Constellation Code",
+    "tagline": "Repair a star map by finding the missing number.",
+    "howToPlay": "Look for the repeating rule. Tap the piece that fills the empty place. Three gentle difficulty settings. Ages 5–8. Learning: Number sequences.",
+    "emoji": "🌌",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Number sequences"
+  },
+  {
+    "id": "coral-cleanup",
+    "title": "Coral Cleanup",
+    "tagline": "Help sea turtles by collecting litter and leaving shells.",
+    "howToPlay": "Tap the requested number of objects, then press Done. Tap again to undo. Three gentle difficulty settings. Ages 3–6. Learning: Environmental care and classification.",
+    "emoji": "🪸",
+    "color": "#ffb0bc",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Environmental care and classification"
+  },
+  {
+    "id": "crash-racers",
+    "title": "Crash Racers",
+    "tagline": "Race up to 4 cars through Ubud, Helsinki and Montreal. Crashes welcome!",
+    "howToPlay": "Steer with the arrows (or ◀ ▶ on a tablet). The car drives itself in Easy gas mode. 🔧 fixes your car, 🔄 puts you back on the road.",
+    "emoji": "🏎️",
+    "color": "#ff595e",
+    "category": "race",
+    "together": true,
+    "featured": false,
+    "url": "https://27038f4c-bitgames-crash-racers.ferdousbd.workers.dev/",
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Map reading, ordered deliveries and spatial planning"
+  },
+  {
+    "id": "crystal-cave-echo",
+    "title": "Crystal Cave Echo",
+    "tagline": "Remember the sparkling song of a crystal cave.",
+    "howToPlay": "Watch and listen to the song, then tap the pads in the same order. Replay whenever you like. Three gentle difficulty settings. Ages 4–8. Learning: Pitch and sound sequence memory.",
+    "emoji": "💎",
+    "color": "#80ded5",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Pitch and sound sequence memory"
+  },
+  {
+    "id": "cuckoo-clock-garden",
+    "title": "Cuckoo Clock Garden",
+    "tagline": "Turn the clock hands for a tiny garden concert.",
+    "howToPlay": "Turn the hour and minute hands using the buttons. Match the requested time, then Check. Three gentle difficulty settings. Ages 5–8. Learning: Telling time.",
+    "emoji": "🕰️",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Telling time"
+  },
+  {
+    "id": "deep-sea-divers",
+    "title": "Deep Sea Divers",
+    "tagline": "Spot the diver nearest the surface or deepest in the sea.",
+    "howToPlay": "Listen to the request. Compare the objects and tap your answer. Three gentle difficulty settings. Ages 4–7. Learning: Spatial vocabulary and depth.",
+    "emoji": "🤿",
+    "color": "#ffb0bc",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Spatial vocabulary and depth"
+  },
+  {
+    "id": "dino-egg-nest",
+    "title": "Dino Egg Nest",
+    "tagline": "Fill a dino’s nest with the right number of eggs.",
+    "howToPlay": "Tap the ten little spaces to fill the requested number. Press Check. Three gentle difficulty settings. Ages 2–5. Learning: Subitising and number representation.",
+    "emoji": "🥚",
+    "color": "#e7aa74",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      5
+    ],
+    "learning": "Subitising and number representation"
+  },
+  {
+    "id": "dinosaur-size-parade",
+    "title": "Dinosaur Size Parade",
+    "tagline": "Find the tiny and towering friends in a dinosaur parade.",
+    "howToPlay": "Listen to the request. Compare the objects and tap your answer. Three gentle difficulty settings. Ages 2–5. Learning: Relative size.",
+    "emoji": "🦕",
+    "color": "#e7aa74",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      5
+    ],
+    "learning": "Relative size"
+  },
+  {
+    "id": "dragon-glide",
+    "title": "Dragon Glide",
+    "tagline": "Fly Ember the baby dragon through floating sky islands, cloud rings and rainbow waterfalls!",
+    "howToPlay": "Drag your finger or move the mouse, or use the arrow keys, to fly. Tap, click or press the space bar to puff sparkly fire that pops gem bubbles and lights lanterns. Grab gems, fly through the rings for combos, and catch the rainbow star to zoom. Bumping into things only makes a silly bonk!",
+    "emoji": "🐉",
+    "color": "#3fbf7f",
+    "category": "jump",
+    "together": false,
+    "featured": false,
+    "url": "https://a1f91e0b-bitgames-dragon-glide.ferdousbd.workers.dev/",
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Spatial awareness, ring counting and coordination"
+  },
+  {
+    "id": "drum-beat-builder",
+    "title": "Drum Beat Builder",
+    "tagline": "Rebuild a drum pattern using beats and quiet rests.",
+    "howToPlay": "Listen to the rhythm. Set each step to a beat or a rest, then play your pattern. Three gentle difficulty settings. Ages 4–8. Learning: Rhythmic patterns.",
+    "emoji": "🥁",
+    "color": "#fbc985",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Rhythmic patterns"
+  },
+  {
+    "id": "firefly-lanterns",
+    "title": "Firefly Lanterns",
+    "tagline": "Light a woodland lantern with just enough fireflies.",
+    "howToPlay": "Tap the requested number of objects, then press Done. Tap again to undo. Three gentle difficulty settings. Ages 2–4. Learning: One-to-one counting.",
+    "emoji": "✨",
+    "color": "#f2b36f",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      4
+    ],
+    "learning": "One-to-one counting"
+  },
+  {
+    "id": "fish-pond",
+    "title": "Fish Pond",
+    "tagline": "Go fishing with Bear and fill your book with fish, a puffer, a whale and treasure!",
+    "howToPlay": "Pick a place: sunny lake, sunset river, starry night or frozen pond. Tap the water (or press Space) to cast. When the bobber dips and a big ! pops up, tap anywhere to reel it in. Missed one? It just swims off giggling and another comes along. Every catch goes into your 📖 book: can you find all 15?",
+    "emoji": "🎣",
+    "color": "#3fa7e0",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "url": "https://bb28c307-bitgames-fish-pond.ferdousbd.workers.dev/",
+    "ages": [
+      2,
+      8
+    ],
+    "learning": "Observation, animal habitats and counting"
+  },
+  {
+    "id": "float-boat-lab",
+    "title": "Float Boat Lab",
+    "tagline": "Test toy objects in a tiny water tank.",
+    "howToPlay": "Make a prediction, press Test, and see what happens. Try both ideas. Three gentle difficulty settings. Ages 4–8. Learning: Prediction and buoyancy.",
+    "emoji": "🛁",
+    "color": "#f6c784",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Prediction and buoyancy"
+  },
+  {
+    "id": "footprint-detective",
+    "title": "Footprint Detective",
+    "tagline": "Follow curious tracks to their woodland owners.",
+    "howToPlay": "Look at the delivery request and tap its matching toy. Three gentle difficulty settings. Ages 4–7. Learning: Observation and animal tracks.",
+    "emoji": "🐾",
+    "color": "#f2b36f",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Observation and animal tracks"
+  },
+  {
+    "id": "frog-choir",
+    "title": "Frog Choir",
+    "tagline": "Echo a pond chorus on colourful lily pads.",
+    "howToPlay": "Watch and listen to the song, then tap the pads in the same order. Replay whenever you like. Three gentle difficulty settings. Ages 3–7. Learning: Auditory and sequential memory.",
+    "emoji": "🎶",
+    "color": "#f5c17c",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      7
+    ],
+    "learning": "Auditory and sequential memory"
+  },
+  {
+    "id": "frog-life-lab",
+    "title": "Frog Life Lab",
+    "tagline": "Watch pond eggs grow into a hopping frog.",
+    "howToPlay": "Tap the pictures in the order the story happens. Use Reset to start again. Three gentle difficulty settings. Ages 4–8. Learning: Frog metamorphosis.",
+    "emoji": "🐸",
+    "color": "#f5c17c",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Frog metamorphosis"
+  },
+  {
+    "id": "fruit-veggie-ferry",
+    "title": "Fruit & Veggie Ferry",
+    "tagline": "Load two tiny ferries for a healthy island picnic.",
+    "howToPlay": "Carry objects to their homes, or tap an object and then its home. Three gentle difficulty settings. Ages 3–6. Learning: Food classification.",
+    "emoji": "⛵",
+    "color": "#f6c784",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Food classification"
+  },
+  {
+    "id": "garden-fence",
+    "title": "Garden Fence",
+    "tagline": "Measure a flower bed before making its tiny fence.",
+    "howToPlay": "Place equal units along the glowing length without gaps. Press Check. Three gentle difficulty settings. Ages 4–7. Learning: Length estimation.",
+    "emoji": "🌷",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Length estimation"
+  },
+  {
+    "id": "gem-turner",
+    "title": "Gem Turner",
+    "tagline": "Turn a crystal key until it fits the glowing lock.",
+    "howToPlay": "Turn the colourful key in quarter turns until it matches the pale outline. Press Check. Three gentle difficulty settings. Ages 4–7. Learning: Mental rotation.",
+    "emoji": "🔷",
+    "color": "#80ded5",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Mental rotation"
+  },
+  {
+    "id": "giraffe-ruler",
+    "title": "Giraffe Ruler",
+    "tagline": "Measure a toy giraffe with colourful cube units.",
+    "howToPlay": "Place equal units along the glowing length without gaps. Press Check. Three gentle difficulty settings. Ages 4–7. Learning: Measuring with equal units.",
+    "emoji": "🦒",
+    "color": "#e7aa74",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Measuring with equal units"
+  },
+  {
+    "id": "habitat-hotel",
+    "title": "Habitat Hotel",
+    "tagline": "Give every animal a room that feels like home.",
+    "howToPlay": "Carry objects to their homes, or tap an object and then its home. Three gentle difficulty settings. Ages 3–7. Learning: Animal habitats.",
+    "emoji": "🏨",
+    "color": "#f2b572",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      7
+    ],
+    "learning": "Animal habitats"
+  },
+  {
+    "id": "healthy-plate-party",
+    "title": "Healthy Plate Party",
+    "tagline": "Help toy friends choose varied snacks and routines.",
+    "howToPlay": "Listen to the little story, then choose the helpful answer. Three gentle difficulty settings. Ages 4–7. Learning: Food variety and healthy routines.",
+    "emoji": "🥗",
+    "color": "#ef796e",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Food variety and healthy routines"
+  },
+  {
+    "id": "jellyfish-glow-lab",
+    "title": "Jellyfish Glow Lab",
+    "tagline": "Blend paint colours for a glowing jellyfish costume.",
+    "howToPlay": "Tap two primary paint colours to make the target colour. Reset to try another blend. Three gentle difficulty settings. Ages 4–7. Learning: Predicting colour combinations.",
+    "emoji": "🪼",
+    "color": "#ffb0bc",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Predicting colour combinations"
+  },
+  {
+    "id": "kindness-cafe",
+    "title": "Kindness Café",
+    "tagline": "Choose caring actions at a tiny toy café.",
+    "howToPlay": "Listen to the little story, then choose the helpful answer. Three gentle difficulty settings. Ages 3–7. Learning: Empathy and cooperation.",
+    "emoji": "💛",
+    "color": "#f3a8aa",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      7
+    ],
+    "learning": "Empathy and cooperation"
+  },
+  {
+    "id": "kite-flight-school",
+    "title": "Kite Flight School",
+    "tagline": "Draw swooping sky trails for a rainbow kite.",
+    "howToPlay": "Start at the glowing dot. Hold and follow the trail, or tap each dot in order. Three gentle difficulty settings. Ages 3–6. Learning: Hand-eye coordination.",
+    "emoji": "🪁",
+    "color": "#f6bfd7",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Hand-eye coordination"
+  },
+  {
+    "id": "ladybird-dot-party",
+    "title": "Ladybird Dot Party",
+    "tagline": "Add dots to a ladybird’s ten little garden seats.",
+    "howToPlay": "Tap the ten little spaces to fill the requested number. Press Check. Three gentle difficulty settings. Ages 3–6. Learning: Ten-frame counting.",
+    "emoji": "🐞",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Ten-frame counting"
+  },
+  {
+    "id": "letter-buddies",
+    "title": "Letter Buddies",
+    "tagline": "Introduce big letters to their little-letter buddies.",
+    "howToPlay": "Turn over two cards. Match their pictures or their related meanings. Three gentle difficulty settings. Ages 4–7. Learning: Uppercase and lowercase letters.",
+    "emoji": "🔤",
+    "color": "#e5a077",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Uppercase and lowercase letters"
+  },
+  {
+    "id": "letter-trails",
+    "title": "Letter Trails",
+    "tagline": "Trace large glowing letters with a friendly firefly.",
+    "howToPlay": "Start at the glowing dot. Hold and follow the trail, or tap each dot in order. Three gentle difficulty settings. Ages 4–7. Learning: Letter formation.",
+    "emoji": "✏️",
+    "color": "#e5a077",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Letter formation"
+  },
+  {
+    "id": "magnet-discovery",
+    "title": "Magnet Discovery",
+    "tagline": "Predict, test, and discover what a magnet attracts.",
+    "howToPlay": "Make a prediction, press Test, and see what happens. Try both ideas. Three gentle difficulty settings. Ages 5–8. Learning: Testing magnetic attraction.",
+    "emoji": "🧲",
+    "color": "#f8c974",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Testing magnetic attraction"
+  },
+  {
+    "id": "memory-match",
+    "title": "Memory Match",
+    "tagline": "Flip the cards and find the matching animal twins!",
+    "howToPlay": "Tap a card to flip it and meet the animal inside, then find its twin. Match all the pairs to make the animals dance, and try six levels from 4 to 20 cards.",
+    "emoji": "🧩",
+    "color": "#2ec4b6",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "url": "https://ed02918a-bitgames-memory-match.ferdousbd.workers.dev/",
+    "ages": [
+      2,
+      8
+    ],
+    "learning": "Visual memory, matching and turn taking"
+  },
+  {
+    "id": "moon-pebbles",
+    "title": "Moon Pebbles",
+    "tagline": "Gather moon gems for a friendly astronaut.",
+    "howToPlay": "Tap the requested number of objects, then press Done. Tap again to undo. Three gentle difficulty settings. Ages 3–6. Learning: Counting and stopping at a target.",
+    "emoji": "🌙",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Counting and stopping at a target"
+  },
+  {
+    "id": "number-spark-trails",
+    "title": "Number Spark Trails",
+    "tagline": "Draw sparkling numerals across a moon garden.",
+    "howToPlay": "Start at the glowing dot. Hold and follow the trail, or tap each dot in order. Three gentle difficulty settings. Ages 4–7. Learning: Numeral formation.",
+    "emoji": "🔢",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Numeral formation"
+  },
+  {
+    "id": "orchard-baskets",
+    "title": "Orchard Baskets",
+    "tagline": "Pick a tiny picnic from a candy-coloured orchard.",
+    "howToPlay": "Tap the requested number of objects, then press Done. Tap again to undo. Three gentle difficulty settings. Ages 2–5. Learning: Counting and quantity.",
+    "emoji": "🍎",
+    "color": "#ef796e",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      5
+    ],
+    "learning": "Counting and quantity"
+  },
+  {
+    "id": "paint-a-planet",
+    "title": "Paint a Planet",
+    "tagline": "Mix a paint colour for a tiny new planet.",
+    "howToPlay": "Tap two primary paint colours to make the target colour. Reset to try another blend. Three gentle difficulty settings. Ages 3–7. Learning: Colour experimentation.",
+    "emoji": "🎨",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      7
+    ],
+    "learning": "Colour experimentation"
+  },
+  {
+    "id": "paint-splash",
+    "title": "Paint Splash",
+    "tagline": "Roll giant paint rollers with up to 4 friends and paint a picture together!",
+    "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller and colour the ground. Grab a 🪣 paint bucket for a big splash, roll through a 🌈 rainbow puddle to paint rainbow stripes, and 💧 water washes a little paint away. Roll over any colour to make it yours. When the time is up, look at the picture you made together! Open Mix my colours to explore a simplified red/yellow/blue toy paint model, compare saved mixtures and create your own colour mosaic.",
+    "emoji": "🎨",
+    "color": "#9b5de5",
+    "category": "pop",
+    "together": true,
+    "featured": false,
+    "url": "https://18db4c9e-bitgames-paint-splash.ferdousbd.workers.dev/",
+    "ages": [
+      2,
+      8
+    ],
+    "learning": "Colour exploration, creative patterns and cooperation"
+  },
+  {
+    "id": "parcel-weights",
+    "title": "Parcel Weights",
+    "tagline": "Find the parcel that balances a delivery scale.",
+    "howToPlay": "Choose weights for the empty pan until both sides are equal. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Missing addends.",
+    "emoji": "📦",
+    "color": "#f2b572",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Missing addends"
+  },
+  {
+    "id": "pebble-equations",
+    "title": "Pebble Equations",
+    "tagline": "Build equal pebble piles on a pond seesaw.",
+    "howToPlay": "Choose weights for the empty pan until both sides are equal. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Number decomposition.",
+    "emoji": "🪨",
+    "color": "#f5c17c",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Number decomposition"
+  },
+  {
+    "id": "penguin-bowling",
+    "title": "Penguin Bowling",
+    "tagline": "Belly-slide a chubby penguin down the ice and knock over snowmen and fish!",
+    "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides. ◀ ▶ move the penguin. Turn on bumpers 🛟 so every slide reaches the pins. Every roll gets a cheer, and a strike gets fireworks!",
+    "emoji": "🐧",
+    "color": "#4cc9f0",
+    "category": "pop",
+    "together": false,
+    "featured": false,
+    "url": "https://9a30d48c-bitgames-penguin-bowling.ferdousbd.workers.dev/",
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Predictions, counting and cause and effect"
+  },
+  {
+    "id": "penguin-ice-path",
+    "title": "Penguin Ice Path",
+    "tagline": "Lead a penguin across safe ice to a fish picnic.",
+    "howToPlay": "Use the arrow buttons to plan a route. Press Go to send your friend. Avoid the rocks. Three gentle difficulty settings. Ages 4–7. Learning: Direction and planning.",
+    "emoji": "🐧",
+    "color": "#edbedc",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Direction and planning"
+  },
+  {
+    "id": "picnic-pairs",
+    "title": "Picnic Pairs",
+    "tagline": "Uncover matching snacks beneath picnic blankets.",
+    "howToPlay": "Turn over two cards. Match their pictures or their related meanings. Three gentle difficulty settings. Ages 2–5. Learning: Visual working memory.",
+    "emoji": "🧺",
+    "color": "#ef796e",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      5
+    ],
+    "learning": "Visual working memory"
+  },
+  {
+    "id": "picnic-word-basket",
+    "title": "Picnic Word Basket",
+    "tagline": "Pack a picnic by spelling simple snack words.",
+    "howToPlay": "Look at the picture and listen to the word. Tap its letters in order. Three gentle difficulty settings. Ages 5–8. Learning: Food word spelling.",
+    "emoji": "🧺",
+    "color": "#ef796e",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Food word spelling"
+  },
+  {
+    "id": "pizza-moon",
+    "title": "Pizza Moon",
+    "tagline": "Share moon-shaped pizzas in equal slices.",
+    "howToPlay": "Tap equal parts to colour the requested share. Press Check when ready. Three gentle difficulty settings. Ages 5–8. Learning: Equal parts and fractions.",
+    "emoji": "🍕",
+    "color": "#f3a8aa",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Equal parts and fractions"
+  },
+  {
+    "id": "planet-pairs",
+    "title": "Planet Pairs",
+    "tagline": "Remember where the little space souvenirs are hiding.",
+    "howToPlay": "Turn over two cards. Match their pictures or their related meanings. Three gentle difficulty settings. Ages 3–7. Learning: Visual memory.",
+    "emoji": "🪐",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      7
+    ],
+    "learning": "Visual memory"
+  },
+  {
+    "id": "rain-drop-rhythm",
+    "title": "Rain Drop Rhythm",
+    "tagline": "Copy a gentle rain song on a lily-pad drum.",
+    "howToPlay": "Listen to the rhythm. Set each step to a beat or a rest, then play your pattern. Three gentle difficulty settings. Ages 3–7. Learning: Beat, rests and pattern memory.",
+    "emoji": "🌧️",
+    "color": "#f5c17c",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      7
+    ],
+    "learning": "Beat, rests and pattern memory"
+  },
+  {
+    "id": "rainbow-postoffice",
+    "title": "Rainbow Post Office",
+    "tagline": "Deliver rainbow parcels to their matching mailboxes.",
+    "howToPlay": "Look at the delivery request and tap its matching toy. Three gentle difficulty settings. Ages 2–4. Learning: Colour recognition.",
+    "emoji": "📮",
+    "color": "#f2b572",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      4
+    ],
+    "learning": "Colour recognition"
+  },
+  {
+    "id": "rainbow-quilt",
+    "title": "Rainbow Quilt",
+    "tagline": "Sew the right fraction of patches into a quilt.",
+    "howToPlay": "Tap equal parts to colour the requested share. Press Check when ready. Three gentle difficulty settings. Ages 5–8. Learning: Fractions of a collection.",
+    "emoji": "🧵",
+    "color": "#fbc985",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Fractions of a collection"
+  },
+  {
+    "id": "rainbow-smoothies",
+    "title": "Rainbow Smoothies",
+    "tagline": "Mix two pretend fruit colours into a rainbow smoothie.",
+    "howToPlay": "Tap two primary paint colours to make the target colour. Reset to try another blend. Three gentle difficulty settings. Ages 3–6. Learning: Colour mixing.",
+    "emoji": "🥤",
+    "color": "#f3a8aa",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Colour mixing"
+  },
+  {
+    "id": "recycling-robots",
+    "title": "Recycling Robots",
+    "tagline": "Sort toy recyclables with a cheerful robot team.",
+    "howToPlay": "Carry objects to their homes, or tap an object and then its home. Three gentle difficulty settings. Ages 4–8. Learning: Materials and recycling.",
+    "emoji": "♻️",
+    "color": "#f8c974",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Materials and recycling"
+  },
+  {
+    "id": "rhyming-river",
+    "title": "Rhyming River",
+    "tagline": "Hop between lily pads with words that rhyme.",
+    "howToPlay": "Listen to the word. Pick a word with the same ending sound. Three gentle difficulty settings. Ages 5–8. Learning: Rhyming word families.",
+    "emoji": "📖",
+    "color": "#f5c17c",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Rhyming word families"
+  },
+  {
+    "id": "ribbon-tailor",
+    "title": "Ribbon Tailor",
+    "tagline": "Choose just the right ribbon for a toy costume.",
+    "howToPlay": "Listen to the request. Compare the objects and tap your answer. Three gentle difficulty settings. Ages 3–6. Learning: Length comparison.",
+    "emoji": "🎀",
+    "color": "#fbc985",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Length comparison"
+  },
+  {
+    "id": "robot-dance-code",
+    "title": "Robot Dance Code",
+    "tagline": "Teach a toy robot a dance one move at a time.",
+    "howToPlay": "Watch and listen to the song, then tap the pads in the same order. Replay whenever you like. Three gentle difficulty settings. Ages 4–8. Learning: Following ordered instructions.",
+    "emoji": "🤖",
+    "color": "#f8c974",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Following ordered instructions"
+  },
+  {
+    "id": "robot-reflections",
+    "title": "Robot Reflections",
+    "tagline": "Light both halves of a robot’s panel symmetrically.",
+    "howToPlay": "Tap squares on the empty side to reflect the pattern across the dotted line. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Spatial reasoning.",
+    "emoji": "🤖",
+    "color": "#f8c974",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Spatial reasoning"
+  },
+  {
+    "id": "rocket-docking",
+    "title": "Rocket Docking",
+    "tagline": "Turn a rocket’s docking key into the correct position.",
+    "howToPlay": "Turn the colourful key in quarter turns until it matches the pale outline. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Rotation and direction.",
+    "emoji": "🚀",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Rotation and direction"
+  },
+  {
+    "id": "rocket-garage",
+    "title": "Rocket Garage",
+    "tagline": "Snap together a silly rocket, then blast your animal pilot off to the Moon and beyond!",
+    "howToPlay": "Tap or drag parts from the tray to build your rocket: nose cones, windows, fuel tanks, fins, boosters and stickers (tap the rocket to swap a part, tap a colour to paint it). Press the big red button to launch! Drag, or use the arrow keys, to steer and catch stars. Bigger boosters fly farther, and every new planet you visit unlocks new parts.",
+    "emoji": "🚀",
+    "color": "#ff5a5f",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "url": "https://7c7fd5ba-bitgames-rocket-garage.ferdousbd.workers.dev/",
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Design comparisons, predictions and experimentation"
+  },
+  {
+    "id": "rover-rescue",
+    "title": "Rover Rescue",
+    "tagline": "Program a moon rover to rescue a stranded rocket.",
+    "howToPlay": "Use the arrow buttons to plan a route. Press Go to send your friend. Avoid the rocks. Three gentle difficulty settings. Ages 5–8. Learning: Algorithms and obstacle avoidance.",
+    "emoji": "🛸",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Algorithms and obstacle avoidance"
+  },
+  {
+    "id": "season-suitcase",
+    "title": "Season Suitcase",
+    "tagline": "Pack sunny-day and snowy-day adventures.",
+    "howToPlay": "Carry objects to their homes, or tap an object and then its home. Three gentle difficulty settings. Ages 4–7. Learning: Seasons and weather.",
+    "emoji": "🧳",
+    "color": "#f2b572",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Seasons and weather"
+  },
+  {
+    "id": "senses-safari",
+    "title": "Senses Safari",
+    "tagline": "Discover how our senses help us explore.",
+    "howToPlay": "Listen to the little story, then choose the helpful answer. Three gentle difficulty settings. Ages 3–6. Learning: The five senses.",
+    "emoji": "👂",
+    "color": "#f2b36f",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "The five senses"
+  },
+  {
+    "id": "shadow-theatre",
+    "title": "Shadow Theatre",
+    "tagline": "Find the toy behind each magical silhouette.",
+    "howToPlay": "Look at the delivery request and tap its matching toy. Three gentle difficulty settings. Ages 3–6. Learning: Visual discrimination.",
+    "emoji": "🎭",
+    "color": "#fbc985",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Visual discrimination"
+  },
+  {
+    "id": "shape-locksmith",
+    "title": "Shape Locksmith",
+    "tagline": "Open a fairy castle with wonderfully shaped keys.",
+    "howToPlay": "Look at the delivery request and tap its matching toy. Three gentle difficulty settings. Ages 2–5. Learning: Shape recognition.",
+    "emoji": "🔑",
+    "color": "#ffd786",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      5
+    ],
+    "learning": "Shape recognition"
+  },
+  {
+    "id": "sleepy-owl-lullaby",
+    "title": "Sleepy Owl Lullaby",
+    "tagline": "Repeat a gentle bedtime song for a sleepy owl.",
+    "howToPlay": "Watch and listen to the song, then tap the pads in the same order. Replay whenever you like. Three gentle difficulty settings. Ages 2–5. Learning: Short sequence recall.",
+    "emoji": "🦉",
+    "color": "#f2b36f",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      5
+    ],
+    "learning": "Short sequence recall"
+  },
+  {
+    "id": "snail-spiral",
+    "title": "Snail Spiral",
+    "tagline": "Follow a glimmering spiral to the snail’s flower.",
+    "howToPlay": "Start at the glowing dot. Hold and follow the trail, or tap each dot in order. Three gentle difficulty settings. Ages 2–5. Learning: Fine motor control and curves.",
+    "emoji": "🐌",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      2,
+      5
+    ],
+    "learning": "Fine motor control and curves"
+  },
+  {
+    "id": "snowflake-studio",
+    "title": "Snowflake Studio",
+    "tagline": "Copy a glittering snowflake across its mirror line.",
+    "howToPlay": "Tap squares on the empty side to reflect the pattern across the dotted line. Press Check. Three gentle difficulty settings. Ages 4–8. Learning: Symmetrical patterns.",
+    "emoji": "❄️",
+    "color": "#edbedc",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Symmetrical patterns"
+  },
+  {
+    "id": "sound-wave-lab",
+    "title": "Sound Wave Lab",
+    "tagline": "Compare crystal tones and find the high or low sound.",
+    "howToPlay": "Play both sounds, then choose the higher or lower one. Replay as often as you like. Three gentle difficulty settings. Ages 4–8. Learning: Pitch discrimination.",
+    "emoji": "🔔",
+    "color": "#80ded5",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Pitch discrimination"
+  },
+  {
+    "id": "space-station-schedule",
+    "title": "Space Station Schedule",
+    "tagline": "Set a station clock for the next rocket launch.",
+    "howToPlay": "Turn the hour and minute hands using the buttons. Match the requested time, then Check. Three gentle difficulty settings. Ages 6–8. Learning: Hours and half hours.",
+    "emoji": "🛰️",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      6,
+      8
+    ],
+    "learning": "Hours and half hours"
+  },
+  {
+    "id": "sprout-sunflower",
+    "title": "Sprout to Sunflower",
+    "tagline": "Help a seed tell the story of how it grows.",
+    "howToPlay": "Tap the pictures in the order the story happens. Use Reset to start again. Three gentle difficulty settings. Ages 3–6. Learning: Plant life cycle.",
+    "emoji": "🌻",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Plant life cycle"
+  },
+  {
+    "id": "star-catcher",
+    "title": "Star Catcher",
+    "tagline": "Fly Kitty’s rocket past friendly planets and catch the falling stars!",
+    "howToPlay": "Drag your finger or mouse, or use the arrow keys, to fly the rocket. Catch stars to travel from planet to planet. Gems are worth 3 and rainbow stars 5; grab a magnet to pull stars in or a heart for double stars. Sleepy space rocks just make you dizzy.",
+    "emoji": "⭐",
+    "color": "#6c63ff",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "url": "https://3cbc96df-bitgames-star-catcher.ferdousbd.workers.dev/",
+    "ages": [
+      3,
+      8
+    ],
+    "learning": "Counting, spatial awareness and star patterns"
+  },
+  {
+    "id": "star-share",
+    "title": "Star Share",
+    "tagline": "Share star biscuits equally between space explorers.",
+    "howToPlay": "Move the toys to tell the story. Make equal shares when sharing, then choose an answer. Three gentle difficulty settings. Ages 5–8. Learning: Fair sharing and division.",
+    "emoji": "⭐",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Fair sharing and division"
+  },
+  {
+    "id": "submarine-subtraction",
+    "title": "Submarine Subtraction",
+    "tagline": "See how many fish remain after friends swim away.",
+    "howToPlay": "Move the toys to tell the story. Make equal shares when sharing, then choose an answer. Three gentle difficulty settings. Ages 5–8. Learning: Concrete subtraction.",
+    "emoji": "🐠",
+    "color": "#ffb0bc",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Concrete subtraction"
+  },
+  {
+    "id": "sunlight-sprouts",
+    "title": "Sunlight Sprouts",
+    "tagline": "Discover which supplies help a garden grow.",
+    "howToPlay": "Make a prediction, press Test, and see what happens. Try both ideas. Three gentle difficulty settings. Ages 4–7. Learning: Plants and their needs.",
+    "emoji": "🌱",
+    "color": "#f7a8c3",
+    "category": "animals",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Plants and their needs"
+  },
+  {
+    "id": "tangram-turntable",
+    "title": "Tangram Turntable",
+    "tagline": "Fit five triangles, a square, and a parallelogram into a complete tangram.",
+    "howToPlay": "Turn the colourful key in quarter turns until it matches the pale outline. Press Check. Three gentle difficulty settings. Ages 4–8. Learning: Tangram composition and rotation.",
+    "emoji": "🔺",
+    "color": "#fbc985",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Tangram composition and rotation"
+  },
+  {
+    "id": "tool-twins",
+    "title": "Tool Twins",
+    "tagline": "Pair a helper with the tool they use.",
+    "howToPlay": "Turn over two cards. Match their pictures or their related meanings. Three gentle difficulty settings. Ages 4–8. Learning: Jobs and their tools.",
+    "emoji": "🛠️",
+    "color": "#f8c974",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Jobs and their tools"
+  },
+  {
+    "id": "toy-town-builder",
+    "title": "Toy Town Builder",
+    "tagline": "Build a miniature skyline from a block blueprint.",
+    "howToPlay": "Tap the towers to add blocks. Match the heights in the blueprint, then Check. Three gentle difficulty settings. Ages 4–8. Learning: Spatial construction from plans.",
+    "emoji": "🏘️",
+    "color": "#f2b572",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Spatial construction from plans"
+  },
+  {
+    "id": "train-carriage-rhythm",
+    "title": "Train Carriage Rhythm",
+    "tagline": "Complete the toy train’s changing carriage pattern.",
+    "howToPlay": "Look for the repeating rule. Tap the piece that fills the empty place. Three gentle difficulty settings. Ages 4–7. Learning: Pattern prediction.",
+    "emoji": "🚂",
+    "color": "#efae72",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      7
+    ],
+    "learning": "Pattern prediction"
+  },
+  {
+    "id": "turtle-treasure-map",
+    "title": "Turtle Treasure Map",
+    "tagline": "Steer a turtle through a reef to a secret pearl.",
+    "howToPlay": "Use the arrow buttons to plan a route. Press Go to send your friend. Avoid the rocks. Three gentle difficulty settings. Ages 4–8. Learning: Grid navigation.",
+    "emoji": "🐢",
+    "color": "#f6c784",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      4,
+      8
+    ],
+    "learning": "Grid navigation"
+  },
+  {
+    "id": "watermelon-picnic",
+    "title": "Watermelon Picnic",
+    "tagline": "Colour equal slices of a picnic watermelon.",
+    "howToPlay": "Tap equal parts to colour the requested share. Press Check when ready. Three gentle difficulty settings. Ages 5–8. Learning: Part-whole reasoning.",
+    "emoji": "🍉",
+    "color": "#ef796e",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "Part-whole reasoning"
+  },
+  {
+    "id": "weather-wardrobe",
+    "title": "Weather Wardrobe",
+    "tagline": "Dress a toy explorer for sun, rain, and snow.",
+    "howToPlay": "Listen to the little story, then choose the helpful answer. Three gentle difficulty settings. Ages 3–6. Learning: Weather and practical reasoning.",
+    "emoji": "🌦️",
+    "color": "#f2b572",
+    "category": "puzzle",
+    "together": false,
+    "featured": false,
+    "ages": [
+      3,
+      6
+    ],
+    "learning": "Weather and practical reasoning"
+  },
+  {
+    "id": "word-rocket",
+    "title": "Word Rocket",
+    "tagline": "Build short words to power a reading rocket.",
+    "howToPlay": "Look at the picture and listen to the word. Tap its letters in order. Three gentle difficulty settings. Ages 5–8. Learning: CVC word building.",
+    "emoji": "🔠",
+    "color": "#ffd179",
+    "category": "space",
+    "together": false,
+    "featured": false,
+    "ages": [
+      5,
+      8
+    ],
+    "learning": "CVC word building"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "id": "butterfly-life-lab",
+  "title": "Butterfly Life Lab",
+  "tagline": "Unfold a caterpillar’s remarkable transformation.",
+  "howToPlay": "Tap the pictures in the order the story happens. Use Reset to start again. Three gentle difficulty settings. Ages 4–8. Learning: Butterfly metamorphosis.",
+  "emoji": "🐛",
+  "color": "#f7a8c3",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Butterfly metamorphosis"
+}

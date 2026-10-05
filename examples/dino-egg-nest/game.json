@@ -1,0 +1,16 @@
+{
+  "id": "dino-egg-nest",
+  "title": "Dino Egg Nest",
+  "tagline": "Fill a dino’s nest with the right number of eggs.",
+  "howToPlay": "Tap the ten little spaces to fill the requested number. Press Check. Three gentle difficulty settings. Ages 2–5. Learning: Subitising and number representation.",
+  "emoji": "🥚",
+  "color": "#e7aa74",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    2,
+    5
+  ],
+  "learning": "Subitising and number representation"
+}

@@ -3,11 +3,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "pnpm -r test",
+    "test": "pnpm examples:check && pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "signal": "pnpm --filter @bitgames/signal start",
-    "lab": "pnpm --filter @bitgames/lab dev"
+    "lab": "pnpm --filter @bitgames/lab dev",
+    "examples:build": "node examples/_studio/build.mjs",
+    "examples:serve": "node examples/_studio/serve.mjs",
+    "examples:assets": "blender --background --python-exit-code 1 --python examples/_studio/blender/build_assets.py",
+    "examples:check": "node examples/_studio/build.mjs && node --test examples/_studio/tests/curriculum.test.mjs",
+    "examples:playtest": "node examples/_studio/tests/browser.mjs"
   },
   "packageManager": "pnpm@11.28.2",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
 }

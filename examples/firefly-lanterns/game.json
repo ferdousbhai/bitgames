@@ -1,0 +1,16 @@
+{
+  "id": "firefly-lanterns",
+  "title": "Firefly Lanterns",
+  "tagline": "Light a woodland lantern with just enough fireflies.",
+  "howToPlay": "Tap the requested number of objects, then press Done. Tap again to undo. Three gentle difficulty settings. Ages 2–4. Learning: One-to-one counting.",
+  "emoji": "✨",
+  "color": "#f2b36f",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    2,
+    4
+  ],
+  "learning": "One-to-one counting"
+}

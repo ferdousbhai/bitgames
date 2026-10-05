@@ -1,0 +1,16 @@
+{
+  "id": "rainbow-quilt",
+  "title": "Rainbow Quilt",
+  "tagline": "Sew the right fraction of patches into a quilt.",
+  "howToPlay": "Tap equal parts to colour the requested share. Press Check when ready. Three gentle difficulty settings. Ages 5–8. Learning: Fractions of a collection.",
+  "emoji": "🧵",
+  "color": "#fbc985",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Fractions of a collection"
+}

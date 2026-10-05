@@ -1,0 +1,16 @@
+{
+  "id": "train-carriage-rhythm",
+  "title": "Train Carriage Rhythm",
+  "tagline": "Complete the toy train’s changing carriage pattern.",
+  "howToPlay": "Look for the repeating rule. Tap the piece that fills the empty place. Three gentle difficulty settings. Ages 4–7. Learning: Pattern prediction.",
+  "emoji": "🚂",
+  "color": "#efae72",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    7
+  ],
+  "learning": "Pattern prediction"
+}

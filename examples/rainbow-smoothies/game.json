@@ -1,0 +1,16 @@
+{
+  "id": "rainbow-smoothies",
+  "title": "Rainbow Smoothies",
+  "tagline": "Mix two pretend fruit colours into a rainbow smoothie.",
+  "howToPlay": "Tap two primary paint colours to make the target colour. Reset to try another blend. Three gentle difficulty settings. Ages 3–6. Learning: Colour mixing.",
+  "emoji": "🥤",
+  "color": "#f3a8aa",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    3,
+    6
+  ],
+  "learning": "Colour mixing"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "sound-wave-lab",
+  "title": "Sound Wave Lab",
+  "tagline": "Compare crystal tones and find the high or low sound.",
+  "howToPlay": "Play both sounds, then choose the higher or lower one. Replay as often as you like. Three gentle difficulty settings. Ages 4–8. Learning: Pitch discrimination.",
+  "emoji": "🔔",
+  "color": "#80ded5",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Pitch discrimination"
+}

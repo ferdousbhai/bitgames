@@ -1,0 +1,16 @@
+{
+  "id": "bead-bridge",
+  "title": "Bead Bridge",
+  "tagline": "Finish a jewel bridge for the royal snail.",
+  "howToPlay": "Look for the repeating rule. Tap the piece that fills the empty place. Three gentle difficulty settings. Ages 3–7. Learning: AB, AAB and ABC sequences.",
+  "emoji": "📿",
+  "color": "#ffd786",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    3,
+    7
+  ],
+  "learning": "AB, AAB and ABC sequences"
+}

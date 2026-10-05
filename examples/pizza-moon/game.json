@@ -1,0 +1,16 @@
+{
+  "id": "pizza-moon",
+  "title": "Pizza Moon",
+  "tagline": "Share moon-shaped pizzas in equal slices.",
+  "howToPlay": "Tap equal parts to colour the requested share. Press Check when ready. Three gentle difficulty settings. Ages 5–8. Learning: Equal parts and fractions.",
+  "emoji": "🍕",
+  "color": "#f3a8aa",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Equal parts and fractions"
+}

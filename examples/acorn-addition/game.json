@@ -1,0 +1,16 @@
+{
+  "id": "acorn-addition",
+  "title": "Acorn Addition",
+  "tagline": "Combine two acorn stashes for a woodland feast.",
+  "howToPlay": "Move the toys to tell the story. Make equal shares when sharing, then choose an answer. Three gentle difficulty settings. Ages 4–8. Learning: Concrete addition.",
+  "emoji": "🐿️",
+  "color": "#f2b36f",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Concrete addition"
+}

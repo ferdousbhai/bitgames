@@ -1,0 +1,16 @@
+{
+  "id": "shadow-theatre",
+  "title": "Shadow Theatre",
+  "tagline": "Find the toy behind each magical silhouette.",
+  "howToPlay": "Look at the delivery request and tap its matching toy. Three gentle difficulty settings. Ages 3–6. Learning: Visual discrimination.",
+  "emoji": "🎭",
+  "color": "#fbc985",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    3,
+    6
+  ],
+  "learning": "Visual discrimination"
+}

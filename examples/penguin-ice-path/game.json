@@ -1,0 +1,16 @@
+{
+  "id": "penguin-ice-path",
+  "title": "Penguin Ice Path",
+  "tagline": "Lead a penguin across safe ice to a fish picnic.",
+  "howToPlay": "Use the arrow buttons to plan a route. Press Go to send your friend. Avoid the rocks. Three gentle difficulty settings. Ages 4–7. Learning: Direction and planning.",
+  "emoji": "🐧",
+  "color": "#edbedc",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    7
+  ],
+  "learning": "Direction and planning"
+}

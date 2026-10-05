@@ -1,0 +1,16 @@
+{
+  "id": "dinosaur-size-parade",
+  "title": "Dinosaur Size Parade",
+  "tagline": "Find the tiny and towering friends in a dinosaur parade.",
+  "howToPlay": "Listen to the request. Compare the objects and tap your answer. Three gentle difficulty settings. Ages 2–5. Learning: Relative size.",
+  "emoji": "🦕",
+  "color": "#e7aa74",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    2,
+    5
+  ],
+  "learning": "Relative size"
+}

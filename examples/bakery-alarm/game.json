@@ -1,0 +1,16 @@
+{
+  "id": "bakery-alarm",
+  "title": "Bakery Alarm",
+  "tagline": "Set the kitchen clock for a pretend bake.",
+  "howToPlay": "Turn the hour and minute hands using the buttons. Match the requested time, then Check. Three gentle difficulty settings. Ages 5–8. Learning: Hours and quarter hours.",
+  "emoji": "⏰",
+  "color": "#f3a8aa",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Hours and quarter hours"
+}

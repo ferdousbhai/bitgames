@@ -1,0 +1,16 @@
+{
+  "id": "season-suitcase",
+  "title": "Season Suitcase",
+  "tagline": "Pack sunny-day and snowy-day adventures.",
+  "howToPlay": "Carry objects to their homes, or tap an object and then its home. Three gentle difficulty settings. Ages 4–7. Learning: Seasons and weather.",
+  "emoji": "🧳",
+  "color": "#f2b572",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    7
+  ],
+  "learning": "Seasons and weather"
+}

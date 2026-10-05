@@ -1,0 +1,16 @@
+{
+  "id": "submarine-subtraction",
+  "title": "Submarine Subtraction",
+  "tagline": "See how many fish remain after friends swim away.",
+  "howToPlay": "Move the toys to tell the story. Make equal shares when sharing, then choose an answer. Three gentle difficulty settings. Ages 5–8. Learning: Concrete subtraction.",
+  "emoji": "🐠",
+  "color": "#ffb0bc",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Concrete subtraction"
+}

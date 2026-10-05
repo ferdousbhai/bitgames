@@ -1,0 +1,16 @@
+{
+  "id": "moon-pebbles",
+  "title": "Moon Pebbles",
+  "tagline": "Gather moon gems for a friendly astronaut.",
+  "howToPlay": "Tap the requested number of objects, then press Done. Tap again to undo. Three gentle difficulty settings. Ages 3–6. Learning: Counting and stopping at a target.",
+  "emoji": "🌙",
+  "color": "#ffd179",
+  "category": "space",
+  "together": false,
+  "featured": false,
+  "ages": [
+    3,
+    6
+  ],
+  "learning": "Counting and stopping at a target"
+}

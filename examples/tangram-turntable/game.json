@@ -1,0 +1,16 @@
+{
+  "id": "tangram-turntable",
+  "title": "Tangram Turntable",
+  "tagline": "Fit five triangles, a square, and a parallelogram into a complete tangram.",
+  "howToPlay": "Turn the colourful key in quarter turns until it matches the pale outline. Press Check. Three gentle difficulty settings. Ages 4–8. Learning: Tangram composition and rotation.",
+  "emoji": "🔺",
+  "color": "#fbc985",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Tangram composition and rotation"
+}

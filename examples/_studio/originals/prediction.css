@@ -1,0 +1,44 @@
+#pin-prediction {
+  border: 0;
+  border-radius: 24px;
+  padding: 24px;
+  color: #34334d;
+  background: #fff5df;
+  max-width: min(440px, calc(100vw - 48px));
+  max-height: 80svh;
+  overflow: auto;
+  text-align: center;
+  font: 600 18px ui-rounded, system-ui, sans-serif;
+}
+#pin-prediction::backdrop { background: #23263e88; }
+#pin-prediction button {
+  min-width: 48px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: #b8d4ff;
+  color: #34334d;
+  font: inherit;
+  padding: 10px 18px;
+  margin: 4px;
+  touch-action: manipulation;
+}
+#pin-prediction button:disabled { opacity: 0.4; }
+.pin-counter { display: flex; justify-content: center; align-items: center; gap: 16px; }
+#pin-value { font-size: 40px; min-width: 64px; }
+
+#pin-discovery {
+  position: fixed;
+  bottom: calc(108px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 40px);
+  width: max-content;
+  border-radius: 16px;
+  background: #fff5dfee;
+  color: #34334d;
+  padding: 8px 14px;
+  font: 700 16px ui-rounded, system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+}

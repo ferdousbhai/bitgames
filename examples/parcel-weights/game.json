@@ -1,0 +1,16 @@
+{
+  "id": "parcel-weights",
+  "title": "Parcel Weights",
+  "tagline": "Find the parcel that balances a delivery scale.",
+  "howToPlay": "Choose weights for the empty pan until both sides are equal. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Missing addends.",
+  "emoji": "📦",
+  "color": "#f2b572",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Missing addends"
+}

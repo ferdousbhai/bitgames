@@ -1,0 +1,80 @@
+/* The studio also carries the game's .panel class (so the game ignores its
+   touches); !important keeps .panel's layout and entrance animation off it. */
+.learning-studio {
+  position: fixed !important;
+  inset: 0 !important;
+  margin: auto !important;
+  width: min(820px, calc(100vw - 32px)) !important;
+  max-width: none !important;
+  max-height: calc(100svh - 32px);
+  padding: 18px !important;
+  border: 2px solid #fff !important;
+  border-radius: 28px !important;
+  color: #554462 !important;
+  background: #fffaf0 !important;
+  overflow: auto;
+  box-sizing: border-box;
+  pointer-events: auto !important;
+  text-align: center;
+  font: 700 17px/1.35 system-ui, sans-serif;
+}
+.learning-studio[open] { display: block !important; animation: none !important; }
+.learning-studio:not([open]) { display: none !important; }
+.learning-studio::backdrop { background: #48385988; backdrop-filter: blur(6px); }
+.learning-studio [hidden] { display: none !important; }
+
+.learning-studio .studio-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  position: sticky;
+  top: -18px;
+  z-index: 2;
+  width: 100%;
+  background: #fffaf0;
+  padding: 8px 0;
+}
+.learning-studio h2 { font-size: 24px; margin: 0; }
+.learning-studio p { margin: 8px 0; }
+
+.learning-studio button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: #e9ddf3;
+  border-radius: 14px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 10px 14px;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  box-shadow: 0 3px 0 #715b7a20;
+}
+.learning-studio button[aria-pressed=true] { background: #c4e4cd; outline: 2px solid #507958; outline-offset: -2px; }
+.learning-studio button:disabled { opacity: 0.5; }
+.learning-studio button:focus-visible { outline: 3px solid #507958; outline-offset: 3px; }
+.learning-studio .studio-close { flex-shrink: 0; width: 48px; padding: 0; }
+
+.learning-studio .studio-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px 0; }
+.learning-studio .studio-preview { display: block; width: 100%; height: 220px; border-radius: 22px; position: static !important; touch-action: auto; }
+.learning-studio .studio-status { width: 100%; min-height: 46px; background: #e8f0dd; border-radius: 16px; padding: 10px; }
+
+/* Cake recipe studio */
+.learning-studio .recipe-strip { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+.learning-studio .recipe-step { background: #f4dfe6; padding: 10px; border-radius: 16px; min-width: 75px; }
+.learning-studio .recipe-step small { display: block; font-size: 12px; }
+
+/* Colour studio mosaic */
+.learning-studio .paint-grid { display: grid; grid-template-columns: repeat(5, 48px); gap: 4px; justify-content: center; }
+.learning-studio .paint-grid button { padding: 0; border: 2px solid #d6c8d8; box-shadow: none; border-radius: 8px; }
+
+/* Short landscape tablets: keep the controls on screen beside a smaller preview. */
+@media (max-height: 820px) and (min-width: 800px) {
+  .learning-studio { font-size: 15px; }
+  .learning-studio p { margin: 5px 0; }
+  .learning-studio .studio-preview { height: 160px; }
+  .learning-studio .studio-row { margin: 6px 0; }
+  .learning-studio .recipe-step { padding: 5px 10px; }
+}

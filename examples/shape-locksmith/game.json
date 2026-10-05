@@ -1,0 +1,16 @@
+{
+  "id": "shape-locksmith",
+  "title": "Shape Locksmith",
+  "tagline": "Open a fairy castle with wonderfully shaped keys.",
+  "howToPlay": "Look at the delivery request and tap its matching toy. Three gentle difficulty settings. Ages 2–5. Learning: Shape recognition.",
+  "emoji": "🔑",
+  "color": "#ffd786",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    2,
+    5
+  ],
+  "learning": "Shape recognition"
+}

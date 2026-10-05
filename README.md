@@ -6,7 +6,7 @@ A web game store built on BitChat's technology. Games are made with Blender and 
 
 - `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog and a Durable Object for multiplayer rooms). Creators host the original game files; the store plays only hash-verified files through its playback gateway and pins each reviewed shipment
 - `packages/game-sdk`: the multiplayer SDK games load from `/vendor/bitgames/multiplayer-1.js`
-- `examples/<game>`: our own games, one per folder, each a standalone creator project deployed to its own Worker (Crash Racers, Bunny Hop, Balloon Pop, Star Catcher, Memory Match, Cake Stack, Penguin Bowling, Bumper Ducks, Fish Pond, Dragon Glide, Paint Splash, Rocket Garage)
+- `examples/<game>`: our own games, one per folder, each a standalone creator project deployed to its own Worker: the original twelve (Crash Racers, Bunny Hop, Balloon Pop, Star Catcher, Memory Match, Cake Stack, Penguin Bowling, Bumper Ducks, Fish Pond, Dragon Glide, Paint Splash, Rocket Garage) plus 88 learning adventures for ages 2–8 (see [the catalogue](examples/CATALOGUE.md))
 - `packages/protocol`: TypeScript port of BitChat's binary packet format, padding, compression and fragmentation
 - `packages/webrtc`: peer-to-peer transport for those packets over WebRTC data channels
 - `apps/signal`: small WebSocket server that introduces peers to each other (game traffic never passes through it)
@@ -114,6 +114,15 @@ node apps/store/scripts/review.mjs take-down GAME --revision REVISION --note "Re
 The reviewer MCP endpoint and its `.mcp.json` entry have been removed; reconnect existing agents to drop the old tool definitions. Creator MCP is still available. You can also review by hand at `/admin` with the admin key.
 
 The MCP endpoint is `/mcp` (streamable HTTP, stateless, `Authorization: Bearer bg_...`). Its code is in `apps/store/src/server/mcp.ts`.
+
+## The 100-game examples catalogue
+
+The 88 learning adventures cover 26 activities, from firefly counting and colour mixing to symmetry, sound memory, route planning and fractions, each with three difficulty settings and iPad touch layouts. Run `pnpm examples:serve` and open http://localhost:4173 to browse all 100 games by age or skill.
+
+- `pnpm examples:assets` rebuilds the models and covers with Blender CLI; then `pnpm examples:build` packages the standalone games
+- `pnpm examples:check` builds and validates the curriculum and shipments
+
+[The studio guide](examples/_studio/README.md) covers editing the games, browser checks and iPad design.
 
 ## Crash Racers
 

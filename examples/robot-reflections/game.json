@@ -1,0 +1,16 @@
+{
+  "id": "robot-reflections",
+  "title": "Robot Reflections",
+  "tagline": "Light both halves of a robot’s panel symmetrically.",
+  "howToPlay": "Tap squares on the empty side to reflect the pattern across the dotted line. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Spatial reasoning.",
+  "emoji": "🤖",
+  "color": "#f8c974",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Spatial reasoning"
+}

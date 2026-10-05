@@ -1,0 +1,16 @@
+{
+  "id": "bear-balance",
+  "title": "Bear Balance",
+  "tagline": "Balance a bear’s seesaw with numbered acorns.",
+  "howToPlay": "Choose weights for the empty pan until both sides are equal. Press Check. Three gentle difficulty settings. Ages 4–7. Learning: Equality and weights.",
+  "emoji": "⚖️",
+  "color": "#f2b36f",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    7
+  ],
+  "learning": "Equality and weights"
+}

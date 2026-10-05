@@ -1,0 +1,16 @@
+{
+  "id": "watermelon-picnic",
+  "title": "Watermelon Picnic",
+  "tagline": "Colour equal slices of a picnic watermelon.",
+  "howToPlay": "Tap equal parts to colour the requested share. Press Check when ready. Three gentle difficulty settings. Ages 5–8. Learning: Part-whole reasoning.",
+  "emoji": "🍉",
+  "color": "#ef796e",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Part-whole reasoning"
+}

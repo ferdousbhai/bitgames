@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>100 Little Adventures · BitGames</title>
+<style>
+* { box-sizing: border-box }
+body { margin: 0; color: #33384e; background: #f7f1e7; font-family: ui-rounded, system-ui, sans-serif }
+main { max-width: 1300px; margin: auto; padding: 40px 24px }
+header { margin-bottom: 34px; max-width: 800px }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 3px; color: #8d759b }
+h1 { font-size: clamp(32px, 5vw, 62px); letter-spacing: -2px; line-height: 1.05; margin: 16px 0 }
+header p { font-size: 18px; line-height: 1.6; color: #747386 }
+.intro { font-size: 12px; color: #8c8591; margin-top: 20px }
+nav { display: flex; gap: 12px; flex-wrap: wrap; margin: 25px 0 }
+input, select { font: inherit; border: 1px solid #ddd3c9; background: #fffc; padding: 14px; border-radius: 14px; min-height: 48px; color: #34384f }
+input { flex: 1; min-width: 240px }
+#count { font-size: 13px; margin: 20px 0; color: #777486 }
+#games { display: grid; grid-template-columns: repeat(auto-fill, minmax(245px, 1fr)); gap: 24px }
+a { color: inherit; text-decoration: none; background: white; border-radius: 22px; overflow: hidden; box-shadow: 0 6px 25px #4b3c4410; transition: transform .18s }
+a:hover { transform: translateY(-4px) }
+a:focus-visible { outline: 4px solid #8276ab; outline-offset: 4px }
+img { width: 100%; aspect-ratio: 1.5; object-fit: cover; background: #e3d6e8 }
+.info { padding: 18px }
+h2 { font-size: 19px; margin: 0 0 9px }
+.info p { font-size: 13px; line-height: 1.6; color: #767583; margin: 9px 0; min-height: 40px }
+.chip { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; color: #9677a0 }
+.skill { font-size: 12px; color: #686f7d }
+@media (max-width: 600px) {
+  main { padding: 24px 16px }
+  #games { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+  .info { padding: 12px }
+  h2 { font-size: 15px }
+  .info p { font-size: 11px }
+  nav { gap: 8px }
+  input { width: 100%; min-width: 100% }
+  select { flex: 1; font-size: 12px; padding: 10px }
+}
+@media (prefers-reduced-motion: reduce) {
+  a { transition: none }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">BITGAMES · THE EXAMPLES COLLECTION</div>
+    <h1>100 little worlds.<br>So much to discover.</h1>
+    <p>Playful 3D adventures for curious minds, ages 2–8. Count fireflies, build castles, mix colours, follow music, and find a new favourite.</p>
+    <div class="intro">Local previews · original 12 games + 88 educational adventures · grown-ups can choose a gentle difficulty inside each new game.</div>
+  </header>
+  <nav aria-label="Filter games">
+    <input id="search" type="search" placeholder="Find an adventure or learning skill…" aria-label="Search games">
+    <select id="age" aria-label="Age">
+      <option value="">All ages</option>
+      <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+    </select>
+    <select id="skill" aria-label="Activity">
+      <option value="">All activities</option>
+    </select>
+  </nav>
+  <div id="count" role="status"></div>
+  <div id="games"></div>
+</main>
+<script type="module">
+const games = await (await fetch('/catalogue/games.json')).json()
+const search = document.getElementById('search')
+const ageSelect = document.getElementById('age')
+const skillSelect = document.getElementById('skill')
+
+const skills = [...new Set(games.map((g) => g.learning))].sort()
+for (const skill of skills) {
+  const option = document.createElement('option')
+  option.value = skill
+  option.textContent = skill
+  skillSelect.append(option)
+}
+
+function element(tag, className, text) {
+  const el = document.createElement(tag)
+  if (className) el.className = className
+  el.textContent = text
+  return el
+}
+
+function card(g) {
+  const link = document.createElement('a')
+  link.href = `/${g.id}/`
+  const img = document.createElement('img')
+  img.src = `/${g.id}/cover.jpg`
+  img.alt = `${g.title} toy world`
+  img.loading = 'lazy'
+  const info = document.createElement('div')
+  info.className = 'info'
+  info.append(
+    element('span', 'chip', `Ages ${g.ages.join('–')}`),
+    element('h2', '', `${g.emoji} ${g.title}`),
+    element('p', '', g.tagline),
+    element('div', 'skill', g.learning),
+  )
+  link.append(img, info)
+  return link
+}
+
+function render() {
+  const query = search.value.toLowerCase()
+  const age = Number(ageSelect.value)
+  const skill = skillSelect.value
+  const shown = games.filter((g) =>
+    (!query || `${g.title} ${g.tagline} ${g.learning}`.toLowerCase().includes(query)) &&
+    (!age || (age >= g.ages[0] && age <= g.ages[1])) &&
+    (!skill || g.learning === skill))
+  document.getElementById('count').textContent = `${shown.length} adventures to explore`
+  document.getElementById('games').replaceChildren(...shown.map(card))
+}
+
+for (const control of [search, ageSelect, skillSelect]) control.addEventListener('input', render)
+render()
+</script>
+</body>
+</html>

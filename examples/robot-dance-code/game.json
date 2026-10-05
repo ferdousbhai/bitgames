@@ -1,0 +1,16 @@
+{
+  "id": "robot-dance-code",
+  "title": "Robot Dance Code",
+  "tagline": "Teach a toy robot a dance one move at a time.",
+  "howToPlay": "Watch and listen to the song, then tap the pads in the same order. Replay whenever you like. Three gentle difficulty settings. Ages 4–8. Learning: Following ordered instructions.",
+  "emoji": "🤖",
+  "color": "#f8c974",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Following ordered instructions"
+}

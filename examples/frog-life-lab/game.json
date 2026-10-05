@@ -1,0 +1,16 @@
+{
+  "id": "frog-life-lab",
+  "title": "Frog Life Lab",
+  "tagline": "Watch pond eggs grow into a hopping frog.",
+  "howToPlay": "Tap the pictures in the order the story happens. Use Reset to start again. Three gentle difficulty settings. Ages 4–8. Learning: Frog metamorphosis.",
+  "emoji": "🐸",
+  "color": "#f5c17c",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Frog metamorphosis"
+}

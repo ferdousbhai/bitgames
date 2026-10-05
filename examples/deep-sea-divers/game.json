@@ -1,0 +1,16 @@
+{
+  "id": "deep-sea-divers",
+  "title": "Deep Sea Divers",
+  "tagline": "Spot the diver nearest the surface or deepest in the sea.",
+  "howToPlay": "Listen to the request. Compare the objects and tap your answer. Three gentle difficulty settings. Ages 4–7. Learning: Spatial vocabulary and depth.",
+  "emoji": "🤿",
+  "color": "#ffb0bc",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    7
+  ],
+  "learning": "Spatial vocabulary and depth"
+}

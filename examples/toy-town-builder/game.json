@@ -1,0 +1,16 @@
+{
+  "id": "toy-town-builder",
+  "title": "Toy Town Builder",
+  "tagline": "Build a miniature skyline from a block blueprint.",
+  "howToPlay": "Tap the towers to add blocks. Match the heights in the blueprint, then Check. Three gentle difficulty settings. Ages 4–8. Learning: Spatial construction from plans.",
+  "emoji": "🏘️",
+  "color": "#f2b572",
+  "category": "puzzle",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Spatial construction from plans"
+}

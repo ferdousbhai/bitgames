@@ -1,0 +1,16 @@
+{
+  "id": "pebble-equations",
+  "title": "Pebble Equations",
+  "tagline": "Build equal pebble piles on a pond seesaw.",
+  "howToPlay": "Choose weights for the empty pan until both sides are equal. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Number decomposition.",
+  "emoji": "🪨",
+  "color": "#f5c17c",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Number decomposition"
+}

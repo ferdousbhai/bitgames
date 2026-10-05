@@ -1,0 +1,16 @@
+{
+  "id": "footprint-detective",
+  "title": "Footprint Detective",
+  "tagline": "Follow curious tracks to their woodland owners.",
+  "howToPlay": "Look at the delivery request and tap its matching toy. Three gentle difficulty settings. Ages 4–7. Learning: Observation and animal tracks.",
+  "emoji": "🐾",
+  "color": "#f2b36f",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    7
+  ],
+  "learning": "Observation and animal tracks"
+}

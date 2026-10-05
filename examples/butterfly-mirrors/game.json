@@ -1,0 +1,16 @@
+{
+  "id": "butterfly-mirrors",
+  "title": "Butterfly Mirrors",
+  "tagline": "Give a butterfly two beautifully matching wings.",
+  "howToPlay": "Tap squares on the empty side to reflect the pattern across the dotted line. Press Check. Three gentle difficulty settings. Ages 4–8. Learning: Reflection symmetry.",
+  "emoji": "🪞",
+  "color": "#f7a8c3",
+  "category": "animals",
+  "together": false,
+  "featured": false,
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Reflection symmetry"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "rocket-docking",
+  "title": "Rocket Docking",
+  "tagline": "Turn a rocket’s docking key into the correct position.",
+  "howToPlay": "Turn the colourful key in quarter turns until it matches the pale outline. Press Check. Three gentle difficulty settings. Ages 5–8. Learning: Rotation and direction.",
+  "emoji": "🚀",
+  "color": "#ffd179",
+  "category": "space",
+  "together": false,
+  "featured": false,
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Rotation and direction"
+}
