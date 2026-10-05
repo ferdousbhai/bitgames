@@ -5,7 +5,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { joinRoom } from 'https://bitgames.store/vendor/bitgames/multiplayer-1.js'
 import { Audio } from './audio.js'
 import { Bot } from './bot.js'
-import { CAR_MODELS, Car, TURBO_COOLDOWN, prepareTemplate } from './car.js'
+import { CAR_MODELS, Car, TURBO_COOLDOWN, carColour, prepareTemplate } from './car.js'
 import { CITIES, buildCity, seeThrough } from './cities.js'
 import { Debris } from './damage.js'
 import { Effects } from './effects.js'
@@ -676,6 +676,7 @@ function makeCar(entry, i, local) {
   const car = new Car({ id: entry.id, model, template: game.templates[model], env, remote: !local, tint: Number(entry.tint) || 0 })
   car.isPlayer = entry.id === game.room.selfId
   car.isBot = !!entry.bot
+  car.colour = carColour(model, Number(entry.tint) || 0)
   car.recovery = car.isPlayer ? PLAYER_RECOVERY : BOT_RECOVERY
   if (local) {
     car.onHit = (hit) => onLocalHit(car, hit)
@@ -685,7 +686,7 @@ function makeCar(entry, i, local) {
   }
   // Tags on everyone else's car; your own would only block your view.
   if (!car.isPlayer) {
-    car.tag = nameTag(String(entry.emoji ?? '🙂'))
+    car.tag = nameTag(String(entry.emoji ?? '🙂'), car.colour)
     car.tag.position.set(0, car.dims.top + 0.9, 0)
     car.root.add(car.tag)
   }
@@ -694,26 +695,32 @@ function makeCar(entry, i, local) {
 }
 
 /**
- * A floating emoji tag above each car so little players can tell who is who.
+ * A floating emoji tag above each car so little players can tell who is who:
+ * a white pill ringed in the car's own colour (the same colour as its dot on
+ * the minimap), so the three 🤖 bots are "the red one", "the blue one"…
  * A fixed size on screen (it never fills the view), fading out up close.
  */
-function nameTag(text) {
+function nameTag(text, colour) {
   const tex = canvasTexture(256, 128, (g) => {
-    // Solid white with a dark rim, so it reads against sky, sand and buildings alike.
-    g.fillStyle = '#ffffff'
-    g.strokeStyle = '#2b2d42'
-    g.lineWidth = 8
     g.beginPath()
-    g.roundRect(8, 8, 240, 112, 56)
+    g.roundRect(6, 6, 244, 116, 58)
+    g.fillStyle = colour
     g.fill()
+    // A dark rim outside, so a yellow or white ring still reads against sand and sky.
+    g.strokeStyle = '#2b2d42'
+    g.lineWidth = 7
     g.stroke()
-    g.font = '80px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif'
+    g.beginPath()
+    g.roundRect(26, 24, 204, 80, 40)
+    g.fillStyle = '#ffffff'
+    g.fill()
+    g.font = '72px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif'
     g.textAlign = 'center'
     g.textBaseline = 'middle'
-    g.fillText(text, 128, 70)
+    g.fillText(text, 128, 68)
   })
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false, toneMapped: false, fog: false }))
-  sprite.scale.set(0.09, 0.045, 1)
+  sprite.scale.set(0.14, 0.07, 1)
   sprite.renderOrder = 10
   return sprite
 }
@@ -1655,17 +1662,33 @@ function drawMinimap() {
   const { g, minX, minZ, scale } = minimap
   g.clearRect(0, 0, 160, 160)
   g.drawImage(minimap.background, 0, 0)
-  // Everyone else first, so the child's own (bigger, yellow) dot is always on top.
-  g.lineWidth = 3
+  // Each car is a dot in its own colour (the colour of its name tag). Everyone else
+  // first, so the child's own dot, bigger and ringed in white, is always on top.
   g.strokeStyle = '#2b2d42'
   for (const pass of [false, true]) {
     for (const car of game.cars.values()) {
       if (car.isPlayer !== pass) continue
-      g.fillStyle = car.isPlayer ? '#ffbe0b' : '#ff6b9d'
+      const x = 20 + (car.body.position.x - minX) * scale, y = 20 + (car.body.position.z - minZ) * scale
       g.beginPath()
-      g.arc(20 + (car.body.position.x - minX) * scale, 20 + (car.body.position.z - minZ) * scale, car.isPlayer ? 10 : 6.5, 0, Math.PI * 2)
-      g.fill()
-      g.stroke()
+      if (car.isPlayer) {
+        g.arc(x, y, 13, 0, Math.PI * 2)
+        g.fillStyle = '#ffffff'
+        g.fill()
+        g.lineWidth = 3
+        g.stroke()
+        g.beginPath()
+        g.arc(x, y, 8, 0, Math.PI * 2)
+        g.fillStyle = car.colour
+        g.fill()
+        g.lineWidth = 2
+        g.stroke()
+      } else {
+        g.arc(x, y, 7.5, 0, Math.PI * 2)
+        g.fillStyle = car.colour
+        g.fill()
+        g.lineWidth = 3
+        g.stroke()
+      }
     }
   }
 }

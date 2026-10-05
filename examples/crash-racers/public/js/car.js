@@ -9,12 +9,12 @@ const _pos = new THREE.Vector3(), _pos2 = new THREE.Vector3()
 const _quat = new THREE.Quaternion(), _quat2 = new THREE.Quaternion()
 
 export const CAR_MODELS = {
-  rocket: { name: 'Rocket', emoji: '🚀', power: 1.12, grip: 1.1 },
-  sunny: { name: 'Sunny', emoji: '😎', power: 1.0, grip: 1.0 },
-  bubbles: { name: 'Bubbles', emoji: '🫧', power: 0.95, grip: 1.05 },
-  bruno: { name: 'Bruno Truck', emoji: '🛻', power: 1.05, grip: 0.95 },
-  pickle: { name: 'Pickle', emoji: '🥒', power: 0.95, grip: 0.95 },
-  siren: { name: 'Siren', emoji: '🚓', power: 1.05, grip: 1.0 },
+  rocket: { name: 'Rocket', emoji: '🚀', power: 1.12, grip: 1.1, colour: '#e8312f' },
+  sunny: { name: 'Sunny', emoji: '😎', power: 1.0, grip: 1.0, colour: '#ffd21f' },
+  bubbles: { name: 'Bubbles', emoji: '🫧', power: 0.95, grip: 1.05, colour: '#6ec3f4' },
+  bruno: { name: 'Bruno Truck', emoji: '🛻', power: 1.05, grip: 0.95, colour: '#ff8a1c' },
+  pickle: { name: 'Pickle', emoji: '🥒', power: 0.95, grip: 0.95, colour: '#4cb944' },
+  siren: { name: 'Siren', emoji: '🚓', power: 1.05, grip: 1.0, colour: '#262a3b' },
 }
 
 const COM_HEIGHT = 0.55
@@ -170,6 +170,12 @@ function isInside(obj, ancestor) {
  */
 const TINTS = ['#ffffff', '#1e90ff', '#ff4fa3', '#36c25b'].map((c) => new THREE.Color(c))
 const tinted = (name, color, n) => color.lerp(TINTS[n % TINTS.length], name.startsWith('paint_') ? 0.75 : 0.35)
+
+/** The colour a child calls a car ("the red one"), as painted: for its name tag and its minimap dot. */
+export const carColour = (model, tint = 0) => {
+  const c = new THREE.Color(CAR_MODELS[model].colour)
+  return '#' + (tint > 0 ? tinted('paint_', c, tint) : c).getHexString()
+}
 
 /**
  * Repaints a car instance in tint `n`: its own copies of the paint materials
