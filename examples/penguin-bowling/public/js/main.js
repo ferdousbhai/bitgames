@@ -95,6 +95,13 @@ const prediction = createPrediction({
   button: $('predict-pins'),
   hud: $('hud'),
   getStanding: () => pins.countStanding(),
+  muted: () => audio.muted,
+  sound: (kind) => {
+    audio.unlock()
+    if (kind === 'tap') audio.squeak(0.9 + Math.random() * 0.4)
+    else if (kind === 'keep') audio.jingle(3)
+    else if (kind === 'exact') setTimeout(() => audio.jingle(10), 500)
+  },
   // Drop any aim in progress so the penguin doesn't launch when the dialog closes.
   onOpen: () => {
     keys.clear()
@@ -324,6 +331,7 @@ function toAim() {
 }
 
 function gameOver() {
+  prediction.reset() // the results card gets the stage to itself
   game.state = 'over'
   const total = card.total
   const newBest = total > game.best
@@ -443,6 +451,7 @@ function setTheme(name) {
   store.set('lane', name)
   for (const b of document.querySelectorAll('.lane-btn')) b.classList.toggle('on', b.dataset.theme === name)
   scenery.setTheme(name)
+  lane.setNight(THEMES[name].night)
   pins.build(THEMES[name].pins)
   pins.list.forEach((p) => (p.drop = 0))
   audio.setTune(name)

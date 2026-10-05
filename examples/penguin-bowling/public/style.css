@@ -152,12 +152,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   100% { transform: translate(-50%, -260%) scale(1); opacity: 0; }
 }
 
-.hint-swipe { position: fixed; left: 50%; bottom: 120px; font-size: 60px; pointer-events: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); animation: swipe 1.6s ease-in-out infinite; }
+.hint-swipe { position: fixed; left: 50%; bottom: min(120px, 22vh); font-size: 60px; pointer-events: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); animation: swipe 1.6s ease-in-out infinite; }
 @keyframes swipe {
   0% { transform: translate(-50%, 40px); opacity: 0; }
   15% { opacity: 1; }
-  70% { transform: translate(-50%, -140px); opacity: 1; }
-  100% { transform: translate(-50%, -160px); opacity: 0; }
+  70% { transform: translate(-50%, var(--swipe-up, -140px)); opacity: 1; }
+  100% { transform: translate(-50%, calc(var(--swipe-up, -140px) - 20px)); opacity: 0; }
 }
 
 .trophy { font-size: 70px; line-height: 1; animation: bob 1.6s ease-in-out infinite; }
@@ -175,10 +175,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .scorecard { order: 3; width: 100%; justify-content: center; gap: 2px; }
   .frame { flex: 1; width: auto; min-width: 0; }
   .frame.wide { flex: 1.3; }
-  .frame .rolls { font-size: 12px; height: 16px; } .frame .rolls span { line-height: 16px; }
-  .frame .tot { font-size: 13px; height: 17px; line-height: 17px; }
-  .rack { top: calc(112px + env(safe-area-inset-top)); }
-  .intro { top: calc(122px + env(safe-area-inset-top)); left: calc(50% - 40px); }
+  .frame .rolls { font-size: 14px; height: 18px; } .frame .rolls span { line-height: 18px; }
+  .frame .tot { font-size: 16px; height: 20px; line-height: 20px; }
+  .rack { top: calc(116px + env(safe-area-inset-top)); }
+  .intro { top: calc(126px + env(safe-area-inset-top)); left: calc(50% - 40px); }
 }
 @media (max-height: 520px) {
   .card { padding: 12px 20px; gap: 8px; }
@@ -187,6 +187,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .big-go { padding: 8px 40px; font-size: 30px; }
   .ctl { width: 52px; height: 52px; }
   .go { height: 60px; }
+  /* The swipe hand stays on the penguin's side of the lane, below the pins */
+  .hint-swipe { --swipe-up: -12vh; font-size: 50px; }
+  /* Sideways phones: a slim "Frame 2" pill that leaves the arch and pins clear */
+  .intro { top: calc(62px + env(safe-area-inset-top)); padding: 0 16px 0 10px; gap: 6px; }
+  #intro-emoji { font-size: 24px; }
+  #intro-title { font-size: 20px; }
 }
 /* Tablets: bigger aim buttons for small hands on a big screen */
 @media (pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
@@ -194,4 +200,25 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .ctl.small { width: 68px; height: 68px; font-size: 32px; }
   .go { height: 92px; padding: 0 34px; font-size: 46px; }
   .round-btn { width: 58px; height: 58px; font-size: 28px; }
+}
+/* Tablets: a bigger title card, with lane buttons sized for small hands */
+@media (min-width: 700px) and (min-height: 700px) {
+  #title .card { max-width: 640px; padding: 30px 44px; gap: 20px; border-radius: 44px; }
+  #title .logo { font-size: 88px; }
+  .lane-btn { width: 136px; padding: 14px 8px 10px; border-radius: 30px; }
+  .lane-btn span { font-size: 62px; }
+  .lane-btn small { font-size: 21px; }
+  .chip { font-size: 25px; padding: 10px 24px; }
+  .chip-icon { font-size: 32px; }
+  #title .big-go { font-size: 54px; padding: 14px 70px; }
+  .scores { font-size: 22px; }
+}
+@media (min-width: 1000px) and (min-height: 700px) {
+  .frame { width: 44px; } .frame.wide { width: 58px; }
+  .frame .rolls { font-size: 16px; height: 22px; } .frame .rolls span { line-height: 22px; }
+  .frame .tot { font-size: 18px; height: 24px; line-height: 24px; }
+}
+/* Narrow tablets: the scorecard squeezes so the top bar stays on one row */
+@media (min-width: 761px) and (max-width: 900px) {
+  .frame { width: 32px; } .frame.wide { width: 44px; }
 }

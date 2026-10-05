@@ -248,6 +248,7 @@ export class Lane {
     // Snow banks along both sides, with a rounded top
     const bankMat = new THREE.MeshStandardMaterial({ color: '#f4f9ff', roughness: 0.95 })
     this.bankMat = bankMat
+    this.gutterMat = gutterMat
     const bank = new THREE.CapsuleGeometry(0.42, gLen, 6, 12)
     bank.rotateX(Math.PI / 2)
     for (const s of [-1, 1]) {
@@ -302,6 +303,13 @@ export class Lane {
     this.aimArrow = new THREE.Mesh(ageo, new THREE.MeshBasicMaterial({ color: '#ffca3a', transparent: true, opacity: 0.95, depthWrite: false }))
     this.aimArrow.visible = false
     r.add(this.aimArrow)
+  }
+
+  /** Moonlight: the ice and snow banks turn night-blue. */
+  setNight(on) {
+    this.iceMaterial.color.set(on ? '#9fb2ea' : '#ffffff')
+    this.bankMat.color.set(on ? '#a3b2ea' : '#f4f9ff')
+    this.gutterMat.color.set(on ? '#6f93d6' : '#8fd0f2')
   }
 
   setBumpers(on) {

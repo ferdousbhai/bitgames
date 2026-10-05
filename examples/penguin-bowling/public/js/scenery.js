@@ -24,12 +24,12 @@ export const THEMES = {
     name: 'Northern Lights',
     emoji: '🌌',
     pins: 'snowman',
-    sky: ['#040824', '#14225a', '#2f4f8f'],
-    fog: ['#1a2a5c', 35, 110],
-    hemi: ['#8fa8ff', '#2a3570', 0.75],
-    sun: ['#c4d2ff', 1.25],
-    env: 0.3,
-    exposure: 1.05,
+    sky: ['#040824', '#122060', '#2a4590'],
+    fog: ['#16245a', 30, 100],
+    hemi: ['#7d94f0', '#1c2560', 0.7],
+    sun: ['#b4c4ff', 1.15],
+    env: 0.22,
+    exposure: 1.0,
     night: true,
   },
   bay: {
@@ -150,6 +150,11 @@ export class Scenery {
     }
     scene.add(this.aurora)
 
+    // Warm halos around the lanterns at night, so the lane looks lamp-lit.
+    this.halos = new THREE.Group()
+    this.haloMat = new THREE.SpriteMaterial({ map: softDot, color: '#ffb547', transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
+    scene.add(this.halos)
+
     this.clouds = []
     this.bobbers = []
     this.whale = null
@@ -207,9 +212,11 @@ export class Scenery {
     const bay = name === 'bay'
     this.water.visible = this.floe.visible = bay
     this.ground.visible = !bay
-    this.snowMat.color.set(th.night ? '#dfe8ff' : '#f2f8ff')
-    if (this.iglooGlow) this.iglooGlow.emissiveIntensity = th.night ? 2.2 : 0
-    if (this.lanternGlow) this.lanternGlow.emissiveIntensity = th.night ? 3 : 0.4
+    // Moonlit snow is blue, not grey, so the Night lane reads as night.
+    this.snowMat.color.set(th.night ? '#8796d4' : '#f2f8ff')
+    if (this.iglooGlow) this.iglooGlow.emissiveIntensity = th.night ? 3.2 : 0
+    if (this.lanternGlow) this.lanternGlow.emissiveIntensity = th.night ? 5 : 0.4
+    this.halos.clear()
 
     this.props.traverse((o) => o.isMesh && o.name.startsWith('merged_') && o.geometry.dispose())
     this.props.clear()
@@ -223,6 +230,15 @@ export class Scenery {
     for (const z of [-1.5, -6, -10.5]) {
       this.place('lantern', -(LANE.half + LANE.gutter + 2.4), z, { rot: 0 })
       this.place('lantern', LANE.half + LANE.gutter + 2.4, z, { rot: Math.PI })
+      if (th.night) {
+        for (const sx of [-1, 1]) {
+          const h = new THREE.Sprite(this.haloMat)
+          h.position.set(sx * (LANE.half + LANE.gutter + 2.4 - 0.45), 1.12, z)
+          h.scale.setScalar(1.6)
+          h.userData.ph = z * 1.7 + sx
+          this.halos.add(h)
+        }
+      }
     }
     const sideTrees = [[-5.5, -3.5, 1.1], [6, -5.5, 1.2], [-9, -12, 1.4], [9.5, -15, 1.3], [-5.6, -20, 1.2], [5.2, -21.5, 1.3], [-12, -24, 1.6], [12, -27, 1.5], [-2.5, -27, 1.4], [3, -30, 1.7], [-16, -9, 1.5], [16, -8, 1.4], [-8, -32, 1.8], [9, -36, 1.8]]
     if (name !== 'bay') {
@@ -284,6 +300,7 @@ export class Scenery {
         this.onSpout?.(p)
       }
     }
+    for (const h of this.halos.children) h.scale.setScalar(1.6 + Math.sin(t * 2.3 + h.userData.ph) * 0.08)
     if (this.sun) this.sun.rotation.z = Math.sin(t * 0.6) * 0.06
   }
 }

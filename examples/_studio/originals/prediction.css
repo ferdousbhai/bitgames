@@ -1,44 +1,94 @@
 #pin-prediction {
   border: 0;
-  border-radius: 24px;
-  padding: 24px;
+  border-radius: 28px;
+  padding: 18px 22px 20px;
   color: #34334d;
   background: #fff5df;
-  max-width: min(440px, calc(100vw - 48px));
-  max-height: 80svh;
+  box-shadow: 0 8px 0 #e4cfa4, 0 20px 50px #0004;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100svh - 24px);
   overflow: auto;
   text-align: center;
-  font: 600 18px ui-rounded, system-ui, sans-serif;
+  font: 700 18px ui-rounded, system-ui, sans-serif;
 }
+#pin-prediction h2 { margin: 0 0 4px; font-size: 24px; }
+#pin-prediction p { margin: 6px 0; }
 #pin-prediction::backdrop { background: #23263e88; }
 #pin-prediction button {
   min-width: 48px;
   min-height: 48px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #b8d4ff;
   color: #34334d;
   font: inherit;
   padding: 10px 18px;
   margin: 4px;
+  box-shadow: 0 4px 0 #8fb0e0;
   touch-action: manipulation;
 }
+#pin-prediction button:active { transform: translateY(3px); box-shadow: 0 1px 0 #8fb0e0; }
 #pin-prediction button:disabled { opacity: 0.4; }
-.pin-counter { display: flex; justify-content: center; align-items: center; gap: 16px; }
-#pin-value { font-size: 40px; min-width: 64px; }
+#pin-prediction .pin-keep { background: #8ac926; color: #fff; box-shadow: 0 4px 0 #5f9a12; text-shadow: 0 1px 0 #0003; }
 
+/* The pins to tap: a little bowling triangle; the guessed ones tip over. */
+.pin-pick { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 6px 0 2px; }
+.pin-pick div { display: flex; gap: 6px; }
+#pin-prediction .pin {
+  width: 48px; min-width: 48px; height: 48px; padding: 0; margin: 0; border-radius: 50%;
+  background: transparent; box-shadow: none; position: relative;
+}
+#pin-prediction .pin::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 22px; height: 38px; margin: -19px 0 0 -11px;
+  border-radius: 11px 11px 9px 9px; border: 3px solid #4cc9f0;
+  background: linear-gradient(#fff 0 34%, #ff6b9d 34% 46%, #fff 46%); box-shadow: inset 0 -5px 0 #0001;
+  transition: transform .25s cubic-bezier(.2, 1.6, .4, 1), opacity .25s;
+}
+#pin-prediction .pin.fall::before { transform: translateY(8px) rotate(75deg) scale(.8); border-color: #ff6b9d; opacity: .75; }
+
+.pin-counter { display: flex; justify-content: center; align-items: center; gap: 16px; }
+#pin-prediction .pin-counter button { width: 60px; height: 60px; padding: 0; border-radius: 50%; font-size: 34px; line-height: 1; }
+#pin-value { font-size: 48px; min-width: 64px; color: #e05a8a; }
+.pin-actions { display: flex; flex-wrap: wrap; justify-content: center; }
+
+/* Sideways phones: the pins sit beside the number so the whole dialog fits. */
+@media (max-height: 480px) {
+  #pin-prediction { width: min(620px, calc(100vw - 32px)); padding: 10px 16px 12px; display: none; }
+  #pin-prediction[open] { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; }
+  #pin-prediction h2, #pin-prediction > p:first-of-type, .pin-actions { grid-column: 1 / -1; }
+  #pin-prediction h2 { font-size: 20px; }
+  .pin-pick { grid-row: 3 / 5; }
+  #pin-prediction .pin { width: 44px; min-width: 44px; height: 44px; }
+}
+/* Tablets: everything a size bigger for small fingers. */
+@media (min-width: 700px) and (min-height: 700px) {
+  #pin-prediction { width: 540px; font-size: 22px; padding: 24px 28px; }
+  #pin-prediction h2 { font-size: 30px; }
+  #pin-prediction .pin { width: 58px; height: 58px; }
+  #pin-prediction .pin-counter button { width: 72px; height: 72px; font-size: 40px; }
+  #pin-value { font-size: 60px; }
+}
+
+/* The result line sits top-left under the buttons, away from the lane and the penguin. */
 #pin-discovery {
   position: fixed;
-  bottom: calc(108px + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: calc(100vw - 40px);
-  width: max-content;
+  top: calc(70px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left));
+  max-width: min(300px, calc(100vw - 110px));
   border-radius: 16px;
   background: #fff5dfee;
   color: #34334d;
-  padding: 8px 14px;
-  font: 700 16px ui-rounded, system-ui, sans-serif;
-  text-align: center;
+  padding: 6px 12px 8px;
+  box-shadow: 0 4px 0 #2b4a8a40;
+  font: 700 14px/1.25 ui-rounded, system-ui, sans-serif;
+  text-align: left;
   pointer-events: none;
+  animation: pin-pop .45s cubic-bezier(.2, 1.7, .4, 1);
 }
+#pin-discovery[hidden] { display: none; }
+#pin-discovery .pin-icons { display: block; font-size: 26px; line-height: 1.15; white-space: nowrap; color: #2b4a8a; }
+#pin-discovery.exact { background: #ffe066; box-shadow: 0 4px 0 #d08a00; }
+@keyframes pin-pop { from { transform: scale(.4); opacity: 0; } }
+@media (max-width: 760px) { #pin-discovery { top: calc(112px + env(safe-area-inset-top)); } }
+@media (max-height: 480px) { #pin-discovery { top: calc(66px + env(safe-area-inset-top)); font-size: 12px; max-width: 220px; } #pin-discovery .pin-icons { font-size: 22px; } }
+@media (max-width: 760px) and (max-height: 480px) { #pin-discovery { top: calc(116px + env(safe-area-inset-top)); } }
