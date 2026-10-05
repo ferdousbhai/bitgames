@@ -308,6 +308,8 @@ function nextRoll() {
   game.dance = false
   if (card.over) return gameOver()
   if (r.resetPins) {
+    // A fresh rack: the last frame's "fell + standing" line no longer matches.
+    prediction.reset()
     pins.reset()
     audio.drop()
     if (r.frameDone) showIntro(card.frame === FRAMES - 1 ? '🏁' : '🎳', card.frame === FRAMES - 1 ? 'Last frame!' : `Frame ${card.frame + 1}`)
@@ -675,10 +677,11 @@ const wantLook = new THREE.Vector3()
 /**
  * Camera framing per state. Aiming uses a long lens from further back, so the
  * pins at the far end look big while the penguin stays the same size.
- * [landscape, portrait] pairs.
+ * [landscape, portrait] pairs; aim adds a third, for sideways phones.
+ * Phones aim tighter (about 35-60% bigger pins); the lane still fits across.
  */
 const CAM = {
-  aim: { fov: 26, back: [10, 11], up: [3.6, 4.4], look: [-10, -9.5] },
+  aim: { fov: [26, 19, 16], back: [10, 12, 10], up: [3.6, 4.3, 3.6], look: [-10, -8.8, -6.6] },
   roll: { fov: 40, back: [5.6, 6.6], up: [2.9, 3.4] },
   deck: { fov: 40, back: [6.6, 6.2], up: [3.4, 4.1], look: [-1.4, -1.8] },
 }
@@ -696,9 +699,10 @@ function updateCamera(dt, t) {
     }
     case 'aim': {
       const c = CAM.aim
-      wantFov = c.fov
-      wantPos.set(game.x * 0.5, c.up[pi], LANE.start + c.back[pi])
-      wantLook.set(game.x * 0.15, 0, c.look[pi])
+      const ai = pi || (innerHeight <= 520 ? 2 : 0)
+      wantFov = c.fov[ai]
+      wantPos.set(game.x * 0.5, c.up[ai], LANE.start + c.back[ai])
+      wantLook.set(game.x * 0.15, 0, c.look[ai])
       break
     }
     case 'roll': {

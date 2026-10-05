@@ -101,7 +101,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .ctl { pointer-events: auto; width: 62px; height: 62px; border-radius: 50%; background: rgba(255,255,255,.85); color: #2b4a8a; font-size: 30px; font-weight: 900; box-shadow: 0 5px 0 rgba(43,74,138,.3); }
 .ctl.small { width: 54px; height: 54px; font-size: 26px; }
 .ctl:active, .go:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(43,74,138,.3); }
-.go { pointer-events: auto; height: 74px; padding: 0 26px; border-radius: 999px; background: linear-gradient(#ffd166, #ffb703); font-size: 38px; box-shadow: 0 6px 0 #d08a00; animation: pulse 1.6s ease-in-out infinite; }
+.go { pointer-events: auto; height: 74px; padding: 0 26px; white-space: nowrap; flex: none; border-radius: 999px; background: linear-gradient(#ffd166, #ffb703); font-size: 38px; box-shadow: 0 6px 0 #d08a00; animation: pulse 1.6s ease-in-out infinite; }
 
 .banner {
   position: absolute; left: 50%; top: calc(30% + env(safe-area-inset-top) / 2); transform: translate(-50%, -50%) scale(0); opacity: 0;
@@ -179,6 +179,19 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .frame .tot { font-size: 16px; height: 20px; line-height: 20px; }
   .rack { top: calc(116px + env(safe-area-inset-top)); }
   .intro { top: calc(126px + env(safe-area-inset-top)); left: calc(50% - 40px); }
+}
+/* Small phones: aim buttons shrink a little so the slide button never runs off screen */
+@media (max-width: 380px) {
+  .controls { left: calc(10px + env(safe-area-inset-left)); right: calc(10px + env(safe-area-inset-right)); }
+  .ctl-group { gap: 8px; }
+  .ctl { width: 56px; height: 56px; font-size: 26px; }
+  .ctl.small { width: 50px; height: 50px; font-size: 22px; }
+  .go { height: 66px; padding: 0 16px; font-size: 32px; }
+}
+@media (max-width: 340px) {
+  .ctl { width: 50px; height: 50px; }
+  .ctl.small { width: 46px; height: 46px; }
+  .go { padding: 0 12px; font-size: 28px; }
 }
 @media (max-height: 520px) {
   .card { padding: 12px 20px; gap: 8px; }
