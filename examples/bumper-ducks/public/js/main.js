@@ -924,12 +924,12 @@ function playEvent(e) {
       if (mine) audio.click()
       break
     case 'zzz':
-      // Robots napping while the children rest: a sleepy 💤 over each one.
-      if (Array.isArray(e.ids))
-        for (const id of e.ids) {
-          const d = posOf(id)
-          if (d && !d.fly) effects.label('💤', { x: d.x, y: 2.6, z: d.z }, { size: 'big' })
-        }
+      // Robots napping while the children rest: each nods off under sleepy Zs (refreshed while the nap lasts).
+      if (Array.isArray(e.ids)) for (const id of e.ids) game.views.get(id)?.nap(3)
+      break
+    case 'wake':
+      // A child paddled: the robots wake up at once.
+      if (Array.isArray(e.ids)) for (const id of e.ids) game.views.get(id)?.wake()
       break
     case 'end':
       if (isHost()) endRound()
@@ -1154,6 +1154,11 @@ function step(dt) {
     if (napping && sim.time - (game.lastZzz ?? -9) > 2.2) {
       game.lastZzz = sim.time
       const e = { k: 'zzz', ids: [...game.bots.keys()] }
+      playEvent(e)
+      outbox.push(e)
+    } else if (!napping && game.lastZzz > 0) {
+      game.lastZzz = -9
+      const e = { k: 'wake', ids: [...game.bots.keys()] }
       playEvent(e)
       outbox.push(e)
     }

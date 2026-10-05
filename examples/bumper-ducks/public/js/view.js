@@ -76,6 +76,27 @@ export function emojiTag(emoji, me = false) {
   return s
 }
 
+/** Sleepy Zs for a napping robot, drawn like the game's outlined labels. */
+function sleepTag() {
+  const tex = canvasTexture(128, 128, (g) => {
+    g.lineJoin = 'round'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    for (const [x, y, size] of [[34, 96, 50], [72, 60, 40], [102, 28, 30]]) {
+      g.font = `900 ${size}px system-ui, sans-serif`
+      g.lineWidth = size * 0.26
+      g.strokeStyle = '#24306e'
+      g.strokeText('Z', x, y)
+      g.fillStyle = '#ffffff'
+      g.fillText('Z', x, y)
+    }
+  })
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }))
+  s.renderOrder = 11
+  s.visible = false
+  return s
+}
+
 const bubbleMaterial = makeBubbleMaterial()
 const bubbleGeometry = new THREE.SphereGeometry(0.55, 20, 14)
 const shieldGeometry = new THREE.SphereGeometry(1, 24, 16)
@@ -121,8 +142,23 @@ export class DuckView {
     this.root.add(this.shield)
     this.phase = Math.random() * 10
     this.squash = 0
+    this.sleepT = 0 // seconds of nap left (refreshed while the robots keep napping)
+    this.sleepK = 0
     this.wakeT = 0
     this.hop = 0
+  }
+
+  /** A robot napping while the children rest: it nods off under drifting Zs. */
+  nap(seconds) {
+    this.sleepT = seconds
+    if (!this.zzz) {
+      this.zzz = sleepTag()
+      this.root.add(this.zzz)
+    }
+  }
+
+  wake() {
+    this.sleepT = 0
   }
 
   bonked(strength = 1) {
@@ -151,6 +187,18 @@ export class DuckView {
     this.spinner.scale.set(s * (1 + sq), s * (1 - sq), s * (1 + sq))
     this.shadow.scale.set(2.8 * s * (1 - Math.min(0.6, y * 0.1)), 1, 2.8 * s * (1 - Math.min(0.6, y * 0.1)))
     this.tag.position.y = 2.5 * s + 0.4 + y
+    // Napping: the duck nods forward and breathes slowly; the Zs bob beside its badge.
+    this.sleepT = Math.max(0, this.sleepT - dt)
+    this.sleepK += ((this.sleepT > 0 && !d.fly ? 1 : 0) - this.sleepK) * Math.min(1, dt * 4)
+    this.duck.rotation.x = this.sleepK * (0.28 + Math.sin(t * 1.6 + this.phase) * 0.08)
+    if (this.zzz) {
+      const k = this.sleepK
+      this.zzz.visible = k > 0.02
+      const breathe = 1 + Math.sin(t * 1.6 + this.phase) * 0.12
+      this.zzz.scale.setScalar(1.7 * k * breathe)
+      this.zzz.position.set(1.05, this.tag.position.y + 0.6 + Math.sin(t * 1.6 + this.phase) * 0.15, 0)
+      this.zzz.material.opacity = Math.min(1, k * 1.2)
+    }
     if (this.ring) {
       this.ring.visible = !d.fly
       this.ring.scale.setScalar(s * (1 + Math.sin(t * 5) * 0.05))
