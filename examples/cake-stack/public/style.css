@@ -424,3 +424,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @media (max-height: 420px) and (min-aspect-ratio: 6/5) {
   #hud.carding .hud-right { visibility: hidden; }
 }
+
+/* --- Pass 6: on short sideways phones the stacking banners sit low, so they never hide the sliding layer --- */
+@media (max-height: 420px) and (min-aspect-ratio: 1/1) {
+  .banner.low:not(.mission) { top: calc(100% - 82px - env(safe-area-inset-bottom)); }
+}

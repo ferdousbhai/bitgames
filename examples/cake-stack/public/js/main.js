@@ -409,7 +409,7 @@ function land(L) {
     stars = 2
     sound.perfect(game.streak)
     effects.perfect(new THREE.Vector3(newX + cake.group.position.x, y + 0.05, 0), newW)
-    banner(game.streak >= 3 ? `Perfect x${game.streak}!` : 'Perfect!', 'gold')
+    banner(game.streak >= 3 ? `Perfect x${game.streak}!` : 'Perfect!', 'gold low')
     customer?.cheer(0.8)
     if (grew) {
       sound.grow()
@@ -540,7 +540,7 @@ async function decorateSide(L, k) {
     L.decor.add(pivot)
     items.push(o)
   }
-  banner('Yummy!', 'gold')
+  banner('Yummy!', 'gold low')
   const front = items.map((o, i) => ({ o, i })).sort((a, b) => Math.cos(a.o.parent.rotation.y) - Math.cos(b.o.parent.rotation.y))
   front.reverse()
   for (let j = 0; j < front.length; j++) {
@@ -729,8 +729,9 @@ async function blowCandles() {
   // Party!
   const cx = cake.group.position.x
   effects.shower(3.5, topY() + 2.5, 220, cx)
-  effects.popper(new THREE.Vector3(cx - 1.6, 0.2, 0.6), 1)
-  effects.popper(new THREE.Vector3(c.group.position.x + 0.6, 0.2, 0.6), -1)
+  // The poppers burst up and outward from either side, so confetti never hides the birthday friend's face
+  effects.popper(new THREE.Vector3(cx - 1.5, 0.2, 0.5), -0.3)
+  effects.popper(new THREE.Vector3(c.group.position.x + 0.95, 0.2, -0.1), 0.3)
   effects.shake = 0.5
   sound.cheer()
   const tune = sound.birthday()
@@ -984,6 +985,7 @@ function hideIntro() {
 }
 
 const hintAt = { pos: null }
+const hintSpot = new THREE.Vector3()
 function showHintAt(pos) {
   hintAt.pos = pos
   $('hint').classList.remove('hidden')
@@ -998,13 +1000,18 @@ function updateIdle(dt) {
 function updateHint() {
   const el = $('hint')
   if (el.classList.contains('hidden')) return
+  // The tap hint points at the top of the cake, where the sliding layer will land
+  const pos = hintAt.pos || (cake && game.state === 'play' ? hintSpot.set(cake.group.position.x + topLayer().x, topY(), 0) : null)
   let x = innerWidth / 2
   let y = innerHeight * 0.62
-  if (hintAt.pos) {
-    const v = hintAt.pos.clone().project(camera)
+  if (pos) {
+    const v = pos.clone().project(camera)
     x = ((v.x + 1) / 2) * innerWidth
-    y = ((1 - v.y) / 2) * innerHeight + 20
+    y = ((1 - v.y) / 2) * innerHeight + (hintAt.pos ? 20 : 2)
   }
+  // ...and stays clear of the layer dots, even on very short sideways phones
+  const bar = $('pips').parentElement
+  if (game.state === 'play' && bar.offsetHeight) y = Math.min(y, bar.offsetTop - el.offsetHeight - 22)
   el.style.transform = `translate(${x}px, ${y}px)`
 }
 
