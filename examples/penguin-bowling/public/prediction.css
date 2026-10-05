@@ -76,6 +76,20 @@
   #pin-prediction .pin-actions { grid-column: 2; }
   #pin-prediction .pin-actions button { padding: 8px 14px; }
 }
+/* The shortest sideways screens (~250-290px tall, e.g. a small iPhone with Safari's
+   bars): the pin rows tuck closer so the last pin and "Just play" stay in view. */
+@media (max-height: 290px) {
+  #pin-prediction { padding-top: 6px; padding-bottom: 8px; }
+  #pin-prediction h2 { font-size: 17px; }
+  #pin-prediction .pin { height: 44px; min-height: 44px; }
+  #pin-prediction .pin::before { width: 20px; height: 34px; margin: -17px 0 0 -10px; }
+  #pin-prediction .pin.fall::before { transform: translateY(6px) rotate(75deg) scale(.8); }
+  #pin-prediction .pin.gap::before { width: 12px; height: 12px; margin: -6px 0 0 -6px; }
+  #pin-prediction p { margin: 1px 0; }
+  #pin-prediction .pin-counter button { width: 46px; height: 46px; font-size: 28px; }
+  #pin-value { font-size: 34px; }
+  #pin-prediction .pin-actions button { padding: 6px 14px; margin: 3px 4px; }
+}
 /* Tablets: everything a size bigger for small fingers. */
 @media (min-width: 700px) and (min-height: 700px) {
   #pin-prediction { width: 540px; font-size: 22px; padding: 24px 28px; }
