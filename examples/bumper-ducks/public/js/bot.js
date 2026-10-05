@@ -16,8 +16,11 @@ export class Bot {
     this.moodT = 2 + seed
   }
 
-  update(sim, dt) {
+  /** `lead` is how far this robot is ahead of the best child; robots in front ease off so children win plenty. */
+  update(sim, dt, lead = 0) {
     const d = this.duck
+    // Gentler still in the bubble party at the end, where a quick robot could snatch the win.
+    const easy = Math.min(1, Math.max(0, sim.party ? (lead + 1) / 4 : (lead - 1) / 6))
     if (d.fly) {
       d.ix = d.iz = 0
       return
@@ -27,7 +30,7 @@ export class Bot {
     if (this.moodT <= 0) {
       // Mostly collecting, now and then a bonk chase (less often against children on giants or shields).
       const r = Math.random()
-      this.mood = r < 0.25 ? 'bonk' : r < 0.42 ? 'rest' : 'collect'
+      this.mood = r < 0.25 ? 'bonk' : r < 0.42 + easy * 0.3 ? 'rest' : 'collect'
       this.moodT = this.mood === 'bonk' ? 2.5 + Math.random() * 2 : this.mood === 'rest' ? 0.8 + Math.random() * 1.2 : 4 + Math.random() * 4
     }
     if (this.mood === 'rest') {
@@ -62,12 +65,12 @@ export class Bot {
       tz -= (d.z / dist) * k
     }
     const len = Math.hypot(tx, tz) || 1
-    const pace = this.skill * (t?.duck ? 1 : Math.min(1, 0.5 + len / 4))
+    const pace = this.skill * (1 - easy * 0.7) * (t?.duck ? 1 : Math.min(1, 0.5 + len / 4))
     d.ix = (tx / len) * pace
     d.iz = (tz / len) * pace
     // Dash at a nearby duck, or at a star that's getting away.
     if (t?.duck && len < 4 && d.dashCd <= 0 && Math.random() < dt * 2.5 * this.skill) sim.dash(d)
-    else if (t && !t.duck && len > 5 && d.dashCd <= 0 && Math.random() < dt * 0.4) sim.dash(d)
+    else if (t && !t.duck && !easy && len > 5 && d.dashCd <= 0 && Math.random() < dt * 0.4) sim.dash(d)
   }
 
   choose(sim) {

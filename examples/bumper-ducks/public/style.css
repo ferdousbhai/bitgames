@@ -22,6 +22,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .screen h1 { font-size: clamp(32px, 6.5vw, 60px); margin: 0; text-shadow: 0 4px 0 #ff6b9d; }
 .screen h2 { margin: 4px 0 0; font-size: clamp(20px, 3.6vw, 30px); text-shadow: 0 3px 0 rgba(0,0,0,.18); }
 .hint { opacity: 0.9; font-size: 18px; font-weight: 700; margin: 0; }
+/* The podium sits on a lighter wash, so the confetti behind it stays in view. */
+#results { background: radial-gradient(circle at 50% 18%, rgba(255,255,255,0.35), transparent 55%), linear-gradient(170deg, rgba(76,190,255,0.45), rgba(124,96,255,0.55)); }
+#results h1 { -webkit-text-stroke: 8px #c2185b; paint-order: stroke fill; text-shadow: 0 5px 0 #c2185b; }
+.big-go.asked { animation: none; opacity: .6; transform: translateY(6px); box-shadow: 0 2px 0 #c78a00; }
 #loading { background: radial-gradient(circle at 50% 35%, #fffbe6, #9fdcff 70%); color: #3b6fd1; font-size: 22px; font-weight: 800; justify-content: center; }
 #loading > :first-child, #loading > :last-child { margin: 0; }
 
@@ -40,7 +44,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .player.me { outline: 4px solid #ffd23f; }
 .player img { width: 34px; height: 34px; }
 
-.duck-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 780px; }
+.duck-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: safe center; max-width: 780px; }
 .duck-pick {
   position: relative; width: 112px; height: 112px; padding: 0; border-radius: 26px; background: rgba(255,255,255,0.22);
   border: 4px solid rgba(255,255,255,0.45); box-shadow: 0 6px 0 rgba(0,0,0,.2); transition: transform .12s;
@@ -51,7 +55,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .duck-pick.selected { background: #fff6c2; border-color: #ffd23f; transform: scale(1.08) rotate(-3deg); box-shadow: 0 0 0 5px rgba(255,210,63,.6), 0 6px 0 rgba(0,0,0,.2); }
 .duck-pick .taken { position: absolute; top: -12px; right: -10px; font-size: 26px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); }
 
-.arenas { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.arenas { display: flex; gap: 12px; flex-wrap: wrap; justify-content: safe center; }
 .arena {
   width: min(30vw, 190px); padding: 10px 8px 12px; border-radius: 26px; border: 5px solid rgba(255,255,255,0.65);
   box-shadow: 0 7px 0 rgba(0,0,0,0.22); transition: transform .12s;
@@ -80,7 +84,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .pill { background: rgba(20,40,110,0.5); border-radius: 999px; padding: 4px 16px; font-size: 26px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); white-space: nowrap; }
 .timer.hurry { background: #ff6b9d; animation: pulse 0.6s ease-in-out infinite; }
 .scores { display: flex; gap: 6px; }
-.score { display: flex; align-items: center; gap: 3px; border-radius: 999px; padding: 2px 10px 2px 4px; font-size: 22px; font-weight: 900; background: rgba(20,40,110,0.45); border: 3px solid var(--c); transition: transform .15s; }
+.score { display: flex; align-items: center; gap: 3px; border-radius: 999px; padding: 2px 10px 2px 4px; font-size: 22px; font-weight: 900; background: rgba(20,40,110,0.62); border: 3px solid var(--c); transition: transform .15s; }
 .score .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--c); display: flex; align-items: center; justify-content: center; font-size: 17px; }
 .score.me { background: rgba(255,210,63,0.85); color: #5b3a00; }
 .score.lead { transform: scale(1.08); }
@@ -91,6 +95,18 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   background: rgba(255,255,255,0.8); border-radius: 50%; box-shadow: 0 5px 0 rgba(40,60,140,.3); animation: bob 1.2s ease-in-out infinite; }
 .power svg { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); transform: rotate(-90deg); }
 .power circle { fill: none; stroke: #ffd23f; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 100 100; }
+
+/* The counting mission: bubbles that fill in at the bottom, clear of the dash button. */
+#hud .adventure-goal { display: flex; align-items: center; gap: 2px; padding: 4px 14px 4px 8px; border-radius: 999px; background: rgba(255,255,255,0.88);
+  border: 3px solid #fff; box-shadow: 0 4px 0 rgba(40,60,140,.3); color: #24306e; font: 900 20px/1 ui-rounded, system-ui, sans-serif; bottom: calc(16px + env(safe-area-inset-bottom)); }
+#hud .adventure-goal[hidden] { display: none; }
+#hud .adventure-goal b { margin-left: 6px; white-space: nowrap; }
+.goal-bubble { font-size: 30px; line-height: 1; transition: opacity .2s, filter .2s; }
+.goal-bubble.off { opacity: .28; filter: grayscale(1); }
+.goal-bubble.new { animation: goal-pop .45s cubic-bezier(.2, 1.8, .4, 1); }
+@keyframes goal-pop { 0% { transform: scale(.3); } 60% { transform: scale(1.5); } }
+#hud:has(#adventure-goal:not([hidden])) .power { bottom: calc(80px + env(safe-area-inset-bottom)); }
+#menu .adventure-choice { font-size: 18px; border: 3px solid #fff; }
 
 /* The dash button, bottom right, with a fill that drains as it recharges. */
 .dash {
@@ -115,7 +131,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 .banner {
   position: absolute; top: 26%; left: 0; right: 0; text-align: center; font-size: clamp(40px, 9vw, 84px); font-weight: 900;
-  color: #ffd23f; text-shadow: 0 6px 0 #ff6b9d, 0 10px 30px rgba(0,0,0,.3); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2, 1.8, .4, 1); transform: scale(.5);
+  color: #ffd23f; paint-order: stroke fill; -webkit-text-stroke: 0.16em #c2185b; text-shadow: 0 0.1em 0 #c2185b, 0 10px 30px rgba(0,0,0,.3); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2, 1.8, .4, 1); transform: scale(.5);
 }
 .banner.show { opacity: 1; transform: scale(1) rotate(-3deg); }
 
@@ -129,10 +145,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .float {
-  position: absolute; transform: translate(-50%, -50%); font-size: 32px; font-weight: 900; white-space: nowrap;
-  -webkit-text-stroke: 1.5px rgba(0,0,0,.25); text-shadow: 0 3px 0 rgba(0,0,0,.2); animation: float-up 1.1s ease-out forwards;
+  position: absolute; transform: translate(-50%, -50%); font-size: 32px; font-weight: 900; white-space: nowrap; paint-order: stroke fill;
+  -webkit-text-stroke: 7px #24306e; text-shadow: 0 4px 0 #24306e; animation: float-up 1.1s ease-out forwards;
 }
-.float.big { font-size: 48px; color: #ffd23f; text-shadow: 0 4px 0 #ff6b9d; }
+.float.big { font-size: 48px; color: #ffd23f; -webkit-text-stroke: 9px #c2185b; text-shadow: 0 5px 0 #c2185b; }
 @keyframes float-up {
   0% { transform: translate(-50%, -50%) scale(.4); opacity: 1; }
   25% { transform: translate(-50%, -90%) scale(1.25); }
@@ -147,7 +163,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .keys-hint .space { background: rgba(255,255,255,.85); color: #24306e; border-radius: 10px; padding: 0 12px; font-size: 26px; font-weight: 900; }
 
 .podium { display: flex; flex-direction: column; gap: 8px; width: min(560px, 94vw); }
-.place { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.2); border-radius: 22px; padding: 6px 14px; font-size: 24px; font-weight: 800;
+.place { display: flex; align-items: center; gap: 10px; background: rgba(20,40,110,0.42); border-radius: 22px; padding: 6px 14px; font-size: 24px; font-weight: 800;
   animation: slide-in .5s cubic-bezier(.2, 1.4, .4, 1) backwards; }
 .place:nth-child(2) { animation-delay: .15s; } .place:nth-child(3) { animation-delay: .3s; } .place:nth-child(4) { animation-delay: .45s; }
 @keyframes slide-in { from { transform: translateX(-60px) scale(.8); opacity: 0; } }
@@ -170,6 +186,15 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 /* Narrow phone, upright: the scores move under the corner buttons so the timer fits. */
 @media (max-width: 420px) {
   .hud-top { top: calc(66px + env(safe-area-inset-top)); }
+  #results { padding-top: calc(66px + env(safe-area-inset-top)); }
+  #results h1 { font-size: 26px; white-space: nowrap; }
+  .place .award { white-space: nowrap; }
+  #results .big-go { white-space: nowrap; padding: 10px 30px; }
+}
+/* Upright phones: the counting bubbles sit bottom left, out of the dash button's way. */
+@media (max-width: 560px) and (orientation: portrait) {
+  #hud .adventure-goal { left: 10px; transform: none; padding: 3px 10px 3px 6px; font-size: 17px; }
+  .goal-bubble { font-size: 24px; }
 }
 /* Phones held sideways: a compact menu with rows that scroll sideways and GO pinned in the corner. */
 @media (max-height: 500px) and (orientation: landscape) {
@@ -189,4 +214,23 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .power { width: 60px; height: 60px; font-size: 32px; }
   .hud-top { left: calc(10px + env(safe-area-inset-left)); top: calc(66px + env(safe-area-inset-top)); transform: none; align-items: flex-start; }
   .scores { flex-direction: column; align-items: flex-start; }
+  #menu .logo.small { margin-left: 120px; }
+  #hud .adventure-goal { padding: 2px 10px 2px 6px; font-size: 16px; bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .goal-bubble { font-size: 22px; }
+  #hud:has(#adventure-goal:not([hidden])) .power { bottom: calc(52px + env(safe-area-inset-bottom)); }
+  #menu .adventure-choice { font-size: 15px; }
+}
+/* Very short sideways phones: smaller pills so all four scores fit down the side. */
+@media (max-height: 330px) and (orientation: landscape) {
+  .hud-top { gap: 4px; top: calc(62px + env(safe-area-inset-top)); }
+  .pill { font-size: 17px; padding: 2px 12px; }
+  .scores { gap: 3px; }
+  .score { font-size: 15px; border-width: 2px; padding: 1px 7px 1px 2px; } .score .dot { width: 20px; height: 20px; font-size: 13px; }
+  .duck-row { gap: 6px; } .duck-pick { width: 54px; height: 54px; border-radius: 14px; border-width: 3px; } .duck-pick img { width: 50px; height: 50px; }
+  #menu { padding-right: calc(160px + env(safe-area-inset-right)); }
+  .arena { width: 96px; } .arena .emoji { font-size: 30px; }
+  #results h1 { display: none; }
+  .podium { gap: 3px; margin-top: auto; width: auto; align-self: stretch; margin-left: 168px; }
+  .place { padding: 1px 10px; gap: 6px; } .place .medal { font-size: 22px; } .place img { width: 32px; height: 32px; }
+  .place .who { flex-direction: row; align-items: center; gap: 6px; } .place .award { font-size: 13px; } .place .pts { font-size: 20px; }
 }

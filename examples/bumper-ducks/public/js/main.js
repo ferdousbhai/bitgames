@@ -145,21 +145,53 @@ const game = {
   me: null,
 }
 
-// Optional learning missions count bubbles the whole team collects. A bubble's
-// 'got' event can arrive more than once, so each one is counted once per round.
+// Optional learning missions count bubbles the children collect (all of them together; the robots'
+// don't count). A bubble's 'got' event can arrive more than once, so each one is counted once per round.
 const collectedBubbles = new Set()
 const adventure = createAdventure({
   id: 'bumper-ducks',
   anchor: $('go'),
   hud: $('hud'),
   isMuted: () => audio.muted,
-  celebrate: (text) => banner(text, 2000),
+  celebrate: () => {
+    const n = adventure.option.target
+    banner(`🎉 ${n} 🫧 🎉`, 2200)
+    audio.star()
+    if (game.me) effects.sparkle(game.me.x, 1.6, game.me.z, '#ffd23f', 30)
+  },
+  // The goal as bubbles that fill in, one per bubble counted, so it reads without words.
+  renderProgress: (goal, option, count) => {
+    if (!option.goal) return
+    goal.replaceChildren()
+    for (let i = 0; i < option.target; i++) {
+      const b = document.createElement('span')
+      b.className = `goal-bubble${i < count ? '' : ' off'}${i === count - 1 ? ' new' : ''}`
+      b.textContent = '🫧'
+      goal.append(b)
+    }
+    const n = document.createElement('b')
+    n.textContent = count >= option.target ? '⭐' : `${count} / ${option.target}`
+    goal.append(n)
+    goal.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
+  },
   options: [
     { emoji: '🦆', label: 'Free duck play' },
-    { emoji: '🤝', label: 'Three bubbles together', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
-    { emoji: '💧', label: 'Six bubbles together', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
+    { emoji: '3️⃣', label: 'Count 3 bubbles together', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
+    { emoji: '6️⃣', label: 'Count 6 bubbles together', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
   ],
 })
+const isBotDuck = (id) => !!game.setup?.entries.find((e) => e.id === id)?.bot
+
+/** Says the counting goal once the round starts, for children who can't read it yet. */
+function sayGoal() {
+  const goal = adventure.option.goal
+  if (!goal || audio.muted || !('speechSynthesis' in window)) return
+  const u = new SpeechSynthesisUtterance(`Let's count ${adventure.option.target} bubbles together!`)
+  u.lang = 'en-US'
+  u.rate = 0.85
+  speechSynthesis.cancel()
+  speechSynthesis.speak(u)
+}
 
 const isHost = () => game.room && game.hostId === game.room.selfId
 const roundId = () => game.setup?.seed ?? 0
@@ -360,7 +392,7 @@ function buildMenu() {
   }
   $('again').onclick = () => {
     audio.click()
-    hostStartRound()
+    askAgain()
   }
   $('change').onclick = () => {
     if (!isHost()) return
@@ -368,6 +400,14 @@ function buildMenu() {
     send({ t: 'menu' })
     enterLobbyScreen()
   }
+}
+
+/** Again! The host starts the next splash at once; a friend's tap asks the host's device to. */
+function askAgain() {
+  if (game.state !== 'results') return
+  if (isHost()) return hostStartRound()
+  send({ t: 'again' }, { to: game.hostId })
+  $('again').classList.add('asked')
 }
 
 function setWaitingText(text) {
@@ -519,6 +559,14 @@ function onMessage(msg, from) {
         maybeGo()
       }
       break
+    case 'again':
+      // A friend tapped Again on the podium.
+      if (isHost() && game.state === 'results' && game.players.has(from)) hostStartRound()
+      break
+    case 'sitout':
+      // A friend went home mid-round: a robot paddles their duck until the round ends.
+      if (isHost() && game.sim) adoptBot(from)
+      break
     case 'go':
       if (from === game.hostId && game.state === 'syncing') runCountdown()
       break
@@ -604,6 +652,7 @@ function startRound(setup) {
   game.partyShown = false
   game.run = 0
   game.lastShake = 0
+  game.lastSteer = 0
   const entries = setup.entries.slice(0, MAX_PLAYERS).map((e) => ({ ...e, duck: validDuck(e.duck) ? e.duck : 'sunny', emoji: String(e.emoji ?? '🙂').slice(0, 8) }))
   setup.entries = entries
   if (!entries.some((e) => e.id === game.room.selfId)) {
@@ -668,6 +717,7 @@ function runCountdown() {
         game.state = 'play'
         audio.squeak(1.1)
         showHint()
+        later(sayGoal, 700)
         later(() => el.classList.add('hidden'), 700)
       }
     }, i * 800),
@@ -685,6 +735,17 @@ function hideHint() {
   game.hinted = true
   $('hint').classList.add('hidden')
   $('keys-hint').classList.add('hidden')
+}
+
+/** A child who has stopped paddling for a while sees the steering hint again for a moment. */
+function idleHint() {
+  const sim = game.sim
+  if (game.state !== 'play' || !game.me || game.sitOut || !sim) return
+  if (sim.time - (game.lastSteer ?? 0) < 8 || sim.time > 88) return
+  game.lastSteer = sim.time
+  const el = $(matchMedia('(any-pointer: coarse)').matches ? 'hint' : 'keys-hint')
+  el.classList.remove('hidden')
+  later(() => el.classList.add('hidden'), 3000)
 }
 
 function endRound() {
@@ -712,8 +773,8 @@ function abortToLobby() {
     send({ t: 'menu' })
     enterLobbyScreen()
   } else {
-    // A friend's device: sit this round out and wait for the next one.
-    send({ t: 'in', r: roundId(), x: 0, z: 0 })
+    // A friend's device: sit this round out (a robot takes the duck) and wait for the next one.
+    if (['syncing', 'countdown', 'play'].includes(game.state)) send({ t: 'sitout' }, { to: game.hostId })
     clearTimers()
     game.state = 'waiting'
     clearRound()
@@ -749,7 +810,7 @@ function playEvent(e) {
     case 'got': {
       if (e.kind === 'bubble' && !collectedBubbles.has(e.item)) {
         collectedBubbles.add(e.item)
-        adventure.event(e)
+        if (!isBotDuck(e.id)) adventure.event(e)
       }
       const v = game.items.get(e.item)
       const y = v ? v.body.position.y : 0.8
@@ -911,6 +972,7 @@ function updateHud() {
     }
     el.classList.toggle('lead', best > 0 && d.score === best)
   })
+  idleHint()
   // Bubble party for the last seconds.
   if (game.state === 'play' && sim.party && !game.partyShown) {
     game.partyShown = true
@@ -1006,10 +1068,9 @@ function renderResults() {
         <span class="pts">${r.score} 🫧</span></div>`
     })
     .join('')
-  const canRestart = isHost()
-  $('again').classList.toggle('hidden', !canRestart)
-  $('change').classList.toggle('hidden', !canRestart)
-  $('results-wait').classList.toggle('hidden', canRestart)
+  // Everyone can tap Again (a friend's tap asks the host); only the host picks a new place.
+  $('again').classList.remove('asked')
+  $('change').classList.toggle('hidden', !isHost())
   const meRow = rows.findIndex((r) => r.id === self)
   if (meRow === 0) later(() => audio.quack(1.2), 600)
 }
@@ -1028,6 +1089,10 @@ function readMyInput() {
   const { x, y } = playing ? input.read() : { x: 0, y: 0 }
   me.ix = x
   me.iz = y
+  if (playing && Math.hypot(x, y) > 0.3) {
+    game.lastSteer = game.sim.time
+    if (game.hinted) for (const id of ['hint', 'keys-hint']) $(id).classList.add('hidden')
+  }
   if (playing && Math.hypot(x, y) > 0.3 && !game.hinted && !game.hintHiding && game.sim.time > 1.2) {
     game.hintHiding = true
     later(hideHint, 1200)
@@ -1052,7 +1117,11 @@ function step(dt) {
     sim.time = time
     return
   }
-  if (host) for (const bot of game.bots.values()) bot.update(sim, dt)
+  if (host && game.bots.size) {
+    let kids = -1
+    for (const d of sim.ducks) if (!game.bots.has(d.id)) kids = Math.max(kids, d.score)
+    for (const bot of game.bots.values()) bot.update(sim, dt, kids < 0 ? 0 : bot.duck.score - kids)
+  }
   sim.step(dt, host)
   if (host) {
     for (const e of sim.events) {
@@ -1142,7 +1211,6 @@ const input = new Input({
 $('home').addEventListener('click', (e) => {
   e.stopPropagation()
   audio.click()
-  if (game.state === 'results') return isHost() ? (send({ t: 'menu' }), enterLobbyScreen()) : undefined
   abortToLobby()
 })
 addEventListener('keydown', (e) => {
@@ -1151,7 +1219,7 @@ addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() === 'm' && !e.repeat) $('music').click()
   if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
     if (game.state === 'menu') hostStartRound()
-    else if (game.state === 'results' && isHost()) hostStartRound()
+    else if (game.state === 'results') askAgain()
   }
 })
 addEventListener('pointerdown', () => audio.unlock(), { capture: true })
