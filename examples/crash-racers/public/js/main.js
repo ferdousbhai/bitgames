@@ -699,16 +699,20 @@ function makeCar(entry, i, local) {
  */
 function nameTag(text) {
   const tex = canvasTexture(256, 128, (g) => {
-    g.fillStyle = 'rgba(255,255,255,0.9)'
+    // Solid white with a dark rim, so it reads against sky, sand and buildings alike.
+    g.fillStyle = '#ffffff'
+    g.strokeStyle = '#2b2d42'
+    g.lineWidth = 8
     g.beginPath()
     g.roundRect(8, 8, 240, 112, 56)
     g.fill()
+    g.stroke()
     g.font = '80px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif'
     g.textAlign = 'center'
     g.textBaseline = 'middle'
     g.fillText(text, 128, 70)
   })
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false }))
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false, toneMapped: false, fog: false }))
   sprite.scale.set(0.09, 0.045, 1)
   sprite.renderOrder = 10
   return sprite

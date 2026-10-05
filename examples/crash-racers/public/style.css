@@ -205,6 +205,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .city .emoji { font-size: 40px; }
   .city .name { font-size: 16px; }
   .city .blurb { display: none; }
+  /* Laps and Easy mode share one row, above GO rather than hidden under it. */
+  .options { gap: 6px; font-size: 17px; flex-wrap: nowrap; }
+  .laps button, .chip { font-size: 17px; padding: 6px 12px; margin-left: 2px; white-space: nowrap; }
+  /* Banners fit on one line, on the open road below the car, clear of the button column and the speed. */
+  .banner { top: auto; bottom: calc(var(--tb) + 96px + env(safe-area-inset-bottom)); font-size: min(40px, 7.6vw); padding: 0 8px; }
 }
 
 /* Short phones held upright: the headings make way so the places clear GO. */

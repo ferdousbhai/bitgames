@@ -59,13 +59,14 @@ const asphalt = memoTexture('asphalt', function asphalt({ lines = true, patches 
     const r = rng(3)
     speckle(g, w, h, '#4a4b4f', 0.18, 9000, 2, r)
     if (patches) {
+      // Faint repairs and hairline cracks: enough to make it a real road, never dark enough to look like holes.
       for (let i = 0; i < 6; i++) {
-        g.fillStyle = `rgba(20,20,22,${0.3 + r() * 0.3})`
+        g.fillStyle = `rgba(20,20,22,${0.08 + r() * 0.08})`
         g.beginPath()
         g.ellipse(r() * w, r() * h, 12 + r() * 30, 8 + r() * 20, r() * 3, 0, Math.PI * 2)
         g.fill()
       }
-      g.strokeStyle = 'rgba(15,15,15,0.6)'
+      g.strokeStyle = 'rgba(15,15,15,0.22)'
       for (let i = 0; i < 10; i++) {
         g.beginPath()
         let x = r() * w, y = r() * h
