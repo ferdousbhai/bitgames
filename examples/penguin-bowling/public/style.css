@@ -107,6 +107,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   position: absolute; left: 50%; top: calc(30% + env(safe-area-inset-top) / 2); transform: translate(-50%, -50%) scale(0); opacity: 0;
   display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: calc(100vw - 24px); text-align: center;
   transition: transform .3s cubic-bezier(.2, 1.8, .4, 1), opacity .3s;
+  z-index: 1; /* above the 💭/💥 result line, which can sit right next to it */
+}
+/* Upright phones: the result line fills the space under the scorecard, so the cheer
+   drops below it instead of hiding behind it (iPhone SE/8 sized screens). */
+@media (max-width: 760px) and (orientation: portrait) {
+  .banner { top: max(30%, calc(252px + env(safe-area-inset-top))); }
 }
 .banner.show { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
 /* Thick outlines keep every word readable over snow, sky and confetti. */
@@ -189,6 +195,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .go { height: 66px; padding: 0 16px; font-size: 32px; }
 }
 @media (max-width: 340px) {
+  /* The top bar keeps to one row, so the scorecard stays clear of the result line */
+  .hud-left, .hud-right { gap: 5px; }
+  .round-btn { width: 42px; height: 42px; font-size: 21px; }
+  .hud-top .pill.score { font-size: 20px; padding: 5px 10px; }
   .ctl { width: 50px; height: 50px; }
   .ctl.small { width: 46px; height: 46px; }
   .go { padding: 0 12px; font-size: 28px; }
