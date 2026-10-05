@@ -161,6 +161,11 @@ export class DuckView {
     this.sleepT = 0
   }
 
+  /** A happy hop on each countdown beat: "that's me!" */
+  hello() {
+    this.hop = 1
+  }
+
   bonked(strength = 1) {
     this.squash = Math.min(1, 0.5 + strength * 0.08)
   }
@@ -175,6 +180,8 @@ export class DuckView {
       y = Math.sin(Math.PI * k) * 4.8
       flip = k * Math.PI * 2
     }
+    this.hop = Math.max(0, this.hop - dt * 2.2)
+    y += Math.sin(this.hop * Math.PI) * 0.9
     this.spinner.position.y = y
     this.spinner.rotation.y = d.h + d.spin
     // Lean into the paddling and bob on the waves.
@@ -201,7 +208,7 @@ export class DuckView {
     }
     if (this.ring) {
       this.ring.visible = !d.fly
-      this.ring.scale.setScalar(s * (1 + Math.sin(t * 5) * 0.05))
+      this.ring.scale.setScalar(s * (1 + Math.sin(t * 5) * 0.05 + Math.sin(this.hop * Math.PI) * 0.35))
       this.ring.material.opacity = 0.6 + Math.sin(t * 5) * 0.25
     }
     this.shield.visible = d.power === 'shield'

@@ -159,10 +159,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   100% { transform: translate(-50%, -230%) scale(1); opacity: 0; }
 }
 
-.hint-finger { position: absolute; left: 30%; top: 62%; font-size: 64px; filter: drop-shadow(0 4px 4px rgba(0,0,0,.3)); }
+.hint-finger { position: absolute; left: 30%; top: 62%; font-size: 64px; line-height: 1; margin: -10px 0 0 -32px; filter: drop-shadow(0 4px 4px rgba(0,0,0,.3)); }
 .hint-finger .finger { display: inline-block; animation: drag 1.6s ease-in-out infinite; }
-@keyframes drag { 0% { transform: translate(0, 0); } 40%, 60% { transform: translate(80px, -60px); } 100% { transform: translate(0, 0); } }
-.keys-hint { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 6px; align-items: center;
+@keyframes drag { 0% { transform: translate(0, 0); } 40%, 60% { transform: translate(var(--dx, 60px), -50px); } 100% { transform: translate(0, 0); } }
+/* Centred with margins, since its bobbing animation owns the transform. */
+.keys-hint { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; gap: 6px; align-items: center;
   background: rgba(20,40,110,0.55); border-radius: 22px; padding: 8px 16px; font-size: 32px; animation: bob 1.4s ease-in-out infinite; white-space: nowrap; }
 .keys-hint .space { background: rgba(255,255,255,.85); color: #24306e; border-radius: 10px; padding: 0 12px; font-size: 26px; font-weight: 900; }
 

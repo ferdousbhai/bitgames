@@ -32,8 +32,9 @@ export class Sim {
       const a = Math.PI / 2 + (i * Math.PI * 2) / Math.max(4, entries.length)
       const x = Math.cos(a) * R * 0.66
       const z = Math.sin(a) * R * 0.66
+      // Everyone starts facing the camera, so each child sees their duck's face (and hat) at the countdown.
       return {
-        id: e.id, i, x, z, vx: 0, vz: 0, h: Math.atan2(-x, -z), spin: 0, sv: 0, ix: 0, iz: 0,
+        id: e.id, i, x, z, vx: 0, vz: 0, h: 0, spin: 0, sv: 0, ix: 0, iz: 0,
         dashCd: 0, dashT: 0, power: null, powerT: 0, scale: 1, fly: null, score: 0,
         stats: newStats(), lastHit: null, lastHitT: -99,
       }

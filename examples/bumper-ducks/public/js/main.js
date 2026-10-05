@@ -727,6 +727,8 @@ function runCountdown() {
       void el.offsetWidth
       el.className = 'countdown tick'
       audio.beep(i === 3)
+      // Your own duck hops on each beat, so a child spots which one is theirs.
+      game.views.get(game.room.selfId)?.hello()
       if (i === 3) {
         game.state = 'play'
         audio.squeak(1.1)
@@ -742,8 +744,26 @@ function runCountdown() {
 function showHint() {
   if (game.hinted || game.roundsPlayed > 0) return
   const touch = matchMedia('(any-pointer: coarse)').matches
+  if (touch) placeHint()
   $(touch ? 'hint' : 'keys-hint').classList.remove('hidden')
   later(hideHint, 6000)
+}
+/** The dragging finger sits beside the child's own duck (never on top of it) and drags away from it. */
+const hintPos = new THREE.Vector3()
+function placeHint() {
+  const me = game.me
+  if (!me) return
+  hintPos.set(me.x, 0.6, me.z).project(camera)
+  const x = (hintPos.x * 0.5 + 0.5) * innerWidth
+  const y = (-hintPos.y * 0.5 + 0.5) * innerHeight
+  // Left of the duck unless it is near the left edge; the drag shortens on narrow screens to stay in view.
+  const side = x > 150 ? -1 : 1
+  const fx = clamp(x + side * 82, 40, innerWidth - 40)
+  const room = side < 0 ? fx - 32 : innerWidth - fx - 32
+  const el = $('hint')
+  el.style.left = `${fx}px`
+  el.style.top = `${clamp(y + 10, 60, innerHeight - 60)}px`
+  el.style.setProperty('--dx', `${side * clamp(room - 6, 16, 60)}px`)
 }
 function hideHint() {
   game.hinted = true
@@ -757,7 +777,9 @@ function idleHint() {
   if (game.state !== 'play' || !game.me || game.sitOut || !sim) return
   if (sim.time - (game.lastSteer ?? 0) < 6 || sim.time > 88) return
   game.lastSteer = sim.time
-  const el = $(matchMedia('(any-pointer: coarse)').matches ? 'hint' : 'keys-hint')
+  const touch = matchMedia('(any-pointer: coarse)').matches
+  if (touch) placeHint()
+  const el = $(touch ? 'hint' : 'keys-hint')
   el.classList.remove('hidden')
   later(() => el.classList.add('hidden'), 3000)
 }
