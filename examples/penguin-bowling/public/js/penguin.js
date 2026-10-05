@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { LANE, PENGUIN_R } from './lane.js'
+import { bakeColors } from './merge.js'
 
 const STAND_Y = 0.45 // origin height when standing (feet at -0.45)
 const LIE_Y = PENGUIN_R + 0.06 // origin height above the body centre's floor when on the belly
@@ -16,6 +17,13 @@ function parts(model) {
     footL: get('penguin_foot_L'),
     footR: get('penguin_foot_R'),
   }
+}
+
+/** One mesh per moving part (body, head, flippers, feet) instead of one per colour. */
+function bake(model) {
+  const p = parts(model)
+  bakeColors(model, { skip: Object.values(p).filter(Boolean), roughness: 0.5 })
+  if (p.head) bakeColors(p.head, { roughness: 0.5 })
 }
 
 /** Give a cloned penguin its own scarf colour. */
@@ -80,6 +88,7 @@ export class Penguin {
         o.material.envMapIntensity = 0.5
       }
     })
+    bake(model)
     this.pose.add(model)
     this.p = parts(model)
   }
@@ -195,6 +204,7 @@ export class Crowd {
     spots.forEach(([side, z], i) => {
       const m = template.clone(true)
       tintScarf(m, colors[i % colors.length])
+      bake(m)
       m.traverse((o) => o.isMesh && (o.castShadow = true))
       const group = new THREE.Group()
       group.add(m)
@@ -204,8 +214,30 @@ export class Crowd {
       // Face the lane, turned a little towards the camera
       group.rotation.y = side > 0 ? -Math.PI / 2 + 0.55 : Math.PI / 2 - 0.55
       this.scene.add(group)
-      this.list.push({ group, p: parts(m), baseY: group.position.y, phase: i * 1.3, s })
+      this.list.push({ group, p: parts(m), baseY: group.position.y, phase: i * 1.3, s, yaw: group.rotation.y, hop: 0 })
     })
+  }
+
+  /**
+   * A tapped baby penguin hops. Taps are matched on screen with a generous
+   * radius, so small fingers don't have to hit exactly. Returns where it is, or null.
+   */
+  poke(x, y, camera) {
+    let best = null
+    let bestD = Math.max(44, innerHeight * 0.06)
+    const v = new THREE.Vector3()
+    for (const c of this.list) {
+      v.copy(c.group.position).setY(c.baseY + 0.35 * c.s).project(camera)
+      if (v.z > 1) continue
+      const d = Math.hypot(((v.x + 1) / 2) * innerWidth - x, ((1 - v.y) / 2) * innerHeight - y)
+      if (d < bestD) {
+        bestD = d
+        best = c
+      }
+    }
+    if (!best) return null
+    best.hop = 1
+    return best.group.position.clone().setY(best.baseY + 0.8)
   }
 
   /** Start a cheer; big ones last longer and jump higher. */
@@ -220,8 +252,11 @@ export class Crowd {
     for (const c of this.list) {
       const ph = t * (on ? 10 : 2) + c.phase
       const jump = on ? Math.abs(Math.sin(ph)) * (this.big ? 0.4 : 0.22) * c.s : 0
-      c.group.position.y = c.baseY + jump
-      const flap = on ? 1.2 + Math.sin(ph * 2) * 0.6 : 0.15 + Math.sin(ph) * 0.08
+      c.hop = Math.max(0, (c.hop ?? 0) - dt * 2.4)
+      const hop = Math.sin(c.hop * Math.PI) * 0.55 * c.s
+      c.group.position.y = c.baseY + Math.max(jump, hop)
+      c.group.rotation.y = c.yaw + (c.hop > 0 ? (1 - c.hop) ** 2 * Math.PI * 2 : 0)
+      const flap = on || c.hop > 0 ? 1.2 + Math.sin(ph * 2) * 0.6 : 0.15 + Math.sin(ph) * 0.08
       c.p.flipperL?.rotation.set(0, 0, -flap)
       c.p.flipperR?.rotation.set(0, 0, flap)
       c.p.head?.rotation.set(on ? -0.25 : 0, Math.sin(t * 0.5 + c.phase) * 0.3, Math.sin(ph) * (on ? 0.2 : 0.05))

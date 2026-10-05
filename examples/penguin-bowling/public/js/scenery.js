@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { canvasTexture, softDot } from './effects.js'
 import { LANE } from './lane.js'
+import { mergeByMaterial } from './merge.js'
 
 /**
  * The three lanes' surroundings, built from world.glb (blender/models.py):
@@ -210,6 +211,7 @@ export class Scenery {
     if (this.iglooGlow) this.iglooGlow.emissiveIntensity = th.night ? 2.2 : 0
     if (this.lanternGlow) this.lanternGlow.emissiveIntensity = th.night ? 3 : 0.4
 
+    this.props.traverse((o) => o.isMesh && o.name.startsWith('merged_') && o.geometry.dispose())
     this.props.clear()
     this.clouds = []
     this.bobbers = []
@@ -257,6 +259,9 @@ export class Scenery {
         }
       }
     }
+    // Everything that stands still becomes one mesh per material.
+    const moving = new Set([...this.clouds, ...this.bobbers.map((b) => b.o), this.sun].filter(Boolean))
+    mergeByMaterial(this.props, moving)
   }
 
   update(dt, t) {

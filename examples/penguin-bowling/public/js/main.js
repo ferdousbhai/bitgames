@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
-import { CONFETTI, Effects } from './effects.js'
+import { Effects } from './effects.js'
 import { LANE, Lane, PENGUIN_R, PIN_H, PIN_SPOTS, Pins } from './lane.js'
 import { Crowd, Penguin } from './penguin.js'
 import { Scenery, THEMES } from './scenery.js'
@@ -30,13 +30,16 @@ const store = {
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+// iPad touch displays: fewer pixels preserve battery and keep play responsive.
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
 const scene = new THREE.Scene()
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600)
+let fov = 50 // landscape field of view; eased per game state
+let fovScale = 1
 const hemi = new THREE.HemisphereLight('#e4f4ff', '#b8d4ff', 1)
 scene.add(hemi)
 const sun = new THREE.DirectionalLight('#fff4e0', 2.2)
@@ -83,6 +86,7 @@ const game = {
   stuck: 0,
   hitSoundAt: 0,
   lastScore: null,
+  idle: 0, // seconds without a touch while aiming
 }
 
 // --- Layout -----------------------------------------------------------------------------
@@ -93,7 +97,8 @@ function resize() {
   renderer.setSize(w, h, false)
   camera.aspect = w / h
   // Narrow screens see more upwards and downwards so the lane still fits across.
-  camera.fov = w >= h ? 50 : clamp(50 / Math.pow(camera.aspect, 0.55), 50, 78)
+  fovScale = w >= h ? 1 : clamp(1 / Math.pow(camera.aspect, 0.55), 1, 1.56)
+  camera.fov = fov * fovScale
   camera.updateProjectionMatrix()
 }
 addEventListener('resize', resize)
@@ -243,7 +248,7 @@ function finishRoll() {
 
   const deck = new THREE.Vector3(0, 1.2, LANE.headPin - 0.8)
   if (r.strike) {
-    banner('STRIKE!', 'strike')
+    banner('STRIKE!', { kind: 'strike', stars: 3, plus: knocked })
     audio.fanfare()
     audio.cheer(true)
     crowd.start(true)
@@ -258,21 +263,20 @@ function finishRoll() {
       }, 200 + i * 380)
     }
   } else if (r.spare) {
-    banner('SPARE!', 'spare')
+    banner('SPARE!', { kind: 'spare', stars: 2, plus: knocked })
     audio.fanfare()
     audio.cheer(true)
     crowd.start(true)
     effects.toss(deck, 120)
   } else {
     const words = ['Wheee!', 'Nice!', 'Good!', 'Great!', 'Super!', 'Wow!', 'Amazing!', 'Fantastic!', 'So close!', 'So close!']
-    banner(knocked === 0 ? 'Wheee! 🐧' : `${'⭐'.repeat(Math.min(3, Math.ceil(knocked / 3)))} ${words[knocked]}`)
+    banner(knocked === 0 ? 'Wheee! 🐧' : words[knocked], { stars: Math.min(3, Math.ceil(knocked / 3)), plus: knocked })
     audio.jingle(knocked)
     audio.cheer(knocked >= 5)
     crowd.start(knocked >= 5)
     if (knocked) effects.toss(deck, 12 + knocked * 5)
     else effects.puff(new THREE.Vector3(0, 0.5, LANE.headPin), 10, 0.8, '#ffffff')
   }
-  if (knocked > 0) effects.label(`+${knocked}`, deck.clone().setY(2), CONFETTI[knocked % 6], knocked >= 7)
 }
 
 /** After the cheering: tidy the pins and get the penguin ready for the next roll. */
@@ -294,6 +298,7 @@ function nextRoll() {
 
 function toAim() {
   game.state = 'aim'
+  game.idle = 0
   penguin.ready(game.x)
   effects.puff(penguin.group.position.clone().setY(0.2), 6, 0.5)
   $('controls').classList.remove('away')
@@ -320,7 +325,8 @@ function gameOver() {
   crowd.start(true)
   for (let i = 0; i < 6; i++) {
     setTimeout(() => {
-      const from = new THREE.Vector3((Math.random() - 0.5) * 8, 0.5, LANE.headPin - 2)
+      // Left and right of the results card, so the card never hides them
+      const from = new THREE.Vector3((i % 2 ? -1 : 1) * (2.6 + Math.random() * 2), 0.5, LANE.headPin - 2)
       effects.firework(from, 4 + Math.random() * 3, () => audio.bang())
     }, 300 + i * 450)
   }
@@ -379,12 +385,14 @@ function updateRack(standing) {
 }
 
 let bannerTimer = 0
-function banner(text, kind = '') {
+function banner(word, { kind = '', stars = 0, plus = 0 } = {}) {
   const el = $('banner')
-  el.textContent = text
+  el.querySelector('.b-stars').textContent = '⭐'.repeat(stars)
+  el.querySelector('.b-word').textContent = word
+  el.querySelector('.b-plus').textContent = plus ? `+${plus}` : ''
   el.className = `banner show ${kind}`
   clearTimeout(bannerTimer)
-  bannerTimer = setTimeout(() => (el.className = 'banner'), kind === 'strike' ? 2600 : 1600)
+  bannerTimer = setTimeout(() => (el.className = 'banner'), kind === 'strike' ? 2600 : 1800)
 }
 
 let introTimer = 0
@@ -517,6 +525,7 @@ function move(dir) {
 }
 
 function cycleCurve() {
+  game.idle = 0
   game.curve = game.curve === 0 ? 1 : game.curve === 1 ? -1 : 0
   updateCurveBtn()
   audio.click()
@@ -530,6 +539,7 @@ const holdable = (id, fn) => {
     e.preventDefault()
     e.stopPropagation()
     audio.unlock()
+    game.idle = 0
     fn()
     clearInterval(iv)
     iv = setInterval(fn, 180)
@@ -553,11 +563,20 @@ const ndc = new THREE.Vector2()
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault()
   audio.unlock()
-  if (game.state !== 'aim') return
-  // Tapping the penguin makes it hop and squeak
+  game.idle = 0
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
-  drag.tapPenguin = raycaster.intersectObject(penguin.group, true).length > 0
+  // The baby penguins on the snow banks hop and cheep when tapped, any time.
+  const baby = crowd.poke(e.clientX, e.clientY, camera)
+  if (baby) {
+    audio.squeak(1.35 + Math.random() * 0.3)
+    effects.sparkleAt(baby, '#fff3b0', 4, 1.2)
+  }
+  // Tapping the penguin makes it hop and squeak (also on the title screen)
+  const onPenguin = raycaster.intersectObject(penguin.group, true).length > 0
+  if (game.state === 'title' && onPenguin && penguin.poke()) audio.squeak(1 + Math.random() * 0.3)
+  if (game.state !== 'aim') return
+  drag.tapPenguin = onPenguin
   drag.on = true
   drag.id = e.pointerId
   drag.pts = [{ x: e.clientX, y: e.clientY }]
@@ -589,6 +608,7 @@ for (const ev of ['touchmove', 'gesturestart', 'dblclick', 'contextmenu']) docum
 const keys = new Set()
 addEventListener('keydown', (e) => {
   audio.unlock()
+  game.idle = 0
   const k = e.key.toLowerCase()
   if (k === 'escape' && game.state !== 'title' && game.state !== 'loading') return toTitle()
   if ((game.state === 'title' || game.state === 'over') && (k === 'enter' || k === ' ')) {
@@ -624,10 +644,20 @@ const camLook = new THREE.Vector3(0, 0.4, -8)
 const wantPos = new THREE.Vector3()
 const wantLook = new THREE.Vector3()
 
+/**
+ * Camera framing per state. Aiming uses a long lens from further back, so the
+ * pins at the far end look big while the penguin stays the same size.
+ * [landscape, portrait] pairs.
+ */
+const CAM = {
+  aim: { fov: 26, back: [10, 11], up: [3.6, 4.4], look: [-10, -9.5] },
+  roll: { fov: 40, back: [5.6, 6.6], up: [2.9, 3.4] },
+  deck: { fov: 40, back: [6.6, 6.2], up: [3.4, 4.1], look: [-1.4, -1.8] },
+}
+
 function updateCamera(dt, t) {
-  const portrait = camera.aspect < 1
-  const back = portrait ? 5.4 : 4.4
-  const up = portrait ? 3.0 : 2.5
+  const pi = camera.aspect < 1 ? 1 : 0
+  let wantFov = 50
   switch (game.state) {
     case 'loading':
     case 'title': {
@@ -636,28 +666,41 @@ function updateCamera(dt, t) {
       wantLook.set(0, 0.5, -8)
       break
     }
-    case 'aim':
-      wantPos.set(game.x * 0.5, up, LANE.start + back)
-      wantLook.set(game.x * 0.2, 0, -6.5)
+    case 'aim': {
+      const c = CAM.aim
+      wantFov = c.fov
+      wantPos.set(game.x * 0.5, c.up[pi], LANE.start + c.back[pi])
+      wantLook.set(game.x * 0.15, 0, c.look[pi])
       break
+    }
     case 'roll': {
-      const z = Math.max(penguin.body.position.z + back, LANE.headPin + 4.6)
-      wantPos.set(penguin.body.position.x * 0.4, up - 0.1, z)
-      wantLook.set(penguin.body.position.x * 0.2, 0.2, Math.max(z - 10, LANE.headPin - 1.2))
+      const c = CAM.roll
+      wantFov = c.fov
+      const z = Math.max(penguin.body.position.z + c.back[pi], LANE.headPin + CAM.deck.back[pi])
+      wantPos.set(penguin.body.position.x * 0.4, c.up[pi], z)
+      wantLook.set(penguin.body.position.x * 0.2, 0.2, Math.max(z - 10, LANE.headPin + CAM.deck.look[pi]))
       break
     }
     case 'settle':
     case 'result':
-    case 'over':
-      wantPos.set(0, up + 0.5, LANE.headPin + 5.4 + (game.dance ? 0.6 : 0))
-      wantLook.set(0, game.dance ? 1.6 : 0.5, LANE.headPin - 1.2)
+    case 'over': {
+      const c = CAM.deck
+      wantFov = c.fov
+      wantPos.set(0, c.up[pi] + (game.dance ? 0.3 : 0), LANE.headPin + c.back[pi] + (game.dance ? 0.6 : 0))
+      wantLook.set(0, game.dance ? 1.2 : 0.3, LANE.headPin + c.look[pi])
       break
+    }
   }
   const k = game.state === 'roll' ? 6 : 2.5
   camPos.x = damp(camPos.x, wantPos.x, k, dt)
   camPos.y = damp(camPos.y, wantPos.y, k, dt)
   camPos.z = damp(camPos.z, wantPos.z, k, dt)
   camLook.lerp(wantLook, 1 - Math.exp(-k * dt))
+  if (Math.abs(fov - wantFov) > 0.01) {
+    fov = damp(fov, wantFov, k, dt)
+    camera.fov = fov * fovScale
+    camera.updateProjectionMatrix()
+  }
   const sh = effects.shake * effects.shake * 0.3
   camera.position.set(camPos.x + (Math.random() - 0.5) * sh, camPos.y + (Math.random() - 0.5) * sh, camPos.z)
   camera.lookAt(camLook)
@@ -723,6 +766,13 @@ function frame(fixedDt) {
   } else if (game.state === 'settle') {
     if (penguin.state === 'slide' && penguin.body.position.y < -0.3) penguin.hide()
     if ((game.timer > 1.1 && !pins.moving()) || game.timer > 3.4) finishRoll()
+  } else if (game.state === 'aim' && !drag.on) {
+    // Gentle nudge for little ones who have stopped: show the swipe hand and wave.
+    game.idle += dt
+    if (game.idle > 6) {
+      $('hint').classList.remove('hidden')
+      if ((game.idle - 6) % 4 < dt && penguin.poke()) audio.squeak(0.9)
+    }
   } else if (game.state === 'result') {
     const wait = game.dance ? 3.4 : 2.0
     if (game.timer > wait) nextRoll()
@@ -749,4 +799,4 @@ renderer.setAnimationLoop(() => frame())
 
 show('loading')
 load()
-if (new URLSearchParams(location.search).has('debug')) window.__pb = { frame, scene, camera, effects, game, lane, pins, penguin, card, throwPenguin, renderer }
+if (new URLSearchParams(location.search).has('debug')) window.__pb = { CAM, frame, scene, camera, effects, game, lane, pins, penguin, card, throwPenguin, renderer }

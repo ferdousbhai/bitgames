@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { canvasTexture } from './effects.js'
+import { bakeColors } from './merge.js'
 
 /**
  * The icy lane, its physics and the ten pins.
@@ -409,6 +410,8 @@ export class Pins {
         })
         o.material = Array.isArray(o.material) ? tinted : tinted[0]
       })
+      // Each pin becomes a single mesh: ten draw calls for the rack, not seventy.
+      bakeColors(mesh, { roughness: 0.7, envMapIntensity: 0.4 })
       this.scene.add(mesh)
       const body = new CANNON.Body({
         mass: 0.5,
