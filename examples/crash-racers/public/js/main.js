@@ -1174,7 +1174,7 @@ function standings() {
 /** Everyone gets an award: each goes to whoever did the most of it and has no award yet (children first on a tie). */
 const AWARDS = [
   { title: '💥 Crash King', stat: (s) => s.crashes, text: (n) => `${n} crash${n === 1 ? '' : 'es'}` },
-  { title: '✈️ Sky Star', stat: (s) => s.air, min: 0.5, text: (n) => `${n.toFixed(1)}s in the air` },
+  { title: '✈️ Sky Star', stat: (s) => s.air, min: 0.5, text: (n) => `${n.toFixed(1)}s flying` },
   { title: '🌀 Flip Wizard', stat: (s) => s.flips, text: (n) => `${n} flip${n > 1 ? 's' : ''}` },
   { title: '⭐ Star Catcher', stat: (s) => s.stars, text: (n) => `${n} star${n === 1 ? '' : 's'}` },
   { title: '🚧 Cone Crusher', stat: (s) => s.cones, text: (n) => `${n} knocked over` },

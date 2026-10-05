@@ -338,7 +338,12 @@ const seeThroughMaterial = (material) =>
           float seeD = length(vSeeWorld - seeCamera - seeRay * clamp(seeT, 0.0, 1.0));
           float seeFade = (1.0 - smoothstep(1.8, 3.4, seeD)) * step(0.0, seeT) * (1.0 - smoothstep(0.8, 1.0, seeT));
           seeFade = max(seeFade, 1.0 - smoothstep(3.5, 6.0, distance(vSeeWorld, seeCamera)));
-          if (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) < seeFade * 0.92) discard;`,
+          // An even 4x4 ordered (Bayer) screen, not random noise: it reads as a soft see-through veil, not grain.
+          vec2 seeP = mod(floor(gl_FragCoord.xy), 2.0);
+          vec2 seeQ = mod(floor(gl_FragCoord.xy * 0.5), 2.0);
+          float seeBayer = 4.0 * (seeP.x * 2.0 + seeP.y * 3.0 - 4.0 * seeP.x * seeP.y) + (seeQ.x * 2.0 + seeQ.y * 3.0 - 4.0 * seeQ.x * seeQ.y);
+          float seeThreshold = (seeBayer + 0.5) / 16.0;
+          if (seeThreshold < seeFade * 0.92) discard;`,
         )
     }
     m.customProgramCacheKey = () => 'seeThrough'

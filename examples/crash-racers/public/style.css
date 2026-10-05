@@ -18,6 +18,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* Centred when it fits, scrolls from the top when it doesn't (plain centring would clip the top on phones). */
 .screen > :first-child { margin-top: auto; }
 .screen > :last-child { margin-bottom: auto; }
+/* The last child *shown*: a hidden 'waiting for the host' line left the podium stuck to the bottom. */
+.screen > :nth-last-child(1 of :not(.hidden)) { margin-bottom: auto; }
 .screen > * { flex-shrink: 0; }
 .screen h1 { font-size: clamp(34px, 7vw, 64px); margin: 0; text-shadow: 0 4px 0 #ff6b9d; }
 .screen h2 { margin: 4px 0; font-size: clamp(22px, 4vw, 34px); }
@@ -80,7 +82,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 #hud { position: fixed; inset: 0; pointer-events: none; }
 .hud-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); display: flex; gap: 8px; }
-.pill { background: rgba(0,0,0,0.45); border-radius: 18px; padding: 6px 14px; font-size: 22px; font-weight: 900; }
+.pill { display: flex; align-items: center; background: rgba(0,0,0,0.45); border-radius: 18px; padding: 6px 14px; font-size: 22px; font-weight: 900; }
 .pill.big { font-size: 34px; color: #ffbe0b; }
 /* Below the top-right corner, which BitGames keeps for its ✕ button. */
 #minimap { position: absolute; top: calc(58px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); width: 140px; height: 140px; background: rgba(0,0,0,0.3); border-radius: 50%; }
@@ -135,7 +137,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @keyframes nudge { 0%, 100% { transform: scale(1) rotate(0); } 15% { transform: scale(1.1) rotate(-4deg); } 30% { transform: scale(1.1) rotate(4deg); } 45% { transform: scale(1) rotate(0); } }
 .podium .place.me { background: #ffbe0b; color: #2b2d42; }
 .podium .place .who { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; }
-.podium .place .award { font-size: 16px; font-weight: 800; background: rgba(0,0,0,0.18); border-radius: 999px; padding: 2px 10px; }
+.podium .place .award { font-size: 16px; font-weight: 800; background: rgba(0,0,0,0.18); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
 .podium .place .extra { margin-left: auto; font-size: 18px; opacity: .9; display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
 .podium .place .extra small { font-size: 15px; }
 
@@ -194,7 +196,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   #minimap { width: 110px; height: 110px; }
   .podium .place { font-size: 18px; padding: 8px 12px; gap: 8px; }
   .podium .place .medal { font-size: 30px; }
-  .podium .place .award { font-size: 13px; }
+  .podium .place .award { font-size: min(13px, 3.4vw); padding: 2px 8px; }
+  .podium .place .who { min-width: 0; }
   .podium .podium-pic { width: 58px; margin: -6px -6px; }
   .car-pick { width: calc((100vw - 52px) / 3); max-width: 118px; padding: 6px 4px 8px; }
   .car-pick .name { font-size: 14px; }
