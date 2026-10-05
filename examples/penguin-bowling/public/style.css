@@ -217,6 +217,27 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #intro-emoji { font-size: 24px; }
   #intro-title { font-size: 20px; }
 }
+/* Very short sideways screens (Android phones with the browser bar, ~280-380px tall):
+   the title and results cards shrink to fit, so Play, Best and the play-again
+   buttons are never cut off at the bottom. */
+@media (max-height: 380px) {
+  .screen { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: calc(6px + env(safe-area-inset-bottom)); gap: 8px; }
+  .card { padding: 8px 20px 12px; gap: 7px; border-radius: 28px; }
+  .logo { font-size: 34px; }
+  .logo br { display: none; }
+  .logo br + span { margin-left: .3em; }
+  .lane-btn { width: 84px; padding: 5px 6px 4px; border-radius: 18px; }
+  .lane-btn span { font-size: 26px; }
+  .lane-btn small { font-size: 14px; }
+  .chip { font-size: 16px; padding: 4px 14px; } .chip-icon { font-size: 20px; } .chip b { font-size: 13px; }
+  .big-go { font-size: 26px; padding: 5px 40px; box-shadow: 0 5px 0 #1f78b4; }
+  .big-go.alt { box-shadow: 0 5px 0 #d08a00; }
+  .scores, .scores .pill { font-size: 16px; } .scores .pill { padding: 3px 12px; }
+  .trophy { font-size: 36px; }
+  .big-score { font-size: 50px; }
+  .stars { font-size: 30px; }
+  .badge { font-size: 15px; padding: 3px 12px; }
+}
 /* Tablets: bigger aim buttons for small hands on a big screen */
 @media (pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
   .ctl { width: 78px; height: 78px; font-size: 36px; }

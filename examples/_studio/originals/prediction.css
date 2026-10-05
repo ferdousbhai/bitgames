@@ -62,6 +62,20 @@
   .pin-pick { grid-row: 3 / 5; }
   #pin-prediction .pin { width: 44px; min-width: 44px; height: 44px; }
 }
+/* Very short sideways screens (~280-380px tall): the buttons join the number beside
+   the pins, so "Keep my prediction" and "Just play" never drop out of sight. */
+@media (max-height: 380px) {
+  #pin-prediction { padding: 8px 14px 10px; max-height: calc(100svh - 12px); }
+  #pin-prediction h2 { font-size: 18px; }
+  #pin-prediction p { margin: 3px 0; }
+  #pin-prediction > p:first-of-type { font-size: 15px; }
+  .pin-pick { grid-row: 3 / 6; margin: 0; gap: 0; }
+  .pin-pick div { gap: 2px; }
+  #pin-prediction .pin-counter button { width: 52px; height: 52px; font-size: 30px; }
+  #pin-value { font-size: 40px; }
+  #pin-prediction .pin-actions { grid-column: 2; }
+  #pin-prediction .pin-actions button { padding: 8px 14px; }
+}
 /* Tablets: everything a size bigger for small fingers. */
 @media (min-width: 700px) and (min-height: 700px) {
   #pin-prediction { width: 540px; font-size: 22px; padding: 24px 28px; }

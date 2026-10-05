@@ -748,7 +748,9 @@ function updateCamera(dt, t) {
     case 'aim': {
       const c = CAM.aim
       const ai = pi || (innerHeight <= 520 ? 2 : 0)
-      wantFov = c.fov[ai]
+      // Very short sideways screens (~260-330px tall): a touch wider, so the
+      // back pins stay below the scorecard and the penguin above the buttons.
+      wantFov = c.fov[ai] * (ai === 2 ? 1 + clamp((330 - innerHeight) / 300, 0, 0.25) : 1)
       wantPos.set(game.x * 0.5, c.up[ai], LANE.start + c.back[ai])
       wantLook.set(game.x * 0.15, 0, c.look[ai])
       break
