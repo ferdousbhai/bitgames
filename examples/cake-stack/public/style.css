@@ -402,3 +402,20 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @media (max-height: 330px) and (min-aspect-ratio: 5/4) {
   #title .tag { display: none; }
 }
+
+/* --- Pass 4: thick-outlined banners, a mission ribbon, a bonus bounce, the party card on 320px phones --- */
+.banner { text-shadow: 2px 2px 0 #ff4d8d, -2px 2px 0 #ff4d8d, 2px -2px 0 #ff4d8d, -2px -2px 0 #ff4d8d, 3px 0 0 #ff4d8d, -3px 0 0 #ff4d8d, 0 3px 0 #ff4d8d, 0 -3px 0 #ff4d8d, 0 6px 0 #c2185b, 0 10px 18px rgba(0,0,0,.2); }
+.banner.gold { text-shadow: 2px 2px 0 #b04a7a, -2px 2px 0 #b04a7a, 2px -2px 0 #b04a7a, -2px -2px 0 #b04a7a, 3px 0 0 #b04a7a, -3px 0 0 #b04a7a, 0 3px 0 #b04a7a, 0 -3px 0 #b04a7a, 0 6px 0 #8a3a62, 0 10px 18px rgba(0,0,0,.2); }
+.banner.mission { background: rgba(176, 74, 122, .86); border: 4px solid #fff; border-radius: 26px; padding: 8px 22px 12px; box-shadow: 0 6px 0 rgba(138, 58, 98, .35), 0 12px 24px rgba(0,0,0,.18); }
+@media (max-height: 420px) and (min-aspect-ratio: 1/1) { .banner.mission { padding: 4px 14px 7px; border-width: 3px; border-radius: 18px; top: max(34%, calc(98px + env(safe-area-inset-top))); } }
+.pill.score.pop { animation: score-pop .6s cubic-bezier(.2, 1.8, .4, 1); }
+@keyframes score-pop { 0% { transform: scale(1); } 35% { transform: scale(1.35); background: #ffb300; } 100% { transform: scale(1); } }
+@media (max-width: 400px) {
+  .card { padding-left: 16px; padding-right: 16px; max-width: 100%; }
+  .card .row { gap: 10px; }
+  .card .big-go:not(.alt) { padding: 12px 28px; font-size: 30px; }
+  .card .big-go.alt { padding: 12px 20px; font-size: 30px; }
+}
+@media (max-width: 400px) and (max-aspect-ratio: 1/1) {
+  .banner.mission { font-size: 22px; padding: 6px 14px 9px; border-width: 3px; border-radius: 20px; top: max(26%, calc(166px + env(safe-area-inset-top))); }
+}

@@ -277,7 +277,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null }) {
       layers.push(flavour)
       const i = layers.length - 1
       const right = recipe()[i] === flavour
-      say(`${layers.length} layers: ${layers.map((f) => FLAVOURS[f].emoji).join(' → ')}`)
+      say(`${layers.length} ${layers.length === 1 ? 'layer' : 'layers'}: ${layers.map((f) => FLAVOURS[f].emoji).join(' → ')}`)
       draw()
       // A right layer chimes higher each time; a layer that differs from its picture gets a soft wobble.
       if (right) play('perfect', i * 2)

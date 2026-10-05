@@ -737,12 +737,17 @@ async function blowCandles() {
   c.group.rotation.y = 0
   if (cake.figure) cake.figure.cheer(3)
   banner('Happy Birthday!', 'gold')
+  // The birthday bonus pops once the banner has had its moment, so the two never overlap
+  await wait(1.15)
+  if (run !== game.run) return
   const bonus = 5
   game.stars += bonus
   game.cakeStars += bonus
-  effects.label(`⭐ +${bonus}`, new THREE.Vector3(cx, topY() + 0.8, 0.3), '#ffb300', true)
+  effects.label(`⭐ +${bonus}`, new THREE.Vector3(cx, topY() + 0.5, 0.3), '#ffb300', true)
+  sound.pop(0, 8)
   updateHud()
-  await wait(2.4)
+  popScore()
+  await wait(1.25)
   if (run !== game.run) return
   showCard()
 }
@@ -927,6 +932,14 @@ function updateHud() {
     // Dark icing (chocolate) gets a white number so it can still be counted
     p.style.color = f && !f.rainbow && new THREE.Color(f.icing).getHSL({}).l < 0.35 ? '#fff' : ''
   })
+}
+
+/** The star count gives a happy bounce when a bonus lands in it. */
+function popScore() {
+  const el = document.querySelector('.pill.score')
+  el.classList.remove('pop')
+  void el.offsetWidth
+  el.classList.add('pop')
 }
 
 let bannerTimer = 0
