@@ -8,5 +8,10 @@
   "category": "space",
   "together": false,
   "featured": false,
-  "url": "https://7c7fd5ba-bitgames-rocket-garage.ferdousbd.workers.dev/"
+  "url": "https://7c7fd5ba-bitgames-rocket-garage.ferdousbd.workers.dev/",
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Design comparisons, predictions and experimentation"
 }

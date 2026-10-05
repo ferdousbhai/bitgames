@@ -1,3 +1,5 @@
+import { createDelivery } from './delivery.js'
+import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
@@ -172,6 +174,22 @@ const game = {
   resetCooldown: 0,
 }
 
+// Optional learning mission (race mode only): visit four numbered stops in map order.
+const adventure = createAdventure({
+  id: 'crash-racers',
+  anchor: document.querySelector('[data-mode="race"]'),
+  hud: $('hud'),
+  isMuted: () => audio.muted,
+  celebrate: (text) => banner(text),
+  options: [
+    { emoji: '🏎️', label: 'Free driving' },
+    { emoji: '🎁', label: 'Follow the delivery map', goal: 'Deliver to stops 1 → 2 → 3 → 4', target: 4, reward: 'Four deliveries in map order!' },
+  ],
+})
+adventure.enable(game.mode === 'race')
+const delivery = createDelivery(scene, () => adventure.event())
+const deliveryOn = () => game.mode === 'race' && !!adventure.option.goal
+
 const isHost = () => game.room && game.hostId === game.room.selfId
 /** The current race's id: every race message carries it, so stragglers from the last race are ignored. */
 const raceId = () => (game.pendingSetup ?? game.setup)?.seed ?? 0
@@ -311,6 +329,7 @@ function buildMenu() {
   for (const el of document.querySelectorAll('[data-mode]')) {
     el.onclick = () => {
       game.mode = el.dataset.mode
+      adventure.enable(game.mode === 'race')
       document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b === el))
       document.querySelector('.laps').classList.toggle('hidden', game.mode === 'smash')
       audio.beep()
@@ -625,6 +644,8 @@ function startRace(setup) {
   }
   game.track?.dispose()
   game.track = buildCity(game.city, env, game.props)
+  adventure.begin()
+  delivery.configure(game.track)
   skyMaterial.uniforms.top.value.set(game.track.sky[0])
   skyMaterial.uniforms.bottom.value.set(game.track.sky[1])
   scene.fog = new THREE.Fog(game.track.fog, 120, 700)
@@ -1455,6 +1476,7 @@ function tick(dt, realDt) {
   pickups.update(dt, game.room.selfId, game.raceTime)
   debris.update(dt)
   game.track.update(dt)
+  if (game.raceOn && deliveryOn() && game.player) delivery.update(game.player.body.position, Math.max(8, game.track.width * 0.6))
   scrapeAndSkid(dt)
   offRoadEffects(dt)
   for (const car of game.cars.values()) if (!car.remote) recover(car, dt)
@@ -1662,6 +1684,21 @@ function drawMinimap() {
   const { g, minX, minZ, scale } = minimap
   g.clearRect(0, 0, 160, 160)
   g.drawImage(minimap.background, 0, 0)
+  if (deliveryOn()) {
+    // The stops still to visit, numbered, with the next one highlighted.
+    g.font = 'bold 14px system-ui'
+    g.textAlign = 'center'
+    delivery.points.forEach((point, i) => {
+      if (i < delivery.next) return
+      const x = 20 + (point.x - minX) * scale, y = 20 + (point.z - minZ) * scale
+      g.beginPath()
+      g.arc(x, y, 11, 0, Math.PI * 2)
+      g.fillStyle = i === delivery.next ? '#ffe1a2' : '#bca3df'
+      g.fill()
+      g.fillStyle = '#34334d'
+      g.fillText(String(i + 1), x, y + 5)
+    })
+  }
   // Each car is a dot in its own colour (the colour of its name tag). Everyone else
   // first, so the child's own dot, bigger and ringed in white, is always on top.
   g.strokeStyle = '#2b2d42'
@@ -1694,6 +1731,7 @@ function drawMinimap() {
 }
 
 function frame(now) {
+  delivery.show(game.state === 'race' && deliveryOn())
   const realDt = Math.min(0.1, (now - last) / 1000)
   last = now
   game.timeScale = now < game.slowmoUntil ? 0.28 : damp(game.timeScale, 1, 5, realDt)
@@ -1821,6 +1859,7 @@ if (DEBUG) {
       return this.state()
     },
   }
+  window.__adventure = { mission: adventure, game, delivery }
 }
 
 boot()

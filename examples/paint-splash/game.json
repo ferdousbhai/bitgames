@@ -2,11 +2,16 @@
   "id": "paint-splash",
   "title": "Paint Splash",
   "tagline": "Roll giant paint rollers with up to 4 friends and paint a picture together!",
-  "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller and colour the ground. Grab a 🪣 paint bucket for a big splash, roll through a 🌈 rainbow puddle to paint rainbow stripes, and 💧 water washes a little paint away. Roll over any colour to make it yours. When the time is up, look at the picture you made together!",
+  "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller and colour the ground. Grab a 🪣 paint bucket for a big splash, roll through a 🌈 rainbow puddle to paint rainbow stripes, and 💧 water washes a little paint away. Roll over any colour to make it yours. When the time is up, look at the picture you made together! Open Mix my colours to explore a simplified red/yellow/blue toy paint model, compare saved mixtures and create your own colour mosaic.",
   "emoji": "🎨",
   "color": "#9b5de5",
   "category": "pop",
   "together": true,
   "featured": false,
-  "url": "https://18db4c9e-bitgames-paint-splash.ferdousbd.workers.dev/"
+  "url": "https://18db4c9e-bitgames-paint-splash.ferdousbd.workers.dev/",
+  "ages": [
+    2,
+    8
+  ],
+  "learning": "Colour exploration, creative patterns and cooperation"
 }

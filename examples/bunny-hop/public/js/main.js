@@ -1,3 +1,4 @@
+import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Sound } from './audio.js'
@@ -25,7 +26,7 @@ const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 700)
 // Tablets that can't keep up lose shadows and resolution, not frame rate.
 const quality = { level: 2, frames: 0, time: 0 }
 function applyQuality() {
-  renderer.setPixelRatio(quality.level === 2 ? Math.min(devicePixelRatio, 2) : quality.level === 1 ? Math.min(devicePixelRatio, 1.25) : 0.75)
+  renderer.setPixelRatio(quality.level === 2 ? Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2) : quality.level === 1 ? Math.min(devicePixelRatio, 1.25) : 0.75)
   renderer.shadowMap.enabled = quality.level > 0
   resize()
 }
@@ -95,6 +96,20 @@ try {
   game.best = Number(localStorage.getItem('bunnyhop.best')) || 0
 } catch {}
 
+// Optional learning missions. A flip is the bunny's 'double' hop.
+const adventure = createAdventure({
+  id: 'bunny-hop',
+  anchor: $('play'),
+  hud: $('hud'),
+  isMuted: () => sound.muted,
+  celebrate: (text) => banner(text),
+  options: [
+    { emoji: '🐰', label: 'Free hopping' },
+    { emoji: '🐢', label: 'Gentle hop counting', pace: 0.6, goal: 'Make 4 hops', target: 4, reward: 'Four hops helped Pip along the trail!' },
+    { emoji: '🎶', label: 'Hop, hop, flip pattern', pace: 0.6, goal: 'Hop → hop → flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => kind === ['hop', 'hop', 'double'][n], reward: 'You made the hop, hop, flip pattern!' },
+  ],
+})
+
 let bunny, world, course, effects, weather, glints, popups
 const camPos = new THREE.Vector3(1.2, 2, 8)
 const camLook = new THREE.Vector3(0.3, 1.1, 0)
@@ -146,6 +161,7 @@ function toMenu() {
 }
 
 function start() {
+  adventure.begin()
   sound.unlock()
   sound.click()
   sound.music(true)
@@ -204,6 +220,7 @@ function hop() {
   if (game.state !== 'play') return
   const kind = bunny.hop()
   if (!kind) return
+  adventure.event(kind)
   sound.hop(kind === 'double')
   tmp.set(game.x, 0, 0)
   if (kind === 'hop') effects.puff(tmp, 6, dustColor(), 0.9)
@@ -436,7 +453,7 @@ function frame(now) {
   if (game.state === 'play') {
     mode = 'run'
     game.slow = Math.min(1, game.slow + dt * 0.7)
-    const target = speedAt(game.x) * game.slow
+    const target = speedAt(game.x) * game.slow * adventure.pace
     game.speed = THREE.MathUtils.damp(game.speed, target, 3, dt)
     game.x += game.speed * dt
     game.comboTimer -= dt
@@ -501,3 +518,4 @@ init().catch((err) => {
   $('load-bar').style.background = '#ff6b6b'
 })
 
+if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game }

@@ -1,3 +1,4 @@
+import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -12,7 +13,8 @@ const $ = (id) => document.getElementById(id)
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+// iPad touch displays: fewer pixels preserve battery and keep play responsive.
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.toneMappingExposure = 0.95
 const scene = new THREE.Scene()
@@ -71,6 +73,22 @@ try {
   game.best = Number(localStorage.getItem('balloon-pop-best')) || 0
 } catch {}
 
+// Optional learning missions. Hunts also make their balloons more common (see spawn).
+const RED = '#ff595e'
+const adventure = createAdventure({
+  id: 'balloon-pop',
+  anchor: $('play'),
+  hud: $('hud'),
+  isMuted: () => audio.muted,
+  celebrate: (text) => banner(text, 'combo'),
+  options: [
+    { emoji: '🎈', label: 'Free play' },
+    { emoji: '🐢', label: 'Count three balloons', pace: 0.6, goal: 'Pop 3 balloons', target: 3, reward: 'Three balloons, one pop each!' },
+    { emoji: '❤️', label: 'Heart shape hunt', pace: 0.6, goal: 'Find 3 heart balloons', target: 3, huntKind: 'heart', accept: (b) => b.kindName === 'heart', reward: 'Three matching heart shapes!' },
+    { emoji: '🎨', label: 'Red colour hunt', pace: 0.6, goal: 'Find 3 red balloons', target: 3, huntColor: RED, accept: (b) => b.color === RED, reward: 'Three red balloons!' },
+  ],
+})
+
 function saveBest() {
   if (game.score <= game.best) return false
   game.best = game.score
@@ -108,6 +126,9 @@ function pickKind(kinds) {
 
 function spawn(kindName, opts = {}) {
   const lv = level(game.level)
+  const hunt = game.state === 'play' && Math.random() < 0.55 ? adventure.option : {}
+  if (hunt.huntKind) kindName = hunt.huntKind
+  if (hunt.huntColor && ['round', 'smile', 'heart'].includes(kindName)) opts = { ...opts, color: hunt.huntColor }
   const s = balloonScale()
   const b = balloons.make(kindName, { scale: s, ...opts })
   const z = -1.5 + Math.random() * 2
@@ -119,7 +140,7 @@ function spawn(kindName, opts = {}) {
   game.lastLane = lane
   const x = -w + (2 * w * (lane + 0.5)) / lanes + (Math.random() - 0.5) * 0.6
   b.group.position.set(x, -h - 1.6 * s, z)
-  b.speed = (game.state === 'title' ? 0.8 : lv.speed) * (0.85 + Math.random() * 0.3) * (game.party > 0 ? 1.3 : 1)
+  b.speed = (game.state === 'title' ? 0.8 : lv.speed * adventure.pace) * (0.85 + Math.random() * 0.3) * (game.party > 0 ? 1.3 : 1)
   if (b.kind.power) b.speed *= 0.8
   return b
 }
@@ -202,6 +223,7 @@ function pop(b, { chain = false } = {}) {
     $('hint').classList.add('hidden')
   }
   if (!playing) return
+  if (!chain) adventure.event(b)
 
   let points = b.kind.points
   game.score += points
@@ -311,6 +333,7 @@ function toTitle() {
 }
 
 function start() {
+  adventure.begin()
   audio.unlock()
   audio.click()
   balloons.clear()
@@ -525,3 +548,4 @@ renderer.setAnimationLoop(() => {
 
 show('loading')
 load()
+if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game, balloons, camera }

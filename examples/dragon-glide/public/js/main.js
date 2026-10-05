@@ -1,3 +1,4 @@
+import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Sound } from './audio.js'
@@ -46,7 +47,7 @@ const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 900)
 // Tablets that can't keep up lose resolution, not frame rate.
 const quality = { level: 2, frames: 0, time: 0 }
 function applyQuality() {
-  renderer.setPixelRatio(quality.level === 2 ? Math.min(devicePixelRatio, 2) : quality.level === 1 ? Math.min(devicePixelRatio, 1.25) : 0.8)
+  renderer.setPixelRatio(quality.level === 2 ? Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2) : quality.level === 1 ? Math.min(devicePixelRatio, 1.25) : 0.8)
   resize()
 }
 function measureQuality(dt) {
@@ -110,6 +111,20 @@ const game = {
   done: new Set(store.get('dragon-glide-worlds', [])),
 }
 if (new URLSearchParams(location.search).has('debug')) window.game = game
+
+// Optional learning missions: a slower flight, or counting rings.
+const adventure = createAdventure({
+  id: 'dragon-glide',
+  anchor: $('play'),
+  hud: $('hud'),
+  isMuted: () => sound.muted,
+  celebrate: (text) => banner('⭐ Discovery!', text),
+  options: [
+    { emoji: '🐉', label: 'Free flight' },
+    { emoji: '🐢', label: 'Gentle discovery flight', pace: 0.6 },
+    { emoji: '⭕', label: 'Count four rings', pace: 0.65, goal: 'Fly through 4 rings', target: 4, reward: 'Four rings along your discovery route!' },
+  ],
+})
 
 let templates, dragon, world, course, sparks, dots, rings, popups
 const pos = new THREE.Vector3(0, 4, 0) // Ember
@@ -184,6 +199,7 @@ function buildWorldButtons() {
 }
 
 function start(from = 0) {
+  adventure.begin()
   sound.unlock()
   sound.click()
   game.state = 'play'
@@ -469,6 +485,7 @@ function handle(events) {
       else if (game.gemCombo > 0 && game.gemCombo % 5 === 4) popups.show(ev.pos, pick(YAY))
     } else if (ev.type === 'hoop') {
       game.hoops++
+      adventure.event()
       const pts = 2 + Math.min(game.hoops, 6)
       addScore(pts)
       sound.hoop(game.hoops)
@@ -636,7 +653,7 @@ function updatePlay(dt) {
 
   // Speed: each world a little quicker; the rainbow star makes it zoom
   const w = WORLDS[game.world]
-  const cruise = w.speed * game.slow * (game.power > 0 ? 1.45 : 1)
+  const cruise = w.speed * game.slow * adventure.pace * (game.power > 0 ? 1.45 : 1)
   game.speed = damp(game.speed, cruise, 1.5, dt)
   game.z += game.speed * dt
 
@@ -785,3 +802,4 @@ init().catch((err) => {
   console.error(err)
   $('load-bar').style.background = '#ff6b6b'
 })
+if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game }

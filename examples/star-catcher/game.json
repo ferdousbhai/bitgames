@@ -8,5 +8,10 @@
   "category": "space",
   "together": false,
   "featured": false,
-  "url": "https://3cbc96df-bitgames-star-catcher.ferdousbd.workers.dev/"
+  "url": "https://3cbc96df-bitgames-star-catcher.ferdousbd.workers.dev/",
+  "ages": [
+    3,
+    8
+  ],
+  "learning": "Counting, spatial awareness and star patterns"
 }

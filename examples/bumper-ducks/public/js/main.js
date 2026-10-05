@@ -1,3 +1,4 @@
+import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -37,7 +38,8 @@ function save(key, value) {
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+// iPad touch displays: fewer pixels preserve battery and keep play responsive.
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.toneMappingExposure = 1.0
 const scene = new THREE.Scene()
@@ -142,6 +144,22 @@ const game = {
   roundsPlayed: 0,
   me: null,
 }
+
+// Optional learning missions count bubbles the whole team collects. A bubble's
+// 'got' event can arrive more than once, so each one is counted once per round.
+const collectedBubbles = new Set()
+const adventure = createAdventure({
+  id: 'bumper-ducks',
+  anchor: $('go'),
+  hud: $('hud'),
+  isMuted: () => audio.muted,
+  celebrate: (text) => banner(text, 2000),
+  options: [
+    { emoji: '🦆', label: 'Free duck play' },
+    { emoji: '🤝', label: 'Three bubbles together', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
+    { emoji: '💧', label: 'Six bubbles together', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
+  ],
+})
 
 const isHost = () => game.room && game.hostId === game.room.selfId
 const roundId = () => game.setup?.seed ?? 0
@@ -576,6 +594,8 @@ function hostStartRound() {
 
 function startRound(setup) {
   if (!Array.isArray(setup.entries) || !setup.entries.length || !validArena(setup.arena)) return
+  adventure.begin()
+  collectedBubbles.clear()
   clearTimers()
   clearRound()
   game.setup = setup
@@ -727,6 +747,10 @@ function playEvent(e) {
       water.ripple(e.x, e.z, 0.3)
       break
     case 'got': {
+      if (e.kind === 'bubble' && !collectedBubbles.has(e.item)) {
+        collectedBubbles.add(e.item)
+        adventure.event(e)
+      }
       const v = game.items.get(e.item)
       const y = v ? v.body.position.y : 0.8
       removeItemView(e.item)
@@ -1210,6 +1234,7 @@ if (DEBUG) {
       for (let i = Math.round(seconds / STEP); i > 0; i--) step(STEP)
     },
   }
+  window.__adventure = { mission: adventure, game }
 }
 
 boot()

@@ -1,3 +1,4 @@
+import { createPrediction } from './prediction.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -46,7 +47,8 @@ const sun = new THREE.DirectionalLight('#fff4e0', 2.2)
 sun.position.set(6, 14, 4)
 sun.target.position.set(0, 0, -8)
 sun.castShadow = true
-sun.shadow.mapSize.set(2048, 2048)
+const shadowSize = matchMedia('(pointer: coarse)').matches ? 1024 : 2048
+sun.shadow.mapSize.set(shadowSize, shadowSize)
 Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 14, bottom: -14, near: 1, far: 45 })
 sun.shadow.bias = -0.0005
 sun.shadow.normalBias = 0.02
@@ -88,6 +90,18 @@ const game = {
   lastScore: null,
   idle: 0, // seconds without a touch while aiming
 }
+
+const prediction = createPrediction({
+  button: $('predict-pins'),
+  hud: $('hud'),
+  getStanding: () => pins.countStanding(),
+  // Drop any aim in progress so the penguin doesn't launch when the dialog closes.
+  onOpen: () => {
+    keys.clear()
+    drag.on = false
+    drag.aim = null
+  },
+})
 
 // --- Layout -----------------------------------------------------------------------------
 
@@ -212,6 +226,7 @@ function updateAimPreview() {
 function throwPenguin({ angle, power, hook }) {
   if (game.state !== 'aim') return
   audio.unlock()
+  prediction.rolling()
   game.state = 'roll'
   game.timer = 0
   game.stuck = 0
@@ -238,6 +253,7 @@ function standingSet() {
 function finishRoll() {
   const standing = pins.countStanding()
   const knocked = game.standingBefore - standing
+  prediction.result(knocked, standing, game.standingBefore)
   const r = card.add(knocked)
   game.outcome = { ...r, knocked }
   game.state = 'result'
@@ -297,6 +313,7 @@ function nextRoll() {
 }
 
 function toAim() {
+  prediction.aim()
   game.state = 'aim'
   game.idle = 0
   penguin.ready(game.x)
@@ -440,6 +457,7 @@ function setBumpers(on) {
 }
 
 function toTitle() {
+  prediction.reset()
   game.state = 'title'
   game.dance = false
   $('best').textContent = game.best
@@ -453,6 +471,7 @@ function toTitle() {
 }
 
 function start() {
+  prediction.reset()
   audio.unlock()
   audio.click()
   card.reset()
@@ -632,7 +651,7 @@ addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()))
 addEventListener('blur', () => keys.clear())
 
 function updateKeys(dt) {
-  if (game.state !== 'aim') return
+  if (game.state !== 'aim' || prediction.open) return
   if (keys.has('arrowleft')) game.angle = clamp(game.angle - dt * 0.18, -MAX_ANGLE, MAX_ANGLE)
   if (keys.has('arrowright')) game.angle = clamp(game.angle + dt * 0.18, -MAX_ANGLE, MAX_ANGLE)
 }
@@ -799,4 +818,4 @@ renderer.setAnimationLoop(() => frame())
 
 show('loading')
 load()
-if (new URLSearchParams(location.search).has('debug')) window.__pb = { CAM, frame, scene, camera, effects, game, lane, pins, penguin, card, throwPenguin, renderer }
+if (new URLSearchParams(location.search).has('debug')) window.__pb = { prediction, CAM, frame, scene, camera, effects, game, lane, pins, penguin, card, throwPenguin, renderer }

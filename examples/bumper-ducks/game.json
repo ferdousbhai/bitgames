@@ -8,5 +8,10 @@
   "category": "race",
   "together": true,
   "featured": false,
-  "url": "https://3e04a8d1-bitgames-bumper-ducks.ferdousbd.workers.dev/"
+  "url": "https://3e04a8d1-bitgames-bumper-ducks.ferdousbd.workers.dev/",
+  "ages": [
+    3,
+    8
+  ],
+  "learning": "Cooperation, counting and spatial awareness"
 }

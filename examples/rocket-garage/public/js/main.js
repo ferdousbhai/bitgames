@@ -6,6 +6,7 @@ import { Particles, Popups, Rings, makeGlowTexture } from './effects.js'
 import { COLORS, DESTS, PARTS, SLOTS, isUnlocked, modelName, part, reach, sanitize, unlocksAt, wobble } from './parts.js'
 import { Rocket } from './rocket.js'
 import { Thumbs } from './thumbs.js'
+import { createWorkshop } from './workshop.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -49,7 +50,8 @@ function persist() {
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+// iPad touch displays: fewer pixels preserve battery and keep play responsive.
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.toneMappingExposure = 1.05
 const scene = new THREE.Scene()
@@ -725,7 +727,16 @@ function hintStep() {
 
 // --- Title & garage -------------------------------------------------------------------
 
+const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf })
+$('experiment').onclick = () => {
+  if (game.state !== 'garage') return
+  audio.unlock()
+  keys.clear()
+  workshop.open()
+}
+
 function toTitle() {
+  workshop.close()
   game.state = 'title'
   show('title')
   show('topbar', false)
@@ -779,6 +790,7 @@ $('play').addEventListener('click', () => {
 
 function launch() {
   if (game.state !== 'garage' || game.busy) return
+  workshop.close()
   game.state = 'countdown'
   game.t = 0
   game.count = 3

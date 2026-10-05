@@ -8,5 +8,10 @@
   "category": "puzzle",
   "together": false,
   "featured": false,
-  "url": "https://ed02918a-bitgames-memory-match.ferdousbd.workers.dev/"
+  "url": "https://ed02918a-bitgames-memory-match.ferdousbd.workers.dev/",
+  "ages": [
+    2,
+    8
+  ],
+  "learning": "Visual memory, matching and turn taking"
 }

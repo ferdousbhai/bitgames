@@ -8,5 +8,10 @@
   "category": "jump",
   "together": false,
   "featured": false,
-  "url": "https://97b18d5e-bitgames-bunny-hop.ferdousbd.workers.dev/"
+  "url": "https://97b18d5e-bitgames-bunny-hop.ferdousbd.workers.dev/",
+  "ages": [
+    3,
+    8
+  ],
+  "learning": "Movement patterns, counting and timing"
 }

@@ -8,5 +8,10 @@
   "category": "pop",
   "together": false,
   "featured": false,
-  "url": "https://9a30d48c-bitgames-penguin-bowling.ferdousbd.workers.dev/"
+  "url": "https://9a30d48c-bitgames-penguin-bowling.ferdousbd.workers.dev/",
+  "ages": [
+    4,
+    8
+  ],
+  "learning": "Predictions, counting and cause and effect"
 }

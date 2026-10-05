@@ -65,7 +65,8 @@ function save() {
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+// iPad touch displays: fewer pixels preserve battery and keep play responsive.
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
 renderer.toneMapping = THREE.NeutralToneMapping
@@ -83,7 +84,8 @@ scene.add(new THREE.HemisphereLight('#fff8ec', '#d9a874', 1.5))
 const sun = new THREE.DirectionalLight('#fff3dc', 2.3)
 sun.position.set(-3.5, 10, 5)
 sun.castShadow = true
-sun.shadow.mapSize.set(2048, 2048)
+const shadowSize = matchMedia('(pointer: coarse)').matches ? 1024 : 2048
+sun.shadow.mapSize.set(shadowSize, shadowSize)
 sun.shadow.bias = -0.0004
 sun.shadow.normalBias = 0.02
 sun.shadow.radius = 3
@@ -1252,3 +1254,19 @@ async function main() {
 }
 
 main()
+
+// A demonstration supports memory strategies without adding a failed turn.
+$('peek').onclick = async () => {
+  if (game.state !== 'play' || game.busy || game.open.length) return
+  const first = game.cards.find((card) => card.state === 'down')
+  const second = first && game.cards.find((card) => card !== first && card.state === 'down' && card.animal === first.animal)
+  if (!second) return
+  game.busy = true
+  await Promise.all([first.flipUp(), second.flipUp()])
+  banner('Remember these two places', 1800, [first, second])
+  await wait(1.8)
+  if (game.state !== 'play') return
+  await Promise.all([first.close(), second.close()])
+  game.busy = false
+}
+if (new URLSearchParams(location.search).has('debug')) window.__memory = { game, camera }

@@ -2,3 +2,13 @@
 @media (pointer: coarse) and (min-width: 600px) {
   button { min-width: 48px; min-height: 48px; touch-action: manipulation; }
 }
+/* Leave the lap controls above the pinned GO button on portrait iPads. */
+@media (pointer: coarse) and (min-width:700px) and (max-width:900px) and (min-height:900px) {
+  #menu { gap:8px; }
+  #menu h2 { font-size:24px; margin:0; }
+  #menu .city { padding:10px 8px; }
+  #menu .city .emoji { font-size:52px; }
+  #menu .city .name { font-size:24px; }
+  #menu .city .blurb { font-size:13px; }
+  #menu .adventure-choice { margin:4px auto; }
+}

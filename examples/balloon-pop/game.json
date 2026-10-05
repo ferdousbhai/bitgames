@@ -8,5 +8,10 @@
   "category": "pop",
   "together": false,
   "featured": true,
-  "url": "https://ae8ea8a8-bitgames-balloon-pop.ferdousbd.workers.dev/"
+  "url": "https://ae8ea8a8-bitgames-balloon-pop.ferdousbd.workers.dev/",
+  "ages": [
+    2,
+    6
+  ],
+  "learning": "Counting, colours and shape recognition"
 }

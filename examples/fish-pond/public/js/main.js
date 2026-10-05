@@ -1,3 +1,4 @@
+import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -37,7 +38,8 @@ const store = {
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+// iPad touch displays: fewer pixels preserve battery and keep play responsive.
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.toneMappingExposure = 1.0
 const scene = new THREE.Scene()
@@ -213,6 +215,20 @@ function stageScale() {
 }
 
 // --- Fishing ------------------------------------------------------------------------
+
+// Optional learning missions. A pace below 1 gives a much longer bite window.
+const adventure = createAdventure({
+  id: 'fish-pond',
+  anchor: $('title-book'),
+  hud: $('hud'),
+  isMuted: () => audio.muted,
+  celebrate: (text) => audio.say(text),
+  options: [
+    { emoji: '🎣', label: 'Free fishing' },
+    { emoji: '🐢', label: 'Extra time to reel', pace: 0.6 },
+    { emoji: '🐟', label: 'Count three discoveries', pace: 0.6, goal: 'Discover 3 finds', target: 3, reward: 'Three finds in your fishing story!' },
+  ],
+})
 
 const fish = {
   pick: null, // the creature info coming to bite
@@ -400,7 +416,7 @@ function nibbleStep(dt) {
 
 function bite() {
   setPhase('bite')
-  fish.window = 2.1 + Math.min(1.5, game.misses * 0.5) + (totalCaught() < 3 ? 0.6 : 0)
+  fish.window = (adventure.pace < 1 ? 6 : 2.1) + Math.min(1.5, game.misses * 0.5) + (totalCaught() < 3 ? 0.6 : 0)
   bob.shake = 1
   audio.bite()
   effects.ripple(bob.pos, 1.4, 0.8)
@@ -495,6 +511,7 @@ function startShow() {
   game.luck = pick.stars === 3 ? 0 : game.luck + 1
   store.set('fish-pond-luck', game.luck)
   game.session++
+  adventure.event(pick)
   const isNew = before === 0
   fish.show = { c, pick, t: 0, isNew, puffed: false, all: isNew && caughtKinds() === CREATURES.length }
   setPhase('show')
@@ -824,6 +841,7 @@ function toTitle() {
 }
 
 function start(place) {
+  adventure.begin()
   audio.unlock()
   audio.click()
   if (place !== game.place || game.state === 'loading') setupPlace(place)
@@ -1137,4 +1155,5 @@ if (new URLSearchParams(location.search).has('debug')) {
       for (let i = 0; i < n; i++) frame(1 / 30, i === n - 1)
     },
   }
+  window.__adventure = { mission: adventure, game }
 }

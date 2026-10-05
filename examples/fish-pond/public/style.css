@@ -175,3 +175,5 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .cstars { font-size: 18px; }
   .new { font-size: 16px; top: -16px; }
 }
+
+.field-guide { font-size: 15px; line-height: 1.35; margin: 8px 0 12px; color: #34334d; background: #fff5df; border-radius: 12px; padding: 10px; text-align: center; }

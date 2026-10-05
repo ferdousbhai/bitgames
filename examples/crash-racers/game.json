@@ -8,5 +8,10 @@
   "category": "race",
   "together": true,
   "featured": false,
-  "url": "https://27038f4c-bitgames-crash-racers.ferdousbd.workers.dev/"
+  "url": "https://27038f4c-bitgames-crash-racers.ferdousbd.workers.dev/",
+  "ages": [
+    5,
+    8
+  ],
+  "learning": "Map reading, ordered deliveries and spatial planning"
 }

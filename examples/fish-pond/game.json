@@ -8,5 +8,10 @@
   "category": "animals",
   "together": false,
   "featured": false,
-  "url": "https://bb28c307-bitgames-fish-pond.ferdousbd.workers.dev/"
+  "url": "https://bb28c307-bitgames-fish-pond.ferdousbd.workers.dev/",
+  "ages": [
+    2,
+    8
+  ],
+  "learning": "Observation, animal habitats and counting"
 }

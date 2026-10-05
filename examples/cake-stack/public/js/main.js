@@ -1,3 +1,5 @@
+import { createRecipeStudio } from './recipe-studio.js'
+import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -15,7 +17,8 @@ const clamp = THREE.MathUtils.clamp
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+// iPad touch displays: fewer pixels preserve battery and keep play responsive.
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.toneMappingExposure = 1.0
 renderer.shadowMap.enabled = true
@@ -45,6 +48,7 @@ const sound = new Sound()
 const effects = new Effects(scene, camera)
 const cakeKit = new CakeKit()
 const animals = new AnimalKit()
+const recipeStudio = createRecipeStudio({ cakeKit, openButton: $('recipe-open') })
 
 // --- Game state -----------------------------------------------------------------------------
 
@@ -67,6 +71,20 @@ try {
   game.best = Number(localStorage.getItem('cake-stack-best')) || 0
 } catch {}
 
+// Optional learning missions: count layers as they land.
+const adventure = createAdventure({
+  id: 'cake-stack',
+  anchor: $('play'),
+  hud: $('hud'),
+  isMuted: () => sound.muted,
+  celebrate: (text) => banner(text, 'gold'),
+  options: [
+    { emoji: '🎂', label: 'Free stacking' },
+    { emoji: '🐢', label: 'Gentle layer counting', pace: 0.6, goal: 'Stack 3 layers', target: 3, reward: 'Three layers make your little cake!' },
+    { emoji: '🧮', label: 'Count five layers', pace: 0.65, goal: 'Stack 5 layers', target: 5, reward: 'Five layers, counted one at a time!' },
+  ],
+})
+
 let cake = null // { group, layers: [], candles: [] }
 let mover = null // the layer sliding above the cake
 let customer = null
@@ -81,7 +99,7 @@ const unlockedFlavours = (level) => ['vanilla', ...CUSTOMERS.slice(0, Math.min(l
 const perfectWindow = (w) => Math.max(0.12, w * 0.12)
 const topY = () => STAND_TOP + (cake ? cake.layers.length : 0) * STEP
 const topLayer = () => (cake && cake.layers.length ? cake.layers[cake.layers.length - 1] : { x: 0, w: START_W })
-const speed = () => Math.min(3.0, (1.3 + 0.12 * Math.min(game.level - 1, 8)) * (1 + 0.03 * (cake ? cake.layers.length : 0)))
+const speed = () => adventure.pace * Math.min(3.0, (1.3 + 0.12 * Math.min(game.level - 1, 8)) * (1 + 0.03 * (cake ? cake.layers.length : 0)))
 
 function saveBest() {
   if (game.stars <= game.best) return false
@@ -307,6 +325,7 @@ function land(L) {
   L.group.removeFromParent()
   cakeKit.unglow(L)
   const layer = addLayer(cake, L.flavour, L.x, top.w)
+  adventure.event(layer)
   layer.sq = 0.28
   sound.plop(cake.layers.length)
   const y = STAND_TOP + (cake.layers.length - 1) * STEP
@@ -814,6 +833,8 @@ function buildPips(n) {
   for (let i = 0; i < n; i++) {
     const p = document.createElement('span')
     p.className = 'pip'
+    p.textContent = String(i + 1)
+    p.setAttribute('aria-label', `Layer ${i + 1}`)
     el.appendChild(p)
   }
   const goal = document.createElement('span')
@@ -913,6 +934,7 @@ function toTitle() {
 }
 
 function start() {
+  adventure.begin()
   sound.unlock()
   sound.click()
   endRun()
@@ -983,7 +1005,7 @@ canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault()
   tap()
 })
-for (const ev of ['touchmove', 'gesturestart', 'dblclick', 'contextmenu']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false })
+for (const ev of ['touchmove', 'gesturestart', 'dblclick', 'contextmenu']) document.addEventListener(ev, (e) => { if (!recipeStudio.open) e.preventDefault() }, { passive: false })
 
 addEventListener('keydown', (e) => {
   sound.unlock()
@@ -1031,6 +1053,7 @@ const focus = new THREE.Vector3()
 
 let simTime = 0
 function frame(dt) {
+  if (recipeStudio.open) return
   simTime += dt
   const t = simTime
   updateTweens(dt)
@@ -1060,7 +1083,10 @@ show('loading')
 load()
 
 // ?debug exposes the game for testing in the console
-if (new URLSearchParams(location.search).has('debug')) window.cakeStack = { game, frame, get cake() { return cake }, get mover() { return mover }, get customer() { return customer }, camera, scene }
+if (new URLSearchParams(location.search).has('debug')) {
+  window.cakeStack = { game, frame, get cake() { return cake }, get mover() { return mover }, get customer() { return customer }, camera, scene, recipeStudio }
+  window.__adventure = { mission: adventure, game }
+}
 // Background test tabs get no animation frames, so keep time moving there too.
 if (new URLSearchParams(location.search).has('debug')) {
   let last = performance.now()

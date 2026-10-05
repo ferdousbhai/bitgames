@@ -1,3 +1,5 @@
+import { createColourStudio } from './colour-studio.js'
+import { createGallery } from './gallery.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -66,7 +68,7 @@ scene.add(new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), skyMaterial))
  * fewer pixels rather than dropping frames, and gets them back when there's room.
  */
 const quality = { level: 2, frames: 0, time: 0, holdUntil: 0, drops: 0 }
-const QUALITY_PIXELS = [0.7, 1, Math.min(devicePixelRatio, 2)]
+const QUALITY_PIXELS = [0.7, 1, Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2)]
 function applyQuality() {
   renderer.setPixelRatio(QUALITY_PIXELS[quality.level])
   resize()
@@ -155,6 +157,19 @@ const game = {
   touched: false,
   build: 0,
 }
+
+// Opening (or closing) the gallery or colour studio lets go of the roller so the animal stops.
+function releaseControls() {
+  input.release()
+  input.keys.clear()
+  if (game.me) game.me.controls = { x: 0, z: 0 }
+}
+const gallery = createGallery({ renderer, scene, camera, openButton: $('gallery-open'), saveButton: $('gallery-save'), onOpen: releaseControls })
+const colourStudio = createColourStudio({
+  openButton: $('colour-open'),
+  onOpen: releaseControls,
+  onClose: releaseControls,
+})
 
 const isHost = () => game.room && game.hostId === game.room.selfId
 const roundId = () => game.setup?.r ?? 0
@@ -592,6 +607,8 @@ function stopRound() {
 
 async function startRound(setup) {
   if (!Array.isArray(setup.entries) || !setup.entries.length) return
+  gallery.close()
+  colourStudio.close()
   stopRound()
   game.setup = setup
   game.setup.seconds = clamp(Number(setup.seconds) || ROUND_SECONDS, 10, 180)
@@ -1001,7 +1018,7 @@ function collide(p) {
 function updatePainters(dt, t) {
   const playing = game.state === 'play'
   if (playing && game.me) {
-    const v = input.read()
+    const v = gallery.open || colourStudio.open ? { x: 0, y: 0 } : input.read()
     game.me.controls = { x: v.x, z: v.y }
   }
   const world = { paint, items, obstacles: game.arena.obstacles, painters: [...game.painters.values()] }
@@ -1183,7 +1200,7 @@ function frame() {
     if (game.state === 'play') measureQuality(realDt, t)
   }
   audio.updateMusic(game.state !== 'loading', game.state === 'play' && game.setup && (t - game.roundStart) / 1000 > game.setup.seconds - 10)
-  renderer.render(scene, camera)
+  if (!colourStudio.open) renderer.render(scene, camera)
   requestAnimationFrame(frame)
 }
 
@@ -1209,7 +1226,7 @@ async function boot() {
 
 if (DEBUG) {
   window.__paint = {
-    game, paint, items, audio, effects, camera, renderer, scene, THREE,
+    game, paint, items, audio, effects, camera, renderer, scene, THREE, gallery, colourStudio,
     end: () => (isHost() ? endRound() : null),
     /** Lets a bot drive this child's painter (for tests). */
     autopilot(on = true) {

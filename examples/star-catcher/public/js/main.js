@@ -1,3 +1,4 @@
+import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -31,7 +32,8 @@ const store = {
 
 const canvas = $('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+// iPad touch displays: fewer pixels preserve battery and keep play responsive.
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.toneMappingExposure = 1.05
 const scene = new THREE.Scene()
@@ -81,6 +83,43 @@ const game = {
   time: 0,
   idle: 0, // seconds since the player last steered (see the nudge in frame)
 }
+// The star-counting mission draws its progress as a five-star constellation,
+// joining each caught star to the one before it.
+const CONSTELLATION = [[10, 28], [42, 8], [74, 24], [106, 7], [140, 28]]
+function drawConstellation(el, count) {
+  const ns = 'http://www.w3.org/2000/svg'
+  const svgEl = (tag, attrs) => {
+    const node = document.createElementNS(ns, tag)
+    for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value)
+    return node
+  }
+  const svg = svgEl('svg', { viewBox: '0 0 150 38', width: 150, height: 38, 'aria-label': `Constellation with ${count} of five stars` })
+  CONSTELLATION.forEach(([x, y], i) => {
+    if (i && i < count) {
+      const [px, py] = CONSTELLATION[i - 1]
+      svg.append(svgEl('line', { x1: px, y1: py, x2: x, y2: y, stroke: '#c49d45', 'stroke-width': 2 }))
+    }
+    const star = svgEl('text', { x, y: y + 5, 'text-anchor': 'middle', fill: i < count ? '#946418' : '#bdb9a8' })
+    star.textContent = i < count ? '★' : '☆'
+    svg.append(star)
+  })
+  el.append(document.createElement('br'), svg)
+}
+
+const adventure = createAdventure({
+  id: 'star-catcher',
+  anchor: $('go'),
+  hud: $('hud'),
+  isMuted: () => audio.muted,
+  celebrate: (text) => banner('⭐ Mission complete!', text),
+  renderProgress: (el, option, count) => { if (option.constellation) drawConstellation(el, count) },
+  options: [
+    { emoji: '🚀', label: 'Free space flight' },
+    { emoji: '🐢', label: 'Gentle star counting', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => it.kind === 'star', reward: 'Five stars for a new constellation!' },
+    { emoji: '💎', label: 'Three-gem mission', pace: 0.65, goal: 'Catch 3 gems', target: 3, accept: (it) => it.kind === 'gem', reward: 'Three gems on your space journey!' },
+  ],
+})
+
 const items = []
 const pools = {}
 const templates = {}
@@ -307,6 +346,7 @@ function catchItem(it) {
     game.joy = 0.6
     return
   }
+  adventure.event(it)
   const points = it.k.points * (game.double > 0 ? 2 : 1)
   game.score += points
   game.legPoints += points
@@ -510,6 +550,7 @@ $('sound').addEventListener('pointerdown', (e) => {
 
 function start() {
   if (game.state !== 'title') return
+  adventure.begin()
   audio.unlock()
   audio.click()
   game.state = 'play'
@@ -657,7 +698,7 @@ function updateItems(dt) {
       o.position.y += it.vy * dt
       o.rotation.z += it.spin * dt
     } else {
-      o.position.y += it.vy * dt
+      o.position.y += it.vy * dt * (game.state === 'play' ? adventure.pace : 1)
       // The magnet pulls every goodie (not rocks) toward the rocket
       if (game.magnet > 0 && it.kind !== 'rock' && game.state === 'play') {
         tmp.subVectors(rocketCenter, o.position)
@@ -841,3 +882,4 @@ load()
     $('go').disabled = false
     $('go').onclick = () => location.reload()
   })
+if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game }

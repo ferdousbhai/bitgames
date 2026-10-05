@@ -2,11 +2,12 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { CREATURES } from './creatures.js'
 import { PLACES } from './world.js'
+import { fieldNote } from './field-guide.js'
 
 /**
  * The collection book: one sticker per creature. Caught ones show in full
  * colour with how many you have; the rest are mystery silhouettes with the
- * places where they live. Pictures are rendered once from the real models.
+ * toy-story places where they appear. Pictures are rendered once from the real models.
  */
 export class Book {
   constructor({ el, audio, creatures, getBook }) {
@@ -16,6 +17,11 @@ export class Book {
     this.getBook = getBook
     this.open = false
     this.pics = {}
+    this.note = document.createElement('p')
+    this.note.className = 'field-guide'
+    this.note.setAttribute('role', 'status')
+    this.note.textContent = 'This is a pretend toy pond. Touch a sticker to explore real habitats and imaginary surprises.'
+    el.querySelector('.book-grid').before(this.note)
     el.querySelector('.book-close').addEventListener('click', (e) => {
       e.stopPropagation()
       this.audio.click()
@@ -109,10 +115,11 @@ export class Book {
         tile.classList.remove('wiggle')
         void tile.offsetWidth
         tile.classList.add('wiggle')
-        if (n) {
-          this.audio.newOne()
-          this.audio.say(c.name)
-        } else this.audio.bubbles()
+        const message = fieldNote(c.id, c.name)
+        this.note.textContent = message
+        if (n) this.audio.newOne()
+        else this.audio.bubbles()
+        this.audio.say(message)
       })
       grid.appendChild(tile)
     }
