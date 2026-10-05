@@ -304,7 +304,8 @@ function finishRoll() {
     audio.cheer(knocked >= 5)
     crowd.start(knocked >= 5)
     if (knocked) effects.toss(deck, 12 + knocked * 5)
-    else effects.puff(new THREE.Vector3(0, 0.5, LANE.headPin), 10, 0.8, '#ffffff')
+    // No pins down: a little sparkle above the deck, never a cloud over the pins left to count
+    else effects.sparkleAt(new THREE.Vector3(0, 2.2, LANE.headPin - 0.8), '#fff3b0', 12, 2)
   }
 }
 
@@ -572,11 +573,17 @@ soundBtn.addEventListener('click', (e) => {
   audio.click()
 })
 const musicBtn = $('music')
+// Music on/off is remembered between visits, like the sound button.
+function setMusic(on) {
+  audio.musicOn = on
+  musicBtn.classList.toggle('off', !on)
+  store.set('music', on ? '1' : '0')
+}
+if (store.get('music') === '0') setMusic(false)
 musicBtn.addEventListener('click', (e) => {
   e.stopPropagation()
   audio.unlock()
-  audio.musicOn = !audio.musicOn
-  musicBtn.classList.toggle('off', !audio.musicOn)
+  setMusic(!audio.musicOn)
   audio.click()
 })
 

@@ -69,6 +69,9 @@
   #pin-prediction .pin { width: 58px; height: 58px; }
   #pin-prediction .pin-counter button { width: 72px; height: 72px; font-size: 40px; }
   #pin-value { font-size: 60px; }
+  /* The tap-pins fill their bigger buttons. */
+  #pin-prediction .pin::before { width: 28px; height: 48px; margin: -24px 0 0 -14px; border-radius: 14px 14px 11px 11px; border-width: 4px; }
+  #pin-prediction .pin.gap::before { width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 0; border-radius: 50%; }
 }
 
 /* The result line sits top-left under the buttons, away from the lane and the penguin. */
@@ -94,3 +97,8 @@
 @keyframes pin-pop { from { transform: scale(.4); opacity: 0; } }
 @media (max-width: 760px) { #pin-discovery { top: calc(112px + env(safe-area-inset-top)); } }
 @media (max-height: 480px) { #pin-discovery { top: calc(66px + env(safe-area-inset-top)); font-size: 12px; max-width: 220px; } #pin-discovery .pin-icons { font-size: 22px; } }
+/* Tablets: the result line a size bigger, readable from arm's length. */
+@media (min-width: 700px) and (min-height: 700px) {
+  #pin-discovery { font-size: 17px; max-width: 360px; padding: 8px 14px 10px; }
+  #pin-discovery .pin-icons { font-size: 32px; }
+}
