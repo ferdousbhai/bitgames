@@ -241,6 +241,14 @@ function trace(c, g, a) {
   for (const trail of trails) ribbon(trail, '#fff4dc', 0.03, 0.5).show(Infinity)
   // Arrows along the path, about every 1.6 units, pointing the way to go.
   const chevron = new THREE.Shape([[0.17, 0], [-0.09, 0.15], [-0.02, 0], [-0.09, -0.15]].map(([x, y]) => new THREE.Vector2(x, y)))
+  // Where the path runs back over itself (the stems of a, d, n, h, m), the two ways get their own
+  // lanes, as on a worksheet: smaller arrows to either side of the middle, never mixed on one line.
+  const headings = trails.flatMap((trail) => trail.slice(1).map(([x, z], k) => {
+    const [px, pz] = trail[k]
+    const length = Math.hypot(x - px, z - pz) || 1
+    return [(x + px) / 2, (z + pz) / 2, (x - px) / length, (z - pz) / length]
+  }))
+  const retraced = (x, z, dx, dz) => headings.some(([hx, hz, hdx, hdz]) => Math.hypot(hx - x, hz - z) < 0.2 && hdx * dx + hdz * dz < -0.7)
   for (const trail of trails) {
     let travelled = 1.05
     for (let k = 1; k < trail.length; k++) {
@@ -249,9 +257,14 @@ function trace(c, g, a) {
       travelled += Math.hypot(x - px, z - pz)
       if (travelled < 1.6 || k > trail.length - 2) continue
       const mark = flat(new THREE.ShapeGeometry(chevron).rotateX(-Math.PI / 2), '#d9a87c', 0.05)
-      mark.position.x = x
-      mark.position.z = z
-      mark.rotation.y = -Math.atan2(trail[k + 1][1] - pz, trail[k + 1][0] - px)
+      const [dx, dz] = [trail[k + 1][0] - px, trail[k + 1][1] - pz]
+      const length = Math.hypot(dx, dz) || 1
+      const lane = retraced(x, z, dx / length, dz / length) ? 0.135 : 0
+      // Each way keeps to its own side: left of the way it goes.
+      mark.position.x = x + (dz / length) * lane
+      mark.position.z = z - (dx / length) * lane
+      if (lane) mark.scale.setScalar(0.75)
+      mark.rotation.y = -Math.atan2(dz, dx)
       travelled = 0
     }
   }

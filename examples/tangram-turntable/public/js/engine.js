@@ -502,7 +502,9 @@ function positionTargets() {
   }
 }
 
-// Fit at least 10 world units across, more on wide screens.
+// Fit at least 10 world units across, more on wide screens. A tracing trail spans only about
+// 7 units across, so on upright screens tracing frames that instead of the whole board, for a
+// bigger letter to follow. Wide screens keep their framing, which the trail's height fills.
 function resize() {
   requestRender()
   if (!renderer) return
@@ -510,7 +512,8 @@ function resize() {
   if (!w || !h) return
   renderer.setSize(w, h, false)
   const aspect = w / h
-  const halfWidth = Math.max(5, 3.6 * aspect)
+  const tracing = state.screen === 'play' && state.challenge?.mode === 'trace'
+  const halfWidth = Math.max(tracing ? 3.9 : 5, 3.6 * aspect)
   const halfHeight = halfWidth / aspect
   camera.left = -halfWidth
   camera.right = halfWidth
