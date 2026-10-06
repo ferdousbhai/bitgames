@@ -254,6 +254,20 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   /* Nudged left, clear of the store's 🏠 and ✕ buttons in the top-right corner. */
   #menu .modes { margin-right: 80px; }
 }
+/* The shortest sideways phones (browser bars showing): Laps and Easy mode join GO along the bottom,
+   and smaller car and place cards fit above them, so nothing needs a scroll. */
+@media (max-height: 340px) and (orientation: landscape) {
+  #menu { gap: 4px; padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+  /* Playing alone, the lone '(me)' chip makes way; with friends in the room it stays. */
+  #menu .players:not(:has(> :nth-child(2))) { display: none; }
+  #menu .options { position: fixed; left: calc(10px + env(safe-area-inset-left)); bottom: calc(10px + env(safe-area-inset-bottom)); margin: 0; z-index: 3;
+    flex-wrap: nowrap; gap: 6px; padding: 2px 8px 2px 12px; border-radius: 999px; background: rgba(43,45,66,0.88); }
+  #menu .laps button, #menu .chip, #menu .mode { min-width: 44px; min-height: 44px; }
+  #menu .cities, #menu .car-row { padding: 6px 14px; }
+  #menu .car-pick { width: 92px; padding: 0 4px 4px; } #menu .car-pick .pic { width: 58px; margin: -2px auto -4px; }
+  #menu .city { display: flex; align-items: center; gap: 6px; width: auto; min-height: 44px; padding: 2px 14px; }
+  #menu .city .emoji { font-size: 24px; }
+}
 /* Sideways phone in a race: the small buttons sit in a row between the steering and the pedals. */
 @media (max-height: 500px) and (orientation: landscape) and (any-pointer: coarse) {
   .hud-buttons { top: auto; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom)); flex-direction: row; gap: 6px; }
