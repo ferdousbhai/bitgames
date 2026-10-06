@@ -6,7 +6,7 @@ Trace large glowing letters with a friendly firefly.
 - Learning: Letter formation
 - Activity: trace
 
-Start at the glowing dot. Hold and follow the trail, or tap each dot in order.
+Watch the firefly, then start at number 1 and follow the arrows with your finger. You can also tap each glowing dot.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/letter-trails assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

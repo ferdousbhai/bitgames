@@ -59,6 +59,9 @@ await runChecks(session, async (pass) => {
   await page.screenshot({ path: `${out}/stirred-paint.png` })
 
   await open('letter-trails')
+  // Step 4 of Little steps is big A: two slanted strokes from the top, then the crossbar.
+  await page.evaluate(() => window.__learning.startRound(3))
+  await page.waitForTimeout(300)
   const trail = await page.evaluate(() => {
     const c = window.__learning.state.challenge
     return { starts: c.strokeStarts, points: c.points.map(([x, z]) => window.__learning.api.screenPoint({ x, y: 0.25, z })) }
@@ -66,7 +69,7 @@ await runChecks(session, async (pass) => {
   // Run every stroke into one without lifting: the letter must not complete.
   await touchStroke(cdp, trail.points, null)
   assert.equal(await isSolved(), false, 'Connecting all strokes without lifting must not complete A.')
-  assert.equal(await page.locator('.world-action.selected').count(), trail.starts[1])
+  assert.equal(await page.locator('.world-action.reached').count(), trail.starts[1])
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   for (let i = 1; i < trail.starts.length; i++) {
     await touchStroke(cdp, trail.points.slice(trail.starts[i], trail.starts[i + 1] || trail.points.length))

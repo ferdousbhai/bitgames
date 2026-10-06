@@ -129,28 +129,164 @@ function path(c, g, a) {
 }
 
 // The child follows glowing dots by dragging, tapping each dot, or pressing a button.
-// Letters and numbers have several strokes; dragging must lift between them.
+// A pale path shows the whole shape with arrows for its direction; letters and numbers
+// number each stroke's start and need a lift between strokes. The hero shows the way first,
+// and the ink follows the finger smoothly between dots.
 function trace(c, g, a) {
   const strokeStarts = c.strokeStarts || [0]
+  const points = c.points
+  const count = points.length
+  // Each stroke's smooth trail and the trail position of each of its dots.
+  const trails = c.trails || [points]
+  const marks = c.marks || [points.map((_, i) => i)]
+  const isStart = (i) => strokeStarts.includes(i)
+  const strokeOf = (i) => strokeStarts.filter((start) => start <= i).length - 1
+  const markOf = (i) => marks[strokeOf(i)][i - strokeStarts[strokeOf(i)]]
   const pads = []
   let step = 0
   let needsLift = false
+  let last = null
+  let offPath = false
+  let nudges = 0
+  let saidOffPath = false
+  let idleTimer = null
+  let demoRun = 0
+  let demoing = false
+
+  const materials = {}
+  const paint = (colour) => {
+    if (!materials[colour]) {
+      materials[colour] = a.material(colour)
+      materials[colour].side = THREE.DoubleSide
+    }
+    return materials[colour]
+  }
+  const flat = (geometry, colour, y) => {
+    const result = a.mesh(geometry, colour)
+    result.material = paint(colour)
+    result.castShadow = false
+    result.position.y = y
+    a.board.add(result)
+    return result
+  }
+  const disc = (p, colour, y, width) => {
+    const d = flat(new THREE.CircleGeometry(width / 2, 24).rotateX(-Math.PI / 2), colour, y)
+    d.position.x = p[0]
+    d.position.z = p[1]
+    return d
+  }
+  const sharp = (p, q, r) => {
+    const [ax, az, bx, bz] = [q[0] - p[0], q[1] - p[1], r[0] - q[0], r[1] - q[1]]
+    return (ax * bx + az * bz) / (Math.hypot(ax, az) * Math.hypot(bx, bz) || 1) < 0.8
+  }
+  // A flat band along trail[from..to], drawn up to a trail position with setDrawRange.
+  const band = (trail, from, to, colour, y, width) => {
+    const position = []
+    const index = []
+    for (let k = from; k <= to; k++) {
+      const before = trail[Math.max(from, k - 1)]
+      const after = trail[Math.min(to, k + 1)]
+      const length = Math.hypot(after[0] - before[0], after[1] - before[1]) || 1
+      const nx = (-(after[1] - before[1]) / length) * (width / 2)
+      const nz = ((after[0] - before[0]) / length) * (width / 2)
+      position.push(trail[k][0] + nx, 0, trail[k][1] + nz, trail[k][0] - nx, 0, trail[k][1] - nz)
+      if (k < to) {
+        const v = (k - from) * 2
+        index.push(v, v + 2, v + 1, v + 1, v + 2, v + 3)
+      }
+    }
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3))
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(position.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3))
+    geometry.setIndex(index)
+    return flat(geometry, colour, y)
+  }
+  // A stroke's ribbon: bands split at sharp corners, with round ends and corners.
+  // `show(d)` reveals it up to trail position d (-1 hides it).
+  const ribbon = (trail, colour, y, width) => {
+    const bands = []
+    const caps = [[0, disc(trail[0], colour, y, width)]]
+    let from = 0
+    for (let k = 1; k < trail.length; k++) {
+      if (k === trail.length - 1 || sharp(trail[k - 1], trail[k], trail[k + 1])) {
+        bands.push([from, k, band(trail, from, k, colour, y, width)])
+        caps.push([k, disc(trail[k], colour, y, width)])
+        from = k
+      }
+    }
+    const head = disc(trail[0], colour, y, width)
+    const show = (d) => {
+      for (const [start, end, mesh] of bands) {
+        mesh.visible = d > start
+        mesh.geometry.setDrawRange(0, Math.floor(Math.max(0, Math.min(d, end) - start)) * 6)
+      }
+      for (const [k, cap] of caps) cap.visible = d >= k
+      const k = Math.floor(d)
+      head.visible = d >= 0 && k < trail.length
+      if (head.visible) head.position.set(trail[k][0], y, trail[k][1])
+      a.invalidate()
+    }
+    show(-1)
+    return { show }
+  }
+
+  if (c.trace === 'letter') {
+    // Handwriting lines: the top line, a dashed middle line at the little letters' height, and the baseline.
+    const lineColour = '#c3ab92'
+    const rule = (x0, x1, z, width) => band([[x0, z], [x1, z]], 0, 1, lineColour, 0.012, width)
+    rule(-3.4, 3.4, -3, 0.06)
+    rule(-3.4, 3.4, 3, 0.06)
+    for (let x = -3.4; x < 3.4; x += 0.5) rule(x, x + 0.28, -0.667, 0.05)
+  }
+  for (const trail of trails) ribbon(trail, '#fff4dc', 0.03, 0.5).show(Infinity)
+  // Arrows along the path, about every 1.6 units, pointing the way to go.
+  const chevron = new THREE.Shape([[0.17, 0], [-0.09, 0.15], [-0.02, 0], [-0.09, -0.15]].map(([x, y]) => new THREE.Vector2(x, y)))
+  for (const trail of trails) {
+    let travelled = 1.05
+    for (let k = 1; k < trail.length; k++) {
+      const [px, pz] = trail[k - 1]
+      const [x, z] = trail[k]
+      travelled += Math.hypot(x - px, z - pz)
+      if (travelled < 1.6 || k > trail.length - 2) continue
+      const mark = flat(new THREE.ShapeGeometry(chevron).rotateX(-Math.PI / 2), '#d9a87c', 0.05)
+      mark.position.x = x
+      mark.position.z = z
+      mark.rotation.y = -Math.atan2(trail[k + 1][1] - pz, trail[k + 1][0] - px)
+      travelled = 0
+    }
+  }
+  const ink = trails.map((trail) => ribbon(trail, g.accent, 0.06, 0.32))
+  // The hero's glow when it shows the way.
+  const glow = trails.map((trail) => ribbon(trail, '#ffe680', 0.07, 0.22))
+  const hideGlow = () => glow.forEach((part) => part.show(-1))
 
   const marker = new THREE.Group()
   marker.add(a.model(c.hero, 0.55))
-  marker.position.set(c.points[0][0], 0.25, c.points[0][1])
+  marker.position.set(points[0][0], 0.25, points[0][1])
   a.board.add(marker)
+  const home = () => (step ? points[step - 1] : points[0])
+  const goHome = () => {
+    const [hx, hz] = home()
+    marker.position.set(hx, 0.25, hz)
+    a.invalidate()
+  }
+  const face = (from, to) => {
+    if (Math.hypot(to[0] - from[0], to[1] - from[1]) > 1e-6) marker.rotation.y = Math.atan2(to[0] - from[0], to[1] - from[1])
+  }
 
-  // One ink line per stroke, revealed as the child reaches each dot.
-  const ink = strokeStarts.map((start, i) => {
-    const end = strokeStarts[i + 1] || c.points.length
-    const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array((end - start) * 3), 3))
-    c.points.slice(start, end).forEach(([x, z], j) => geometry.attributes.position.setXYZ(j, x, 0.26, z))
-    geometry.setDrawRange(0, 0)
-    a.board.add(a.line(geometry, g.accent))
-    return { start, end, geometry }
-  })
+  // Ink up to the last dot reached, plus `extra` (0 to 1) of the way to the next dot.
+  function showInk(extra = 0) {
+    trails.forEach((_, s) => {
+      const first = strokeStarts[s]
+      const lastDot = (strokeStarts[s + 1] || count) - 1
+      if (step <= first) ink[s].show(-1)
+      else if (step > lastDot) ink[s].show(Infinity)
+      else {
+        const reached = markOf(step - 1)
+        ink[s].show(reached + extra * (markOf(step) - reached))
+      }
+    })
+  }
 
   function setCurrent(pad, current) {
     pad.button.classList.toggle('current', current)
@@ -158,53 +294,210 @@ function trace(c, g, a) {
     pad.button.tabIndex = current ? 0 : -1
   }
 
+  // Number each stroke's start (letters and numbers). Where two strokes start at the same dot,
+  // only the next one shows its number.
+  function numberStarts() {
+    if (!c.strokes) return
+    const shown = []
+    strokeStarts.forEach((start, s) => {
+      const [x, z] = points[start]
+      const show = start >= step && !shown.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 0.3)
+      if (show) shown.push([x, z])
+      pads[start].label(show ? String(s + 1) : '')
+      pads[start].button.setAttribute('aria-label', `Trace dot ${start + 1}${show ? `, start of stroke ${s + 1}` : ''}`)
+    })
+  }
+
+  // Where a finger is along the line from the last dot reached to the next one.
+  function along(p) {
+    const [ax, az] = points[step - 1]
+    const [bx, bz] = points[step]
+    const length2 = (bx - ax) ** 2 + (bz - az) ** 2 || 1
+    const t = Math.max(0, Math.min(1, ((p.x - ax) * (bx - ax) + (p.z - az) * (bz - az)) / length2))
+    return { t, away: Math.hypot(p.x - (ax + (bx - ax) * t), p.z - (az + (bz - az) * t)) }
+  }
+  // How far a finger is from the path still to draw: the part being drawn, or the next dot.
+  function distanceToPath(p) {
+    if (step === 0 || isStart(step)) return Math.hypot(p.x - points[step][0], p.z - points[step][1])
+    return along(p).away
+  }
+
+  function stopDemo() {
+    demoRun++
+    hideGlow()
+    for (const pad of pads) pad.flash(false)
+    if (demoing) goHome()
+    demoing = false
+  }
+
+  // A child who stops hears what to do and sees the hero show the way again (twice at most).
+  function waitForChild() {
+    clearTimeout(idleTimer)
+    if (nudges >= 2) return
+    idleTimer = a.later(() => {
+      if (step >= count) return
+      nudges++
+      const start = step === 0 ? (c.strokes ? 'start at number 1' : 'start at the glowing dot') : 'carry on from the glowing dot'
+      a.hint(`Watch, then ${start} and follow the arrows.`)
+      a.audio.speak(['Watch me.', `Then ${start}, and follow the arrows.`])
+      demo(true)
+    }, 15000)
+  }
+
   function advance(index, dragging = false) {
-    if (index !== step || step >= c.points.length || (dragging && needsLift)) return
-    const [x, z] = c.points[step]
+    if (index !== step || step >= count || (dragging && needsLift)) return
+    stopDemo()
+    const [x, z] = points[step]
     const origin = marker.position.clone()
     const destination = new THREE.Vector3(x, 0.25, z)
     a.animate(0.12, (t) => marker.position.lerpVectors(origin, destination, t), marker)
     // Face along the stroke, except when jumping to the start of a new one.
-    if (step > 0 && !strokeStarts.includes(step)) {
-      const [px, pz] = c.points[step - 1]
-      marker.rotation.y = Math.atan2(x - px, z - pz)
-    }
-    pads[step].select(true)
+    if (step > 0 && !isStart(step)) face(points[step - 1], points[step])
+    pads[step].base.visible = false
+    pads[step].button.classList.add('reached')
+    pads[step].flash(false)
     setCurrent(pads[step], false)
     step++
-    for (const stroke of ink) stroke.geometry.setDrawRange(0, Math.max(0, Math.min(step, stroke.end) - stroke.start))
+    showInk()
+    numberStarts()
     a.audio.note(300 + step * 12, 0.08)
     a.invalidate()
+    waitForChild()
 
-    if (step === c.points.length) {
-      const strokeNote = strokeStarts.length > 1 ? 'Each stroke has its own beginning.' : ''
-      a.success(c.glyph ? `You drew ${c.glyph}. ${strokeNote}` : 'Your friend followed the whole trail!')
+    if (step === count) {
+      clearTimeout(idleTimer)
+      a.hint(g.instructions)
+      if (c.factSay) a.success(c.fact, c.factSay)
+      else a.success(c.glyph ? `You drew ${c.glyph}.` : 'Your friend followed the whole trail!')
       return
     }
-    if (strokeStarts.includes(step)) {
+    // Once a new stroke has begun, the lift reminder gives way to the usual help.
+    if (step > 1 && isStart(step - 1)) a.hint(g.instructions)
+    if (isStart(step)) {
       needsLift = dragging
-      a.hint(`Lift your finger. Start stroke ${strokeStarts.indexOf(step) + 1} at the glowing dot.`)
+      const say = `Now start at number ${strokeOf(step) + 1}.`
+      a.hint(dragging ? `Lift your finger. ${say}` : say)
+      a.audio.speak(dragging ? ['Lift your finger.', say] : say)
     }
     setCurrent(pads[step], true)
   }
 
-  c.points.forEach(([x, z], i) => {
+  // The hero traces the whole shape, stroke by stroke, leaving a glow, then waits at its place.
+  function demo(again = false) {
+    stopDemo()
+    demoing = true
+    const run = demoRun
+    const drawStroke = (s) => {
+      if (run !== demoRun) return
+      if (s === trails.length) {
+        a.later(() => {
+          if (run !== demoRun) return
+          hideGlow()
+          demoing = false
+          goHome()
+          if (step < count) pads[step].flash(again)
+        }, 700)
+        return
+      }
+      const trail = trails[s]
+      const [sx, sz] = trail[0]
+      const origin = marker.position.clone()
+      // Hop to the stroke's start, then glide along it at about eight dots a second.
+      a.animate(0.3, (t) => {
+        marker.position.lerpVectors(origin, new THREE.Vector3(sx, 0.25, sz), t)
+        marker.position.y += Math.sin(t * Math.PI) * (s ? 0.8 : 0)
+      }, marker)
+      const seconds = Math.max(0.5, (trail.length - 1) * 0.026)
+      a.later(() => {
+        if (run !== demoRun) return
+        a.animate(seconds, (t) => {
+          const d = t * (trail.length - 1)
+          const k = Math.min(trail.length - 1, Math.floor(d))
+          glow[s].show(d)
+          marker.position.set(trail[k][0], 0.25, trail[k][1])
+          face(trail[Math.max(0, k - 1)], trail[Math.min(trail.length - 1, k + 1)])
+        }, marker)
+        a.later(() => drawStroke(s + 1), seconds * 1000 + 250)
+      }, 320)
+    }
+    a.later(() => drawStroke(0), 150)
+  }
+
+  points.forEach(([x, z], i) => {
     const pad = a.tile({ x, z, size: 0.19, depth: 0.19, thin: true, colour: '#fff8d8', label: '', onTap: () => advance(i) })
     pad.button.setAttribute('aria-label', `Trace dot ${i + 1}`)
     setCurrent(pad, i === 0)
     pads.push(pad)
   })
+  numberStarts()
 
-  const clearLift = () => {
+  // A finger counts as on a dot within about 30 screen pixels (more on small screens), checked
+  // along its whole movement so a quick stroke never skips a dot.
+  const tolerance = () => {
+    const unit = parseFloat(getComputedStyle(document.getElementById('targets')).getPropertyValue('--unit')) || 60
+    return Math.max(0.7, 30 / unit)
+  }
+  const endDrag = () => {
     needsLift = false
+    last = null
+    if (step < count) {
+      showInk()
+      goHome()
+      if (offPath) pads[step].flash(false)
+    }
+    offPath = false
   }
   a.onTrace(
     (p) => {
-      if (!p || step >= c.points.length) return
-      const [x, z] = c.points[step]
-      if (Math.hypot(p.x - x, p.z - z) < 0.55) advance(step, true)
+      if (!p || step >= count || needsLift) return
+      const tol = tolerance()
+      let from = last || p
+      while (step < count && !needsLift) {
+        const [x, z] = points[step]
+        const dx = p.x - from.x
+        const dz = p.z - from.z
+        const t = Math.max(0, Math.min(1, ((x - from.x) * dx + (z - from.z) * dz) / (dx * dx + dz * dz || 1)))
+        const q = { x: from.x + dx * t, z: from.z + dz * t }
+        if (Math.hypot(q.x - x, q.z - z) > tol) break
+        advance(step, true)
+        from = q
+      }
+      last = p
+      if (step >= count || needsLift) return
+      // The ink and the hero follow the finger between dots.
+      if (step > 0 && !isStart(step)) {
+        const { t, away } = along(p)
+        if (away < tol * 1.5) {
+          showInk(t)
+          const s = strokeOf(step)
+          const k = Math.floor(markOf(step - 1) + t * (markOf(step) - markOf(step - 1)))
+          marker.position.set(trails[s][k][0], 0.25, trails[s][k][1])
+          a.invalidate()
+        }
+      }
+      // Wandering off the path is never a mistake: the next dot glows and a gentle word helps.
+      const away = distanceToPath(p) > Math.max(1.5, tol * 2.2)
+      if (away && !offPath) {
+        offPath = true
+        pads[step].flash(true)
+        a.hint('Come back to the glowing dot and follow the path.')
+        if (!saidOffPath) a.audio.speak('Come back to the glowing dot.')
+        saidOffPath = true
+      } else if (!away && offPath) {
+        offPath = false
+        pads[step].flash(false)
+      }
     },
-    { onStart: clearLift, onEnd: clearLift },
+    { onStart: () => { needsLift = false; last = null; stopDemo() }, onEnd: endDrag },
   )
+  a.action('👀 Show me', () => {
+    a.hint('Watch the way to go.')
+    demo()
+  })
   a.action('Next glowing dot', () => advance(step))
+  // The hero shows the way once at the start, while the prompt is read.
+  a.later(() => {
+    if (step === 0) demo()
+  }, 900)
+  waitForChild()
 }

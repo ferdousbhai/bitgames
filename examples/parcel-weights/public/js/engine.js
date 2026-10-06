@@ -555,7 +555,8 @@ function startRound(round = 0) {
   $('hint').textContent = game.instructions
   runActivity(state.challenge, game, api)
   resize()
-  later(() => audio.speak($('prompt').textContent), 250)
+  // `say` gives the words read aloud when they differ from the shown prompt, e.g. a letter's name.
+  later(() => audio.speak(state.challenge.say || $('prompt').textContent), 250)
 }
 
 function begin() {
@@ -574,14 +575,22 @@ function finish() {
   const spelled = game.mode === 'spell'
     ? Array.from({ length: 5 }, (_, round) => challenge(game, state.level, round, state.seed))
     : []
+  // Letter tracing recaps the five letters, each said on its own so voices say its name.
+  const traced = game.trace === 'letter'
+    ? Array.from({ length: 5 }, (_, round) => challenge(game, state.level, round, state.seed).glyph)
+    : []
   const list = (words) => `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`
   printText($('win-text'), spelled.length
     ? `You spelled ${list(spelled.map((c) => `${c.picture} ${c.word.toLowerCase()}`))}. Every try helped you learn!`
-    : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)
+    : traced.length
+      ? `You traced ${list(traced)}. Every try helped you learn!`
+      : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)
   audio.happy()
   audio.speak(spelled.length
     ? ['A wonderful adventure!', `You spelled ${list(spelled.map((c) => c.word.toLowerCase()))}.`]
-    : 'A wonderful adventure! Every try helped you learn.')
+    : traced.length
+      ? ['A wonderful adventure!', 'You traced', ...traced.slice(0, -1).map((l) => l.toUpperCase()), 'and', traced.at(-1).toUpperCase()]
+      : 'A wonderful adventure! Every try helped you learn.')
   tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true })
   burst()
 }
@@ -727,7 +736,7 @@ $('home').onclick = menu
 $('win-home').onclick = menu
 $('listen').onclick = () => {
   audio.unlock()
-  audio.speak($('prompt').textContent || game.instructions)
+  audio.speak(state.challenge?.say || $('prompt').textContent || game.instructions)
 }
 
 function updateMute() {

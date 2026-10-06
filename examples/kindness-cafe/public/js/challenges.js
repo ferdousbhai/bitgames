@@ -35,14 +35,68 @@ const pathPrompts = {
   penguin: 'Plan a safe route to the fish picnic.',
 }
 
-// Each glyph is a list of strokes; each stroke is a list of corner points.
-const letterStrokes = [
-  ['A', [[[0, -2], [-2, 2]], [[0, -2], [2, 2]], [[-1, 0], [1, 0]]]],
-  ['L', [[[-1, -2], [-1, 2], [2, 2]]]],
-  ['M', [[[-2, -2], [-2, 2]], [[-2, -2], [0, 0], [2, -2]], [[2, -2], [2, 2]]]],
-  ['V', [[[-2, -2], [0, 2], [2, -2]]]],
-  ['N', [[[-2, -2], [-2, 2]], [[-2, -2], [2, 2]], [[2, -2], [2, 2]]]],
+// Each glyph is a list of strokes, in the order and direction children are taught to form
+// them; each stroke is a list of points with y = -2 at the top and y = 2 on the baseline.
+// Capitals: lines start at the top, go down before across, and across left to right.
+const capitalStrokes = {
+  L: [[[-1, -2], [-1, 2], [2, 2]]],
+  T: [[[0, -2], [0, 2]], [[-2, -2], [2, -2]]],
+  V: [[[-2, -2], [0, 2], [2, -2]]],
+  A: [[[0, -2], [-2, 2]], [[0, -2], [2, 2]], [[-1, 0], [1, 0]]],
+  // Down; then from the top, slant down and push straight up.
+  N: [[[-2, -2], [-2, 2]], [[-2, -2], [2, 2], [2, -2]]],
+}
+
+// Little letters follow the early-years print of the letter tiles (LETTER_PATHS in engine.js:
+// an 80-wide box, x-height 45, baseline 100, ascenders 10): a single-storey a, an l with a tail.
+// Curly letters start at the top right and go round anticlockwise, as in "c, then up and down".
+const PRINT = 4 / 90
+const fromPrint = ([x, y]) => [(x - 40) * PRINT, (y - 10) * PRINT - 2]
+// An ellipse from angle a0 to a1 in degrees; y grows downwards, so falling angles go anticlockwise.
+const arc = (cx, cy, rx, ry, a0, a1) => Array.from({ length: 33 }, (_, i) => {
+  const t = ((a0 + ((a1 - a0) * i) / 32) * Math.PI) / 180
+  return [cx + rx * Math.cos(t), cy + ry * Math.sin(t)]
+})
+const bezier = (p0, p1, p2, p3) => Array.from({ length: 13 }, (_, i) => {
+  const t = i / 12
+  const u = 1 - t
+  return [0, 1].map((k) => u ** 3 * p0[k] + 3 * u * u * t * p1[k] + 3 * u * t * t * p2[k] + t ** 3 * p3[k])
+})
+// Back up the stem and over the hump, then down (n, h, m).
+const hump = (x, w) => [
+  ...bezier([x, 64], [x + 2, 52], [x + w * 0.3, 45], [x + w * 0.55, 45]),
+  ...bezier([x + w * 0.55, 45], [x + w * 0.85, 45], [x + w, 51], [x + w, 62]),
+  [x + w, 100],
 ]
+const tail = (x) => bezier([x, 86], [x, 96], [x + 6, 100], [x + 16, 100])
+const ball = arc(36, 72.5, 24, 27.5, -40, -360)
+const littleStrokes = {
+  l: [[[34, 10], ...tail(34)]],
+  t: [[[38, 22], ...tail(38)], [[22, 45], [56, 45]]],
+  c: [arc(39.5, 72.5, 25, 27.5, -42.3, -317.7)],
+  o: [arc(40, 72.5, 25, 27.5, -60, -420)],
+  a: [[...ball, [60, 45], [60, 100]]],
+  d: [[...ball, [60, 10], [60, 100]]],
+  n: [[[20, 45], [20, 100], ...hump(20, 40)]],
+  h: [[[20, 10], [20, 100], ...hump(20, 40)]],
+  m: [[[12, 45], [12, 100], ...hump(12, 28), ...hump(40, 28)]],
+  s: [[
+    ...bezier([58, 53], [54, 47], [47, 45], [40, 45]), ...bezier([40, 45], [30, 45], [22, 50], [22, 58]),
+    ...bezier([22, 58], [22, 67], [30, 69], [40, 72]), ...bezier([40, 72], [51, 75], [59, 78], [59, 87]),
+    ...bezier([59, 87], [59, 96], [50, 100], [40, 100]), ...bezier([40, 100], [31, 100], [24, 97], [20, 91]),
+  ]],
+}
+for (const [letter, strokes] of Object.entries(littleStrokes)) littleStrokes[letter] = strokes.map((stroke) => stroke.map(fromPrint))
+
+// Each level's five letters, easiest first, with a word that begins with the letter's sound.
+// Little steps: big straight-line letters. Growing: little letters, then the curly c family.
+// Explorer: more curly letters and the "down, back up and over" family.
+const letterSets = [
+  [['L', 'lion', '🦁'], ['T', 'tiger', '🐯'], ['V', 'van', '🚐'], ['A', 'apple', '🍎'], ['N', 'nose', '👃']],
+  [['l', 'leaf', '🍃'], ['t', 'tent', '⛺'], ['c', 'cat', '🐱'], ['o', 'octopus', '🐙'], ['a', 'ant', '🐜']],
+  [['d', 'dog', '🐶'], ['n', 'nut', '🥜'], ['h', 'hat', '🎩'], ['m', 'moon', '🌙'], ['s', 'sun', '☀️']],
+]
+const glyphStrokes = { ...capitalStrokes, ...littleStrokes }
 const digitStrokes = [
   ['1', [[[0, -2], [0, 2]]]],
   ['2', [[[-1.6, -1], [-1.3, -1.7], [-0.5, -2], [0.6, -1.9], [1.4, -1.4], [1.5, -0.7], [1, 0.1], [-1.6, 2], [1.7, 2]]]],
@@ -91,13 +145,52 @@ function shuffle(values, rng) {
 
 export const clockTime = (hour, minute) => `${hour}:${String(minute).padStart(2, '0')}`
 
-// Adds four evenly spaced points between each pair of corners.
-function resample(corners) {
-  return corners.flatMap((p, i) => {
-    if (i === corners.length - 1) return [p]
-    const next = corners[i + 1]
-    return Array.from({ length: 5 }, (_, j) => [p[0] + ((next[0] - p[0]) * j) / 5, p[1] + ((next[1] - p[1]) * j) / 5])
-  })
+// Board positions: the camera looks down at about 50 degrees, which shortens the board's depth to
+// 77%, so glyphs are stretched that much front to back to look as drawn. Dots are then spaced
+// evenly along each stroke, keeping its corners (and the turn where a stroke goes back up its line).
+// `trail` follows the stroke closely (five steps per dot) so curves are drawn smooth; `marks` are
+// the trail positions of the dots.
+const GLYPH_X = 1.15
+const GLYPH_Z = 1.5
+const DOT_SPACING = 0.9
+const TRAIL_STEPS = 5
+function resample(points) {
+  const placed = points.map(([x, y]) => [x * GLYPH_X, y * GLYPH_Z])
+    .filter((p, i, all) => i === 0 || Math.hypot(p[0] - all[i - 1][0], p[1] - all[i - 1][1]) > 1e-6)
+  const pieces = [[placed[0]]]
+  for (let i = 1; i < placed.length; i++) {
+    pieces.at(-1).push(placed[i])
+    const next = placed[i + 1]
+    if (!next) break
+    const [ax, ay] = [placed[i][0] - placed[i - 1][0], placed[i][1] - placed[i - 1][1]]
+    const [bx, by] = [next[0] - placed[i][0], next[1] - placed[i][1]]
+    const turn = Math.acos(Math.max(-1, Math.min(1, (ax * bx + ay * by) / (Math.hypot(ax, ay) * Math.hypot(bx, by)))))
+    if (turn > 0.6) pieces.push([placed[i]])
+  }
+  const dots = []
+  const trail = []
+  const marks = []
+  for (const piece of pieces) {
+    const lengths = [0]
+    for (let i = 1; i < piece.length; i++) lengths.push(lengths[i - 1] + Math.hypot(piece[i][0] - piece[i - 1][0], piece[i][1] - piece[i - 1][1]))
+    const total = lengths.at(-1)
+    const steps = Math.max(1, Math.round(total / DOT_SPACING)) * TRAIL_STEPS
+    for (let k = 0; k < steps; k++) {
+      const at = (total * k) / steps
+      let i = 1
+      while (i < piece.length - 1 && lengths[i] < at) i++
+      const t = (at - lengths[i - 1]) / (lengths[i] - lengths[i - 1] || 1)
+      trail.push([piece[i - 1][0] + (piece[i][0] - piece[i - 1][0]) * t, piece[i - 1][1] + (piece[i][1] - piece[i - 1][1]) * t])
+      if (k % TRAIL_STEPS === 0) {
+        dots.push(trail.at(-1))
+        marks.push(trail.length - 1)
+      }
+    }
+  }
+  trail.push(placed.at(-1))
+  dots.push(placed.at(-1))
+  marks.push(trail.length - 1)
+  return { dots, trail, marks }
 }
 
 // A pattern of random cells with at least one filled in.
@@ -269,9 +362,12 @@ export function challenge(g, level, round, seed) {
         c.points = Array.from({ length: 25 }, (_, i) => [-3 + i / 4, Math.sin((i / 24) * Math.PI * (2 + level)) * 1.7])
       }
       if (g.trace === 'letter' || g.trace === 'number') {
-        const [glyph, strokes] = (g.trace === 'letter' ? letterStrokes : digitStrokes)[round % 5]
-        c.glyph = glyph
-        c.strokes = strokes.map(resample)
+        ;[c.glyph, c.word, c.picture] = g.trace === 'letter' ? letterSets[level][round % 5] : [digitStrokes[round % 5][0]]
+        const strokes = g.trace === 'letter' ? glyphStrokes[c.glyph] : digitStrokes[round % 5][1]
+        const sampled = strokes.map((stroke) => resample(stroke))
+        c.strokes = sampled.map(({ dots }) => dots)
+        c.trails = sampled.map(({ trail }) => trail)
+        c.marks = sampled.map(({ marks }) => marks)
         c.points = []
         c.strokeStarts = []
         for (const stroke of c.strokes) {
@@ -280,6 +376,15 @@ export function challenge(g, level, round, seed) {
         }
       }
       c.prompt = c.glyph ? `Follow the trail to draw ${c.glyph}.` : 'Follow the glowing dots in order.'
+      if (g.trace === 'letter') {
+        // Letters are spoken on their own, as capitals, so voices say their names ("ay", never "uh").
+        const size = c.glyph === c.glyph.toUpperCase() ? 'big' : 'little'
+        const name = [size === 'big' ? 'Big' : 'Little', c.glyph.toUpperCase()]
+        c.prompt = `Trace ${size} ${c.glyph}.`
+        c.say = [`Trace ${size}`, c.glyph.toUpperCase()]
+        c.fact = `${size === 'big' ? 'Big' : 'Little'} ${c.glyph} is for ${c.picture} ${c.word}.`
+        c.factSay = [...name, `is for ${c.word}.`]
+      }
       break
 
     case 'arithmetic': {
