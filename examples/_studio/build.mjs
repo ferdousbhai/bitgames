@@ -72,7 +72,8 @@ function writeGame(g){
 
 const designs=games.map((g,index)=>{
   const [sky,ground,accent,scenery]=themes[g.theme];
-  return {...g,sky:g.sky||sky,ground:g.ground||ground,accent,scenery,seed:4217+index*73};
+  // A game can swap its theme's scenery, e.g. so no decor animal is mistaken for a word's animal.
+  return {...g,sky:g.sky||sky,ground:g.ground||ground,accent,scenery:g.scenery||scenery,seed:4217+index*73};
 });
 designs.forEach(writeGame);
 // Blender's build_assets.py reads the resolved designs.

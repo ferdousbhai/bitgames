@@ -43,15 +43,16 @@ export default {
       "dog"
     ]
   ],
-  "sky": "#dcebd6",
-  "ground": "#4e8060",
-  "accent": "#f2b36f",
   "scenery": [
     "tree",
     "mushroom",
     "acorn",
-    "fox"
+    "flower"
   ],
+  "hero": "fox",
+  "sky": "#dcebd6",
+  "ground": "#4e8060",
+  "accent": "#f2b36f",
   "seed": 9327,
   "instructions": "Look at the picture and listen to the word. Tap its letters in order.",
   "activityNumber": 18

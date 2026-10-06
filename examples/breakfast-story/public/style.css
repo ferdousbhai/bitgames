@@ -288,6 +288,8 @@ body.dark { background: radial-gradient(ellipse at 50% 30%, #355069, var(--sky))
   .prompt-row h2 { margin: 4px 0; }
   #hint { font-size: 11px; }
   #stage { min-height: 200px; }
+  /* Short laptop windows: the toys need the footer's height more than its labels. */
+  footer { display: none; }
 }
 
 /* Short sideways phones: the stage fills the left; heading, prompt and controls stack beside it. */

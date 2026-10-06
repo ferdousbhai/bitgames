@@ -2203,15 +2203,16 @@
         "dog"
       ]
     ],
-    "sky": "#dcebd6",
-    "ground": "#4e8060",
-    "accent": "#f2b36f",
     "scenery": [
       "tree",
       "mushroom",
       "acorn",
-      "fox"
+      "flower"
     ],
+    "hero": "fox",
+    "sky": "#dcebd6",
+    "ground": "#4e8060",
+    "accent": "#f2b36f",
     "seed": 9327
   },
   {
