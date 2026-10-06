@@ -641,13 +641,13 @@ function finish() {
     : []
   const list = (words) => `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`
   printText($('win-text'), spelled.length
-    ? `You spelled ${list(spelled.map((c) => (c.picture ? `${c.picture}\u00a0` : '') + c.word.toLowerCase()))}. Every try helped you learn!`
+    ? `You spelled ${list(spelled.map((c) => (c.picture ? `${c.picture}\u00a0` : '') + c.word.toLowerCase()))}. ${game.cheer || 'Every try helped you learn!'}`
     : traced.length
       ? `You traced ${list(traced)}. Every try helped you learn!`
       : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)
   audio.happy()
   audio.speak(spelled.length
-    ? ['A wonderful adventure!', `You spelled ${list(spelled.map((c) => c.word.toLowerCase()))}.`]
+    ? ['A wonderful adventure!', `You spelled ${list(spelled.map((c) => c.word.toLowerCase()))}.`, ...(game.cheer ? [game.cheer] : [])]
     : traced.length
       ? ['A wonderful adventure!', 'You traced', ...traced.slice(0, -1).map((l) => l.toUpperCase()), 'and', traced.at(-1).toUpperCase()]
       : 'A wonderful adventure! Every try helped you learn.')
@@ -712,11 +712,12 @@ function launch(rocket, crew) {
 // the five spelled foods hop out of the basket onto it one at a time, then the basket bounces.
 function picnic(basket, foods) {
   const step = 450
-  const blanket = actor('blanket', 6.4, 0, 3.45, 0.02)
-  blanket.scale.z = 0.42
+  // The basket stands on the blanket's back edge, so the whole picnic fits below the card.
+  const blanket = actor('blanket', 6.4, 0, 3.05, 0.02)
+  blanket.scale.z = 0.4
   foods.forEach((name, i) => {
     const food = actor(name, 0.9, 0, 2, 0.2)
-    const goal = new THREE.Vector3((i - (foods.length - 1) / 2) * 1.2, 0.2, 3.45)
+    const goal = new THREE.Vector3((i - (foods.length - 1) / 2) * 1.2, 0.2, 3.25)
     const start = food.position.clone()
     food.visible = false
     later(() => {

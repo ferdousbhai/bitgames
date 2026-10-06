@@ -51,6 +51,7 @@ export default {
   ],
   "hero": "basket",
   "carrier": "basket",
+  "cheer": "Picnic time!",
   "sky": "#ffe5cf",
   "ground": "#b8d58b",
   "accent": "#ef796e",
