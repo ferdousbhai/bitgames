@@ -65,6 +65,7 @@ const game = {
   casts: 0,
   phaseT: 0,
   misses: 0,
+  idleT: 0,
 }
 if (typeof game.book !== 'object' || !game.book) game.book = {}
 const debug = { force: null }
@@ -90,10 +91,45 @@ function frameCamera() {
     camBase.set(0, 8 + (1.1 - a) * 4, 16.5)
     camLook.set(0, -0.6 - (1.1 - a) * 1.5, -2)
   }
+  camera.clearViewOffset()
+  view.x = view.y = 0
   camera.position.copy(camBase)
   camera.lookAt(camLook)
   camera.updateProjectionMatrix()
   camera.updateMatrixWorld()
+  // Where Bear sits on screen with the plain framing (the title slides the view from here)
+  bearOnScreen.copy(RIG).setY(1.2).project(camera)
+}
+
+/**
+ * On the title the picture slides sideways (or down, on tall screens) like a
+ * camera lens shift, so Bear and the boat sit in the open space beside the card
+ * instead of hiding behind it. Fishing uses the plain framing.
+ */
+const view = { x: 0, y: 0 }
+const bearOnScreen = new THREE.Vector3()
+let titleCard = null
+function updateView(dt) {
+  const w = innerWidth
+  const h = innerHeight
+  let tx = 0
+  let ty = 0
+  if (game.state === 'title') {
+    titleCard ??= document.querySelector('#title .card')
+    const r = titleCard.getBoundingClientRect()
+    const bx = ((bearOnScreen.x + 1) / 2) * w
+    const by = ((1 - bearOnScreen.y) / 2) * h
+    if (w / h >= 1.25) {
+      if (r.width && bx < r.right + 60) tx = bx - (r.right + w) / 2
+    } else if (r.height && by < r.bottom + 60) ty = by - (r.bottom + (h - r.bottom) * 0.42)
+  }
+  const k = 1 - Math.exp(-dt * 4)
+  view.x += (tx - view.x) * k
+  view.y += (ty - view.y) * k
+  if (Math.abs(view.x) < 0.5 && Math.abs(view.y) < 0.5 && !tx && !ty) {
+    if (camera.view?.enabled) camera.clearViewOffset()
+    view.x = view.y = 0
+  } else camera.setViewOffset(w, h, view.x, view.y, w, h)
 }
 
 function resize() {
@@ -222,11 +258,32 @@ const adventure = createAdventure({
   anchor: $('title-book'),
   hud: $('hud'),
   isMuted: () => audio.muted,
-  celebrate: (text) => audio.say(text),
+  // The mission speaks its own reward; the screen shows a big trophy to go with it
+  celebrate: () => {
+    showIntro('🏆', '1, 2, 3!', '🐟 🐟 🐟')
+    effects.party(tmp.copy(stageWorld).add(new THREE.Vector3(0, 0, -1.5)), 90, true, 0.5)
+    audio.fanfare(3)
+  },
+  // Fish to fill in as you count, so a child who can't read can follow along
+  renderProgress: (el, option, count) => {
+    el.classList.toggle('done', el.textContent.startsWith('★'))
+    if (!option.goal) return
+    const row = document.createElement('span')
+    row.className = 'goal-fish'
+    row.setAttribute('aria-hidden', 'true')
+    for (let i = 0; i < option.target; i++) {
+      const f = document.createElement('span')
+      f.textContent = '🐟'
+      if (i < count) f.className = 'got'
+      row.append(f)
+    }
+    el.replaceChildren(row, `${count} / ${option.target}`)
+    el.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
+  },
   options: [
     { emoji: '🎣', label: 'Free fishing' },
     { emoji: '🐢', label: 'Extra time to reel', pace: 0.6 },
-    { emoji: '🐟', label: 'Count three discoveries', pace: 0.6, goal: 'Discover 3 finds', target: 3, reward: 'Three finds in your fishing story!' },
+    { emoji: '🐟', label: 'Count to 3', pace: 0.6, goal: 'Count 3 catches', target: 3, reward: 'One, two, three! You counted three catches!' },
   ],
 })
 
@@ -274,6 +331,9 @@ function castTo(point) {
   bob.fly = { from: new THREE.Vector3(), to: castSpot.clone(), t: 0, dur: 0.6 }
   audio.cast()
   hint(false)
+  game.idleT = 0
+  // The place's name card steps aside once fishing starts (a trophy stays up)
+  if (introIsPlace) $('intro').classList.remove('show')
 }
 
 /** The bobber lands: something will come and have a look soon. */
@@ -511,7 +571,6 @@ function startShow() {
   game.luck = pick.stars === 3 ? 0 : game.luck + 1
   store.set('fish-pond-luck', game.luck)
   game.session++
-  adventure.event(pick)
   const isNew = before === 0
   fish.show = { c, pick, t: 0, isNew, puffed: false, all: isNew && caughtKinds() === CREATURES.length }
   setPhase('show')
@@ -625,6 +684,8 @@ function updateToBook(dt) {
     setPhase('idle')
     refillAmbient()
     updateHud()
+    // Counted once the catch is in the book, so the number never talks over its name
+    adventure.event(s.pick)
   }
 }
 
@@ -782,7 +843,9 @@ function updateBang() {
 }
 
 let introTimer = 0
-function showIntro(emoji, title, sub) {
+let introIsPlace = false
+function showIntro(emoji, title, sub, place = false) {
+  introIsPlace = place
   $('intro-emoji').textContent = emoji
   $('intro-title').textContent = title
   $('intro-sub').textContent = sub
@@ -810,8 +873,9 @@ function hint(on) {
 function updateHint() {
   if (game.state !== 'play' || book.open) return hintEl.classList.add('hidden')
   let target = null
-  if (game.phase === 'idle' && game.casts === 0) target = tmp.set(1.6, 0, 2.2)
-  else if (game.phase === 'bite' && totalCaught() < 2) target = tmp.copy(bob.pos).setY(0)
+  // First cast, or a little one who has stopped: point at the water again
+  if (game.phase === 'idle' && (game.casts === 0 || game.idleT > 8)) target = tmp.set(1.6, 0, 2.2)
+  else if (game.phase === 'bite' && (totalCaught() < 2 || game.misses > 0)) target = tmp.copy(bob.pos).setY(0)
   if (!target) return hintEl.classList.add('hidden')
   hintEl.classList.remove('hidden')
   target.project(camera)
@@ -853,7 +917,7 @@ function start(place) {
   audio.setAmbient(true)
   updateHud()
   const P = PLACES[place]
-  showIntro(P.emoji, P.name, P.ice ? 'Tap a hole to fish!' : 'Tap the water to fish!')
+  showIntro(P.emoji, P.name, P.ice ? 'Tap a hole to fish!' : 'Tap the water to fish!', true)
 }
 
 function markPlace() {
@@ -937,6 +1001,7 @@ let keysUsed = false
 function tapAt(x, y) {
   audio.unlock()
   if (game.state !== 'play' || book.open) return
+  game.idleT = 0
   const ph = game.phase
   if (ph === 'bite') return reel()
   if (ph === 'show') {
@@ -1107,6 +1172,7 @@ function frame(dt, draw = true) {
     game.phaseT += dt
     const ph = game.phase
     if (game.state === 'play') {
+      game.idleT = ph === 'idle' && !book.open ? game.idleT + dt : 0
       if (ph === 'cast' && !bob.fly && game.phaseT > 1) setPhase('idle')
       if (ph === 'wait') updateWait(dt, t)
       else if (ph === 'bite') updateBite(dt)
@@ -1126,6 +1192,7 @@ function frame(dt, draw = true) {
     updateBear(dt, t)
     updateBobber(dt, t)
   }
+  updateView(dt)
   world.update(dt, t, effects)
   effects.update(dt, t)
   updateBang()

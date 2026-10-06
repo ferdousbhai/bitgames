@@ -20,8 +20,10 @@ export class Book {
     this.note = document.createElement('p')
     this.note.className = 'field-guide'
     this.note.setAttribute('role', 'status')
-    this.note.textContent = 'This is a pretend toy pond. Touch a sticker to explore real habitats and imaginary surprises.'
-    el.querySelector('.book-grid').before(this.note)
+    this.grid = el.querySelector('.book-grid')
+    // The note shares the header row on short screens, so the stickers all fit without scrolling
+    el.querySelector('.book-close').before(this.note)
+    addEventListener('resize', () => this.fit())
     el.querySelector('.book-close').addEventListener('click', (e) => {
       e.stopPropagation()
       this.audio.click()
@@ -115,11 +117,18 @@ export class Book {
         tile.classList.remove('wiggle')
         void tile.offsetWidth
         tile.classList.add('wiggle')
-        const message = fieldNote(c.id, c.name)
-        this.note.textContent = message
-        if (n) this.audio.newOne()
-        else this.audio.bubbles()
-        this.audio.say(message)
+        if (n) {
+          const fact = fieldNote(c.id, c.name)
+          this.note.textContent = `${c.name}: ${fact}`
+          this.audio.newOne()
+          this.audio.say(`${c.name}! ${fact}`)
+        } else {
+          // A mystery stays a mystery: just where to look for it
+          const where = Object.keys(c.places)
+          this.note.textContent = `❓ Not found yet! Look here: ${where.map((p) => PLACES[p].emoji).join(' ')}`
+          this.audio.bubbles()
+          this.audio.say(where.length === 4 ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`)
+        }
       })
       grid.appendChild(tile)
     }
@@ -129,8 +138,38 @@ export class Book {
 
   show() {
     this.render()
+    this.note.textContent = '👆 Tap a picture!'
     this.open = true
     this.el.classList.remove('hidden')
+    this.fit()
+  }
+
+  /** Pick the column count that makes the biggest pictures with every sticker on screen. */
+  fit() {
+    if (!this.open) return
+    const g = this.grid
+    g.classList.remove('compact')
+    const W = g.clientWidth - 8
+    const H = g.clientHeight - 8
+    const gap = 8
+    const n = CREATURES.length
+    const best = (chrome) => {
+      let b = { c: 5, s: 0 }
+      for (let c = 3; c <= n; c++) {
+        const rows = Math.ceil(n / c)
+        const s = Math.min((W - gap * (c - 1)) / c - 8, (H - gap * (rows - 1)) / rows - chrome, 128)
+        if (s > b.s + 1) b = { c, s }
+      }
+      return b
+    }
+    // Names under the pictures when there is room; otherwise just the pictures (tapping says the name)
+    let b = best(46)
+    if (b.s < 60) {
+      b = best(12)
+      g.classList.add('compact')
+    }
+    g.style.gridTemplateColumns = `repeat(${b.c}, 1fr)`
+    g.style.setProperty('--pic', `${Math.max(24, Math.floor(b.s))}px`)
   }
 
   hide() {
