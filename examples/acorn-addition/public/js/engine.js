@@ -82,9 +82,10 @@ function fillLabel(text, value) {
 }
 // In spelling games the letters and words a child builds are drawn in that same print in the
 // prompt, feedback and win card too, so "c – a – t spells cat" shows the a and l of the tiles.
-// Each letter's left and right ink edge in its 80-wide box, for spacing letters into words.
+// Each letter's left and right ink edge in its 80-wide box, for spacing letters into words
+// (f's is its crossbar: the hook above leans over the next letter, as in print).
 const LETTER_EDGES = {
-  a: [12, 60], b: [20, 68], c: [14, 58], d: [12, 60], e: [16, 64], f: [20, 60], g: [12, 60], h: [20, 60],
+  a: [12, 60], b: [20, 68], c: [14, 58], d: [12, 60], e: [16, 64], f: [20, 52], g: [12, 60], h: [20, 60],
   i: [40, 40], j: [18, 48], k: [22, 60], l: [34, 50], m: [12, 68], n: [20, 60], o: [15, 65], p: [20, 68],
   q: [12, 60], r: [24, 62], s: [20, 59], t: [22, 56], u: [20, 60], v: [18, 62], w: [8, 72], x: [20, 60],
   y: [18, 63], z: [20, 60],
@@ -103,9 +104,10 @@ function drawnWord(word) {
     svg.append(path)
     x += right - left + 26
   }
-  // Half a stroke of room on either side of the ink.
-  const width = x - 26 + 14
-  svg.setAttribute('viewBox', `-7 3 ${width} 135`)
+  // Half a stroke plus a little side room on either side of the ink, so a space or comma
+  // after a drawn word looks as wide as after a typed one ("dog and", not "dogand").
+  const width = x - 26 + 24
+  svg.setAttribute('viewBox', `-12 3 ${width} 135`)
   svg.style.width = `${(1.25 * width) / 135}em`
   const hidden = document.createElement('span')
   hidden.className = 'letter-text'
