@@ -88,7 +88,7 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 .trip-dragon { position: absolute; top: -14px; left: 4%; width: 92%; font-size: 28px; transition: transform .2s linear; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35)); }
 .trip-dragon span { display: inline-block; translate: -50% 0; transform: scaleX(-1); }
 
-.combo { position: absolute; top: calc(124px + env(safe-area-inset-top)); left: 50%; translate: -50% 0; font-size: 30px; font-weight: 900; color: #fff; text-shadow: 0 3px 0 #9b5de5, 0 6px 12px rgba(0,0,0,0.25); opacity: 0; transition: opacity .3s; white-space: nowrap; }
+.combo { position: absolute; top: calc(124px + env(safe-area-inset-top)); left: 50%; translate: -50% 0; font-size: 30px; font-weight: 900; color: #fff; text-shadow: 2px 2px 0 #6a3aa8, -2px 2px 0 #6a3aa8, 2px -2px 0 #6a3aa8, -2px -2px 0 #6a3aa8, 0 2px 0 #6a3aa8, 0 -2px 0 #6a3aa8, 2px 0 0 #6a3aa8, -2px 0 0 #6a3aa8, 0 4px 0 #6a3aa8; opacity: 0; transition: opacity .3s; white-space: nowrap; }
 .combo.show { opacity: 1; animation: pop .35s cubic-bezier(.2,1.8,.4,1); }
 
 .power { position: absolute; top: calc(72px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); display: flex; align-items: center; gap: 6px; font-size: 34px; background: rgba(0,0,0,0.25); border-radius: 99px; padding: 2px 12px 2px 6px; animation: pulse 0.8s ease-in-out infinite; }
@@ -239,6 +239,16 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   /* hints sit low, between the rings and 🔥, so they never cover Ember */
   .tip, body.mission .tip { bottom: calc(10px + env(safe-area-inset-bottom)); left: calc(50% + 30px); font-size: 20px; padding: 5px 16px; }
   .banner.mission { font-size: clamp(30px, 6vw, 40px); top: calc(62px + env(safe-area-inset-top)); }
+  /* the end card stands in a column on the left so the family in the nest shows on the right */
+  #results { align-items: flex-start; padding-left: calc(14px + env(safe-area-inset-left)); }
+  #results .results-top, #results .menu-bottom { width: min(300px, 50vw); }
+  #results h1 { font-size: 28px; white-space: nowrap; }
+  #results .tally { font-size: 36px; gap: 6px; }
+  #results .new-best { font-size: 17px; padding: 3px 10px; margin-left: 2px; }
+  #results .best { font-size: 15px; padding: 3px 12px; }
+  #results .row { gap: 10px; }
+  #results .big-go { font-size: 22px; padding: 9px 22px; white-space: nowrap; }
+  #results .big-go.alt { padding: 9px 16px; }
 }
 @media (max-height: 340px) and (orientation: landscape) {
   #title .sub { display: none; }

@@ -204,6 +204,14 @@ export class Rings {
     this.next = 0
   }
 
+  /** On a dark sky the rings shine (added light) instead of fading to grey. */
+  setGlow(on) {
+    for (const r of this.items) {
+      r.m.material.blending = on ? THREE.AdditiveBlending : THREE.NormalBlending
+      r.m.material.needsUpdate = true
+    }
+  }
+
   spawn(pos, color = '#fff3a0', size = 2.2, life = 0.4) {
     const r = this.items[this.next]
     this.next = (this.next + 1) % this.items.length

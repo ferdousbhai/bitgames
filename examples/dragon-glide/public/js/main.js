@@ -268,6 +268,7 @@ function start(from = 0) {
   updateCombo()
   show(null)
   const w = WORLDS[from]
+  rings.setGlow(!!w.night)
   banner(`${w.emoji} ${w.name}`, 'Fly to the nest! 🪺')
   sound.play(w.music)
   tip('👆 Drag to fly!', 3.5)
@@ -640,6 +641,7 @@ function leaveNest() {
   game.speed = 2
   const w = WORLDS[game.world]
   world.addNest(game.world)
+  rings.setGlow(!!w.night)
   adventure.begin()
   banner(`${w.emoji} ${w.name}`, 'Off we go! 🐉')
   setTimeout(sayGoal, 900)
@@ -811,6 +813,18 @@ function updateNest(dt) {
   showTrip()
 }
 
+/** How far (in world units) to slide the nest picture right, past the end card on sideways phones. */
+const sideResults = matchMedia('(max-height: 480px) and (orientation: landscape)')
+function sideShift() {
+  if (!sideResults.matches) return 0
+  const card = document.querySelector('#results .menu-bottom').getBoundingClientRect()
+  if (!card.width) return 0
+  // the middle of the space between the card and the sound buttons, as a fraction of half the screen
+  const mid = (card.right + innerWidth - 66) / 2
+  const ndc = mid / innerWidth * 2 - 1
+  return ndc * 8.4 * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect
+}
+
 function updateCamera(dt) {
   let px, py, pz, lx, ly, lz, rate
   const s = game.state
@@ -827,12 +841,14 @@ function updateCamera(dt) {
     rate = 2.5
   } else if (atNest) {
     const nestZ = -(game.world + 1) * WORLD_LENGTH
-    px = 1.6
+    // on sideways phones the end card stands on the left, so the family moves over to the right
+    const side = s === 'results' ? sideShift() : 0
+    px = 1.6 - side
     py = NEST_Y + 3.6
-    pz = nestZ + (view.portrait ? 11 : 7.2)
-    lx = 0
-    // while the banner shows on sideways screens, the family sits lower in the picture, under it
-    ly = NEST_Y + (s === 'nest' && !view.portrait ? 2.7 : 1.9)
+    pz = nestZ + (view.portrait ? 11 : side ? 8.4 : 7.2)
+    lx = -side
+    // while the banner shows, the family sits lower in the picture, under it
+    ly = NEST_Y + (s === 'nest' ? (view.portrait ? 3.1 : 2.7) : 1.9)
     lz = nestZ
     rate = 2
   } else {
