@@ -260,7 +260,7 @@ const adventure = createAdventure({
   isMuted: () => audio.muted,
   // The mission speaks its own reward; the screen shows a big trophy to go with it
   celebrate: () => {
-    showIntro('🏆', '1, 2, 3!', '🐟 🐟 🐟')
+    showIntro('🏆', '1, 2, 3!', '🐟 🐟 🐟', false, true)
     effects.party(tmp.copy(stageWorld).add(new THREE.Vector3(0, 0, -1.5)), 90, true, 0.5)
     audio.fanfare(3)
   },
@@ -675,17 +675,20 @@ function updateToBook(dt) {
     b.classList.remove('bump')
     void b.offsetWidth
     b.classList.add('bump')
-    if (s.all) {
-      showIntro('🏆', 'You found them all!', '')
-      effects.party(tmp.copy(stageWorld).add(new THREE.Vector3(0, 0, -1.5)), 120, true, 0.5)
-      audio.fanfare(4)
-    }
     fish.show = null
     setPhase('idle')
     refillAmbient()
     updateHud()
-    // Counted once the catch is in the book, so the number never talks over its name
+    // Counted once the catch is in the book, so the number never talks over its name.
+    // After a trophy the next catch starts a fresh count at 1, so there is always a goal.
+    if (adventure.complete) adventure.begin()
     adventure.event(s.pick)
+    // Finding all 15 is the bigger prize: its card goes up last so nothing covers it
+    if (s.all) {
+      showIntro('🏆', 'You found them all!', '📖 15 / 15', false, true)
+      effects.party(tmp.copy(stageWorld).add(new THREE.Vector3(0, 0, -1.5)), 120, true, 0.5)
+      audio.fanfare(4)
+    }
   }
 }
 
@@ -844,17 +847,18 @@ function updateBang() {
 
 let introTimer = 0
 let introIsPlace = false
-function showIntro(emoji, title, sub, place = false) {
+function showIntro(emoji, title, sub, place = false, prize = false) {
   introIsPlace = place
   $('intro-emoji').textContent = emoji
   $('intro-title').textContent = title
   $('intro-sub').textContent = sub
   const el = $('intro')
   el.classList.remove('show')
+  el.classList.toggle('prize', prize)
   void el.offsetWidth
   el.classList.add('show')
   clearTimeout(introTimer)
-  introTimer = setTimeout(() => el.classList.remove('show'), 2800)
+  introTimer = setTimeout(() => el.classList.remove('show'), prize ? 4200 : 2800)
 }
 
 function show(screen) {
