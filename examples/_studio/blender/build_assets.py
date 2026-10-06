@@ -691,8 +691,84 @@ def build_shapes(name):
         cone((0, 0, .65), .055, .25, BLUE, .055)
         cube((0, 0, .77), (.13, .13, .05), WHITE)
     elif name == 'basket':
-        cube((0, 0, .22), (.65, .55, .4), '#dcb689')
-        torus((0, 0, .4), .3, .035, '#b28e6c').rotation_euler[0] = QUARTER_TURN
+        # A wicker picnic basket: woven bands, a red-and-white cloth peeking out, a tall handle.
+        cube((0, 0, .22), (.72, .52, .4), '#d9a865')
+        for z in [.1, .22, .34]:
+            cube((0, 0, z), (.74, .54, .045), '#b9844c', .02)
+        for x in [-.24, 0, .24]:
+            cube((x, -.262, .22), (.05, .02, .38), '#c99558', .01)
+        for i in range(5):
+            cube(((i - 2) * .13, -.04, .45), (.13, .4, .1), RED if i % 2 == 0 else WHITE, .03)
+        cube((0, 0, .43), (.76, .56, .05), '#a7773f', .02)
+        torus((0, 0, .45), .33, .04, '#a7773f').rotation_euler[0] = QUARTER_TURN
+    elif name == 'blanket':
+        # A gingham picnic blanket for the picnic at the end.
+        for x in range(6):
+            for y in range(4):
+                colour = RED if (x + y) % 2 == 0 else WHITE
+                cube(((x - 2.5) * .3, (y - 1.5) * .3, .025), (.3, .3, .05), colour, .01)
+    elif name == 'jam':
+        # A jar of red jam with a gingham cloth lid tied with string and a strawberry label.
+        cone((0, 0, .3), .27, .56, '#c9364f', .25)
+        torus((0, 0, .58), .245, .04, '#e9e4ea')
+        cone((0, 0, .64), .33, .1, WHITE, .3)
+        for i in range(8):
+            a = i * math.pi / 4
+            sphere((math.sin(a) * .2, math.cos(a) * .2, .69), (.06, .06, .02), RED)
+        torus((0, 0, .6), .275, .02, GOLD)
+        sphere((0, -.255, .3), (.17, .03, .13), WHITE)
+        sphere((0, -.28, .29), (.07, .02, .08), '#e9405f')
+        leaf((0, -.28, .37), .25)
+    elif name == 'bun':
+        # A round golden bread bun with sesame seeds.
+        sphere((0, 0, .17), (.46, .46, .17), '#e9c085')
+        sphere((0, 0, .27), (.42, .42, .25), '#d58f45')
+        sesame = random.Random(7)
+        for _ in range(14):
+            a = sesame.random() * math.tau
+            r = sesame.uniform(.05, .3)
+            seed = sphere((math.cos(a) * r, math.sin(a) * r, .27 + .25 * math.sqrt(1 - (r / .42) ** 2)),
+                          (.025, .045, .015), '#fbf0d4')
+            seed.rotation_euler[2] = a
+    elif name == 'fig':
+        # A purple fig with its stalk and leaf, and a cut half lying open to show the pink, seedy inside.
+        sphere((-.17, .1, .28), (.27, .27, .27), '#7d4b84')
+        cone((-.17, .1, .58), .17, .3, '#7d4b84', .05)
+        cone((-.17, .1, .76), .035, .1, '#7a8a4b')
+        leaf((-.08, .14, .76), .5, '#6fa565')
+        sphere((.27, -.12, .08), (.21, .27, .08), '#7d4b84')
+        sphere((.27, -.12, .13), (.19, .25, .045), '#f5e3c8')
+        sphere((.27, -.12, .155), (.15, .2, .04), '#e8607c')
+        for dx, dy in [(-.06, -.1), (.05, -.05), (0, .05), (-.05, .1), (.06, .1), (0, -.18), (.07, -.15), (-.07, 0)]:
+            sphere((.27 + dx, -.12 + dy, .19), (.018, .018, .01), '#fff1d8')
+    elif name == 'nut':
+        # A peanut in its shell: two joined lobes with a pinched waist and crossed grooves.
+        shell = '#d4a56c'
+        sphere((-.2, 0, .2), (.24, .21, .2), shell)
+        sphere((.2, 0, .2), (.25, .22, .21), shell)
+        sphere((0, 0, .2), (.17, .17, .16), shell)
+        for x in [-.3, -.14, .12, .3]:
+            torus((x, 0, .2), .19, .012, '#b68551').rotation_euler[1] = QUARTER_TURN
+    elif name == 'pod':
+        # A green pea pod split open, a row of round peas inside.
+        sphere((0, 0, .1), (.52, .18, .1), '#5f9e45')
+        for y in [-.15, .15]:
+            half = sphere((0, y, .17), (.52, .07, .13), '#6fae4f')
+            half.rotation_euler[0] = -.5 if y < 0 else .5
+        for x in [-.33, -.11, .11, .33]:
+            sphere((x, 0, .22), (.11, .11, .11), '#b5e27a')
+        cone((-.53, 0, .2), .04, .14, '#5b8d43').rotation_euler[1] = QUARTER_TURN
+    elif name == 'ham':
+        # A cartoon ham: a rosy joint scored in diamonds, with a white bone at one end.
+        sphere((.08, 0, .26), (.38, .3, .26), '#e9879a')
+        sphere((.1, 0, .3), (.34, .27, .24), '#d9637c')
+        for i in [-1, 0, 1]:
+            for turn in [.7, -.7]:
+                line = cube((.1 + i * .13, -.02, .525), (.022, .3, .02), '#f4c0b2', .008)
+                line.rotation_euler[2] = turn
+        cone((-.4, 0, .26), .07, .3, WHITE, .07).rotation_euler[1] = QUARTER_TURN
+        sphere((-.57, .05, .26), (.07, .07, .08), WHITE)
+        sphere((-.57, -.05, .26), (.07, .07, .08), WHITE)
     elif name == 'parcel':
         cube((0, 0, .3), (.55, .55, .55), ORANGE)
         cube((0, -.283, .3), (.1, .01, .56), WHITE)
@@ -752,6 +828,8 @@ TOYS = [
     'mushroom', 'apple', 'pear', 'strawberry', 'acorn', 'egg', 'carrot', 'leaf', 'stone', 'gem', 'star',
     'planet', 'rocket', 'house', 'castle', 'train', 'boat', 'shell', 'coral', 'bottle', 'basket', 'parcel',
     'book', 'bread', 'drum', 'gear', 'kite', 'cloud', 'cat', 'dog', 'pig', 'hen', 'bat',
+    # Picnic Word Basket's foods and its picnic blanket.
+    'jam', 'bun', 'fig', 'nut', 'pod', 'ham', 'blanket',
 ]
 
 # Build the whole library once, hidden. Each game exports only the toys it uses,
@@ -776,7 +854,7 @@ GAME_TOYS = {
     'bead-bridge': ['snail'], 'sleepy-owl-lullaby': ['owl'], 'picnic-pairs': ['apple', 'pear', 'strawberry'],
     'frog-choir': ['frog'], 'butterfly-patterns': ['leaf'], 'firefly-lanterns': ['lantern'],
     'giraffe-ruler': ['giraffe'], 'bridge-builder': ['boat'], 'garden-fence': ['flower'],
-    'word-rocket': ['rocket', 'cat', 'bed', 'pig', 'dog', 'sun', 'hat'], 'animal-alphabet': ['fox', 'cat', 'dog', 'pig', 'hen', 'bat'], 'picnic-word-basket': ['basket'],
+    'word-rocket': ['rocket', 'cat', 'bed', 'pig', 'dog', 'sun', 'hat'], 'animal-alphabet': ['fox', 'cat', 'dog', 'pig', 'hen', 'bat'], 'picnic-word-basket': ['basket', 'blanket', 'jam', 'bun', 'fig', 'nut', 'pod', 'ham'],
     'rhyming-river': ['frog', 'leaf'],
     # Clock games: the character who keeps the time.
     'cuckoo-clock-garden': ['bird'], 'space-station-schedule': ['rocket'], 'bunny-bedtime': ['rabbit'],
@@ -799,6 +877,9 @@ COVER_HEROES = {
     'senses-safari': 'teddy', 'drum-beat-builder': 'drum', 'rain-drop-rhythm': 'leaf',
     'toy-town-builder': 'house', 'castle-block-blueprints': 'castle', 'ladybird-dot-party': 'ladybird',
 }
+
+# Toys either side of the cover hero, in place of the scenery's second and third toys.
+COVER_SIDES = {'picnic-word-basket': ['jam', 'bun']}
 
 
 def toybox_toys(g):
@@ -946,8 +1027,9 @@ def build_game(g):
 
     # A cover composed from the game's own diorama and toys.
     place(cover_hero(g), (0, -.6, .05), 1.65)
-    place(g['scenery'][1], (-1.65, -.15, 0), 1.25, .2)
-    place(g['scenery'][2], (1.7, -.1, .05), 1.25, -.3)
+    left, right = COVER_SIDES.get(g['id'], g['scenery'][1:3])
+    place(left, (-1.65, -.15, 0), 1.25, .2)
+    place(right, (1.7, -.1, .05), 1.25, -.3)
     for i in range(7):
         place('star', ((i - 3) * .57, 1.05, .28 + math.sin(i) * .1), .45)
     # Title and educational subtitle are real Blender text, rendered with the toys.

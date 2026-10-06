@@ -641,7 +641,7 @@ function finish() {
     : []
   const list = (words) => `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`
   printText($('win-text'), spelled.length
-    ? `You spelled ${list(spelled.map((c) => `${c.picture}\u00a0${c.word.toLowerCase()}`))}. Every try helped you learn!`
+    ? `You spelled ${list(spelled.map((c) => (c.picture ? `${c.picture}\u00a0` : '') + c.word.toLowerCase()))}. Every try helped you learn!`
     : traced.length
       ? `You traced ${list(traced)}. Every try helped you learn!`
       : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)
@@ -656,7 +656,9 @@ function finish() {
   const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true, scale: carrier ? 1.7 : 1 })
   if (carrier) {
     hero.base.visible = false
-    launch(hero.figure, spelled.map((c) => c.friend).filter(Boolean))
+    const crew = spelled.map((c) => c.friend).filter(Boolean)
+    if (game.carrier === 'rocket') launch(hero.figure, crew)
+    else picnic(hero.figure, crew)
   }
   burst()
 }
@@ -704,6 +706,33 @@ function launch(rocket, crew) {
       rocket.position.y = ground + (1 - p) * 10
     }, rocket), 2000)
   }, 700 + crew.length * step + 500)
+}
+
+// A picnic carrier (Picnic Word Basket's basket) on the win card: a gingham blanket is spread,
+// the five spelled foods hop out of the basket onto it one at a time, then the basket bounces.
+function picnic(basket, foods) {
+  const step = 450
+  const blanket = actor('blanket', 6.4, 0, 3.45, 0.02)
+  blanket.scale.z = 0.42
+  foods.forEach((name, i) => {
+    const food = actor(name, 0.9, 0, 2, 0.2)
+    const goal = new THREE.Vector3((i - (foods.length - 1) / 2) * 1.2, 0.2, 3.45)
+    const start = food.position.clone()
+    food.visible = false
+    later(() => {
+      food.visible = true
+      audio.note(523 + i * 70, 0.16)
+      animate(0.5, (p) => {
+        food.position.lerpVectors(start, goal, p)
+        food.position.y = 0.2 + Math.sin(p * Math.PI) * 1.1
+        food.scale.setScalar(0.4 + 0.6 * p)
+      }, food)
+    }, 700 + i * step)
+  })
+  const ground = basket.position.y
+  later(() => animate(0.9, (p) => {
+    basket.position.y = ground + Math.abs(Math.sin(p * Math.PI * 2)) * 0.4
+  }, basket), 700 + foods.length * step + 300)
 }
 
 function burst() {

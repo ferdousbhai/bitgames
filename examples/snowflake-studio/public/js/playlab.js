@@ -405,9 +405,17 @@ function spell(c, g, a) {
   let idle = null
   // A word can name its own toy, e.g. the clay dog who waits to hear its name spelled.
   // A game's carrier (Word Rocket's rocket) waits beside it, and the toy climbs aboard when spelled.
-  const carrier = c.friend && g.carrier ? a.actor(g.carrier, 1.4, 2.3, -1.95) : null
-  const receiver = a.actor(c.friend || spellReceivers[g.id] || 'basket', carrier ? 1.2 : 1.4, 0, -2.15)
-  const picture = a.tile({ symbol: c.picture, x: 0, z: -0.6, size: 1.6, depth: 1.4, visual: true })
+  // A word toy with no emoji is itself the picture (Picnic Word Basket's clay foods): it sits on
+  // the picture tile, the carrier (the basket) waits behind it, and the food hops in when spelled.
+  const onTile = Boolean(c.friend && !c.picture)
+  const carrier = c.friend && g.carrier
+    ? (onTile ? a.actor(g.carrier, 1.5, 0, -2.15) : a.actor(g.carrier, 1.4, 2.3, -1.95))
+    : null
+  const flies = g.carrier === 'rocket'
+  const receiver = onTile ? null : a.actor(c.friend || spellReceivers[g.id] || 'basket', carrier ? 1.2 : 1.4, 0, -2.15)
+  const picture = onTile
+    ? a.tile({ model: c.friend, label: '', x: 0, z: -0.6, size: 1.6, depth: 1.4, visual: true, scale: 1.15 })
+    : a.tile({ symbol: c.picture, x: 0, z: -0.6, size: 1.6, depth: 1.4, visual: true })
   const spaces = Array.from({ length: word.length }, (_, i) => a.tile({
     x: (i - (word.length - 1) / 2) * 1.2, z: 0.8, size: 1, depth: 1, label: '_', visual: true, colour: '#f7e5c1',
   }))
@@ -455,20 +463,29 @@ function spell(c, g, a) {
         clearTimeout(idle)
         picture.hop()
         if (carrier) {
-          // The word's toy hops into the rocket, then the rocket lifts off with it.
-          const from = receiver.position.clone()
+          // The word's toy hops into the rocket, then the rocket lifts off with it;
+          // a food hops off its tile into the basket, and the basket gives a happy bounce.
+          const mover = onTile ? picture.figure : receiver
+          const from = mover.position.clone()
+          const to = onTile ? carrier.position.clone().sub(picture.group.position) : carrier.position
+          const scale = mover.scale.x
           a.animate(2.2, (t) => {
             const hop = Math.min(1, t / 0.4)
-            receiver.position.lerpVectors(from, carrier.position, hop)
-            receiver.position.y = from.y + Math.sin(hop * Math.PI) * 1.2
-            receiver.scale.setScalar(1 - 0.9 * hop * hop)
-            receiver.visible = hop < 1
+            mover.position.lerpVectors(from, to, hop)
+            mover.position.y = from.y + Math.sin(hop * Math.PI) * 1.2 + (onTile ? hop * 0.5 : 0)
+            mover.scale.setScalar(scale * (1 - 0.9 * hop * hop))
+            mover.visible = hop < 1
             const lift = Math.max(0, (t - 0.45) / 0.55)
-            carrier.position.y = 0.2 + lift * lift * 7
-            // Gone into space once off the top, so no shadow lingers on the stars.
-            carrier.visible = lift < 1
-          }, receiver)
-        } else {
+            if (flies) {
+              carrier.position.y = 0.2 + lift * lift * 7
+              // Gone into space once off the top, so no shadow lingers on the stars.
+              carrier.visible = lift < 1
+            } else {
+              carrier.position.y = 0.2 + Math.sin(Math.min(1, lift * 2) * Math.PI) * 0.35
+              carrier.rotation.z = Math.sin(lift * Math.PI * 4) * 0.12 * (1 - lift)
+            }
+          }, mover)
+        } else if (receiver) {
           // The rocket lifts off; other receivers hop.
           a.animate(1.4, (t) => {
             receiver.position.y = 0.2 + (g.id === 'word-rocket' ? t * 2 : Math.sin(t * Math.PI) * 0.4)
@@ -477,7 +494,7 @@ function spell(c, g, a) {
           }, receiver)
         }
         // The voice adds that the toy is on board; the shown line stays short for small screens.
-        const aboard = carrier ? [`The ${name} is on board!`] : []
+        const aboard = carrier ? [flies ? `The ${name} is on board!` : `The ${name} is in the ${g.carrier}!`] : []
         a.success(`${[...name].join(' – ')} spells ${name}!`,
           [...[...word].map((l) => l + '.'), `That spells ${name}!`, ...aboard])
         return

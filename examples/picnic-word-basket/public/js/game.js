@@ -14,38 +14,46 @@ export default {
   "words": [
     [
       "JAM",
-      "🫙"
+      "",
+      "jam"
     ],
     [
-      "EGG",
-      "🥚"
+      "FIG",
+      "",
+      "fig"
     ],
     [
-      "NUT",
-      "🌰"
+      "POD",
+      "",
+      "pod"
     ],
     [
       "BUN",
-      "🥯"
-    ],
-    [
-      "PEA",
-      "🫛"
+      "",
+      "bun"
     ],
     [
       "HAM",
-      "🍖"
+      "",
+      "ham"
+    ],
+    [
+      "NUT",
+      "",
+      "nut"
     ]
   ],
-  "sky": "#ffe5cf",
-  "ground": "#b8d58b",
-  "accent": "#ef796e",
   "scenery": [
     "tree",
     "apple",
     "pear",
-    "basket"
+    "strawberry"
   ],
+  "hero": "basket",
+  "carrier": "basket",
+  "sky": "#ffe5cf",
+  "ground": "#b8d58b",
+  "accent": "#ef796e",
   "seed": 9400,
   "instructions": "Look at the picture and listen to the word. Tap its letters in order.",
   "activityNumber": 18

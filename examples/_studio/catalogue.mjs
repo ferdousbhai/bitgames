@@ -96,7 +96,13 @@ G('word-rocket','Word Rocket','🔠',[5,8],'space','spell','CVC word building','
 G('animal-alphabet','Animal Alphabet','🦊',[4,7],'forest','spell','Beginning sounds and spelling','Build names for tiny animal friends.',{words:[['FOX','🦊','fox'],['CAT','🐱','cat'],['PIG','🐷','pig'],['HEN','🐔','hen'],['BAT','🦇','bat'],['DOG','🐶','dog']],
   // No scenery fox: the only animal on the island is the one being spelled. The fox greets on the menu and win card.
   scenery:['tree','mushroom','acorn','flower'],hero:'fox'}),
-G('picnic-word-basket','Picnic Word Basket','🧺',[5,8],'orchard','spell','Food word spelling','Pack a picnic by spelling simple snack words.',{words:[['JAM','🫙'],['EGG','🥚'],['NUT','🌰'],['BUN','🥯'],['PEA','🫛'],['HAM','🍖']]}),
+G('picnic-word-basket','Picnic Word Basket','🧺',[5,8],'orchard','spell','Food word spelling','Pack a picnic by spelling simple snack words.',{
+  // True three-sound CVC foods, short a i o u (no emoji reads as jam, bun, fig or pod),
+  // so each food is a clay model on the picture tile, and it hops into the basket when spelled.
+  words:[['JAM','','jam'],['FIG','','fig'],['POD','','pod'],['BUN','','bun'],['HAM','','ham'],['NUT','','nut']],
+  // No scenery basket: the only basket is the one being packed. It greets on the menu and
+  // hosts the picnic on the win card.
+  scenery:['tree','apple','pear','strawberry'],hero:'basket',carrier:'basket'}),
 G('rhyming-river','Rhyming River','📖',[5,8],'pond','rhyme','Rhyming word families','Hop between lily pads with words that rhyme.',{sets:[['CAT','HAT','DOG','SUN'],['LOG','DOG','HEN','CUP'],['BEE','TREE','CAT','MAP'],['FOX','BOX','SUN','PIG'],['STAR','CAR','BED','HEN'],['BOAT','GOAT','FISH','CAT']]}),
 G('weather-wardrobe','Weather Wardrobe','🌦️',[3,6],'village','choice','Weather and practical reasoning','Dress a toy explorer for sun, rain, and snow.',{challenges:[['🌧️ Rain! What keeps us dry?','☂️ Umbrella','🕶️ Sunglasses','🩴 Sandals'],['❄️ Snow! What keeps hands warm?','🧤 Mittens','🪭 Fan','🩴 Sandals'],['☀️ Sunshine! What shades our head?','👒 Sun hat','🧣 Scarf','🛷 Sled'],['🌧️ Puddles! What keeps feet dry?','🥾 Rain boots','🩴 Sandals','🧦 Socks']],storyToys:['umbrella','gloves','hat','boots','glasses','sandal','scarf']}),
 G('kindness-cafe','Kindness Café','💛',[3,7],'bakery','choice','Empathy and cooperation','Choose caring actions at a tiny toy café.',{
