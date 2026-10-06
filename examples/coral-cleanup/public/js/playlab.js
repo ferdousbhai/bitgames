@@ -535,7 +535,7 @@ function rhyme(c, g, a) {
   let misses = 0
   let pauses = 0
   let idle = null
-  const frog = a.actor('frog', 0.8, -1.9, -1.75)
+  const frog = a.actor('frog', 1, -1.95, -1.75)
   // A word's clay picture is the toy of the same name, unless the design names another.
   const toy = (word) => g.pictures?.[word.toUpperCase()] || word
   const start = a.tile({ model: toy(first), label: first, x: 0, z: -1.75, size: 1.6, depth: 1.45, colour: '#f1ddb8', visual: true, scale: 1.15 })
@@ -601,11 +601,11 @@ function rhyme(c, g, a) {
       // The frog hops onto the lily pad's front-right edge, in front of the picture where it stays
       // in sight, and both pictures bounce.
       const from = frog.position.clone()
-      const to = new THREE.Vector3(t.x + 0.62, 0.2, t.z + 0.12)
+      const to = new THREE.Vector3(t.x + 0.68, 0.2, t.z + 0.15)
       a.animate(0.8, (p) => {
         frog.position.lerpVectors(from, to, p)
         frog.position.y += Math.sin(p * Math.PI) * 1.1
-        frog.scale.setScalar(1 - 0.15 * p)
+        frog.scale.setScalar(1 - 0.25 * p)
       }, frog)
       a.later(() => {
         t.hop()

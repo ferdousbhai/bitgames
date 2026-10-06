@@ -44,17 +44,21 @@ export class AudioGuide {
   }
 
   // A list is spoken as separate utterances in turn, so single letters keep their names.
-  speak(text) {
-    if (this.muted || !('speechSynthesis' in window)) return
+  // `onStart(i)`, if given, is called as the voice begins the i-th part. Returns whether it speaks.
+  speak(text, onStart) {
+    if (this.muted || !('speechSynthesis' in window)) return false
     speechSynthesis.cancel()
-    for (const part of [text].flat()) {
+    for (const [i, part] of [text].flat().entries()) {
       // Drop emoji and symbols so voices don't read them out.
       const utterance = new SpeechSynthesisUtterance(String(part).replace(/[^\p{L}\p{N}\s.,?!:’'-]/gu, ''))
       utterance.lang = 'en-US'
       utterance.rate = 0.83
       utterance.pitch = 1.12
+      // A part the voice can't say counts as said, so nothing waits on it.
+      if (onStart) utterance.onstart = utterance.onerror = () => onStart(i)
       speechSynthesis.speak(utterance)
     }
+    return true
   }
 
   stop() {

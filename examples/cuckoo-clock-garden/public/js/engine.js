@@ -97,6 +97,9 @@ const LETTER_EDGES = {
 const PRINTED_WORDS = new Set(game.mode === 'spell' ? game.words.map(([word]) => word.toLowerCase())
   : game.mode === 'rhyme' ? game.sets.flat().map((word) => word.toLowerCase()) : [])
 // Letter games (`printLetters` in their design) draw single lowercase letters in their messages too.
+// A rhyming adventure's frog sits on a lily pad on the menu and win card, as it does in play.
+const heroPad = game.mode === 'rhyme' ? { colour: '#9cc987', thin: true } : {}
+
 const PRINTS = game.mode === 'spell' || game.mode === 'rhyme' || !!game.printLetters
 
 function drawnWord(word) {
@@ -536,7 +539,9 @@ function resize() {
   // Spelling's letters and blanks span about 7 units too, so upright screens frame them the
   // same way: bigger letter tiles for small fingers, with only the board's rim cropped.
   const spelling = state.screen === 'play' && state.challenge?.mode === 'spell' && aspect < 1
-  const halfWidth = Math.max(tracing || spelling ? 3.9 : 5, 3.6 * aspect)
+  // A row of four rhyming lily pads spans about 8 units, so upright screens frame just that row.
+  const rhyming = state.screen === 'play' && state.challenge?.mode === 'rhyme' && aspect < 1
+  const halfWidth = Math.max(tracing || spelling ? 3.9 : rhyming ? 4.15 : 5, 3.6 * aspect)
   const halfHeight = halfWidth / aspect
   camera.left = -halfWidth
   camera.right = halfWidth
@@ -601,7 +606,7 @@ function menu() {
   show('menu')
   state.challenge = null
   // A carrier (Word Rocket's rocket) stands tall on the board, as on the win card, not small on a stand.
-  const hero = tile({ model: game.hero || game.item || game.scenery[3], x: 0, z: 2, size: 1.8, visual: true, scale: game.carrier ? 1.7 : 1 })
+  const hero = tile({ model: game.hero || game.item || game.scenery[3], x: 0, z: 2, size: 1.8, visual: true, scale: game.carrier ? 1.7 : 1, ...heroPad })
   if (game.carrier) hero.base.visible = false
   const completed = saved.completed.reduce((sum, count) => sum + count, 0)
   $('saved').textContent = completed ? `${completed} adventures completed. Keep exploring!` : ''
@@ -658,23 +663,28 @@ function finish() {
         ? `You traced ${list(traced)}. Every try helped you learn!`
         : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)
   audio.happy()
-  audio.speak(rhymed.length
+  // Each rhyme's lily pad pops up as the voice says that rhyme.
+  const popRhyme = rhymed.length ? rhymePads(rhymed) : null
+  const token = state.token
+  const spoken = audio.speak(rhymed.length
     ? ['A wonderful adventure!', 'You found five rhymes.', ...rhymed.map((c) => `${c.word}, ${c.target}.`)]
     : spelled.length
       ? ['A wonderful adventure!', `You spelled ${list(spelled.map((c) => c.word.toLowerCase()))}.`, ...(game.cheer ? [game.cheer] : [])]
       : traced.length
         ? ['A wonderful adventure!', 'You traced', ...traced.slice(0, -1).map((l) => l.toUpperCase()), 'and', traced.at(-1).toUpperCase()]
-        : 'A wonderful adventure! Every try helped you learn.')
+        : 'A wonderful adventure! Every try helped you learn.',
+    popRhyme && ((part) => part >= 2 && token === state.token && popRhyme(part - 2)))
+  // Without a voice (muted, or none to start), or if one never says when it starts, they pop up anyway.
+  if (popRhyme) rhymed.forEach((_, i) => later(() => popRhyme(i), spoken ? 4000 + i * 2200 : 900 + i * 450))
   // A carrier (Word Rocket's rocket) stands tall on the board itself, towering over its crew.
   const carrier = game.carrier && spelled.some((c) => c.friend)
-  const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true, scale: carrier ? 1.7 : 1 })
+  const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true, scale: carrier ? 1.7 : 1, ...heroPad })
   if (carrier) {
     hero.base.visible = false
     const crew = spelled.map((c) => c.friend).filter(Boolean)
     if (game.carrier === 'rocket') launch(hero.figure, crew)
     else picnic(hero.figure, crew)
   }
-  if (rhymed.length) rhymePads(rhymed)
   burst()
 }
 
@@ -751,11 +761,11 @@ function picnic(basket, foods) {
   }, basket), 700 + foods.length * step + 300)
 }
 
-// A rhyming adventure's win card: the five rhymes pop up in front of the hero one at a time,
-// each pair of pictures sharing a lily pad, in the order the voice reads them.
+// A rhyming adventure's win card: the five rhymes wait in front of the hero, each pair of
+// pictures sharing a lily pad. Returns `pop(i)`, which pops the i-th one up (once).
 function rhymePads(rhymes) {
   const picture = (word) => game.pictures?.[word.toUpperCase()] || word
-  rhymes.forEach((c, i) => {
+  const pads = rhymes.map((c, i) => {
     const pad = new THREE.Group()
     const leaf = mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.06, 32), '#9cc987')
     leaf.position.y = 0.03
@@ -768,14 +778,24 @@ function rhymePads(rhymes) {
     })
     place(pad, (i - (rhymes.length - 1) / 2) * 1.5, 0.02, 3.35)
     pad.scale.setScalar(0.001)
+    return pad
+  })
+  const popped = new Set()
+  // Pops are at least 0.45 s apart, so pads called together (a voice that fails at once) still pop one by one.
+  let next = 0
+  return (i) => {
+    if (popped.has(i) || !pads[i]) return
+    popped.add(i)
+    const now = performance.now()
+    next = Math.max(now, next + 450)
     later(() => {
       audio.note(523 + i * 70, 0.16)
       animate(0.45, (p) => {
-        pad.scale.setScalar(Math.max(0.001, p))
-        pad.position.y = 0.02 + Math.sin(p * Math.PI) * 0.5
-      }, pad)
-    }, 900 + i * 450)
-  })
+        pads[i].scale.setScalar(Math.max(0.001, p))
+        pads[i].position.y = 0.02 + Math.sin(p * Math.PI) * 0.5
+      }, pads[i])
+    }, next - now)
+  }
 }
 
 function burst() {

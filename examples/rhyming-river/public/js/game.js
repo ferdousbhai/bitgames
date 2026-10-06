@@ -12,6 +12,12 @@ export default {
   "skill": "Rhyming word families",
   "tagline": "Hop between lily pads with words that rhyme.",
   "hero": "frog",
+  "scenery": [
+    "leaf",
+    "flower",
+    "stone",
+    "snail"
+  ],
   "pictures": {
     "BOAT": "sailboat"
   },
@@ -62,12 +68,6 @@ export default {
   "sky": "#e0efd9",
   "ground": "#91c4ad",
   "accent": "#f5c17c",
-  "scenery": [
-    "leaf",
-    "flower",
-    "frog",
-    "snail"
-  ],
   "seed": 9473,
   "instructions": "Listen to the word. Hop to the lily pad whose word ends with the same sound.",
   "activityNumber": 19
