@@ -180,6 +180,20 @@ canvas { touch-action: none; }
   max-width: 100%;
 }
 .world-action .label.glyph { font-size: clamp(20px, min(3.4vw, var(--unit, 99px) * 0.55), 38px); line-height: 1; padding: 4px 9px; }
+/* A drawn lowercase letter (see LETTER_PATHS in engine.js), the same size as the font's. */
+.world-action .label.letter { padding: 2px 7px; }
+.world-action .label.letter svg {
+  display: block;
+  height: 1.25em;
+  width: calc(1.25em * 80 / 135);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.world-action .label.blank svg { opacity: .45; }
+.letter-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .world-action .symbol { font-size: clamp(24px, 4vw, 40px); align-self: center; margin: auto; }
 .world-action.selected { outline: 3px solid var(--accent); outline-offset: -2px; }
 .world-action.visual { pointer-events: none; }

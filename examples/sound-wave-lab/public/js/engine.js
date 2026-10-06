@@ -22,6 +22,64 @@ const LEVEL_NAMES = ['Little steps', 'Growing', 'Explorer']
 const PLAIN_TILE = '#fff6e6'
 // Numbers, short capitals, single letters and marks are drawn large.
 const GLYPH = /^(?:\d+|[A-Z]{1,3}|[a-z]|[✓?])$/
+// Single lowercase letters (and an empty spelling space) are drawn as early-years print instead of the system font:
+// a single-storey a and g, an l with a tail (never mistaken for a capital I), and b/d, p/q
+// built from the same ball and stick. Each path is strokes in an 80-wide box with the
+// x-height at 45, the baseline at 100, ascenders at 10 and descenders at 130.
+const BALL_L = 'M60 72.5A24 27.5 0 1 1 12 72.5A24 27.5 0 1 1 60 72.5'
+const BALL_R = 'M68 72.5A24 27.5 0 1 1 20 72.5A24 27.5 0 1 1 68 72.5'
+const HUMP = (x, w) => `M${x} 64C${x + 2} 52 ${x + w * 0.3} 45 ${x + w * 0.55} 45C${x + w * 0.85} 45 ${x + w} 51 ${x + w} 62V100`
+const LETTER_PATHS = {
+  a: `${BALL_L}M60 45V100`,
+  b: `M20 10V100${BALL_R}`,
+  c: 'M58 54A25 27.5 0 1 0 58 91',
+  d: `${BALL_L}M60 10V100`,
+  e: 'M16 72.5H64A24 27.5 0 1 0 58 92',
+  f: 'M60 16C56 9 50 8 46 8C38 8 34 14 34 24V100M20 45H52',
+  g: `${BALL_L}M60 45V110C60 132 34 136 18 124`,
+  h: `M20 10V100${HUMP(20, 40)}`,
+  i: 'M40 45V100M40 23V25',
+  j: 'M48 45V110C48 130 30 134 18 124M48 23V25',
+  k: 'M22 10V100M58 45L22 79M35 67L60 100',
+  l: 'M34 10V86C34 96 40 100 50 100',
+  m: `M12 45V100${HUMP(12, 28)}${HUMP(40, 28)}`,
+  n: `M20 45V100${HUMP(20, 40)}`,
+  o: 'M65 72.5A25 27.5 0 1 1 15 72.5A25 27.5 0 1 1 65 72.5',
+  p: `M20 45V130${BALL_R}`,
+  q: `${BALL_L}M60 45V130`,
+  r: 'M24 45V100M24 66C28 52 38 45 49 45C55 45 59 47 62 51',
+  s: 'M58 53C54 47 47 45 40 45C30 45 22 50 22 58C22 67 30 69 40 72C51 75 59 78 59 87C59 96 50 100 40 100C31 100 24 97 20 91',
+  t: 'M38 22V86C38 96 44 100 54 100M22 45H56',
+  u: 'M20 45V80C20 93 28 100 40 100C52 100 60 93 60 80M60 45V100',
+  v: 'M18 45L40 100L62 45',
+  w: 'M8 45L23 100L40 56L57 100L72 45',
+  x: 'M20 45L60 100M60 45L20 100',
+  y: 'M18 45L41 99M63 45L32 130',
+  z: 'M20 45H60L20 100H60',
+  // An empty spelling space: the line its letter will sit on.
+  _: 'M12 108H68',
+}
+const SVG_NS = 'http://www.w3.org/2000/svg'
+
+// A label keeps its text (for screen readers and tests); a lowercase letter is shown drawn.
+function fillLabel(text, value) {
+  text.textContent = value
+  const d = LETTER_PATHS[value]
+  text.classList.toggle('glyph', GLYPH.test(value) || !!d)
+  text.classList.toggle('letter', !!d)
+  text.classList.toggle('blank', value === '_')
+  if (!d) return
+  const svg = document.createElementNS(SVG_NS, 'svg')
+  svg.setAttribute('viewBox', '0 3 80 135')
+  svg.setAttribute('aria-hidden', 'true')
+  const path = document.createElementNS(SVG_NS, 'path')
+  path.setAttribute('d', d)
+  svg.append(path)
+  const hidden = document.createElement('span')
+  hidden.className = 'letter-text'
+  hidden.textContent = value
+  text.replaceChildren(svg, hidden)
+}
 // Blender toy materials that a `tint` may repaint.
 const TINTABLE = ['#edab72', '#8bbddf']
 const MAX_CONFETTI = 180
@@ -249,8 +307,8 @@ function tile({
     button.append(symbolText)
   }
   const text = document.createElement('span')
-  text.className = `label${GLYPH.test(label) ? ' glyph' : ''}`
-  text.textContent = label
+  text.className = 'label'
+  fillLabel(text, label)
   if (label) button.append(text)
   if (visual) {
     button.tabIndex = -1
@@ -270,8 +328,7 @@ function tile({
     bounce: 0,
     label(value) {
       value = String(value)
-      text.textContent = value
-      text.classList.toggle('glyph', GLYPH.test(value))
+      fillLabel(text, value)
       if (value) {
         if (!text.parentNode) button.append(text)
         button.setAttribute('aria-label', value)
