@@ -13,6 +13,10 @@ const params = new URLSearchParams(location.search)
 const debug = params.has('debug')
 const debugScale = debug ? Number(params.get('renderScale')) : 0
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+// Inside the BitGames store the store's own ✕ sits in the top-right corner; the header leaves it free.
+let framed = false
+try { framed = window.self !== window.top } catch { framed = true }
+document.documentElement.classList.toggle('framed', framed)
 
 const LEVEL_NAMES = ['Little steps', 'Growing', 'Explorer']
 const PLAIN_TILE = '#fff6e6'
@@ -701,6 +705,10 @@ function createScene() {
 }
 
 function prepareWorld(world) {
+  const toyOf = (o) => {
+    while (o.parent && o.parent !== world) o = o.parent
+    return o
+  }
   world.traverse((o) => {
     // Hide scenery copies of the counted toy, e.g. `acorn.003`.
     if (game.item && o.name.replace(/[._]?\d+(?:[._]\d+)*$/, '') === game.item) o.visible = false
@@ -712,7 +720,8 @@ function prepareWorld(world) {
     // Keep foreground pieces legible; decorative copies of a counted toy
     // would also make the visible quantity ambiguous.
     const intrudes = bounds.max.x > -3.7 && bounds.min.x < 3.7 && bounds.max.z > -2.6 && bounds.min.z < 3.5
-    if (bounds.min.y > -0.05 && size.y > 0.3 && (centre.z > 2.4 || intrudes)) o.visible = false
+    // Hide the whole toy, not just its tallest part: a fox's eyes must not stay behind on their own.
+    if (bounds.min.y > -0.05 && size.y > 0.3 && (centre.z > 2.4 || intrudes)) toyOf(o).visible = false
   })
   scene.add(world)
 }

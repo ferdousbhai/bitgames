@@ -465,7 +465,8 @@ function spell(c, g, a) {
         a.feedback(`${name[0].toUpperCase() + name.slice(1)} begins with ${name[0]}.`, true,
           [letter + '.', `${name} begins with`, letter + '.'])
       } else {
-        a.audio.speak(letter)
+        // Replace the beginning-sound line with the letters built so far.
+        a.feedback(`${[...spelled.toLowerCase()].join(' – ')} … what comes next?`, true, letter + '.')
       }
       wait()
     },
