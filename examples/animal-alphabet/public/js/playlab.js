@@ -396,6 +396,8 @@ function tenframe(c, g, a) {
 // the next letter glow.
 
 const spellReceivers = { 'word-rocket': 'rocket', 'animal-alphabet': 'fox' }
+// A carrier stays on the board beside the word's own toy, which climbs aboard when spelled.
+const spellCarriers = { 'word-rocket': 'rocket' }
 
 function spell(c, g, a) {
   const word = c.word
@@ -404,7 +406,8 @@ function spell(c, g, a) {
   let misses = 0
   let idle = null
   // A word can name its own toy, e.g. the clay dog who waits to hear its name spelled.
-  const receiver = a.actor(c.friend || spellReceivers[g.id] || 'basket', 1.4, 0, -2.15)
+  const carrier = c.friend && spellCarriers[g.id] ? a.actor(spellCarriers[g.id], 1.4, 2.3, -1.95) : null
+  const receiver = a.actor(c.friend || spellReceivers[g.id] || 'basket', carrier ? 1.2 : 1.4, 0, -2.15)
   const picture = a.tile({ symbol: c.picture, x: 0, z: -0.6, size: 1.6, depth: 1.4, visual: true })
   const spaces = Array.from({ length: word.length }, (_, i) => a.tile({
     x: (i - (word.length - 1) / 2) * 1.2, z: 0.8, size: 1, depth: 1, label: '_', visual: true, colour: '#f7e5c1',
@@ -452,12 +455,28 @@ function spell(c, g, a) {
       if (spelled === word) {
         clearTimeout(idle)
         picture.hop()
-        // The rocket lifts off; other receivers hop.
-        a.animate(1.4, (t) => {
-          receiver.position.y = 0.2 + (g.id === 'word-rocket' ? t * 2 : Math.sin(t * Math.PI) * 0.4)
-          // A word friend spins round once, happy to hear its name.
-          if (c.friend) receiver.rotation.y = t * Math.PI * 2
-        }, receiver)
+        if (carrier) {
+          // The word's toy hops into the rocket, then the rocket lifts off with it.
+          const from = receiver.position.clone()
+          a.animate(2.2, (t) => {
+            const hop = Math.min(1, t / 0.4)
+            receiver.position.lerpVectors(from, carrier.position, hop)
+            receiver.position.y = from.y + Math.sin(hop * Math.PI) * 1.2
+            receiver.scale.setScalar(1 - 0.9 * hop * hop)
+            receiver.visible = hop < 1
+            const lift = Math.max(0, (t - 0.45) / 0.55)
+            carrier.position.y = 0.2 + lift * lift * 7
+            // Gone into space once off the top, so no shadow lingers on the stars.
+            carrier.visible = lift < 1
+          }, receiver)
+        } else {
+          // The rocket lifts off; other receivers hop.
+          a.animate(1.4, (t) => {
+            receiver.position.y = 0.2 + (g.id === 'word-rocket' ? t * 2 : Math.sin(t * Math.PI) * 0.4)
+            // A word friend spins round once, happy to hear its name.
+            if (c.friend) receiver.rotation.y = t * Math.PI * 2
+          }, receiver)
+        }
         a.success(`${[...name].join(' – ')} spells ${name}!`, [...word].map((l) => l + '.').concat(`That spells ${name}!`))
         return
       }

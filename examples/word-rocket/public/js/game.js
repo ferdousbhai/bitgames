@@ -14,29 +14,36 @@ export default {
   "words": [
     [
       "CAT",
-      "🐱"
+      "🐱",
+      "cat"
     ],
     [
-      "SUN",
-      "☀️"
+      "BED",
+      "🛏️",
+      "bed"
+    ],
+    [
+      "PIG",
+      "🐷",
+      "pig"
     ],
     [
       "DOG",
-      "🐶"
+      "🐶",
+      "dog"
+    ],
+    [
+      "SUN",
+      "☀️",
+      "sun"
     ],
     [
       "HAT",
-      "🎩"
-    ],
-    [
-      "MAP",
-      "🗺️"
-    ],
-    [
-      "CUP",
-      "☕"
+      "👒",
+      "hat"
     ]
   ],
+  "hero": "rocket",
   "sky": "#282955",
   "ground": "#7c7bbb",
   "accent": "#ffd179",

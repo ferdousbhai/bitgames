@@ -87,7 +87,10 @@ G('giraffe-ruler','Giraffe Ruler','🦒',[4,7],'prehistoric','measure','Measurin
 G('bridge-builder','Bridge Builder','🌉',[4,8],'harbour','measure','Length and unit iteration','Lay equal planks across a little harbour gap.',{subject:'bridge',unit:'planks'}),
 G('garden-fence','Garden Fence','🌷',[4,7],'garden','measure','Length estimation','Measure a flower bed before making its tiny fence.',{subject:'flower bed',unit:'fence pieces'}),
 G('comet-tail-measure','Comet Tail Measure','☄️',[5,8],'space','measure','Measuring with consistent units','Measure sparkling comet tails without gaps.',{subject:'comet tail',unit:'star units'}),
-G('word-rocket','Word Rocket','🔠',[5,8],'space','spell','CVC word building','Build short words to power a reading rocket.',{words:[['CAT','🐱'],['SUN','☀️'],['DOG','🐶'],['HAT','🎩'],['MAP','🗺️'],['CUP','☕']]}),
+G('word-rocket','Word Rocket','🔠',[5,8],'space','spell','CVC word building','Build short words to power a reading rocket.',{
+  // One short vowel each (a e i o u, then a again), and a clay model of every word rides the rocket.
+  words:[['CAT','🐱','cat'],['BED','🛏️','bed'],['PIG','🐷','pig'],['DOG','🐶','dog'],['SUN','☀️','sun'],['HAT','👒','hat']],
+  hero:'rocket'}),
 G('animal-alphabet','Animal Alphabet','🦊',[4,7],'forest','spell','Beginning sounds and spelling','Build names for tiny animal friends.',{words:[['FOX','🦊','fox'],['CAT','🐱','cat'],['PIG','🐷','pig'],['HEN','🐔','hen'],['BAT','🦇','bat'],['DOG','🐶','dog']],
   // No scenery fox: the only animal on the island is the one being spelled. The fox greets on the menu and win card.
   scenery:['tree','mushroom','acorn','flower'],hero:'fox'}),

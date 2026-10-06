@@ -509,6 +509,10 @@ export function challenge(g, level, round, seed) {
       c.picture = picture
       if (friend) c.friend = friend
       c.tiles = shuffle([...new Set([...word, ...extraLetters])], rng)
+      // Never deal the word's letters already in reading order, or tapping left to right spells it.
+      const inOrder = () => [...new Set(word)].every((l, i, w) => !i || c.tiles.indexOf(l) > c.tiles.indexOf(w[i - 1]))
+      for (let turn = 0; turn < c.tiles.length && inOrder(); turn++) c.tiles.push(c.tiles.shift())
+      if (inOrder()) c.tiles.reverse()
       c.prompt = `Spell ${word.toLowerCase()}.`
       break
     }

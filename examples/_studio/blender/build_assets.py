@@ -770,7 +770,7 @@ GAME_TOYS = {
     'bead-bridge': ['snail'], 'sleepy-owl-lullaby': ['owl'], 'picnic-pairs': ['apple', 'pear', 'strawberry'],
     'frog-choir': ['frog'], 'butterfly-patterns': ['leaf'], 'firefly-lanterns': ['lantern'],
     'giraffe-ruler': ['giraffe'], 'bridge-builder': ['boat'], 'garden-fence': ['flower'],
-    'word-rocket': ['rocket'], 'animal-alphabet': ['fox', 'cat', 'dog', 'pig', 'hen', 'bat'], 'picnic-word-basket': ['basket'],
+    'word-rocket': ['rocket', 'cat', 'bed', 'pig', 'dog', 'sun', 'hat'], 'animal-alphabet': ['fox', 'cat', 'dog', 'pig', 'hen', 'bat'], 'picnic-word-basket': ['basket'],
     'rhyming-river': ['frog', 'leaf'],
     # Clock games: the character who keeps the time.
     'cuckoo-clock-garden': ['bird'], 'space-station-schedule': ['rocket'], 'bunny-bedtime': ['rabbit'],
