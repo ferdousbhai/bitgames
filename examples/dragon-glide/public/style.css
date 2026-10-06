@@ -130,6 +130,7 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 .pop.big { font-size: 42px; --o: #c98f00; }
 .pop.oops { font-size: 38px; --o: #e0457f; }
 .pop.hoop { font-size: 40px; --o: #7b3fc8; }
+.pop.hush { visibility: hidden; }
 @keyframes float { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 15% { transform: translateY(-10px) scale(1.2); opacity: 1; } 75% { transform: translateY(-62px) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.7); opacity: 0; } }
 
 @media (max-width: 520px) {

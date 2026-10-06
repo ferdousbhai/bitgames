@@ -176,7 +176,7 @@ async function init() {
   sparks = new Particles(scene, { max: 900, glow: true })
   dots = new Particles(scene, { max: 500, glow: false })
   rings = new Rings(scene)
-  popups = new Popups($('popups'), camera)
+  popups = new Popups($('popups'), camera, bannerBox)
   dragon = new Dragon(templates.dragon)
   scene.add(dragon.root)
   world = new World(scene, templates)
@@ -319,11 +319,40 @@ function banner(text, small, ms = 2400, kind = '') {
   }
   el.classList.add('show')
   $('hud').classList.add('bannering')
+  // numbers already floating under where the banner lands step out of its way
+  for (const d of $('popups').children) d.classList.add('hush')
   clearTimeout(bannerTimer)
   bannerTimer = setTimeout(() => {
     el.classList.remove('show')
     $('hud').classList.remove('bannering')
   }, ms)
+}
+
+/** Where the showing banner's words (or the counting party's rings) are on screen, if one shows. */
+function bannerBox() {
+  const el = $('banner')
+  if (!el.classList.contains('show') || !el.children.length) return null
+  // the counting party's rings pop in one by one, so it keeps its whole band clear from the start
+  if (el.classList.contains('mission')) return { left: 0, right: innerWidth, top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight }
+  let box = null
+  const range = document.createRange()
+  for (const c of el.children) {
+    // the words themselves, not the full-width lines they sit on
+    range.selectNodeContents(c)
+    const r = range.getBoundingClientRect()
+    if (!r.width) continue
+    box = box ? { left: Math.min(box.left, r.left), right: Math.max(box.right, r.right), top: Math.min(box.top, r.top), bottom: Math.max(box.bottom, r.bottom) } : { left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+  }
+  if (!box) return null
+  // while the banner is still popping in it's drawn smaller, so measure it at its full size
+  const k = new DOMMatrixReadOnly(getComputedStyle(el).transform).a || 1
+  if (k < 0.99) {
+    const b = el.getBoundingClientRect()
+    const cx = (b.left + b.right) / 2
+    const cy = (b.top + b.bottom) / 2
+    box = { left: cx + (box.left - cx) / k, right: cx + (box.right - cx) / k, top: cy + (box.top - cy) / k, bottom: cy + (box.bottom - cy) / k }
+  }
+  return box
 }
 
 /** The counting party: four gold rings pop in one by one, each with its number, in time with the chimes. */

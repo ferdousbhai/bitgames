@@ -387,8 +387,10 @@ export class Course {
       }
       this.items[n++] = it
       // small things Ember flew past shrink away, so they don't fill the camera
-      if (SMALL.has(it.type) && !(it.type === 'lantern' && it.done) && o.position.z > p.z + 0.5) {
-        const k = Math.max(0, 1 - (o.position.z - p.z - 0.5) / 3)
+      // (a lit lantern takes longer, so it still drifts up glowing, but it's gone before it reaches the
+      // camera, where its big glow used to cover the banner and the counting party)
+      if (SMALL.has(it.type) && o.position.z > p.z + 0.5) {
+        const k = Math.max(0, 1 - (o.position.z - p.z - 0.5) / (it.type === 'lantern' && it.done ? 6 : 3))
         o.scale.setScalar((it.baseScale ??= o.scale.x) * k)
         if (k <= 0) it.gone = true
         continue
