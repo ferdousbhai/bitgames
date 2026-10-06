@@ -408,8 +408,8 @@ body.dark { background: radial-gradient(ellipse at 50% 30%, #355069, var(--sky))
   .panel .primary { padding: 10px 18px; font-size: 18px; }
   #win h2 { font-size: 20px; margin: 4px 0; }
   #win-home { margin-top: 8px; }
-  /* The win card takes the empty control column, so the celebration fills the stage. */
-  #win { grid-column: 2; left: 8px; right: max(8px, env(safe-area-inset-right)); width: auto; margin: 0; transform: none; padding: 10px 14px; }
+  /* The menu and win cards take the empty control column, so the hero and celebration fill the stage. */
+  #menu, #win { grid-column: 2; left: 8px; right: max(8px, env(safe-area-inset-right)); width: auto; margin: 0; transform: none; padding: 10px 14px; }
 }
 @media (orientation: landscape) and (max-height: 340px) {
   .hero-emoji, .age, #menu-instructions, .saved { display: none; }

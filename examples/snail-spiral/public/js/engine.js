@@ -537,19 +537,23 @@ function resize() {
   camera.right = halfWidth
   camera.top = halfHeight
   camera.bottom = -halfHeight
-  if (state.screen === 'win') frameBesideCard(w, h, halfWidth, halfHeight)
+  // The menu and win cards cover part of the stage, so their hero is framed in the clear space.
+  if (state.screen === 'win') frameBesideCard($('win'), game.carrier ? 2.7 : 2, [8, 4.5, 1.8], w, h, halfWidth, halfHeight)
+  if (state.screen === 'menu') frameBesideCard($('menu'), 2, [5, 3.4, 2.2], w, h, halfWidth, halfHeight)
   camera.updateProjectionMatrix()
   // Letters and numbers on the pieces scale with them, so short wide windows don't crowd the board.
   $('targets').style.setProperty('--unit', `${w / (2 * halfWidth)}px`)
   positionTargets()
 }
 
-// The win card covers part of the stage, so the celebration (the hero, and a carrier's crew in
-// front of it) is centred in the largest clear strip above, below or beside the card, and drawn
-// bigger when that strip has room (up to 1.8×, about 8 × 4.5 world units in view).
-function frameBesideCard(w, h, halfWidth, halfHeight) {
+// A card covers part of the stage, so the scene it presents (the menu's hero; the win card's
+// celebration, with a carrier's crew in front of the hero) is centred on `focusZ` in the largest
+// clear strip above, below or beside the card, and drawn bigger when that strip has room: `span`
+// is the world units to keep in view ([width, height]) and the largest zoom (the win card keeps
+// 8 × 4.5 units, up to 1.8×; the menu's lone hero needs only 5 × 3.4, up to 2.2×).
+function frameBesideCard(panel, focusZ, [spanX, spanY, maxZoom], w, h, halfWidth, halfHeight) {
   const stage = $('stage').getBoundingClientRect()
-  const card = $('win').getBoundingClientRect()
+  const card = panel.getBoundingClientRect()
   const top = Math.max(0, card.top - stage.top)
   const bottom = Math.min(h, card.bottom - stage.top)
   const left = Math.max(0, card.left - stage.left)
@@ -559,7 +563,7 @@ function frameBesideCard(w, h, halfWidth, halfHeight) {
     : [[0, 0, w, top], [0, bottom, w, h], [0, 0, left, h], [right, 0, w, h]]
   const [x0, y0, x1, y1] = strips.reduce((a, b) => ((b[2] - b[0]) * (b[3] - b[1]) > (a[2] - a[0]) * (a[3] - a[1]) ? b : a))
   const perUnit = w / (2 * halfWidth)
-  const zoom = Math.min(1.8, Math.max(1, Math.min((x1 - x0) / (8 * perUnit), (y1 - y0) / (4.5 * perUnit))))
+  const zoom = Math.min(maxZoom, Math.max(1, Math.min((x1 - x0) / (spanX * perUnit), (y1 - y0) / (spanY * perUnit))))
   const hw = halfWidth / zoom
   const hh = halfHeight / zoom
   camera.left = -hw
@@ -567,7 +571,7 @@ function frameBesideCard(w, h, halfWidth, halfHeight) {
   camera.top = hh
   camera.bottom = -hh
   camera.updateProjectionMatrix()
-  const focus = new THREE.Vector3(0, 0.6, game.carrier ? 2.7 : 2).project(camera)
+  const focus = new THREE.Vector3(0, 0.6, focusZ).project(camera)
   const dx = (((x0 + x1) / 2 - ((focus.x + 1) * w) / 2) * 2 * hw) / w
   const dy = (((y0 + y1) / 2 - ((1 - focus.y) * h) / 2) * 2 * hh) / h
   camera.left -= dx
@@ -890,7 +894,7 @@ function createRenderer() {
   renderer.shadowMap.enabled = true
   renderer.shadowMap.autoUpdate = false
   renderer.shadowMap.needsUpdate = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.shadowMap.type = THREE.PCFShadowMap
   renderer.toneMapping = THREE.NeutralToneMapping
   renderer.toneMappingExposure = 1
 }
