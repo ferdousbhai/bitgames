@@ -37,7 +37,7 @@ export class Thumbs {
   }
 
   /** `obj` is a ready clone; returns a PNG data URL. */
-  shot(obj, { turn = -0.45, tilt = 0.12, fill = 0.82, px = this.size } = {}) {
+  shot(obj, { turn = -0.45, tilt = 0.12, fill = 0.82, px = this.size, radius = 0 } = {}) {
     if (px !== this.size) this.renderer.setSize(px, px, false)
     const holder = new THREE.Group()
     holder.add(obj)
@@ -48,7 +48,8 @@ export class Thumbs {
     const c = this.box.getCenter(this.v)
     holder.position.sub(c)
     const size = this.box.getSize(new THREE.Vector3())
-    const r = Math.max(size.x, size.y, size.z * 0.6) / 2
+    // A fixed `radius` draws a family of parts at one shared scale, so bigger parts look bigger
+    const r = radius || Math.max(size.x, size.y, size.z * 0.6) / 2
     const d = r / Math.tan((this.camera.fov * Math.PI) / 360) / fill
     this.camera.position.set(0, 0, d + size.z / 2)
     this.camera.lookAt(0, 0, 0)

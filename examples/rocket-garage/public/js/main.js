@@ -181,17 +181,16 @@ async function load() {
   scene.add(garage)
   padTop = 0.24
   // Arrange the helpers so they stay in view beside the rocket
-  garage.getObjectByName('garage_robot').position.set(-2.6, 0, 1.1)
-  garage.getObjectByName('garage_robot').rotation.y = 0.35
-  garage.getObjectByName('garage_toolbox').position.set(2.5, 0, 1.5)
-  garage.getObjectByName('garage_toolbox').rotation.y = -0.4
   robot = {
     obj: garage.getObjectByName('garage_robot'),
     arm: garage.getObjectByName('garage_robot_arm'),
     armL: garage.getObjectByName('garage_robot_arm_l'),
+    toolbox: garage.getObjectByName('garage_toolbox'),
+    turn: 0.35,
     wave: 2,
     spin: 0,
   }
+  placeHelpers()
   garage.traverse((o) => {
     if (o.isMesh && o.material.name === 'pad_light') {
       o.material = o.material.clone()
@@ -230,6 +229,21 @@ async function load() {
   for (const slot of SLOTS) for (const pt of PARTS[slot.id]) makeThumb(slot.id, pt.id)
 }
 
+/**
+ * The robot and the toolbox stand beside the rocket. In portrait the 🧪, 🎲 and GO buttons
+ * sit on the left, so the robot swaps sides with the toolbox and stays in view (and tappable).
+ */
+function placeHelpers() {
+  if (!robot) return
+  const side = view.landscape ? 1 : -1
+  if (view.landscape) robot.obj.position.set(-2.6, 0, 1.1)
+  else robot.obj.position.set(2.1, 0, 1.2) // a little closer, so the right edge never cuts it off
+  robot.turn = 0.35 * side
+  robot.obj.rotation.y = robot.turn
+  robot.toolbox.position.set(2.5 * side, 0, 1.5)
+  robot.toolbox.rotation.y = -0.4 * side
+}
+
 const padLights = []
 const doors = { l: null, r: null, arm: null, armX: 0, open: 0 }
 
@@ -250,6 +264,8 @@ const shadow = (() => {
 })()
 
 const thumbPaint = {}
+// Boosters are pictured at one shared scale (the mega booster fills its square), so small ones look small
+const BOOSTER_R = 0.84
 function makeThumb(slot, id) {
   if (id === 'none') return null
   const obj = models[modelName(slot, id)].clone()
@@ -273,7 +289,7 @@ function makeThumb(slot, id) {
       })
     }
   }
-  const opts = slot === 'sticker' ? { turn: 0, tilt: 0, fill: 0.78 } : slot === 'pilot' ? { turn: -0.15, tilt: 0.05, fill: 0.86 } : slot === 'booster' ? { turn: -0.3, fill: 0.8 } : {}
+  const opts = slot === 'sticker' ? { turn: 0, tilt: 0, fill: 0.78 } : slot === 'pilot' ? { turn: -0.15, tilt: 0.05, fill: 0.86 } : slot === 'booster' ? { turn: -0.3, fill: 0.8, radius: BOOSTER_R } : {}
   thumbCache[`${slot}:${id}`] = thumbs.shot(obj, opts)
   return thumbCache[`${slot}:${id}`]
 }
@@ -435,7 +451,9 @@ function resize() {
   sparks.setScale(hpx, camera.fov)
   smoke.setScale(hpx, camera.fov)
   starField.material.uniforms.uScale.value = hpx / (2 * TAN)
+  if (!$('tray').classList.contains('hidden')) fitItems()
   layoutActions()
+  placeHelpers()
   placeFinger()
 }
 addEventListener('resize', resize)
@@ -523,6 +541,7 @@ function renderTray() {
   }
   renderItems()
   renderPaints()
+  fitItems()
   layoutActions()
   renderExperiment()
 }
@@ -553,8 +572,39 @@ function renderItems() {
     } else if (save.fresh.has(`${slot}:${p.id}`)) {
       b.insertAdjacentHTML('beforeend', '<span class="new">✨</span>')
     }
+    // Each booster wears the planet it can fly to, so picking one needs no reading
+    if (open && slot === 'booster') b.insertAdjacentHTML('beforeend', `<span class="goes">${DESTS[reach({ booster: p.id })].emoji}</span>`)
     el.append(b)
   }
+}
+
+/**
+ * Every part stays in view without scrolling (a hidden second row of locked parts was easy to
+ * miss on short phones): when the tray's own grid would overflow, pick the column count that
+ * gives the biggest squares that all fit.
+ */
+function fitItems() {
+  const el = $('items')
+  el.style.gridTemplateColumns = ''
+  el.style.justifyContent = ''
+  const n = el.children.length
+  if (!n || !el.clientHeight || el.scrollHeight <= el.clientHeight + 2) return
+  const cs = getComputedStyle(el)
+  const gap = parseFloat(cs.columnGap) || 6
+  const W = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+  const H = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 4
+  let best = 0
+  let cols = n
+  for (let c = 1; c <= n; c++) {
+    const r = Math.ceil(n / c)
+    const size = Math.min((W - (c - 1) * gap) / c, (H - (r - 1) * gap) / r)
+    if (size > best + 0.5) {
+      best = size
+      cols = c
+    }
+  }
+  el.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(best)}px)`
+  el.style.justifyContent = 'center'
 }
 
 function renderPaints() {
@@ -1774,7 +1824,7 @@ function updateGarage(dt) {
   robot.arm.rotation.z = damp(robot.arm.rotation.z, waving ? 2.5 + Math.sin(t * 10) * 0.45 : 0.1, 8, dt)
   robot.armL.rotation.z = damp(robot.armL.rotation.z, game.state === 'countdown' ? -2.5 + Math.sin(t * 10) * 0.4 : -0.1, 8, dt)
   robot.spin = Math.max(0, robot.spin - dt)
-  robot.obj.rotation.y = 0.35 + (1 - robot.spin) * (robot.spin > 0 ? Math.PI * 2 : 0) + Math.sin(t * 1.2) * 0.08
+  robot.obj.rotation.y = robot.turn + (1 - robot.spin) * (robot.spin > 0 ? Math.PI * 2 : 0) + Math.sin(t * 1.2) * 0.08
   robot.obj.position.y = Math.abs(Math.sin(t * 3)) * 0.04
   // Roof hatch and gantry arm move aside for take-off
   doors.l.position.x = damp(doors.l.position.x, -doors.open * 2.4, 3, dt)

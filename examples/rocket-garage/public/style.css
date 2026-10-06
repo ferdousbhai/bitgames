@@ -369,3 +369,26 @@ body.portrait .reward-new.many .gift { flex: 0 0 44px; }
   .journey .stop { font-size: 19px; } .journey .stop.goal { font-size: 25px; }
   .journey .me { font-size: 20px; }
 }
+
+/* --- Pass 4 --- */
+/* Each booster in the tray wears the planet it reaches */
+.item .goes {
+  position: absolute; left: 3px; bottom: 3px; font-size: 18px; line-height: 1; padding: 2px; border-radius: 50%;
+  background: rgba(255,255,255,.9); box-shadow: 0 1px 0 rgba(58,42,122,.25);
+}
+@media (min-width: 700px) and (min-height: 700px) { .item .goes { font-size: 24px; left: 5px; bottom: 5px; } }
+/* Tall tablets in portrait: a GO button (and 🧪 🎲) sized like the sideways one */
+@media (min-width: 700px) and (min-height: 900px) {
+  body.portrait .launch { width: 124px; height: 124px; }
+  body.portrait .launch .em { font-size: 46px; }
+  body.portrait .launch .go { font-size: 24px; }
+  body.portrait .dice { width: 64px; height: 64px; font-size: 36px; }
+}
+/* Short portrait phones: a little more tray, so two full rows of parts fit at a good size */
+@media (orientation: portrait) and (min-height: 540px) and (max-height: 700px) { body.portrait #tray { max-height: 51vh; } }
+/* 320×568 phones: the 🧪 🎲 GO column stays clear of the top bar above the taller tray */
+@media (orientation: portrait) and (max-height: 600px) {
+  body.portrait .dice { width: 48px; height: 48px; font-size: 27px; margin-bottom: 6px; border-radius: 16px; }
+  body.portrait .launch { width: 84px; height: 84px; }
+  body.portrait .launch .em { font-size: 34px; } body.portrait .launch .go { font-size: 18px; }
+}
