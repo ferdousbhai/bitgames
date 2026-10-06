@@ -392,3 +392,24 @@ body.portrait .reward-new.many .gift { flex: 0 0 44px; }
   body.portrait .launch { width: 84px; height: 84px; }
   body.portrait .launch .em { font-size: 34px; } body.portrait .launch .go { font-size: 18px; }
 }
+
+/* --- Pass 5 --- */
+/* The star count never breaks onto two lines (320px-wide phones squeezed it into a tall blob) */
+.pill, .turbo { white-space: nowrap; flex: none; }
+@media (max-width: 360px) {
+  .flightbar { gap: 4px; }
+  #topbar { gap: 4px; }
+  .pill { font-size: 20px; padding: 3px 9px; }
+  .turbo { padding: 4px 7px; font-size: 18px; }
+  .turbo i { width: 40px; }
+  /* All five planets fit between 🏠 and 🎵 (the 👽 used to slip under the music button) */
+  .reach { padding: 4px 6px; gap: 1px; }
+  .reach .d { font-size: 19px; padding: 0; }
+  .reach .dash { width: 4px; }
+}
+/* The shortest upright phones (320×480): 🧪 and 🎲 sit side by side above GO, clear of the top bar */
+@media (orientation: portrait) and (max-height: 520px) {
+  body.portrait #actions { display: grid; grid-template-columns: auto auto; gap: 6px; justify-items: center; }
+  body.portrait #actions .launch { grid-column: 1 / -1; grid-row: 2; }
+  body.portrait #actions .dice { margin: 0; }
+}

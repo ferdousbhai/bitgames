@@ -71,17 +71,35 @@ function buildCard(label, build, slot, rocketThumb) {
   const picture = el('img', 'workshop-rocket')
   picture.src = rocketThumb(build) || ''
   picture.alt = `Rocket ${label}`
-  const rail = el('div', 'workshop-rail')
-  rail.dataset.build = slot
-  rail.append(el('span', 'workshop-home', '🏠'))
-  for (const destination of DESTS) rail.append(el('span', 'workshop-stop', destination.emoji))
-  const ship = el('span', 'workshop-ship')
-  ship.append(el('img'))
-  ship.firstChild.src = picture.src
-  ship.firstChild.alt = ''
-  rail.append(ship)
-  card.append(badge, picture, rail)
+  card.append(badge, picture)
   return card
+}
+
+/**
+ * One race track for both rockets: the planets along the top, then a lane for A and a lane for B,
+ * so which one went farther is plain to see without comparing two separate pictures.
+ */
+function buildRace(builds, rocketThumb) {
+  const race = el('div', 'workshop-race')
+  const stops = el('div', 'workshop-stops')
+  stops.append(el('span'), el('span', 'workshop-stop workshop-home', '🏠'))
+  for (const destination of DESTS) stops.append(el('span', 'workshop-stop', destination.emoji))
+  race.append(stops)
+  for (const [slot, build] of builds) {
+    const lane = el('div', `workshop-lane lane-${slot}`)
+    lane.append(el('b', 'workshop-lane-badge', slot.toUpperCase()))
+    const track = el('div', 'workshop-rail')
+    track.dataset.build = slot
+    const ship = el('span', 'workshop-ship')
+    const img = el('img')
+    img.src = rocketThumb(build) || ''
+    img.alt = ''
+    ship.append(img)
+    track.append(ship)
+    lane.append(track)
+    race.append(lane)
+  }
+  return race
 }
 
 /**
@@ -138,7 +156,7 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
   }
 
   /** The pointing hand shows the next thing to tap. */
-  function point(target) {
+  function point(target, hand = true) {
     for (const b of dialog.querySelectorAll('.nudge')) b.classList.remove('nudge')
     predictionRow.classList.remove('choose')
     // Asking for a guess: all three answers glow in turn, so the hand never hints at one of them
@@ -149,6 +167,7 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
     }
     if (!target) return finger.classList.remove('show')
     target.classList.add('nudge')
+    if (!hand) return finger.classList.remove('show')
     requestAnimationFrame(() => {
       const r = target.getBoundingClientRect()
       const d = dialog.getBoundingClientRect()
@@ -190,7 +209,11 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
     current = structuredClone(readRocket())
     reference ??= structuredClone(current)
     const { changed } = compareBuilds(reference, current)
-    dialog.querySelector('.workshop-builds').replaceChildren(buildCard('A', reference, 'a', rocketThumb), buildCard('B', current, 'b', rocketThumb))
+    dialog.querySelector('.workshop-builds').replaceChildren(
+      buildCard('A', reference, 'a', rocketThumb),
+      buildCard('B', current, 'b', rocketThumb),
+      buildRace([['a', reference], ['b', current]], rocketThumb),
+    )
     swapPicture(changed)
     dialog.dataset.changes = String(Math.min(changed.length, 2))
     $('workshop-rule').textContent = changed.length === 0
@@ -254,9 +277,11 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
     timer = setTimeout(() => {
       for (const ship of dialog.querySelectorAll('.workshop-ship')) ship.classList.remove('flying')
       for (const slot of ['a', 'b']) {
-        dialog.querySelector(`[data-card="${slot}"]`).classList.toggle('winner', result.answer === slot || result.answer === 'same')
-        // A flag goes up on the planet each rocket reached
-        dialog.querySelectorAll(`[data-build="${slot}"] .workshop-stop`)[result[slot].reach]?.classList.add('reached')
+        const won = result.answer === slot || result.answer === 'same'
+        dialog.querySelector(`[data-card="${slot}"]`).classList.toggle('winner', won)
+        dialog.querySelector(`.lane-${slot}`).classList.toggle('winner', won)
+        // The planet each rocket reached pops up above its lane
+        dialog.querySelectorAll('.workshop-stops .workshop-stop')[result[slot].reach + 1]?.classList.add('reached')
       }
       const matched = prediction === result.answer
       const verdict = matched ? '✔ Your prediction matched!' : '💡 A new discovery!'
@@ -267,7 +292,8 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
       feedback(`${verdict} ${outcome} ${why}`.replace('  ', ' '), `${matched ? 'Yes! You were right!' : 'Ooh, a new discovery!'} ${spoken} ${why}`)
       sound(matched ? 'yay' : 'hmm')
       setBusy(false)
-      point(garageButton)
+      // The 🔧 glows for "go and try another change"; no hand, so the result stays in view
+      point(garageButton, false)
     }, 1900)
   }
 

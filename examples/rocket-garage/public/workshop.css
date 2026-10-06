@@ -41,16 +41,7 @@
   font-size: 26px; font-weight: 900; color: #fff; background: #3bb5ff; box-shadow: 0 3px 0 #1d7fc0;
 }
 .build-b .workshop-badge { background: #ff5a7a; box-shadow: 0 3px 0 #c02c4c; }
-.workshop-rocket { height: clamp(70px, 22vh, 150px); width: auto; max-width: 100%; aspect-ratio: 1; object-fit: contain; }
-.workshop-rail {
-  position: relative; width: 100%; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: end; overflow: hidden;
-  background: linear-gradient(90deg, #d7eaf4, #b6c7ef 40%, #4b3d8f); border-radius: 12px; padding: 40px 0 4px; font-size: 20px;
-}
-.workshop-rail > span:not(.workshop-ship) { text-align: center; line-height: 1; }
-.workshop-ship {
-  position: absolute; top: 0; left: calc((var(--at, 0) + 0.5) * 100% / 6); width: 42px; height: 42px; transform: translateX(-50%) rotate(90deg);
-  transition: left 1.6s cubic-bezier(.45, 0, .3, 1);
-}
+.workshop-rocket { height: clamp(56px, 17vh, 150px); width: auto; max-width: 100%; aspect-ratio: 1; object-fit: contain; }
 .workshop-ship img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .workshop-ship.flying { animation: workshop-wobble 0.25s ease-in-out infinite alternate; }
 
@@ -98,9 +89,7 @@
   .workshop-builds { grid-column: 1; grid-row: 2 / span 3; align-self: stretch; }
   .workshop-change, .workshop-prediction, #workshop-feedback { grid-column: 2; }
   #workshop-feedback { align-self: start; }
-  .workshop-rocket { height: clamp(52px, calc(100dvh - 170px), 130px); }
-  .workshop-rail { padding-top: 34px; font-size: 16px; }
-  .workshop-ship { width: 36px; height: 36px; }
+  .workshop-rocket { height: clamp(40px, calc(100dvh - 240px), 120px); }
   .workshop-change { min-height: 46px; flex-direction: column; gap: 2px; }
   #workshop-rule { font-size: 13px; text-align: center; }
   #workshop-feedback { font-size: 13px; min-height: 0; }
@@ -113,9 +102,6 @@
 }
 @media (max-width: 380px) {
   .workshop-head h2 { font-size: 17px; }
-  .workshop-rail { font-size: 14px; }
-  .workshop-ship { width: 34px; height: 34px; }
-  .workshop-rail::before { top: 13px; }
   .workshop-builds { gap: 6px; }
   .workshop-build { padding: 6px 4px; }
   #workshop .workshop-prediction button { min-width: 60px; }
@@ -125,25 +111,13 @@
   .workshop-ship.flying, #workshop button.nudge, .workshop-finger { animation: none; }
 }
 
-/* After the test flight: a glowing trail behind each ship, a flag on the planet it reached, a cup for the farther rocket */
-.workshop-rail::before {
-  content: ""; position: absolute; left: calc(100% / 12); top: 17px; height: 8px; border-radius: 4px;
-  width: calc(var(--at, 0) * 100% / 6); background: linear-gradient(90deg, #fff3a0, #ffd23f 60%, #ff9f43);
-  box-shadow: 0 0 8px #ffd23f; transition: width 1.6s cubic-bezier(.45, 0, .3, 1);
-}
-.workshop-stop { position: relative; transition: transform .3s; }
-.workshop-stop.reached { transform-origin: 50% 90%; transform: scale(1.45); animation: workshop-reach .6s cubic-bezier(.2, 1.8, .4, 1); }
-.workshop-stop.reached::after { content: "🚩"; position: absolute; right: -4px; top: -12px; font-size: 13px; }
-@keyframes workshop-reach { from { transform: scale(.6); } }
+/* After the test flight: the farther rocket's card glows and gets a cup */
 .workshop-build.winner::after {
   content: "🏆"; position: absolute; right: 8px; top: 6px; font-size: 30px; line-height: 1;
   animation: workshop-reach .6s cubic-bezier(.2, 1.8, .4, 1);
 }
-@media (orientation: landscape) and (max-height: 500px) {
-  .workshop-rail::before { top: 14px; height: 7px; }
-  .workshop-build.winner::after { font-size: 24px; }
-}
-@media (prefers-reduced-motion: reduce) { .workshop-rail::before { transition: none; } }
+@keyframes workshop-reach { from { transform: scale(.6); } }
+@media (orientation: landscape) and (max-height: 500px) { .workshop-build.winner::after { font-size: 24px; } }
 
 /* --- Pass 3 --- */
 /* "Which rocket will fly farther?": A, = and B glow one after another, so no answer looks like the right one */
@@ -166,11 +140,7 @@
   .workshop-prediction, .workshop-footer { gap: 18px; }
   .workshop-builds { gap: 16px; }
   .workshop-badge { width: 52px; height: 52px; font-size: 34px; }
-  .workshop-rocket { height: clamp(150px, 26vh, 240px); }
-  .workshop-rail { font-size: 30px; padding: 54px 0 6px; border-radius: 16px; }
-  .workshop-rail::before { top: 23px; height: 10px; }
-  .workshop-ship { width: 58px; height: 58px; }
-  .workshop-stop.reached::after { font-size: 18px; top: -16px; }
+  .workshop-rocket { height: clamp(96px, calc(100dvh - 700px), 220px); }
   .workshop-build.winner::after { font-size: 42px; }
   .workshop-part { width: 64px; height: 64px; font-size: 38px; }
   .workshop-pair i { font-size: 24px; }
@@ -181,3 +151,54 @@
 @media (prefers-reduced-motion: reduce) {
   #workshop .workshop-prediction.choose button, .workshop-build.winner .workshop-rocket { animation: none; }
 }
+
+/* --- Pass 5: one race track for both rockets ---
+   Planets along the top, a blue lane for A and a pink lane for B underneath, so the farther rocket is plain to see. */
+.workshop-race {
+  grid-column: 1 / -1; display: grid; gap: 4px; padding: 6px 8px 8px; border-radius: 16px; --badge: 30px; --lane: 44px;
+  background: linear-gradient(90deg, #d7eaf4, #b6c7ef 40%, #4b3d8f);
+}
+.workshop-stops, .workshop-lane { display: grid; grid-template-columns: var(--badge) repeat(6, minmax(0, 1fr)); align-items: center; column-gap: 0; }
+.workshop-stop { position: relative; text-align: center; font-size: 24px; line-height: 1.1; transition: transform .3s; }
+.workshop-stop.reached { transform: scale(1.3); animation: workshop-reach .6s cubic-bezier(.2, 1.8, .4, 1); }
+.workshop-lane-badge {
+  width: calc(var(--badge) - 4px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+  font-size: calc(var(--badge) * .6); font-weight: 900; color: #fff; background: #3bb5ff; box-shadow: 0 2px 0 #1d7fc0;
+}
+.workshop-lane-badge { position: relative; z-index: 1; }
+.lane-b .workshop-lane-badge { background: #ff5a7a; box-shadow: 0 2px 0 #c02c4c; }
+.workshop-rail {
+  grid-column: 2 / -1; position: relative; height: var(--lane); border-radius: calc(var(--lane) / 2);
+  background: rgba(255, 255, 255, .55); box-shadow: inset 0 0 0 2px #3bb5ff88;
+}
+.lane-b .workshop-rail { box-shadow: inset 0 0 0 2px #ff5a7a88; }
+/* The glowing trail behind each ship */
+.workshop-rail::before {
+  content: ""; position: absolute; left: calc(100% / 12); top: 50%; height: 8px; margin-top: -4px; border-radius: 4px;
+  width: calc(var(--at, 0) * 100% / 6); background: linear-gradient(90deg, #fff3a0, #ffd23f 60%, #ff9f43);
+  box-shadow: 0 0 8px #ffd23f; transition: width 1.6s cubic-bezier(.45, 0, .3, 1);
+}
+.workshop-ship {
+  position: absolute; top: 50%; left: max(calc(var(--lane) * .7), calc((var(--at, 0) + 0.5) * 100% / 6)); width: calc(var(--lane) * 1.5); aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(90deg); transition: left 1.6s cubic-bezier(.45, 0, .3, 1);
+  filter: drop-shadow(0 2px 1px rgba(30, 22, 77, .35));
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .workshop-race { --badge: 24px; --lane: 34px; padding: 4px 6px 6px; gap: 2px; }
+  .workshop-stop { font-size: 18px; }
+}
+@media (orientation: landscape) and (max-height: 330px) { .workshop-race { --lane: 30px; } .workshop-stop { font-size: 16px; } }
+@media (max-width: 380px) { .workshop-race { --badge: 24px; --lane: 38px; padding: 4px 4px 6px; } .workshop-stop { font-size: 19px; } }
+@media (min-width: 740px) and (min-height: 700px) {
+  .workshop-race { --badge: 44px; --lane: 64px; padding: 10px 12px 12px; gap: 8px; border-radius: 20px; }
+  .workshop-stop { font-size: 36px; }
+  .workshop-rail::before { height: 12px; margin-top: -6px; }
+}
+/* The farther lane glows too (on short phones it is the only picture of the rockets) */
+.workshop-lane.winner .workshop-rail { box-shadow: inset 0 0 0 3px #ffd23f, 0 0 12px #ffd23f; }
+/* Short upright phones: the lanes already show both rockets with their letters, so the cards step aside */
+@media (orientation: portrait) and (max-height: 600px) {
+  .workshop-build { display: none; }
+  .workshop-race { --lane: 46px; }
+}
+@media (prefers-reduced-motion: reduce) { .workshop-ship, .workshop-rail::before { transition: none; } }

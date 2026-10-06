@@ -235,8 +235,10 @@ async function load() {
  */
 function placeHelpers() {
   if (!robot) return
-  const side = view.landscape ? 1 : -1
-  if (view.landscape) robot.obj.position.set(-2.6, 0, 1.1)
+  // Only short sideways phones keep the buttons out of the rocket's picture (they get their own
+  // strip); on taller screens the 🧪 🎲 GO corner would hide the robot, so it stands on the right.
+  const side = view.landscape && innerHeight <= 500 ? 1 : -1
+  if (side > 0) robot.obj.position.set(-2.6, 0, 1.1)
   else robot.obj.position.set(2.1, 0, 1.2) // a little closer, so the right edge never cuts it off
   robot.turn = 0.35 * side
   robot.obj.rotation.y = robot.turn
@@ -588,21 +590,26 @@ function fitItems() {
   el.style.gridTemplateColumns = ''
   el.style.justifyContent = ''
   const n = el.children.length
-  if (!n || !el.clientHeight || el.scrollHeight <= el.clientHeight + 2) return
+  if (!n || !el.clientHeight) return
+  const overflow = el.scrollHeight > el.clientHeight + 2
   const cs = getComputedStyle(el)
   const gap = parseFloat(cs.columnGap) || 6
   const W = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
   const H = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 4
+  // Big trays (tablets, desktops) used to show small parts above a large empty space: the parts
+  // grow into it (up to a chunky 132px, keeping as many in a row as fit), so they are easier to see and tap.
+  const cap = overflow ? Infinity : 132
   let best = 0
   let cols = n
   for (let c = 1; c <= n; c++) {
     const r = Math.ceil(n / c)
-    const size = Math.min((W - (c - 1) * gap) / c, (H - (r - 1) * gap) / r)
-    if (size > best + 0.5) {
+    const size = Math.min(cap, (W - (c - 1) * gap) / c, (H - (r - 1) * gap) / r)
+    if (size > best + 0.5 || (size > best - 0.5 && cap < Infinity)) {
       best = size
       cols = c
     }
   }
+  if (!overflow && best < el.children[0].offsetWidth + 12) return
   el.style.gridTemplateColumns = `repeat(${cols}, ${Math.floor(best)}px)`
   el.style.justifyContent = 'center'
 }
