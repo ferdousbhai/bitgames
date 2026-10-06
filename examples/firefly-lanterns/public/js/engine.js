@@ -412,6 +412,8 @@ function resize() {
   camera.top = halfHeight
   camera.bottom = -halfHeight
   camera.updateProjectionMatrix()
+  // Letters and numbers on the pieces scale with them, so short wide windows don't crowd the board.
+  $('targets').style.setProperty('--unit', `${w / (2 * halfWidth)}px`)
   positionTargets()
 }
 
@@ -463,9 +465,18 @@ function finish() {
   saved.completed[state.level] = (saved.completed[state.level] || 0) + 1
   saved.level = state.level
   save()
-  $('win-text').textContent = `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`
+  // Spelling adventures recap the five words the child built, with their pictures.
+  const spelled = game.mode === 'spell'
+    ? Array.from({ length: 5 }, (_, round) => challenge(game, state.level, round, state.seed))
+    : []
+  const list = (words) => `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`
+  $('win-text').textContent = spelled.length
+    ? `You spelled ${list(spelled.map((c) => `${c.picture} ${c.word.toLowerCase()}`))}. Every try helped you learn!`
+    : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`
   audio.happy()
-  audio.speak('A wonderful adventure! Every try helped you learn.')
+  audio.speak(spelled.length
+    ? ['A wonderful adventure!', `You spelled ${list(spelled.map((c) => c.word.toLowerCase()))}.`]
+    : 'A wonderful adventure! Every try helped you learn.')
   tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true })
   burst()
 }

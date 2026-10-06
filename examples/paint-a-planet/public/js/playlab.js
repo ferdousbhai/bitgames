@@ -405,9 +405,9 @@ function spell(c, g, a) {
   let idle = null
   // A word can name its own toy, e.g. the clay dog who waits to hear its name spelled.
   const receiver = a.actor(c.friend || spellReceivers[g.id] || 'basket', 1.4, 0, -2.15)
-  const picture = a.tile({ symbol: c.picture, x: 0, z: -0.5, size: 1.6, depth: 1.4, visual: true })
+  const picture = a.tile({ symbol: c.picture, x: 0, z: -0.6, size: 1.6, depth: 1.4, visual: true })
   const spaces = Array.from({ length: word.length }, (_, i) => a.tile({
-    x: (i - (word.length - 1) / 2) * 1.2, z: 0.9, size: 1, depth: 1, label: '_', visual: true, colour: '#f7e5c1',
+    x: (i - (word.length - 1) / 2) * 1.2, z: 0.8, size: 1, depth: 1, label: '_', visual: true, colour: '#f7e5c1',
   }))
 
   const next = () => word[spelled.length]
@@ -470,7 +470,7 @@ function spell(c, g, a) {
       }
       wait()
     },
-  }), { columns: c.tiles.length, spacing: 1.45, z: 2.45 })
+  }), { columns: c.tiles.length, spacing: 1.45, z: 2.6 })
 
   a.action('🔈 Hear word', () => a.audio.speak(name))
   a.action('⌫ Undo letter', () => {
