@@ -233,10 +233,10 @@ export class Sound {
     ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 0.9, len: 1.4, type: 'sine', gain: 0.1 }))
   }
 
-  /** Four rising chimes, one per ring counted, then a sparkle. */
+  /** Four rising chimes, one as each ring pops up in the counting party (main.js COUNT_BEAT), then a sparkle. */
   counted() {
-    ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 523.25), { at: 0.35 + i * 0.16, len: 0.35, type: 'triangle', gain: 0.12, echo: true }))
-    ;[16, 19, 24].forEach((s, i) => this.note(hz(s, 523.25), { at: 1.05 + i * 0.05, len: 0.5, type: 'sine', gain: 0.07, echo: true }))
+    ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 523.25), { at: 0.3 + i * 0.42, len: 0.4, type: 'triangle', gain: 0.13, echo: true }))
+    ;[16, 19, 24].forEach((s, i) => this.note(hz(s, 523.25), { at: 1.75 + i * 0.06, len: 0.5, type: 'sine', gain: 0.08, echo: true }))
   }
 
   click() {

@@ -120,7 +120,7 @@ const adventure = createAdventure({
   isMuted: () => sound.muted,
   // The reward is spoken; the screen shows the four rings and a party, no reading needed
   celebrate: () => {
-    banner('⭕⭕⭕⭕', '🎉 1, 2, 3, 4! 🎉', 2800, 'mission')
+    countParty()
     sound.counted()
     dragon.twirl()
     for (let i = 0; i < 3; i++) sparks.burst(tmp.set(pos.x + (i - 1) * 1.6, pos.y + 1.2, pos.z - 2), RAINBOW, 22, 7, 0.8, { vz: -game.speed * 0.5 })
@@ -315,6 +315,21 @@ function banner(text, small, ms = 2400, kind = '') {
     $('hud').classList.remove('bannering')
   }, ms)
 }
+
+/** The counting party: four gold rings pop in one by one, each with its number, in time with the chimes. */
+function countParty() {
+  banner('', null, 3400, 'mission')
+  const row = document.createElement('div')
+  row.className = 'count-row'
+  for (let i = 0; i < 4; i++) {
+    const s = document.createElement('span')
+    s.style.animationDelay = `${COUNT_BEAT[0] + i * COUNT_BEAT[1]}s`
+    s.innerHTML = `<i></i><b>${i + 1}</b>`
+    row.append(s)
+  }
+  $('banner').append(row)
+}
+const COUNT_BEAT = [0.3, 0.42] // first ring, then one every beat (audio.js counted() uses the same)
 
 let tipTimer
 function tip(text, secs) {
