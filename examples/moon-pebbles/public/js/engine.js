@@ -126,7 +126,22 @@ function printText(element, message) {
   if (!PRINTS) return
   const parts = String(message).split(/([A-Za-z'’]+)/)
   if (!parts.some((part) => /^[a-z]$/.test(part) || PRINTED_WORDS.has(part))) return
-  element.replaceChildren(...parts.map((part) => (/^[a-z]$/.test(part) || PRINTED_WORDS.has(part) ? drawnWord(part) : part)))
+  const drawn = (part) => /^[a-z]$/.test(part) || PRINTED_WORDS.has(part)
+  // Punctuation straight after a drawn word, and a picture joined to it by a no-break space
+  // ("🐱\u00a0cat"), stay on its line, so no line starts with a comma or ends with a lone picture.
+  const stop = (part) => part?.match(/^[,.!?;:]+/)?.[0] || ''
+  const picture = (part) => part?.match(/\S*\u00a0$/)?.[0] || ''
+  element.replaceChildren(...parts.map((part, i) => {
+    if (drawn(part)) {
+      const span = drawnWord(part)
+      span.prepend(picture(parts[i - 1]))
+      span.append(stop(parts[i + 1]))
+      return span
+    }
+    const start = i && drawn(parts[i - 1]) ? stop(part).length : 0
+    const end = drawn(parts[i + 1]) ? part.length - picture(part).length : part.length
+    return part.slice(start, Math.max(start, end))
+  }))
 }
 // Blender toy materials that a `tint` may repaint.
 const TINTABLE = ['#edab72', '#8bbddf']
@@ -519,10 +534,43 @@ function resize() {
   camera.right = halfWidth
   camera.top = halfHeight
   camera.bottom = -halfHeight
+  if (state.screen === 'win') frameBesideCard(w, h, halfWidth, halfHeight)
   camera.updateProjectionMatrix()
   // Letters and numbers on the pieces scale with them, so short wide windows don't crowd the board.
   $('targets').style.setProperty('--unit', `${w / (2 * halfWidth)}px`)
   positionTargets()
+}
+
+// The win card covers part of the stage, so the celebration (the hero, and a carrier's crew in
+// front of it) is centred in the largest clear strip above, below or beside the card, and drawn
+// bigger when that strip has room (up to 1.8×, about 8 × 4.5 world units in view).
+function frameBesideCard(w, h, halfWidth, halfHeight) {
+  const stage = $('stage').getBoundingClientRect()
+  const card = $('win').getBoundingClientRect()
+  const top = Math.max(0, card.top - stage.top)
+  const bottom = Math.min(h, card.bottom - stage.top)
+  const left = Math.max(0, card.left - stage.left)
+  const right = Math.min(w, card.right - stage.left)
+  const strips = bottom <= top || right <= left
+    ? [[0, 0, w, h]]
+    : [[0, 0, w, top], [0, bottom, w, h], [0, 0, left, h], [right, 0, w, h]]
+  const [x0, y0, x1, y1] = strips.reduce((a, b) => ((b[2] - b[0]) * (b[3] - b[1]) > (a[2] - a[0]) * (a[3] - a[1]) ? b : a))
+  const perUnit = w / (2 * halfWidth)
+  const zoom = Math.min(1.8, Math.max(1, Math.min((x1 - x0) / (8 * perUnit), (y1 - y0) / (4.5 * perUnit))))
+  const hw = halfWidth / zoom
+  const hh = halfHeight / zoom
+  camera.left = -hw
+  camera.right = hw
+  camera.top = hh
+  camera.bottom = -hh
+  camera.updateProjectionMatrix()
+  const focus = new THREE.Vector3(0, 0.6, game.carrier ? 2.7 : 2).project(camera)
+  const dx = (((x0 + x1) / 2 - ((focus.x + 1) * w) / 2) * 2 * hw) / w
+  const dy = (((y0 + y1) / 2 - ((1 - focus.y) * h) / 2) * 2 * hh) / h
+  camera.left -= dx
+  camera.right -= dx
+  camera.top += dy
+  camera.bottom += dy
 }
 
 function show(screen) {
@@ -584,7 +632,7 @@ function finish() {
     : []
   const list = (words) => `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`
   printText($('win-text'), spelled.length
-    ? `You spelled ${list(spelled.map((c) => `${c.picture} ${c.word.toLowerCase()}`))}. Every try helped you learn!`
+    ? `You spelled ${list(spelled.map((c) => `${c.picture}\u00a0${c.word.toLowerCase()}`))}. Every try helped you learn!`
     : traced.length
       ? `You traced ${list(traced)}. Every try helped you learn!`
       : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)

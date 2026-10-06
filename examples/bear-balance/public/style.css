@@ -197,6 +197,7 @@ canvas { touch-action: none; }
 .world-action.letter-card { align-items: center; }
 .world-action.letter-card .label.glyph { font-size: clamp(26px, var(--unit, 60px) * 0.62, 64px); padding: 4px 12px; }
 /* Letters and words drawn in a spelling game's prompt, feedback and win card (printText in engine.js). */
+.print { white-space: nowrap; }
 .print svg {
   display: inline-block;
   height: 1.25em;
@@ -299,6 +300,9 @@ body.dark { background: radial-gradient(ellipse at 50% 30%, #355069, var(--sky))
   #actions button { padding: 10px 13px; font-size: 14px; min-height: 48px; }
   #feedback { font-size: 14px; }
   footer { padding: 8px 14px calc(14px + env(safe-area-inset-bottom)); flex-wrap: wrap; font-size: 10px; }
+  /* Upright phones: the win card sits at the bottom and the celebration plays above it (resize in engine.js). */
+  #win { top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); }
+  #win .hero-emoji { display: none; }
 }
 
 @media (max-width: 600px) and (max-height: 600px) {
@@ -313,7 +317,12 @@ body.dark { background: radial-gradient(ellipse at 50% 30%, #355069, var(--sky))
   header { height: 64px; padding-top: 8px; padding-bottom: 8px; }
   .brand span { display: none; }
   #stage { min-height: 200px; }
-  footer { display: none; }
+  footer { display: none; }  /* A smaller win card leaves more room for the celebration above it. */
+  #win { padding: 14px 16px; }
+  #win h2 { font-size: 21px; margin: 4px 0; }
+  #win p { margin: 8px 0; line-height: 1.45; }
+  #win .primary { font-size: 18px; padding: 12px 14px; }
+  #win-home { margin-top: 8px; }
 }
 
 @media (max-height: 650px) and (min-width: 650px) {
@@ -328,6 +337,8 @@ body.dark { background: radial-gradient(ellipse at 50% 30%, #355069, var(--sky))
   #stage { min-height: 200px; }
   /* Short laptop windows: the toys need the footer's height more than its labels. */
   footer { display: none; }
+  /* The win card moves to the right, leaving the celebration in view on the left. */
+  #win { top: 12px; align-self: flex-end; margin-right: max(16px, env(safe-area-inset-right)); width: min(460px, 42%); }
 }
 
 /* Short sideways phones: the stage fills the left; heading, prompt and controls stack beside it. */
@@ -397,11 +408,17 @@ body.dark { background: radial-gradient(ellipse at 50% 30%, #355069, var(--sky))
   .panel .primary { padding: 10px 18px; font-size: 18px; }
   #win h2 { font-size: 20px; margin: 4px 0; }
   #win-home { margin-top: 8px; }
+  /* The win card takes the empty control column, so the celebration fills the stage. */
+  #win { grid-column: 2; left: 8px; right: max(8px, env(safe-area-inset-right)); width: auto; margin: 0; transform: none; padding: 10px 14px; }
 }
 @media (orientation: landscape) and (max-height: 340px) {
   .hero-emoji, .age, #menu-instructions, .saved { display: none; }
   .levels button span { display: none; }
   #hint { display: none; }
+  #win h2 { display: none; }
+  #win p { font-size: 13px; }
+  #win .primary { padding: 8px 12px; font-size: 16px; }
+  #win-home { margin-top: 4px; padding: 8px 14px; }
 }
 
 /* In the store, keep the top-right corner clear for its ✕ (about 54 × 54px) on every layout. */
