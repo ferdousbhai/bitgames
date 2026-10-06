@@ -654,6 +654,10 @@ function handle(events) {
 
 // --- Nests ------------------------------------------------------------------------------
 
+let nestClear = 0 // px from the top that the nest banner covers
+const FACES_Y = NEST_Y + 5.4 // the parents' heads as they hop and cheer (wing tips may go higher)
+const NEST_FLOOR = NEST_Y - 0.3 // just under the nest's twigs
+
 function arriveAtNest() {
   game.state = 'nest'
   game.nestT = 0
@@ -670,6 +674,8 @@ function arriveAtNest() {
   setTimeout(() => sound.rawr(1.3), 800)
   const last = game.world === WORLDS.length - 1
   banner('🎉 Home to the nest!', last ? 'You flew all the way! 🌟' : `${w.emoji} ${w.name} done!`, 3200)
+  // where the banner's words end, so the camera can keep the family's faces below them
+  nestClear = bannerBox()?.bottom ?? 0
   dragon.twirl()
 }
 
@@ -894,6 +900,20 @@ function updateCamera(dt) {
     // while the banner shows, the family sits lower in the picture, under it
     ly = NEST_Y + (s === 'nest' ? (view.portrait ? 3.1 : 2.7) : 1.9)
     lz = nestZ
+    if (s === 'nest' && nestClear) {
+      // the parents' faces sit just below the banner, not behind its words: the camera steps back
+      // until the family and the nest fit under it, then tilts so the faces line up with its edge
+      const t = Math.tan((camera.fov * Math.PI) / 360)
+      const room = Math.atan((1 - (2 * (nestClear + 10)) / innerHeight) * t)
+      let d = pz - nestZ
+      while (d < pz - nestZ + 10 && Math.atan2(FACES_Y - py, d) - Math.atan2(NEST_FLOOR - py, d) > room - Math.atan(-0.82 * t)) d += 0.25
+      const look = Math.atan2(FACES_Y - py, d) - room
+      const lyFit = py + d * Math.tan(look)
+      if (lyFit > ly) {
+        ly = lyFit
+        pz = nestZ + d
+      }
+    }
     rate = 2
   } else {
     px = pos.x * 0.55

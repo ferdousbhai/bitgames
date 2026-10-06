@@ -91,13 +91,15 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 .combo { position: absolute; top: calc(124px + env(safe-area-inset-top)); left: 50%; translate: -50% 0; font-size: 30px; font-weight: 900; color: #fff; text-shadow: 2px 2px 0 #6a3aa8, -2px 2px 0 #6a3aa8, 2px -2px 0 #6a3aa8, -2px -2px 0 #6a3aa8, 0 2px 0 #6a3aa8, 0 -2px 0 #6a3aa8, 2px 0 0 #6a3aa8, -2px 0 0 #6a3aa8, 0 4px 0 #6a3aa8; opacity: 0; transition: opacity .3s; white-space: nowrap; }
 .combo.show { opacity: 1; animation: pop .35s cubic-bezier(.2,1.8,.4,1); }
 
-.power { position: absolute; top: calc(72px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); display: flex; align-items: center; gap: 6px; font-size: 34px; background: rgba(0,0,0,0.25); border-radius: 99px; padding: 2px 12px 2px 6px; animation: pulse 0.8s ease-in-out infinite; }
+.power { position: absolute; top: calc(72px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); display: flex; align-items: center; gap: 6px; font-size: 34px; background: rgba(0,0,0,0.25); border-radius: 99px; padding: 2px 12px 2px 6px; animation: pulse 0.8s ease-in-out infinite; transition: opacity .3s; }
 .power i { display: block; width: 70px; height: 10px; border-radius: 99px; background: rgba(255,255,255,0.35); overflow: hidden; }
 .power b { display: block; height: 100%; background: linear-gradient(90deg, #ff6b6b, #ffd23f, #8ef0c8, #7cc6fe, #c9b6ff); transform-origin: left; }
 
 .banner {
   position: absolute; top: 24%; left: 0; right: 0; text-align: center; font-size: clamp(36px, 8vw, 76px); font-weight: 900;
-  color: #fff; text-shadow: 0 5px 0 #3fcf8c, 0 10px 26px rgba(0,0,0,0.3); opacity: 0; transform: scale(0.5); transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1);
+  color: #fff; opacity: 0;
+  /* a thick green outline so the big line reads on the sun's glow and pale pink skies */
+  --o: #24a56b; text-shadow: 3px 3px 0 var(--o), -3px 3px 0 var(--o), 3px -3px 0 var(--o), -3px -3px 0 var(--o), 0 3px 0 var(--o), 0 -3px 0 var(--o), 3px 0 0 var(--o), -3px 0 0 var(--o), 0 7px 0 var(--o), 0 12px 26px rgba(0,0,0,0.3); transform: scale(0.5); transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1);
   padding: 0 16px;
 }
 .banner .line { display: inline-block; white-space: nowrap; }
@@ -260,6 +262,8 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   /* hints sit low, between the rings and 🔥, so they never cover Ember */
   .tip, body.mission .tip { bottom: calc(10px + env(safe-area-inset-bottom)); left: calc(50% + 30px); font-size: 20px; padding: 5px 16px; }
   .banner.mission { font-size: clamp(30px, 6vw, 40px); top: calc(62px + env(safe-area-inset-top)); }
+  /* the 🌈 timer waits while 'Rainbow zoom!' shows, so the two never bump on short screens */
+  #hud.bannering .power { opacity: 0; }
   /* the end card stands in a column on the left so the family in the nest shows on the right */
   #results { align-items: flex-start; padding-left: calc(14px + env(safe-area-inset-left)); }
   #results .results-top, #results .menu-bottom { width: min(300px, 50vw); }
