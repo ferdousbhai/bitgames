@@ -65,7 +65,7 @@ export class Course {
   }
 
   reset(startZ) {
-    for (const it of this.items) this.scene.remove(it.obj)
+    for (const it of this.items) this.drop(it)
     for (const f of this.fireballs) this.scene.remove(f.obj)
     for (const f of this.flyers) this.scene.remove(f.obj)
     this.items.length = this.fireballs.length = this.flyers.length = 0
@@ -125,8 +125,15 @@ export class Course {
     obj.position.set(x, y, -z)
     this.scene.add(obj)
     const it = { type, obj, x, y, z: -z, t: Math.random() * 10, done: false, ...extra }
+    // big things get see-through materials of their own, so they can fade once Ember is past
+    if (BIG.has(type)) it.mats = seeThrough(obj)
     this.items.push(it)
     return it
+  }
+
+  drop(it) {
+    this.scene.remove(it.obj)
+    if (it.mats) for (const m of it.mats) m.dispose()
   }
 
   gem(x, y, z, kind = this.w.gem) {
@@ -374,7 +381,7 @@ export class Course {
       const o = it.obj
       it.t += dt
       if (it.z > behindZ || it.gone) {
-        this.scene.remove(o)
+        this.drop(it)
         if (it.targeted) it.targeted = false
         continue
       }
@@ -385,6 +392,16 @@ export class Course {
         o.scale.setScalar((it.baseScale ??= o.scale.x) * k)
         if (k <= 0) it.gone = true
         continue
+      }
+      // rocks, windmills, towers and lollipops Ember has passed fade away, so they never hide
+      // Ember (or fill the screen) on their way past the camera
+      if (it.mats) {
+        const k = clamp(1 - (o.position.z - p.z + 0.5) / 3, 0, 1)
+        if (k !== it.fade) {
+          it.fade = k
+          for (const m of it.mats) m.opacity = k
+          o.visible = k > 0
+        }
       }
       switch (it.type) {
         case 'gem': {
@@ -565,6 +582,22 @@ export class Course {
 }
 
 const SMALL = new Set(['gem', 'bubble', 'lantern', 'power'])
+const BIG = new Set(['rock', 'windmill', 'tower', 'lolly'])
+
+/** Gives each mesh of `obj` its own transparent copy of its material and returns them all. */
+function seeThrough(obj) {
+  const mats = []
+  const own = (m) => {
+    const c = m.clone()
+    c.transparent = true
+    mats.push(c)
+    return c
+  }
+  obj.traverse((o) => {
+    if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material)
+  })
+  return mats
+}
 const FIRE_COLORS = ['#ffd23f', '#ff9f43', '#ff6b6b', '#fff3a0', '#ff7eb9']
 
 function decorTower(wi) {

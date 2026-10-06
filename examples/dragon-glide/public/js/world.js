@@ -369,7 +369,9 @@ export class World {
     this.sun.material.opacity = 0.6 * (1 - this.night)
     this.sun.visible = this.night < 0.98
     this.moon.visible = this.night > 0.05
-    this.moon.position.set(c.x - 45, c.y + 38, c.z - 200)
+    // the end card can ask the moon to drift further left, out from behind its stars
+    this.moonX = THREE.MathUtils.damp(this.moonX ?? -45, this.moonAside ? -150 : -45, 2, dt)
+    this.moon.position.set(c.x + this.moonX, c.y + 38, c.z - 200)
     this.moon.rotation.set(0, 0.25, Math.sin(this.time * 0.4) * 0.08)
     this.moon.scale.setScalar(9 * Math.min(1, this.night * 1.2))
     this.key.position.set(c.x + 5, c.y + 10, c.z + 6)

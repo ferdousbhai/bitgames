@@ -840,6 +840,7 @@ function updateCamera(dt) {
   let px, py, pz, lx, ly, lz, rate
   const s = game.state
   const atNest = (s === 'nest' && game.nestT >= 0) || ((s === 'results' || s === 'done') && world.nestFor(game.world))
+  world.moonAside = false
   if (s === 'title' || (!atNest && (s === 'results' || s === 'done'))) {
     // in front of Ember's face; Ember is turned toward us
     const portrait = view.portrait
@@ -854,9 +855,12 @@ function updateCamera(dt) {
     const nestZ = -(game.world + 1) * WORLD_LENGTH
     // on sideways phones the end card stands on the left, so the family moves over to the right
     const side = s === 'results' ? sideShift() : 0
+    // on the wide end card the moon steps out from behind the stars
+    world.moonAside = s === 'results' && !side && !view.portrait
     px = 1.6 - side
     py = NEST_Y + 3.6
-    pz = nestZ + (view.portrait ? 11 : side ? 8.4 : 7.2)
+    // on the wide end card the camera steps back a little, so the family fits between the stars and the score
+    pz = nestZ + (view.portrait ? 11 : side ? 8.4 : s === 'results' ? 9.4 : 7.2)
     lx = -side
     // while the banner shows, the family sits lower in the picture, under it
     ly = NEST_Y + (s === 'nest' ? (view.portrait ? 3.1 : 2.7) : 1.9)
