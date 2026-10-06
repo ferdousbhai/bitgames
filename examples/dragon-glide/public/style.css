@@ -140,6 +140,7 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
   .power { top: calc(124px + env(safe-area-inset-top)); }
   .worlds button { width: 54px; height: 54px; font-size: 28px; }
   .fire { width: 84px; height: 84px; font-size: 44px; }
+  .pop { animation-name: float-short; }
 }
 
 /* Phones held sideways: shrink the screens so the big button stays on screen */
@@ -161,7 +162,10 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
   .corner { top: calc(62px + env(safe-area-inset-top)); flex-direction: column; }
   .round { width: 46px; height: 46px; font-size: 22px; }
   .fire { width: 80px; height: 80px; font-size: 42px; }
+  /* floating numbers rise less on short screens, so they stay below 'N rings in a row!' */
+  .pop { animation-name: float-short; }
 }
+@keyframes float-short { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 15% { transform: translateY(-6px) scale(1.15); opacity: 1; } 75% { transform: translateY(-30px) scale(1); opacity: 1; } 100% { transform: translateY(-38px) scale(0.7); opacity: 0; } }
 
 body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38%; }
 /* upright, the end card's family fills the middle, so the sound buttons go back up to their corner */
@@ -229,7 +233,16 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   .worlds { gap: 14px; }
   .worlds button { width: 78px; height: 78px; font-size: 42px; }
 }
-@media (max-width: 360px) { .sub { font-size: 17px; } }
+@media (max-width: 360px) {
+  .sub { font-size: 17px; }
+  /* the smallest phones: the end card's title stays on one line and its buttons stay off the edges */
+  #results h1 { font-size: 30px; white-space: nowrap; }
+  #results .tally { font-size: 40px; gap: 6px; }
+  #results .new-best { font-size: 17px; padding: 3px 10px; margin-left: 2px; }
+  #results .row { gap: 10px; }
+  #results .big-go { font-size: 24px; padding: 10px 20px; }
+  #results .big-go.alt { padding: 10px 16px; }
+}
 
 /* Phones held sideways: the worlds stand in a column at the side and the title buttons sit in
    one row, so Ember shows in the middle and Let's fly never falls off the bottom */

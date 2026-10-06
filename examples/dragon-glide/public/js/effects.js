@@ -252,7 +252,9 @@ export class Popups {
     d.className = `pop ${kind}`
     d.textContent = text
     d.style.left = `${Math.min(92, Math.max(8, (this.v.x * 0.5 + 0.5) * 100))}%`
-    d.style.top = `${Math.min(90, Math.max(12, (-this.v.y * 0.5 + 0.5) * 100))}%`
+    // on phones they start below the trip bar and 'N rings in a row!'
+    const minTop = innerHeight <= 480 ? Math.min(42, 12000 / innerHeight) : innerWidth <= 520 ? Math.min(45, 24000 / innerHeight) : 12
+    d.style.top = `${Math.min(90, Math.max(minTop, (-this.v.y * 0.5 + 0.5) * 100))}%`
     this.el.appendChild(d)
     setTimeout(() => d.remove(), 1000)
   }

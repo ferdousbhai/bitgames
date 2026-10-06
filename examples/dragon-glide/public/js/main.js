@@ -571,7 +571,9 @@ function handle(events) {
       rings.spawn(ev.pos, typeof c === 'string' ? c : c.color, 4.5, 0.5)
       rings.spawn(ev.pos, '#fff3a0', 6.5, 0.7)
       sparks.burst(ev.pos, RAINBOW, 24, 8, 0.45, { vz: -game.speed * 0.5 })
-      popups.show(tmp.set(ev.pos.x, ev.pos.y + 2.4, ev.pos.z), `+${pts}`, 'hoop')
+      // the points float up beside the ring (not above it, where they ran into the HUD and the counting party)
+      const side = ev.pos.x > camera.position.x ? -1 : 1
+      if (performance.now() >= bannerHold) popups.show(tmp.set(ev.pos.x + side * Math.min(2.6, lane.x * 0.7), ev.pos.y + 0.4, ev.pos.z), `+${pts}`, 'hoop')
       if (game.hoops >= 3) dragon.twirl()
       updateCombo()
     } else if (ev.type === 'hoopMiss') {
