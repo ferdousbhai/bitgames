@@ -678,7 +678,8 @@ function finish() {
   if (popRhyme) rhymed.forEach((_, i) => later(() => popRhyme(i), spoken ? 4000 + i * 2200 : 900 + i * 450))
   // A carrier (Word Rocket's rocket) stands tall on the board itself, towering over its crew.
   const carrier = game.carrier && spelled.some((c) => c.friend)
-  const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true, scale: carrier ? 1.7 : 1, ...heroPad })
+  // A rhyming hero's lily pad sits a little further back, clear of the row of rhyme pads.
+  const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: popRhyme ? 1.7 : 2, visual: true, scale: carrier ? 1.7 : 1, ...heroPad })
   if (carrier) {
     hero.base.visible = false
     const crew = spelled.map((c) => c.friend).filter(Boolean)

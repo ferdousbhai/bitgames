@@ -156,7 +156,7 @@ def export_selected(path):
 
 
 ANIMAL_COLOURS = {
-    'rabbit': WHITE, 'fox': ORANGE, 'bear': '#c79872', 'frog': GREEN, 'penguin': DARK,
+    'rabbit': WHITE, 'fox': '#e9945a', 'bear': '#c79872', 'frog': GREEN, 'penguin': DARK,
     'duck': GOLD, 'bird': BLUE, 'dino': '#9ac1aa', 'robot': BLUE,
     # Animal Alphabet's word friends.
     'cat': '#bdb6cf', 'dog': '#d0a77c', 'pig': '#f6b9c6', 'hen': WHITE, 'bat': '#857aa3',
@@ -169,6 +169,9 @@ FRUIT_COLOURS = {'apple': '#ee887e', 'pear': '#bbd587', 'strawberry': '#e9829b',
 
 def build_animal(name):
     colour = ANIMAL_COLOURS[name]
+    if name == 'frog':
+        build_frog(colour)
+        return
     if name == 'robot':
         cube((0, 0, .4), (.48, .4, .5), colour)
         cube((0, 0, .85), (.6, .43, .42), colour)
@@ -185,14 +188,13 @@ def build_animal(name):
         for x in [-.17, .17]:
             sphere((x, 0, 1.24), (.105, .09, .36), WHITE)
             sphere((x, -.08, 1.27), (.054, .024, .23), PINK)
-    if name in ['bear', 'fox']:
+    if name == 'bear':
         for x in [-.25, .25]:
-            if name == 'fox':
-                cone((x, 0, 1.15), .16, .36, ORANGE)
-            else:
-                sphere((x, 0, 1.06), (.14, .1, .14), colour)
+            sphere((x, 0, 1.06), (.14, .1, .14), colour)
         sphere((0, -.32, .68), (.22, .1, .12), WHITE)
         sphere((0, -.41, .73), (.055,) * 3, DARK)
+    if name == 'fox':
+        build_fox(colour)
     if name == 'penguin':
         sphere((0, -.25, .35), (.24, .06, .3), WHITE)
         cone((0, -.35, .7), .07, .18, ORANGE).rotation_euler[0] = QUARTER_TURN
@@ -205,6 +207,50 @@ def build_animal(name):
         for z in [.45, .65, .85]:
             cone((0, .23, z), .09, .15, GOLD)
     eyes(.85, -.34, .14)
+
+
+def build_frog(colour):
+    """A squat frog: wide body, big eyes bulging on top of its head, a wide smile and folded legs."""
+    belly = '#e4efc0'
+    sphere((0, .04, .3), (.44, .4, .3), colour)
+    sphere((0, -.2, .28), (.3, .2, .24), belly)
+    sphere((0, -.1, .56), (.42, .34, .22), colour)
+    for side in [-1, 1]:
+        # Eyes: green bumps topped with big white eyeballs and dark pupils looking forward.
+        sphere((side * .21, -.12, .76), (.15, .14, .14), colour)
+        sphere((side * .21, -.19, .81), (.11, .08, .11), WHITE)
+        sphere((side * .21, -.26, .82), (.055, .025, .065), DARK)
+        sphere((side * .2, -.28, .85), (.016, .008, .018), WHITE)
+        # Folded back legs at the sides, webbed feet in front.
+        sphere((side * .38, .1, .2), (.15, .3, .15), colour)
+        sphere((side * .42, -.16, .04), (.13, .14, .04), '#86b277')
+        sphere((side * .17, -.36, .05), (.1, .11, .04), '#86b277')
+        sphere((side * .19, -.3, .18), (.07, .07, .13), colour)
+        sphere((side * .27, -.36, .52), (.06, .02, .04), PINK)
+    # A wide smile: a curve of small dark beads across the face.
+    for k in range(-4, 5):
+        x = k * .045
+        sphere((x, -.43 + abs(k) * .01, .52 + (k / 4) ** 2 * .05), (.026, .018, .018), DARK)
+
+
+def build_fox(colour):
+    """A fox: tall pointed ears with dark tips, a long pointed snout, white cheeks and a white-tipped tail."""
+    for side in [-1, 1]:
+        cone((side * .2, 0, 1.17), .14, .42, colour)
+        cone((side * .2, 0, 1.31), .055, .15, DARK)
+        cone((side * .2, -.06, 1.12), .07, .24, WHITE)
+        sphere((side * .15, -.25, .68), (.15, .1, .1), WHITE)
+        sphere((side * .19, -.16, .04), (.1, .14, .06), DARK)
+    sphere((0, -.29, .3), (.2, .1, .26), WHITE)
+    snout = cone((0, -.4, .7), .14, .34, colour, .045)
+    snout.rotation_euler[0] = QUARTER_TURN
+    sphere((0, -.43, .64), (.1, .1, .05), WHITE)
+    sphere((0, -.58, .71), (.05, .04, .045), DARK)
+    tail = sphere((.36, .32, .34), (.17, .4, .17), colour)
+    tail.rotation_euler[0] = .7
+    tail.rotation_euler[2] = -.5
+    tip = sphere((.51, .55, .56), (.11, .13, .11), WHITE)
+    tip.rotation_euler[2] = -.5
 
 
 def build_word_friend(name, colour):
