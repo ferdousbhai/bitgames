@@ -217,6 +217,12 @@ canvas { touch-action: none; }
 .world-action.visual { pointer-events: none; }
 .world-action.visual .label { background: #ffffff78; }
 .world-action.flash { background: #fff8 !important; box-shadow: 0 0 35px #fff !important; }
+/* Tracing: a stroke's number sits beside its start dot (direction set by trace in activities.js). */
+.world-action.stroke-start { align-items: center; }
+.world-action.stroke-start .label {
+  pointer-events: none;
+  transform: translate(calc(var(--side-x, 0) * (20px + .6em)), calc(var(--side-y, 0) * (20px + .6em)));
+}
 .world-action.current { outline: 4px solid var(--accent); border-radius: 50%; box-shadow: 0 0 24px var(--accent) !important; }
 
 /* Controls and feedback below the stage */

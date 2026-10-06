@@ -294,6 +294,26 @@ function trace(c, g, a) {
     pad.button.tabIndex = current ? 0 : -1
   }
 
+  // Each stroke's number sits just beside its start dot, so the hero waiting on the dot stays
+  // in sight: behind the stroke's first move when that is clear of the path, or else in the
+  // clearest direction around the dot.
+  const numberSide = (start, s) => {
+    const [x, z] = points[start]
+    const next = trails[s][Math.min(3, trails[s].length - 1)]
+    const back = Math.atan2(z - next[1], x - next[0])
+    const clearance = (angle) => {
+      const [lx, lz] = [x + Math.cos(angle) * 0.7, z + Math.sin(angle) * 0.7]
+      return Math.min(...trails.flat().map(([px, pz]) => Math.hypot(px - lx, pz - lz)))
+    }
+    let best = back
+    if (clearance(back) < 0.5) {
+      for (let k = 1; k < 16; k++) {
+        const angle = back + (k * Math.PI) / 8
+        if (clearance(angle) > clearance(best) + 0.01) best = angle
+      }
+    }
+    return [Math.cos(best), Math.sin(best)]
+  }
   // Number each stroke's start (letters and numbers). Where two strokes start at the same dot,
   // only the next one shows its number.
   function numberStarts() {
@@ -302,7 +322,13 @@ function trace(c, g, a) {
     strokeStarts.forEach((start, s) => {
       const [x, z] = points[start]
       const show = start >= step && !shown.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 0.3)
-      if (show) shown.push([x, z])
+      if (show) {
+        shown.push([x, z])
+        const [dx, dz] = numberSide(start, s)
+        pads[start].button.classList.add('stroke-start')
+        pads[start].button.style.setProperty('--side-x', dx.toFixed(3))
+        pads[start].button.style.setProperty('--side-y', dz.toFixed(3))
+      }
       pads[start].label(show ? String(s + 1) : '')
       pads[start].button.setAttribute('aria-label', `Trace dot ${start + 1}${show ? `, start of stroke ${s + 1}` : ''}`)
     })
