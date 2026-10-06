@@ -874,7 +874,9 @@ function updateHint() {
   if (game.state !== 'play' || book.open) return hintEl.classList.add('hidden')
   let target = null
   // First cast, or a little one who has stopped: point at the water again
-  if (game.phase === 'idle' && (game.casts === 0 || game.idleT > 8)) target = tmp.set(1.6, 0, 2.2)
+  // (after the place's name card has gone, so the finger never covers its words)
+  const placeCardUp = introIsPlace && $('intro').classList.contains('show')
+  if (game.phase === 'idle' && !placeCardUp && (game.casts === 0 || game.idleT > 8)) target = tmp.set(1.6, 0, 2.2)
   else if (game.phase === 'bite' && (totalCaught() < 2 || game.misses > 0)) target = tmp.copy(bob.pos).setY(0)
   if (!target) return hintEl.classList.add('hidden')
   hintEl.classList.remove('hidden')

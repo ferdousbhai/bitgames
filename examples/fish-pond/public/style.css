@@ -55,12 +55,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 .title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 12px; }
 #title .adventure-choice {
-  margin: 0; min-height: 52px; padding: 6px 18px; border-radius: 999px; border: 3px solid #fff; font: 900 18px/1.1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
-  background: linear-gradient(#f2fbff, #c7ecff); color: #1f5f99; box-shadow: 0 5px 0 rgba(31, 95, 153, .3); white-space: nowrap;
+  margin: 0; min-height: clamp(52px, 8vh, 66px); padding: 6px clamp(18px, 2.4vh, 26px); border-radius: 999px; border: 3px solid #fff; font: 900 18px/1.1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
+  background: linear-gradient(#f2fbff, #c7ecff); color: #1f5f99; box-shadow: 0 5px 0 rgba(31, 95, 153, .3); white-space: nowrap; font-size: clamp(18px, min(3.4vw, 3.6vh), 28px);
 }
 #title .adventure-choice:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(31, 95, 153, .3); }
 .book-big {
-  background: linear-gradient(#ffd96b, #ffb43b); color: #7a4a12; font-size: clamp(22px, min(5vw, 7vh), 34px); font-weight: 900; padding: 6px 26px; min-height: 52px;
+  background: linear-gradient(#ffd96b, #ffb43b); color: #7a4a12; font-size: clamp(22px, min(5vw, 7vh), 34px); font-weight: 900; padding: 6px 26px; min-height: clamp(52px, 8vh, 66px);
   border-radius: 999px; box-shadow: 0 7px 0 #d98a1c; text-shadow: 0 2px 0 rgba(255,255,255,.4);
 }
 .book-big:active { transform: translateY(5px); box-shadow: 0 2px 0 #d98a1c; }
@@ -176,6 +176,22 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @media (max-width: 640px) {
   .pill { font-size: 20px; padding: 5px 12px; }
 }
+/* 320px-wide phones: the catch count stays clear of the music button */
+@media (max-width: 360px) {
+  .hud-left, .hud-right { gap: 6px; }
+  .hud-left { left: calc(8px + env(safe-area-inset-left)); }
+  .hud-right { right: calc(8px + env(safe-area-inset-right)); }
+  .round-btn { width: 46px; height: 46px; font-size: 23px; }
+  .book-btn { width: 54px; height: 54px; font-size: 27px; }
+  .pill { font-size: 18px; padding: 4px 10px; }
+}
+/* Tablets and computers: bigger buttons and a bigger fish row for small hands */
+@media (min-width: 760px) and (min-height: 640px) {
+  .round-btn { width: 66px; height: 66px; font-size: 33px; }
+  .book-btn { width: 76px; height: 76px; font-size: 38px; }
+  .badge-count { font-size: 16px; padding: 2px 8px; }
+  .pill { font-size: 30px; padding: 8px 20px; }
+}
 @media (max-height: 520px) {
   .book-bar { display: none; }
   .book-head .field-guide { order: 0; flex: 1 1 0; min-width: 0; }
@@ -199,3 +215,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .goal-fish span { filter: grayscale(1); opacity: .4; }
 .goal-fish span.got { filter: none; opacity: 1; animation: bump .5s cubic-bezier(.2, 1.8, .4, 1); }
 @media (max-height: 420px) { #hud .adventure-goal { top: calc(68px + env(safe-area-inset-top)); font-size: 15px; } .goal-fish { font-size: 20px; } }
+@media (min-width: 760px) and (min-height: 640px) {
+  #hud .adventure-goal { top: calc(90px + env(safe-area-inset-top)); font-size: 24px; padding: 6px 18px 6px 14px; }
+  .goal-fish { font-size: 32px; }
+}
