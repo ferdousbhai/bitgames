@@ -29,6 +29,14 @@ export default {
       "e"
     ],
     [
+      "G",
+      "g"
+    ],
+    [
+      "H",
+      "h"
+    ],
+    [
       "M",
       "m"
     ],
@@ -37,6 +45,8 @@ export default {
       "r"
     ]
   ],
+  "printLetters": true,
+  "instructions": "Turn over two cards. Find each big letter and its little-letter buddy. Tap Show a pair for help.",
   "sky": "#f6e7d1",
   "ground": "#c3aa92",
   "accent": "#e5a077",
@@ -47,6 +57,5 @@ export default {
     "bear"
   ],
   "seed": 6188,
-  "instructions": "Turn over two cards. Match their pictures or their related meanings.",
   "activityNumber": 6
 };

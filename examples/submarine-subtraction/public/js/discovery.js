@@ -453,36 +453,65 @@ const planetColours = { Mercury: '#b5b5b9', Venus: '#e7c292', Earth: '#91bce2', 
 const helperColours = { '🧑‍🍳': '#f4ecda', '🧑‍🌾': '#99bd8b', '🧑‍🎨': '#b7a0d2', '🧑‍🚒': '#e29b8e', '🧑‍🔧': '#95b9ce', '🧑‍✈️': '#788ba8' }
 const picnicModels = { '🍎': 'apple', '🍐': 'pear', '🍓': 'strawberry' }
 
+// Letter Buddies names a card "big D" or "little d". Speech says each letter on its own, as a
+// capital, so a voice reads its name ("ay"), never a word ("uh" for a lone a).
+const isLetter = (text) => /^[A-Za-z]$/.test(text)
+const letterName = (text) => `${text === text.toUpperCase() ? 'big' : 'little'} ${text}`
+const sayLetter = (text) => [text === text.toUpperCase() ? 'Big' : 'Little', text.toUpperCase()]
+const capital = (words) => words[0].toUpperCase() + words.slice(1)
+
 function memory(c, g, a) {
   // Picnic Pairs shows only the picture; the other games also name the face-up card.
   const showsName = ['letter-buddies', 'tool-twins', 'planet-pairs'].includes(g.id)
+  const letters = c.cards.every((card) => isLetter(card.text))
   const completion = {
     'tool-twins': 'Helpers use different tools for different jobs.',
-    'letter-buddies': 'Uppercase and lowercase are two forms of the same letters.',
+    'letter-buddies': 'Every big letter found its little-letter buddy!',
   }[g.id] || 'You remembered every pair!'
   const figures = []
   const covers = []
   let open = []
   let busy = false
   let matched = 0
+  let misses = 0
+  let lastTap = Date.now()
+
+  // A big letter and its little buddy, shown and said together: "Big D, little d."
+  const buddies = (i) => {
+    const [big, little] = c.cards.filter((card) => card.pair === c.cards[i].pair).map((card) => card.text)
+      .sort((x, y) => Number(x !== x.toUpperCase()) - Number(y !== y.toUpperCase()))
+    return { big: letterName(big), little: letterName(little), spoken: [...sayLetter(big), ...sayLetter(little)] }
+  }
 
   function reveal(i, show) {
     const name = nameOf(c.cards[i].text)
     figures[i].visible = show
     covers[i].visible = !show
     cards[i].label(show ? (showsName ? name : '') : '?')
-    cards[i].button.setAttribute('aria-label', show ? name : `Hidden card ${i + 1}`)
+    cards[i].button.setAttribute('aria-label', show ? (letters ? letterName(name) : name) : `Hidden card ${i + 1}`)
     cards[i].select(show)
     a.invalidate()
   }
+
+  // A child who stops for a while hears what to do next, once until they tap again.
+  const nudge = () => a.later(() => {
+    if (matched === cards.length) return
+    if (busy || document.hidden || Date.now() - lastTap < 18000) return nudge()
+    lastTap = Date.now()
+    const text = matched ? 'Turn over two more cards. Show a pair can help you.' : 'Tap a card to turn it over.'
+    a.feedback(text)
+    nudge()
+  }, 20000)
+  nudge()
 
   const cards = a.grid(c.cards, (card, i) => ({
     label: '?',
     colour: g.accent,
     onTap: () => {
       if (busy || cards[i].matched || open.includes(i)) return
+      lastTap = Date.now()
       reveal(i, true)
-      a.audio.speak(nameOf(card.text))
+      a.audio.speak(letters ? sayLetter(card.text) : nameOf(card.text))
       open.push(i)
       if (open.length < 2) return
       busy = true
@@ -490,20 +519,37 @@ function memory(c, g, a) {
       if (c.cards[x].pair === c.cards[y].pair) {
         cards[x].matched = cards[y].matched = true
         matched += 2
-        a.audio.happy()
+        misses = 0
+        const done = matched === cards.length
+        if (letters) {
+          const pair = buddies(x)
+          if (done) a.success(`${capital(pair.big)}, ${pair.little}. ${completion}`, [...pair.spoken, completion])
+          else a.feedback(`${capital(pair.big)}, ${pair.little}. Buddies!`, true, [...pair.spoken, 'Buddies!'])
+        }
+        if (!(letters && done)) a.audio.happy()
         a.animate(0.5, (t) => { figures[x].position.y = figures[y].position.y = 0.35 + Math.sin(t * Math.PI) * 0.2 })
         a.later(() => {
           open = []
           busy = false
-          if (matched === cards.length) a.success(completion)
+          if (done && !letters) a.success(completion)
         }, 550)
       } else {
+        misses += 1
+        const help = misses >= 3 ? ' Show a pair can help you.' : ''
         a.later(() => {
           reveal(x, false)
           reveal(y, false)
           open = []
           busy = false
-          a.feedback('Different cards. Now you know where they live.')
+          if (letters) {
+            // Name the buddy the first card is looking for, so a miss still teaches the pair.
+            const first = c.cards[x].text
+            const partner = c.cards.find((card, i) => i !== x && card.pair === c.cards[x].pair).text
+            a.feedback(`${capital(letterName(first))} goes with ${letterName(partner)}. Keep looking!${help}`, false,
+              [...sayLetter(first), 'goes with', ...sayLetter(partner), `Keep looking!${help}`])
+          } else {
+            a.feedback(`Different cards. Now you know where they live.${help}`)
+          }
         }, 1000)
       }
     },
@@ -526,9 +572,16 @@ function memory(c, g, a) {
     if (x < 0) return
     const y = c.cards.findIndex((card, i) => i !== x && !cards[i].matched && card.pair === c.cards[x].pair)
     busy = true
+    lastTap = Date.now()
     reveal(x, true)
     reveal(y, true)
-    a.feedback('Look at this pair. Remember its two places.')
+    if (letters) {
+      const pair = buddies(x)
+      a.feedback(`Look: ${pair.big} and ${pair.little}. Remember their two places.`, false,
+        ['Look.', ...pair.spoken, 'Remember their two places.'])
+    } else {
+      a.feedback('Look at this pair. Remember its two places.')
+    }
     a.later(() => {
       if (!cards[x].matched) {
         reveal(x, false)

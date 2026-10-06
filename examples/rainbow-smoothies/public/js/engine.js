@@ -91,6 +91,8 @@ const LETTER_EDGES = {
   y: [18, 63], z: [20, 60],
 }
 const PRINTED_WORDS = new Set(game.mode === 'spell' ? game.words.map(([word]) => word.toLowerCase()) : [])
+// Letter games (`printLetters` in their design) draw single lowercase letters in their messages too.
+const PRINTS = game.mode === 'spell' || !!game.printLetters
 
 function drawnWord(word) {
   const svg = document.createElementNS(SVG_NS, 'svg')
@@ -118,10 +120,10 @@ function drawnWord(word) {
   return span
 }
 
-// Sets an element's text; in spelling games single letters and the game's words are drawn.
+// Sets an element's text; in spelling and letter games single letters (and spelling words) are drawn.
 function printText(element, message) {
   element.textContent = message
-  if (!PRINTED_WORDS.size) return
+  if (!PRINTS) return
   const parts = String(message).split(/([A-Za-z'’]+)/)
   if (!parts.some((part) => /^[a-z]$/.test(part) || PRINTED_WORDS.has(part))) return
   element.replaceChildren(...parts.map((part) => (/^[a-z]$/.test(part) || PRINTED_WORDS.has(part) ? drawnWord(part) : part)))
