@@ -23,7 +23,7 @@ img { -webkit-user-drag: none; pointer-events: none; }
 .spinner { font-size: 72px; animation: hop 1.2s ease-in-out infinite; }
 @keyframes hop { 0%, 100% { transform: translateY(10px) rotate(-8deg); } 50% { transform: translateY(-16px) rotate(8deg); } }
 
-.logo { font-size: clamp(38px, 10vw, 86px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1; }
+.logo { font-size: clamp(28px, 9.2vw, 86px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1; }
 .logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.08); text-shadow: 0 5px 0 rgba(58, 42, 122, 0.35); animation: bob 1.8s ease-in-out infinite; }
 .logo span:nth-child(6n+1) { color: #ff4f6d; } .logo span:nth-child(6n+2) { color: #ff9f43; animation-delay: .12s; }
 .logo span:nth-child(6n+3) { color: #ffd23f; animation-delay: .24s; } .logo span:nth-child(6n+4) { color: #5cd65c; animation-delay: .36s; }
@@ -129,11 +129,15 @@ body.portrait #tray.away { transform: translateY(calc(100% + 40px)); }
 .item .none { font-size: 38px; opacity: .6; }
 .paints { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; flex: none; padding-top: 2px; }
 .paints:empty { display: none; }
-.swatch {
-  width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 0 rgba(58,42,122,.25), 0 0 0 1px rgba(58,42,122,.15);
-  transition: transform .15s;
+.paints { gap: 2px; }
+/* The button is a little bigger than the paint dot, so small fingers can't miss it */
+.swatch { position: relative; width: 40px; height: 40px; border-radius: 50%; background: none; }
+.swatch::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: min(calc(100% - 6px), 34px); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  background: var(--c); border: 3px solid #fff; box-shadow: 0 2px 0 rgba(58,42,122,.25), 0 0 0 1px rgba(58,42,122,.15); transition: transform .15s;
 }
-.swatch.on { transform: scale(1.22); box-shadow: 0 0 0 3px #3a2a7a; }
+.swatch.on::before { transform: scale(1.18); box-shadow: 0 0 0 3px #3a2a7a; }
+.swatch:active::before { transform: scale(.9); }
 .paints .brush { font-size: 26px; align-self: center; }
 
 /* --- Launch --- */
@@ -240,7 +244,7 @@ body.landscape #reward { left: auto; top: calc(66px + env(safe-area-inset-top));
   .reach .d { font-size: 22px; padding: 1px; }
   .pill { font-size: 22px; padding: 3px 12px; }
   .items { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
-  .swatch { width: 32px; height: 32px; border-width: 3px; }
+  .swatch { width: 36px; height: 40px; }
   .journey { width: 36px; }
   .journey .stop { font-size: 22px; } .journey .stop.goal { font-size: 28px; }
 }
@@ -248,7 +252,6 @@ body.landscape #reward { left: auto; top: calc(66px + env(safe-area-inset-top));
   .logo { font-size: clamp(32px, 8vw, 56px); }
   .tab { max-width: 48px; border-radius: 12px; }
   .items { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
-  .swatch { width: 28px; height: 28px; border-width: 3px; }
   .launch { width: 92px; height: 92px; } .launch .em { font-size: 34px; } .launch .go { font-size: 18px; }
   .dice { width: 50px; height: 50px; font-size: 28px; }
   .btn { width: 58px; height: 58px; font-size: 30px; border-radius: 20px; }
@@ -256,4 +259,70 @@ body.landscape #reward { left: auto; top: calc(66px + env(safe-area-inset-top));
   .reward-stars { font-size: 20px; }
   .reward-new .gift { width: 46px; height: 46px; border-radius: 12px; }
   #reward .card { padding: 8px 14px 12px; gap: 6px; }
+}
+
+/* --- The test-workshop button: shows an A once a rocket is saved, wiggles when ready to compare --- */
+#experiment { position: relative; }
+#experiment.has-a::after {
+  content: "A"; position: absolute; right: -6px; top: -8px; width: 24px; height: 24px; border-radius: 50%; background: #3bb5ff; color: #fff;
+  font-size: 15px; font-weight: 900; display: grid; place-items: center; box-shadow: 0 2px 0 #1d7fc0;
+}
+#experiment.ready { animation: wiggle 1.4s ease-in-out infinite; box-shadow: 0 0 0 4px #8ef0c8, 0 5px 0 rgba(58,42,122,.3); }
+@keyframes wiggle { 0%, 60%, 100% { rotate: 0deg; } 70% { rotate: -12deg; } 80% { rotate: 12deg; } 90% { rotate: -6deg; } }
+
+/* --- Celebration banner up in the top bar, never over the landing party --- */
+.banner.top { top: calc(36px + env(safe-area-inset-top)); font-size: clamp(30px, 6vw, 48px); }
+.banner.top.show { transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
+.banner { -webkit-text-stroke: 0; filter: drop-shadow(0 0 2px #3a2a7a) drop-shadow(0 0 1px #3a2a7a); }
+
+/* --- Portrait reward card: one short row (place + stars beside the buttons) so the planet's face stays in view --- */
+body.portrait #reward .card { display: grid; grid-template-columns: auto auto; grid-template-areas: "head btns" "stars btns" "new new"; column-gap: 18px; row-gap: 2px; align-items: center; padding: 10px 16px 12px; }
+body.portrait .reward-head { grid-area: head; font-size: 40px; }
+body.portrait .reward-stars { grid-area: stars; text-align: center; }
+body.portrait .reward-new { grid-area: new; margin-top: 4px; }
+body.portrait #reward .btns { grid-area: btns; margin: 0; }
+body.portrait .btn { width: 76px; height: 76px; font-size: 40px; }
+body.portrait .reward-new .gift { width: 58px; height: 58px; }
+
+/* --- Short sideways phones (260–500px tall) --- */
+@media (max-height: 500px) {
+  body.landscape .title-bottom { left: auto; right: calc(16px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); align-items: flex-end; }
+  body.landscape .big-go { font-size: 30px; padding: 8px 34px; }
+  body.landscape .visited { font-size: 22px; }
+  body.landscape #tray { top: calc(58px + env(safe-area-inset-top)); bottom: calc(6px + env(safe-area-inset-bottom)); width: min(56vw, 440px); padding: 7px; gap: 6px; border-radius: 22px; }
+  body.landscape .tabs { gap: 4px; }
+  body.landscape .tab { min-width: 0; max-width: 48px; }
+  body.landscape .items { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; min-height: 56px; }
+  body.landscape .paints { flex-wrap: nowrap; gap: 0; padding-top: 0; }
+  body.landscape .swatch { flex: 1 1 0; min-width: 0; max-width: 42px; height: 40px; }
+  body.landscape #actions { display: grid; grid-template-columns: auto auto; gap: 6px 8px; justify-items: center; left: calc(10px + env(safe-area-inset-left)); bottom: calc(10px + env(safe-area-inset-bottom)); }
+  body.landscape #actions .launch { grid-column: 1 / -1; grid-row: 2; width: 86px; height: 86px; }
+  body.landscape #actions .dice { margin: 0; width: 48px; height: 48px; font-size: 26px; border-radius: 16px; }
+  body.landscape .launch .em { font-size: 32px; } body.landscape .launch .go { font-size: 17px; }
+  .round-btn { width: 44px; height: 44px; font-size: 22px; }
+  #topbar { padding-top: calc(6px + env(safe-area-inset-top)); }
+  .banner.top { top: calc(29px + env(safe-area-inset-top)); font-size: 30px; }
+}
+@media (max-height: 330px) {
+  body.landscape .logo { font-size: clamp(26px, 6vw, 40px); }
+  body.landscape .tag { font-size: 16px; }
+}
+
+/* The 3-2-1 sits beside the rumbling rocket on wide screens instead of on top of it */
+body.landscape .countdown { left: 22%; top: 46%; }
+body.portrait .countdown { top: 80%; }
+@media (max-width: 380px) {
+  body.portrait .reward-head { font-size: 32px; }
+  body.portrait .btn { width: 66px; height: 66px; font-size: 34px; }
+  body.portrait #reward .card { column-gap: 12px; padding: 8px 12px 10px; }
+  .banner.top { font-size: 26px; }
+}
+.reward-head, .reward-stars { white-space: nowrap; }
+@media (max-width: 340px) { .banner.top { font-size: 22px; } }
+/* Tall tablets: bigger parts in the tray (there is plenty of room under the rocket) */
+@media (min-width: 700px) and (min-height: 900px) {
+  body.portrait .tab { max-width: 84px; border-radius: 20px; }
+  body.portrait .items { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
+  body.portrait .swatch { width: 52px; height: 52px; }
+  body.portrait .swatch::before { width: 42px; }
 }

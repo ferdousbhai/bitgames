@@ -37,7 +37,8 @@ export class Thumbs {
   }
 
   /** `obj` is a ready clone; returns a PNG data URL. */
-  shot(obj, { turn = -0.45, tilt = 0.12, fill = 0.82 } = {}) {
+  shot(obj, { turn = -0.45, tilt = 0.12, fill = 0.82, px = this.size } = {}) {
+    if (px !== this.size) this.renderer.setSize(px, px, false)
     const holder = new THREE.Group()
     holder.add(obj)
     holder.rotation.set(tilt, turn, 0)
@@ -54,6 +55,8 @@ export class Thumbs {
     this.renderer.setClearColor(0x000000, 0)
     this.renderer.render(this.scene, this.camera)
     this.scene.remove(holder)
-    return this.canvas.toDataURL('image/png')
+    const url = this.canvas.toDataURL('image/png')
+    if (px !== this.size) this.renderer.setSize(this.size, this.size, false)
+    return url
   }
 }

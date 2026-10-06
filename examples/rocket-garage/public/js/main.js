@@ -203,6 +203,23 @@ async function load() {
   doors.arm = garage.getObjectByName('garage_gantry_arm')
   doors.armX = doors.arm.position.x
 
+  // The comet's glowing tail used to stream straight away from the camera, hidden behind the
+  // comet. Swing it out to the left and up a little, so it fans out beside the comet everywhere.
+  const comet = models.dest_comet
+  for (const [i, t] of comet.children.filter((c) => c.name.startsWith('comet_tail')).entries()) {
+    const spread = (i - 1) * 0.22
+    t.quaternion.setFromUnitVectors(v3.set(0, 1, 0), v3b.set(-1, 0.75 + spread, -0.6).normalize())
+    t.position.set(-0.3, 0.05 + spread * 0.6, -0.35)
+    t.scale.set(1, 0.62, 1)
+    t.traverse((o) => {
+      if (o.isMesh && !o.material.userData.glow) {
+        o.material.userData.glow = true
+        o.material.opacity = Math.min(0.7, o.material.opacity * 1.4)
+        o.material.emissiveIntensity *= 1.6
+      }
+    })
+  }
+
   rocket = new Rocket(models, glowTex)
   scene.add(rocket.root)
   rocket.build(save.rocket)
@@ -285,18 +302,29 @@ const view = { w: 1, h: 1, hw: 5, hh: 5, landscape: true }
 
 function freeRect() {
   const r = { x: 0, y: 0, w: innerWidth, h: innerHeight }
-  const top = $('topbar').classList.contains('hidden') ? 0 : 70
+  const top = $('topbar').classList.contains('hidden') ? 0 : innerHeight <= 500 ? 56 : 70
   r.y = top
   r.h -= top
   if (game.state === 'title') {
     const a = document.querySelector('.title-top').getBoundingClientRect()
     const b = document.querySelector('.title-bottom').getBoundingClientRect()
     r.y = a.bottom
-    r.h = Math.max(120, b.top - a.bottom)
+    if (view.landscape && innerHeight <= 500) {
+      // Short sideways screens: the Play button sits in the corner, beside the rocket
+      r.h = innerHeight - a.bottom - 6
+      r.w = b.left - 8
+    } else r.h = Math.max(120, b.top - a.bottom)
   } else if (game.state === 'garage') {
     const t = $('tray').getBoundingClientRect()
-    if (view.landscape) r.w = t.left - 10
-    else {
+    if (view.landscape) {
+      r.w = t.left - 10
+      if (innerHeight <= 500) {
+        // The buttons stack in the bottom-left corner: keep the rocket to their right
+        const a = $('actions').getBoundingClientRect()
+        r.x = a.right + 2
+        r.w = t.left - 6 - r.x
+      }
+    } else {
       r.h = t.top - r.y
       // The launch column sits on the left, just above the tray
       const a = $('actions').getBoundingClientRect()
@@ -340,13 +368,17 @@ function camTarget(out) {
     return out
   }
   // Landing and party on a little planet
+  // Frame from just above the rocket's nose down to the planet's smile, so the landing party
+  // fills the free space (the lower half of the little planet can fall off the bottom).
   const f = freeRect()
-  const H = 10.6
-  const W = 8.6
-  const d = clamp(Math.max((H * innerHeight) / (f.h * 2 * TAN), (W * innerHeight) / (f.w * 2 * TAN)), 12, 70)
+  const top = LAND.y - 1.4 + (rocket ? rocket.half * 1.6 : 3.6) + 0.5
+  const bottom = LAND.y - 6
+  const H = top - bottom
+  const W = 9
+  const d = clamp(Math.max((H * innerHeight) / (f.h * 2 * TAN), (W * innerHeight) / (f.w * 2 * TAN)), 10, 70)
   out.d = d
   out.x = 0
-  out.y = LAND.y - 1.8
+  out.y = (top + bottom) / 2 - 0.4
   out.ox = innerWidth / 2 - (f.x + f.w / 2)
   out.oy = innerHeight / 2 - (f.y + f.h / 2)
   out.tilt = 0.16
@@ -415,9 +447,16 @@ function show(id, on = true) {
 }
 
 let bannerTimer = 0
-function banner(text, ms = 2200) {
+function banner(text, ms = 2200, top = false) {
   const el = $('banner')
   el.textContent = text
+  // Celebrations sit up in the top bar, clear of the rocket and the dancing pilot
+  el.classList.toggle('top', top)
+  // In the garage, pop up over the rocket's side of the screen rather than over the tray
+  if (game.state === 'garage' && !top) {
+    const f = freeRect()
+    el.style.left = `${f.x + f.w / 2}px`
+  } else el.style.left = ''
   el.classList.add('show')
   clearTimeout(bannerTimer)
   bannerTimer = setTimeout(() => el.classList.remove('show'), ms)
@@ -485,6 +524,7 @@ function renderTray() {
   renderItems()
   renderPaints()
   layoutActions()
+  renderExperiment()
 }
 
 function renderItems() {
@@ -524,7 +564,7 @@ function renderPaints() {
   for (const c of COLORS) {
     const b = document.createElement('button')
     b.className = 'swatch' + (save.rocket.colors[game.tab] === c ? ' on' : '')
-    b.style.background = c
+    b.style.setProperty('--c', c)
     b.dataset.color = c
     b.setAttribute('aria-label', `paint ${c}`)
     el.append(b)
@@ -703,17 +743,23 @@ $('launch').addEventListener('click', () => {
 
 // --- First-time hints (a pointing finger, no reading needed) ------------------------
 
+// Children who stop for a while get a gentle nudge toward the next fun thing
+let lastInput = performance.now()
+for (const type of ['pointerdown', 'keydown']) addEventListener(type, () => (lastInput = performance.now()), true)
+const idle = () => (performance.now() - lastInput) / 1000
+
 function hintTarget() {
-  if (game.state !== 'garage') return null
+  if (game.state === 'party') return !$('reward').classList.contains('hidden') && idle() > 8 && performance.now() - rewardAt > 6000 ? $('again') : null
+  if (game.state !== 'garage' || $('workshop')?.open) return null
   if (!save.picked) {
     const items = [...$('items').children]
     return items.find((b) => !b.classList.contains('on') && !b.classList.contains('locked')) ?? null
   }
-  if (save.flights === 0) return $('launch')
+  if (save.flights === 0 || idle() > 15) return $('launch')
   return null
 }
 function placeFinger() {
-  const el = game.state === 'garage' ? hintTarget() : null
+  const el = game.state === 'garage' || game.state === 'party' ? hintTarget() : null
   const f = $('finger')
   if (!el) return f.classList.add('hidden')
   const r = el.getBoundingClientRect()
@@ -727,10 +773,55 @@ function hintStep() {
 
 // --- Title & garage -------------------------------------------------------------------
 
-const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf })
+/** Speaks short phrases for children who are not reading yet (only when sound is on). */
+function speak(text) {
+  if (audio.muted || !text || typeof speechSynthesis === 'undefined') return
+  try {
+    speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(text.replace(/[^\p{L}\p{N}\s.,!?'’-]/gu, ' '))
+    u.lang = 'en-US'
+    u.rate = 0.95
+    u.pitch = 1.15
+    speechSynthesis.speak(u)
+  } catch {}
+}
+
+/** A picture of a whole rocket, for comparing builds side by side. */
+let thumbRocket = null
+const rocketThumbs = new Map()
+function rocketThumb(cfg) {
+  const key = JSON.stringify(cfg)
+  if (!rocketThumbs.has(key)) {
+    thumbRocket ??= new Rocket(models, glowTex)
+    thumbRocket.build(cfg)
+    if (rocketThumbs.size > 12) rocketThumbs.clear()
+    rocketThumbs.set(key, thumbs.shot(thumbRocket.wobbler, { turn: -0.35, tilt: 0.08, fill: 0.92, px: 256 }))
+    thumbRocket.root.add(thumbRocket.wobbler)
+  }
+  return rocketThumbs.get(key)
+}
+
+function workshopSound(kind) {
+  if (kind === 'pick') audio.click()
+  else if (kind === 'save') audio.paint()
+  else if (kind === 'go') audio.whoosh(1.6)
+  else if (kind === 'yay') audio.fanfare()
+  else if (kind === 'hmm') audio.reach()
+}
+
+/** The 🧪 button shows an A once a rocket is saved, and wiggles when exactly one part has changed. */
+function renderExperiment() {
+  const status = workshop.status(save.rocket)
+  const b = $('experiment')
+  b.classList.toggle('has-a', status >= 0)
+  b.classList.toggle('ready', status === 1)
+}
+
+const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf, rocketThumb, speak, sound: workshopSound, onChange: () => renderExperiment() })
 $('experiment').onclick = () => {
   if (game.state !== 'garage') return
   audio.unlock()
+  audio.click()
   keys.clear()
   workshop.open()
 }
@@ -846,6 +937,7 @@ const flight = {
   dist: 100,
   stars: 0,
   turbo: false,
+  canTurbo: false,
   boost: 0,
   x: 0,
   vx: 0,
@@ -900,7 +992,10 @@ function liftoff() {
   shadow.visible = false
   show('flightbar')
   show('journey')
-  $('turbo').classList.toggle('hidden', base >= DESTS.length - 1)
+  // Turbo carries you one stop further, but only past places you have already visited: a first
+  // trip always lands at the boosters' own destination, so no planet (or its new parts) gets skipped.
+  flight.canTurbo = base < DESTS.length - 1 && save.visited[base]
+  $('turbo').classList.toggle('hidden', !flight.canTurbo)
   $('turbo').classList.remove('full')
   renderStars()
   renderJourney()
@@ -1026,7 +1121,7 @@ function catchStar(it) {
   rings.spawn(it.obj.position, '#ffd23f', 2)
   popups.show(it.obj.position, '+1')
   renderStars()
-  if (!flight.turbo && flight.stars >= TURBO && flight.target < DESTS.length - 1) {
+  if (!flight.turbo && flight.canTurbo && flight.stars >= TURBO && flight.target < DESTS.length - 1) {
     flight.turbo = true
     flight.target++
     flight.dist += flight.cruise * 4.5
@@ -1398,7 +1493,7 @@ function startParty() {
   persist()
   audio.fanfare()
   audio.playSong('dance')
-  banner(`🎉 ${DESTS[d].emoji} 🎉`, 2600)
+  banner(`🎉 ${DESTS[d].emoji} 🎉`, 3200, true)
   confetti()
   setTimeout(() => {
     if (game.state === 'party') showReward()
@@ -1427,7 +1522,9 @@ function showReward() {
     setTimeout(() => audio.unlock1(i), 300 + i * 180)
   })
   show('reward')
+  rewardAt = performance.now()
 }
+let rewardAt = 0
 
 function animateDancers(dt, dancing) {
   const t = game.time
@@ -1486,6 +1583,7 @@ function backToGarage(thenLaunch = false) {
   if (game.busy) return
   game.busy = true
   audio.click()
+  $('finger').classList.add('hidden')
   // Head to the tab with something new, so it is easy to find
   const fresh = SLOTS.find((s) => PARTS[s.id].some((p) => save.fresh.has(`${s.id}:${p.id}`)))
   if (fresh) game.tab = fresh.id
@@ -1701,7 +1799,7 @@ function tick(dt) {
   updateCamera(dt)
   updateSky(dt)
   audio.updateMusic()
-  if (game.state === 'garage' && Math.random() < dt) placeFinger()
+  if ((game.state === 'garage' || game.state === 'party') && Math.random() < dt * 2) placeFinger()
   renderer.render(scene, camera)
 }
 

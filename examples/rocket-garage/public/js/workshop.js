@@ -1,7 +1,7 @@
 import { DESTS, PARTS, reach, wobble } from './parts.js'
 
 const STORAGE_KEY = 'rocket-garage:reference:v1'
-const QUESTION = 'Which build will travel farther?'
+const QUESTION = 'Which rocket will fly farther?'
 
 // Compare the actual toy-flight rules. This is deliberately the same model as
 // flight: booster power selects reach; nose/tank/fins affect wobble.
@@ -17,46 +17,89 @@ export function compareBuilds(a, b) {
   }
 }
 
+const BOOSTER_WORDS = { none: 'no boosters', small: 'small boosters', big: 'big boosters', mega: 'mega boosters', rainbow: 'rainbow boosters' }
+const SLOT_WORDS = { nose: 'nose', cabin: 'window', pilot: 'pilot', tank: 'tank', sticker: 'sticker', fins: 'fins', booster: 'boosters' }
+const WOBBLY = new Set(['nose', 'tank', 'fins'])
+
+/** One or two short, honest sentences: what changed, and why the rockets flew the way they did. */
+export function explain(a, b, result = compareBuilds(a, b)) {
+  const { changed } = result
+  if (changed.length === 0) return 'Same parts, so they fly the same.'
+  const many = changed.length > 1 ? ' You changed more than one part, so it is hard to tell which one did it.' : ''
+  if (changed.includes('booster')) {
+    if (result.answer === 'same') return `Both rockets still reach the ${DESTS[result.a.reach].name}.${many}`
+    const far = result.answer === 'a' ? a : b
+    const near = result.answer === 'a' ? b : a
+    const push = near.booster === 'none' ? 'give an extra push' : `push harder than ${BOOSTER_WORDS[near.booster]}`
+    return `${capital(BOOSTER_WORDS[far.booster])} ${push}!${many}`
+  }
+  const wobbly = changed.filter((slot) => WOBBLY.has(slot))
+  if (wobbly.length) {
+    const more = result.b.wobble > result.a.wobble ? 'B wobbles more' : result.b.wobble < result.a.wobble ? 'A wobbles more' : 'they wobble the same'
+    const names = wobbly.map((s) => SLOT_WORDS[s])
+    const verb = names.length > 1 || names[0] === 'fins' ? 'change' : 'changes'
+    return `Same boosters, same distance. The ${names.join(' and ')} only ${verb} the wobble: ${more}.`
+  }
+  const names = changed.map((s) => SLOT_WORDS[s])
+  return `Same boosters, same distance. The ${names.join(' and ')} ${names.length > 1 || names[0] === 'boosters' ? 'are' : 'is'} just for fun!`
+}
+const capital = (s) => s[0].toUpperCase() + s.slice(1)
+
 const isBuild = (value) => value && Object.keys(PARTS).every((slot) => PARTS[slot].some((p) => p.id === value[slot]))
 
-function buildCard(label, build, slot, thumbOf) {
-  const card = document.createElement('section')
-  card.className = 'workshop-build'
-  const heading = document.createElement('h3')
-  heading.textContent = `${label} 🚀`
-  const picture = document.createElement('img')
-  picture.src = thumbOf('booster', build.booster) || ''
-  picture.alt = `${build.booster} booster`
-  const rail = document.createElement('div')
-  rail.className = 'workshop-rail'
-  rail.dataset.build = slot
-  const ship = document.createElement('span')
-  ship.className = 'workshop-ship'
-  ship.textContent = '🚀'
-  rail.append(ship)
-  const destinations = document.createElement('div')
-  destinations.className = 'workshop-destinations'
-  for (const destination of DESTS) {
-    const mark = document.createElement('span')
-    mark.textContent = destination.emoji
-    destinations.append(mark)
+/** Rocket A from an earlier visit, if one was saved. */
+export function readStoredReference() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    return isBuild(stored) ? stored : null
+  } catch {
+    return null
   }
-  card.append(heading, picture, rail, destinations)
+}
+
+function el(tag, className, text) {
+  const e = document.createElement(tag)
+  if (className) e.className = className
+  if (text !== undefined) e.textContent = text
+  return e
+}
+
+function buildCard(label, build, slot, rocketThumb) {
+  const card = el('section', `workshop-build build-${slot}`)
+  card.dataset.card = slot
+  const badge = el('b', 'workshop-badge', label)
+  const picture = el('img', 'workshop-rocket')
+  picture.src = rocketThumb(build) || ''
+  picture.alt = `Rocket ${label}`
+  const rail = el('div', 'workshop-rail')
+  rail.dataset.build = slot
+  rail.append(el('span', 'workshop-home', '🏠'))
+  for (const destination of DESTS) rail.append(el('span', 'workshop-stop', destination.emoji))
+  const ship = el('span', 'workshop-ship')
+  ship.append(el('img'))
+  ship.firstChild.src = picture.src
+  ship.firstChild.alt = ''
+  rail.append(ship)
+  card.append(badge, picture, rail)
   return card
 }
 
-// A fair-test workshop: save build A, change one part in the garage, predict, then watch both fly.
-export function createWorkshop({ readRocket, thumbOf }) {
+/**
+ * A fair-test workshop: rocket A is saved, the child changes one part in the garage (that is
+ * rocket B), predicts which flies farther, then watches both fly on little tracks.
+ * Pictures, a pointing hand and spoken words carry it for children who are not reading yet.
+ */
+export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', speak = () => {}, sound = () => {}, onChange = () => {} }) {
   const dialog = document.createElement('dialog')
   dialog.id = 'workshop'
   dialog.setAttribute('aria-labelledby', 'workshop-title')
-  dialog.innerHTML = `<div class="workshop-head"><h2 id="workshop-title">Robot’s test workshop</h2><button id="workshop-close" aria-label="Close workshop">✕</button></div>
-    <p>Save A. Change one part in the garage. Compare it with B.</p>
+  dialog.innerHTML = `<div class="workshop-head"><h2 id="workshop-title">🧪 Robot’s test workshop</h2><button id="workshop-say" class="workshop-round" aria-label="Say it again">🔊</button><button id="workshop-close" class="workshop-round" aria-label="Back to the garage">✕</button></div>
     <div class="workshop-builds"></div>
-    <p id="workshop-rule"></p>
-    <div class="workshop-prediction" role="group" aria-label="${QUESTION}"><button data-predict="a">A 🚀</button><button data-predict="same">Same ↔</button><button data-predict="b">B 🚀</button></div>
+    <div class="workshop-change"><div class="workshop-swap" aria-hidden="true"></div><p id="workshop-rule"></p></div>
+    <div class="workshop-prediction" role="group" aria-label="${QUESTION}"><button data-predict="a" aria-label="Rocket A flies farther">A</button><button data-predict="same" aria-label="Both fly the same">=</button><button data-predict="b" aria-label="Rocket B flies farther">B</button></div>
     <p id="workshop-feedback" role="status" aria-live="polite">${QUESTION}</p>
-    <div class="workshop-footer"><button id="workshop-save">Save current build as A</button><button id="workshop-test" disabled>▶ Run workshop test</button></div>`
+    <div class="workshop-footer"><button id="workshop-save" aria-label="Save this rocket as A">📸 A</button><button id="workshop-garage" aria-label="Back to the garage to change one part">🔧</button><button id="workshop-test" disabled aria-label="Test fly both rockets">▶</button></div>
+    <span class="workshop-finger" aria-hidden="true">👆</span>`
   document.body.append(dialog)
   // Keep the garage's keyboard controls out of the open workshop.
   const guard = (e) => { if (dialog.open) e.stopPropagation() }
@@ -66,18 +109,21 @@ export function createWorkshop({ readRocket, thumbOf }) {
   const $ = (id) => dialog.querySelector(`#${id}`)
   const saveButton = $('workshop-save')
   const testButton = $('workshop-test')
+  const garageButton = $('workshop-garage')
+  const finger = dialog.querySelector('.workshop-finger')
   const predictButtons = [...dialog.querySelectorAll('[data-predict]')]
-  const feedback = (text) => { $('workshop-feedback').textContent = text }
+  let said = ''
+  const feedback = (text, voice = text) => {
+    $('workshop-feedback').textContent = text
+    said = voice
+    if (dialog.open && voice) speak(voice)
+  }
 
-  let reference = null // build A
+  let reference = readStoredReference() // build A
   let current = null // build B: the garage's rocket when the workshop opened
   let prediction = null
   let running = false
   let timer = 0
-  try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
-    if (isBuild(stored)) reference = stored
-  } catch {}
 
   function setBusy(busy) {
     running = busy
@@ -90,76 +136,147 @@ export function createWorkshop({ readRocket, thumbOf }) {
     running = false
   }
 
-  function render() {
+  /** The pointing hand shows the next thing to tap. */
+  function point(target) {
+    for (const b of dialog.querySelectorAll('.nudge')) b.classList.remove('nudge')
+    if (!target) return finger.classList.remove('show')
+    target.classList.add('nudge')
+    requestAnimationFrame(() => {
+      const r = target.getBoundingClientRect()
+      const d = dialog.getBoundingClientRect()
+      finger.style.left = `${r.left - d.left + r.width / 2 - 18 + dialog.scrollLeft}px`
+      finger.style.top = `${r.top - d.top + r.height * 0.55 + dialog.scrollTop}px`
+      finger.classList.add('show')
+    })
+  }
+
+  function swapPicture(changed) {
+    const swap = dialog.querySelector('.workshop-swap')
+    swap.replaceChildren()
+    if (changed.length === 0) {
+      swap.append(el('span', 'workshop-same', '='))
+      return
+    }
+    for (const slot of changed.slice(0, 3)) {
+      const pair = el('span', 'workshop-pair')
+      for (const [i, build] of [reference, current].entries()) {
+        if (i) pair.append(el('i', '', '➜'))
+        const holder = el('span', 'workshop-part')
+        const src = build[slot] === 'none' ? '' : thumbOf(slot, build[slot])
+        if (src) {
+          const img = el('img')
+          img.src = src
+          img.alt = ''
+          holder.append(img)
+        } else holder.append(el('span', '', '🚫'))
+        pair.append(holder)
+      }
+      swap.append(pair)
+    }
+    if (changed.length > 1) swap.append(el('span', 'workshop-many', '✋'))
+  }
+
+  function render(say = true) {
     stop()
     prediction = null
     current = structuredClone(readRocket())
     reference ??= structuredClone(current)
     const { changed } = compareBuilds(reference, current)
-    dialog.querySelector('.workshop-builds').replaceChildren(buildCard('A', reference, 'a', thumbOf), buildCard('B', current, 'b', thumbOf))
+    dialog.querySelector('.workshop-builds').replaceChildren(buildCard('A', reference, 'a', rocketThumb), buildCard('B', current, 'b', rocketThumb))
+    swapPicture(changed)
+    dialog.dataset.changes = String(Math.min(changed.length, 2))
     $('workshop-rule').textContent = changed.length === 0
-      ? 'These builds have the same parts. Try changing just the booster.'
+      ? 'A and B are the same. Change one part in the garage.'
       : changed.length === 1
-        ? `One change: ${changed[0]}. A good comparison!`
-        : `You changed ${changed.length} parts. Try changing just one to see its effect.`
+        ? `One change: ${changed[0]}. A fair test!`
+        : `${changed.length} changes. Change just one part to see what it does.`
     for (const button of predictButtons) {
       button.disabled = false
       button.setAttribute('aria-pressed', 'false')
     }
     testButton.disabled = true
     saveButton.disabled = false
-    feedback(QUESTION)
+    if (changed.length === 0) {
+      feedback('Change one part, then come back.', say ? 'This is rocket A. Go to the garage, change one part, then come back!' : '')
+      point(garageButton)
+    } else {
+      feedback(QUESTION, say ? (changed.length === 1 ? `You changed the ${SLOT_WORDS[changed[0]]}. ${QUESTION}` : `You changed ${changed.length} parts. ${QUESTION}`) : '')
+      point(predictButtons[1])
+    }
+    onChange()
   }
 
   for (const button of predictButtons) {
     button.onclick = () => {
       if (running) return
       prediction = button.dataset.predict
+      sound('pick')
       for (const option of predictButtons) option.setAttribute('aria-pressed', String(option === button))
       testButton.disabled = false
-      feedback(`Your prediction: ${prediction === 'same' ? 'same distance' : `build ${prediction.toUpperCase()}`}`)
+      const guess = prediction === 'same' ? 'the same' : `rocket ${prediction.toUpperCase()}`
+      feedback(`You think: ${guess}. Press ▶`, `You think ${guess}. Press play to test!`)
+      point(testButton)
     }
   }
 
   saveButton.onclick = () => {
     reference = structuredClone(readRocket())
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(reference)) } catch {}
-    render()
-    feedback('Build A saved. Close the workshop, change one part, and return.')
+    sound('save')
+    render(false)
+    feedback('📸 Rocket A saved! Now change one part.', 'Rocket A saved! Go to the garage and change one part.')
+    point(garageButton)
   }
 
   testButton.onclick = () => {
     if (!prediction || running) return
     setBusy(true)
+    point(null)
     const result = compareBuilds(reference, current)
-    feedback('Watch where each build travels…')
+    feedback('3… 2… 1…', '')
+    sound('go')
     for (const slot of ['a', 'b']) {
       const ship = dialog.querySelector(`[data-build="${slot}"] .workshop-ship`)
-      ship.style.left = `${10 + result[slot].reach * 20}%`
-      ship.style.setProperty('--wobble', `${result[slot].wobble * 7}deg`)
+      ship.style.setProperty('--at', String(result[slot].reach + 1))
+      ship.style.setProperty('--wobble', `${4 + result[slot].wobble * 14}deg`)
       ship.classList.add('flying')
     }
     timer = setTimeout(() => {
       for (const ship of dialog.querySelectorAll('.workshop-ship')) ship.classList.remove('flying')
-      const verdict = prediction === result.answer ? 'Your prediction matched.' : 'A new discovery!'
-      const outcome = result.answer === 'same' ? 'Both reach the same destination.' : `Build ${result.answer.toUpperCase()} travels farther.`
-      feedback(`${verdict} ${outcome} A reaches ${DESTS[result.a.reach].name}; B reaches ${DESTS[result.b.reach].name}. In this toy workshop, boosters change reach; tank, nose and fins change wobble.`)
+      for (const slot of ['a', 'b']) dialog.querySelector(`[data-card="${slot}"]`).classList.toggle('winner', result.answer === slot || result.answer === 'same')
+      const matched = prediction === result.answer
+      const verdict = matched ? '✔ Your prediction matched!' : '💡 A new discovery!'
+      const outcome = result.answer === 'same' ? 'They fly the same.' : `${result.answer.toUpperCase()} flies farther.`
+      const why = explain(reference, current, result)
+      feedback(`${verdict} ${outcome} ${why}`, `${matched ? 'Yes! You were right!' : 'Ooh, a new discovery!'} ${result.answer === 'same' ? 'They fly the same.' : `Rocket ${result.answer.toUpperCase()} flies farther.`} ${why}`)
+      sound(matched ? 'yay' : 'hmm')
       setBusy(false)
-    }, 1600)
+      point(garageButton)
+    }, 1900)
   }
 
   function close() {
     stop()
-    dialog.close()
+    point(null)
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel()
+    if (dialog.open) dialog.close()
   }
   $('workshop-close').onclick = close
+  garageButton.onclick = close
+  $('workshop-say').onclick = () => { if (said) speak(said) }
   dialog.addEventListener('cancel', stop)
+  dialog.addEventListener('close', () => { point(null); onChange() })
 
   return {
     open() {
-      render()
       dialog.showModal()
+      render()
     },
     close,
+    /** 0 = nothing saved yet or no change, 1 = exactly one part changed (ready to test), 2 = more. */
+    status(rocket) {
+      if (!reference) return -1
+      return Math.min(compareBuilds(reference, rocket).changed.length, 2)
+    },
   }
 }
