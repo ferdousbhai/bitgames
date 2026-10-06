@@ -193,6 +193,9 @@ canvas { touch-action: none; }
   stroke-linejoin: round;
 }
 .world-action .label.blank svg { opacity: .45; }
+/* Letter Buddies: the letter is the card's picture, so it sits in the middle and fills it. */
+.world-action.letter-card { align-items: center; }
+.world-action.letter-card .label.glyph { font-size: clamp(26px, var(--unit, 60px) * 0.62, 64px); padding: 4px 12px; }
 /* Letters and words drawn in a spelling game's prompt, feedback and win card (printText in engine.js). */
 .print svg {
   display: inline-block;

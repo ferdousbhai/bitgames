@@ -42,6 +42,8 @@ G('picnic-pairs','Picnic Pairs','🧺',[2,5],'orchard','memory','Visual working 
 G('planet-pairs','Planet Pairs','🪐',[3,7],'space','memory','Visual memory','Remember where the little space souvenirs are hiding.',{pairs:[['Mercury','Mercury'],['Venus','Venus'],['Earth','Earth'],['Mars','Mars'],['Jupiter','Jupiter'],['Saturn','Saturn']]}),
 G('tool-twins','Tool Twins','🛠️',[4,8],'workshop','memory','Jobs and their tools','Pair a helper with the tool they use.',{pairs:[['🧑‍🍳','🥣'],['🧑‍🌾','🌱'],['🧑‍🎨','🖌️'],['🧑‍🚒','🚒'],['🧑‍🔧','🔧'],['🧑‍✈️','✈️']]}),
 G('letter-buddies','Letter Buddies','🔤',[4,7],'library','memory','Uppercase and lowercase letters','Introduce big letters to their little-letter buddies.',{pairs:[['A','a'],['B','b'],['D','d'],['E','e'],['G','g'],['H','h'],['M','m'],['R','r']],printLetters:true,
+  // The first level starts each step with a buddy that is just a smaller copy of its big letter.
+  easyPairs:[['C','c'],['O','o'],['S','s'],['W','w']],
   instructions:'Turn over two cards. Find each big letter and its little-letter buddy. Tap Show a pair for help.'}),
 G('frog-choir','Frog Choir','🎶',[3,7],'pond','echo','Auditory and sequential memory','Echo a pond chorus on colourful lily pads.',{tokens:['🐸','🌸','🐟','🍃'],notes:[262,330,392,523]}),
 G('crystal-cave-echo','Crystal Cave Echo','💎',[4,8],'cave','echo','Pitch and sound sequence memory','Remember the sparkling song of a crystal cave.',{tokens:['💜','💙','💚','💛'],notes:[294,370,440,587]}),
@@ -170,7 +172,7 @@ export const instructions = {
  pattern:'Look for the repeating rule. Tap the piece that fills the empty place.',
  order:'Tap the pictures in the order the story happens. Use Reset to start again.',
  compare:'Listen to the request. Compare the objects and tap your answer.',
- memory:'Turn over two cards. Match their pictures or their related meanings.',
+ memory:'Turn over two cards. Find the cards that go together.',
  echo:'Watch and listen to the song, then tap the pads in the same order. Replay whenever you like.',
  path:'Use the arrow buttons to plan a route. Press Go to send your friend. Avoid the rocks.',
  trace:'Start at the glowing dot. Hold and follow the trail, or tap each dot in order.',

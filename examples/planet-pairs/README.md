@@ -6,7 +6,7 @@ Remember where the little space souvenirs are hiding.
 - Learning: Visual memory
 - Activity: memory
 
-Turn over two cards. Match their pictures or their related meanings.
+Turn over two cards. Find the cards that go together.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/planet-pairs assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

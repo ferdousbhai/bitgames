@@ -47,6 +47,6 @@ export default {
     "basket"
   ],
   "seed": 5969,
-  "instructions": "Turn over two cards. Match their pictures or their related meanings.",
+  "instructions": "Turn over two cards. Find the cards that go together.",
   "activityNumber": 6
 };

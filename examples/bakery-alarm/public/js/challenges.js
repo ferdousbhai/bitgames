@@ -200,7 +200,10 @@ export function challenge(g, level, round, seed) {
     }
 
     case 'memory': {
-      const pairs = shuffle(g.pairs, rng).slice(0, 2 + level)
+      // A design's easyPairs (Letter Buddies' C/c, O/o...) give the first level one gentle pair.
+      const pairs = level === 0 && g.easyPairs
+        ? [shuffle(g.easyPairs, rng)[0], shuffle(g.pairs, rng)[0]]
+        : shuffle(g.pairs, rng).slice(0, 2 + level)
       c.cards = shuffle(pairs.flatMap(([a, b], pair) => [{ text: a, pair }, { text: b, pair }]), rng)
       c.prompt = memoryPrompts[g.id] ?? 'Find the matching pairs.'
       break

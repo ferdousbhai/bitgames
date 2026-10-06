@@ -460,6 +460,9 @@ const letterName = (text) => `${text === text.toUpperCase() ? 'big' : 'little'} 
 const sayLetter = (text) => [text === text.toUpperCase() ? 'Big' : 'Little', text.toUpperCase()]
 const capital = (words) => words[0].toUpperCase() + words.slice(1)
 
+// Found pairs: soft colours apart from every memory game's accent and the lilac card cover.
+const pairColours = ['#bfdc86', '#93c4ea', '#eda3c0', '#b9a7ee']
+
 function memory(c, g, a) {
   // Picnic Pairs shows only the picture; the other games also name the face-up card.
   const showsName = ['letter-buddies', 'tool-twins', 'planet-pairs'].includes(g.id)
@@ -527,6 +530,13 @@ function memory(c, g, a) {
           else a.feedback(`${capital(pair.big)}, ${pair.little}. Buddies!`, true, [...pair.spoken, 'Buddies!'])
         }
         if (!(letters && done)) a.audio.happy()
+        // A found pair hops and takes on its own shared colour, so the two read as one family
+        // and stand apart from the next two cards a child turns over.
+        for (const i of [x, y]) {
+          cards[i].select(false)
+          cards[i].base.material.color.set(pairColours[c.cards[x].pair % pairColours.length])
+          cards[i].hop()
+        }
         a.animate(0.5, (t) => { figures[x].position.y = figures[y].position.y = 0.35 + Math.sin(t * Math.PI) * 0.2 })
         a.later(() => {
           open = []
@@ -556,6 +566,8 @@ function memory(c, g, a) {
   }), { columns: 4, spacing: 1.65, size: 1.4, depth: 1.5 })
 
   cards.forEach((t, i) => {
+    // A letter card has no picture: its letter fills the card instead.
+    if (letters) t.button.classList.add('letter-card')
     const figure = memoryFigure(a, g.id, c.cards[i].text)
     figure.visible = false
     t.group.add(figure)

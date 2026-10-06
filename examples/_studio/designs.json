@@ -1052,6 +1052,24 @@
       ]
     ],
     "printLetters": true,
+    "easyPairs": [
+      [
+        "C",
+        "c"
+      ],
+      [
+        "O",
+        "o"
+      ],
+      [
+        "S",
+        "s"
+      ],
+      [
+        "W",
+        "w"
+      ]
+    ],
     "instructions": "Turn over two cards. Find each big letter and its little-letter buddy. Tap Show a pair for help.",
     "sky": "#f6e7d1",
     "ground": "#c3aa92",
