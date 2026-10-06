@@ -507,6 +507,7 @@ function memory(c, g, a) {
   }, 20000)
   nudge()
 
+  // Six cards sit in two even rows of three rather than four over two.
   const cards = a.grid(c.cards, (card, i) => ({
     label: '?',
     colour: g.accent,
@@ -563,7 +564,7 @@ function memory(c, g, a) {
         }, 1000)
       }
     },
-  }), { columns: 4, spacing: 1.65, size: 1.4, depth: 1.5 })
+  }), { columns: c.cards.length === 6 ? 3 : 4, spacing: 1.65, size: 1.4, depth: 1.5 })
 
   cards.forEach((t, i) => {
     // A letter card has no picture: its letter fills the card instead.
