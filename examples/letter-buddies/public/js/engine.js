@@ -595,7 +595,9 @@ function menu() {
   clear()
   show('menu')
   state.challenge = null
-  tile({ model: game.hero || game.item || game.scenery[3], x: 0, z: 2, size: 1.8, visual: true })
+  // A carrier (Word Rocket's rocket) stands tall on the board, as on the win card, not small on a stand.
+  const hero = tile({ model: game.hero || game.item || game.scenery[3], x: 0, z: 2, size: 1.8, visual: true, scale: game.carrier ? 1.7 : 1 })
+  if (game.carrier) hero.base.visible = false
   const completed = saved.completed.reduce((sum, count) => sum + count, 0)
   $('saved').textContent = completed ? `${completed} adventures completed. Keep exploring!` : ''
 }
