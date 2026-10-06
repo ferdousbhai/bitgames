@@ -202,6 +202,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .podium .podium-pic { width: 58px; margin: -6px -6px; }
   .car-pick { width: calc((100vw - 52px) / 3); max-width: 118px; padding: 6px 4px 8px; }
   .car-pick .name { font-size: 14px; }
+  /* Race and Smash share the top row; the mission button gets its own row below, on screen. */
+  .mode { font-size: 20px; padding: 6px 18px; } .mode span { font-size: 26px; }
+  #menu { gap: 8px; }
+  #menu .modes { flex-wrap: wrap; justify-content: center; row-gap: 6px; }
+  #menu .modes .adventure-choice { order: 1; margin: 0; padding: 4px 16px; }
   /* Three small places to a row, so every place shows without scrolling. */
   .screen { gap: 10px; }
   .cities { gap: 8px; }
@@ -220,10 +225,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @media (max-width: 520px) and (max-height: 740px) {
   .logo.small { font-size: 30px; }
   #menu h2 { display: none; }
-  .mode { font-size: 20px; padding: 6px 18px; } .mode span { font-size: 26px; }
   .car-pick .pic { width: 72%; margin: -4px auto -2px; }
   /* Smaller place cards, so Laps and Easy mode sit above GO rather than under it. */
-  .screen { gap: 8px; }
+  .screen { gap: 8px; } #menu { gap: 6px; }
   .city { padding: 4px 4px 6px; }
   .city .emoji { font-size: 32px; }
   .options { font-size: 17px; } .laps button, .chip { font-size: 17px; padding: 6px 13px; }
