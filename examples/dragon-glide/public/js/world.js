@@ -200,7 +200,8 @@ export class World {
       if (Math.random() < 0.55 * d) this.cloud(rand(-50, 50), rand(-26, -14), z + rand(-5, 5), rand(3, 6))
       if (Math.random() < 0.5 * d) {
         const side = Math.random() < 0.5 ? -1 : 1
-        this.cloud(side * rand(lane.x + 4, lane.x + 14), rand(-2, 12), z + rand(-5, 5), rand(1.2, 2.4))
+        // these drift outward only, so they never wander into Ember's (and the camera's) path
+        this.cloud(side * rand(lane.x + 4, lane.x + 14), rand(-2, 12), z + rand(-5, 5), rand(1.2, 2.4), side * rand(0, 0.4))
       }
       if (Math.random() < 0.2 * d) this.cloud(rand(-30, 30), rand(16, 26), z, rand(2, 4))
       this.nextZ += rand(13, 18)
@@ -263,12 +264,12 @@ export class World {
     g.add(mist)
   }
 
-  cloud(x, y, z, s) {
+  cloud(x, y, z, s, drift = rand(-0.4, 0.4)) {
     const c = copy(this.t.cloud)
     c.position.set(x, y, -z)
     c.scale.set(s * rand(1, 1.5), s, s)
     c.rotation.y = rand(-0.4, 0.4)
-    this.add(c, z, { drift: rand(-0.4, 0.4) })
+    this.add(c, z, { drift })
   }
 
   add(obj, z, extra) {

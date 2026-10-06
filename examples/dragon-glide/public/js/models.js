@@ -11,14 +11,37 @@ export async function loadModels(onProgress) {
   let done = 0
   const load = (file) =>
     loader.loadAsync(`./models/${file}`).then((gltf) => {
-      onProgress?.(++done / 2)
+      onProgress?.(++done / 3)
       return gltf
     })
-  const [dragon, world] = await Promise.all([load('dragon.glb'), load('world.glb')])
+  // the gingham blanket lining the nest (see ../../blender/nest_blanket.py); the nest still works without it
+  const blanket = new THREE.TextureLoader().loadAsync('./models/nest-blanket.jpg').catch(() => null).finally(() => onProgress?.(++done / 3))
+  const [dragon, world, cloth] = await Promise.all([load('dragon.glb'), load('world.glb'), blanket])
   const templates = {}
   for (const child of world.scene.children) templates[child.name] = child
   templates.dragon = dragon.scene.getObjectByName('dragon')
+  if (cloth) lineNest(templates.nest, cloth)
   return templates
+}
+
+/** Lays the blanket in the nest: top-down UVs on the lining, so the checks lie flat in the bowl. */
+function lineNest(nest, texture) {
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+  texture.anisotropy = 4
+  nest?.traverse((o) => {
+    if (!o.isMesh || o.material.name !== 'nest_inside') return
+    const pos = o.geometry.attributes.position
+    const uv = new Float32Array(pos.count * 2)
+    for (let i = 0; i < pos.count; i++) {
+      uv[i * 2] = pos.getX(i) / 2.6
+      uv[i * 2 + 1] = pos.getZ(i) / 2.6
+    }
+    o.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+    o.material = o.material.clone()
+    o.material.map = texture
+    o.material.color.set('#ffffff')
+  })
 }
 
 const tints = new Map()

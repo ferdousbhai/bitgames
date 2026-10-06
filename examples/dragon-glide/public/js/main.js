@@ -261,6 +261,8 @@ function start(from = 0) {
   // the camera swoops from Ember's face to behind
   camPos.set(1.2, 4.9, -game.z + 6)
   camLook.set(0, 4.3, -game.z)
+  // the camera starts here, not at the title's spot (else a later world loses its first rings and its nest)
+  camRideZ = pos.z
   $('score-num').textContent = '0'
   $('power').classList.add('hidden')
   updateCombo()
@@ -829,7 +831,8 @@ function updateCamera(dt) {
     py = NEST_Y + 3.6
     pz = nestZ + (view.portrait ? 11 : 7.2)
     lx = 0
-    ly = NEST_Y + 1.9
+    // while the banner shows on sideways screens, the family sits lower in the picture, under it
+    ly = NEST_Y + (s === 'nest' && !view.portrait ? 2.7 : 1.9)
     lz = nestZ
     rate = 2
   } else {

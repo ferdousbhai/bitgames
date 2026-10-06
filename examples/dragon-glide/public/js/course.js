@@ -408,7 +408,11 @@ export class Course {
         case 'hoop': {
           o.rotation.z = Math.sin(it.t * 0.8) * 0.08
           const pulse = 1 + Math.sin(it.t * 3) * 0.03
-          o.scale.setScalar(pulse * (it.radius / 2.3) * (it.done ? 1 + it.flash : 1))
+          // once Ember is through, the ring pops away before the camera reaches it, so its
+          // puffs never fill the whole screen
+          const away = it.done ? Math.max(0, 1 - Math.max(0, o.position.z - p.z - 1) / 3.5) : 1
+          o.scale.setScalar(pulse * (it.radius / 2.3) * (it.done ? 1 + it.flash : 1) * away)
+          o.visible = away > 0
           if (it.done) it.flash = Math.max(0, it.flash - dt * 1.5)
           if (!playing || it.done) break
           if (prevZ > it.z && p.z <= it.z) {
