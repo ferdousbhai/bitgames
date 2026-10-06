@@ -916,7 +916,12 @@ def build_game(g):
     for i, (x, y, _) in enumerate(around(11, 3.95)):
         name = g['scenery'][i % len(g['scenery'])]
         size = random.uniform(.65, 1.05)
-        place(name, (x, y, 0), size, random.uniform(-.4, .4))
+        angle = random.uniform(-.4, .4)
+        # Letters and numerals start at their top line, right against the back of the stage:
+        # keep the spot behind the middle clear so no toy crowds stroke 1's number.
+        if g.get('trace') in ['letter', 'number'] and y > 3 and abs(x) < 1.2:
+            continue
+        place(name, (x, y, 0), size, angle)
     for _ in range(22):
         a = random.random() * math.tau
         r = random.uniform(3.2, 4.5)
