@@ -948,6 +948,7 @@ const flight = {
   nextSpawn: 0,
   nextCloud: 0,
   passed: new Set(),
+  flyby: [],
   combo: 0,
   comboT: 0,
 }
@@ -988,6 +989,7 @@ function liftoff() {
     comboT: 0,
   })
   flight.passed.clear()
+  flight.flyby = []
   flight.dist = flight.cruise * (12 + base * 3.2)
   shadow.visible = false
   show('flightbar')
@@ -1134,6 +1136,26 @@ function catchStar(it) {
   }
 }
 
+/**
+ * Flying past a planet for the first time still counts: it waves, drops its new parts, and
+ * they join the reward card. (Otherwise a child who fits boosters before the first flight
+ * would never reach the Moon, and its parts would stay locked for good.)
+ */
+function flyBy(i, pos) {
+  audio.reach()
+  if (save.visited[i]) return popups.show(pos, `👋 ${DESTS[i].emoji}`, true)
+  save.visited[i] = true
+  const news = unlocksAt(i)
+  for (const n of news) {
+    save.fresh.add(`${n.slot}:${n.id}`)
+    flight.flyby.push({ ...n, from: i })
+  }
+  persist()
+  popups.show(pos, `👋 ${DESTS[i].emoji} 🎁`, true)
+  setTimeout(() => audio.unlock1(0), 250)
+  sparks.burst(rocket.root.position, ['#fff3a0', '#ffd23f', '#ff8fc7', '#8ef0c8'], 30, 6, 0.8)
+}
+
 function bumpJunk(it) {
   it.hit = true
   const dir = Math.sign(it.obj.position.x - rocket.root.position.x) || 1
@@ -1268,8 +1290,7 @@ function updateItems(dt) {
     } else if (it.planet) {
       o.rotation.y += dt * 0.15
       if (it.hello !== undefined && o.position.y < cam.y + 1) {
-        popups.show(o.position, `👋 ${DESTS[it.hello].emoji}`, true)
-        audio.reach()
+        flyBy(it.hello, o.position)
         it.hello = undefined
       }
     }
@@ -1488,7 +1509,8 @@ function startParty() {
   const d = party.dest
   const first = !save.visited[d]
   save.visited[d] = true
-  party.news = first ? unlocksAt(d) : []
+  party.news = [...flight.flyby, ...(first ? unlocksAt(d).map((n) => ({ ...n, from: d })) : [])]
+  flight.flyby = []
   for (const n of party.news) save.fresh.add(`${n.slot}:${n.id}`)
   persist()
   audio.fanfare()
@@ -1513,11 +1535,14 @@ function showReward() {
   $('reward-stars').textContent = flight.stars ? `⭐ × ${flight.stars}` : ''
   const el = $('reward-new')
   el.innerHTML = ''
+  el.classList.toggle('many', party.news.length > 6)
   party.news.forEach((n, i) => {
     const g = document.createElement('div')
     g.className = 'gift'
     g.style.animationDelay = `${0.3 + i * 0.18}s`
     g.innerHTML = `<img src="${thumbOf(n.slot, n.id)}" alt="">`
+    // Gifts found on the way wear their planet's badge
+    if (n.from !== party.dest) g.insertAdjacentHTML('beforeend', `<span class="from">${DESTS[n.from].emoji}</span>`)
     el.append(g)
     setTimeout(() => audio.unlock1(i), 300 + i * 180)
   })

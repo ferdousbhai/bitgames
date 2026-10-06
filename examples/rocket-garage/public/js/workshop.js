@@ -188,7 +188,7 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
     $('workshop-rule').textContent = changed.length === 0
       ? 'A and B are the same. Change one part in the garage.'
       : changed.length === 1
-        ? `One change: ${changed[0]}. A fair test!`
+        ? `One change: ${SLOT_WORDS[changed[0]]}. A fair test!`
         : `${changed.length} changes. Change just one part to see what it does.`
     for (const button of predictButtons) {
       button.disabled = false
@@ -236,14 +236,20 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
     feedback('3… 2… 1…', '')
     sound('go')
     for (const slot of ['a', 'b']) {
-      const ship = dialog.querySelector(`[data-build="${slot}"] .workshop-ship`)
-      ship.style.setProperty('--at', String(result[slot].reach + 1))
+      // The rail carries how far it flies: the ship and its glowing trail both follow it
+      const rail = dialog.querySelector(`[data-build="${slot}"]`)
+      rail.style.setProperty('--at', String(result[slot].reach + 1))
+      const ship = rail.querySelector('.workshop-ship')
       ship.style.setProperty('--wobble', `${4 + result[slot].wobble * 14}deg`)
       ship.classList.add('flying')
     }
     timer = setTimeout(() => {
       for (const ship of dialog.querySelectorAll('.workshop-ship')) ship.classList.remove('flying')
-      for (const slot of ['a', 'b']) dialog.querySelector(`[data-card="${slot}"]`).classList.toggle('winner', result.answer === slot || result.answer === 'same')
+      for (const slot of ['a', 'b']) {
+        dialog.querySelector(`[data-card="${slot}"]`).classList.toggle('winner', result.answer === slot || result.answer === 'same')
+        // A flag goes up on the planet each rocket reached
+        dialog.querySelectorAll(`[data-build="${slot}"] .workshop-stop`)[result[slot].reach]?.classList.add('reached')
+      }
       const matched = prediction === result.answer
       const verdict = matched ? '✔ Your prediction matched!' : '💡 A new discovery!'
       const outcome = result.answer === 'same' ? 'They fly the same.' : `${result.answer.toUpperCase()} flies farther.`

@@ -126,6 +126,7 @@ export class Rocket {
         this.boosters.push(o)
       }
       parts.booster = this.boosters[0]
+      this.swingFins(fins)
     }
 
     // Measure (before the flames) and centre on the pivot
@@ -160,6 +161,30 @@ export class Rocket {
       const targets = changed === 'booster' ? this.boosters : [parts[changed]]
       for (const o of targets) if (o) this.pops.push({ o, t: 0, base: o.scale.x })
       this.squash = 1
+    }
+  }
+
+  /**
+   * Side boosters hang exactly where the sideways fins stick out, hiding them. With boosters
+   * fitted, swing each sideways fin (or wing, lobe, star arm, leg) round to the front corner,
+   * so the fins and the boosters both show.
+   */
+  swingFins(fins) {
+    fins.updateMatrixWorld(true)
+    const inv = new THREE.Matrix4().copy(fins.matrixWorld).invert()
+    const c = new THREE.Vector3()
+    const turn = new THREE.Quaternion()
+    const up = new THREE.Vector3(0, 1, 0)
+    for (const o of fins.children) {
+      if (!/_(fin|arm|lobe|wing|leg)_/.test(o.name)) continue
+      box.setFromObject(o).applyMatrix4(inv).getCenter(c)
+      if (Math.abs(c.x) < Math.abs(c.z) || Math.abs(c.x) < 0.3) continue
+      // From its own direction round to 40° in front of the side it is on
+      const from = Math.atan2(c.z, c.x)
+      const to = c.x > 0 ? 0.7 : Math.PI - 0.7
+      turn.setFromAxisAngle(up, from - to)
+      o.quaternion.premultiply(turn)
+      o.position.applyQuaternion(turn)
     }
   }
 

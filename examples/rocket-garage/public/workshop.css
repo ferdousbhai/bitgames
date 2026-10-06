@@ -115,6 +115,7 @@
   .workshop-head h2 { font-size: 17px; }
   .workshop-rail { font-size: 14px; }
   .workshop-ship { width: 34px; height: 34px; }
+  .workshop-rail::before { top: 13px; }
   .workshop-builds { gap: 6px; }
   .workshop-build { padding: 6px 4px; }
   #workshop .workshop-prediction button { min-width: 60px; }
@@ -123,3 +124,23 @@
   .workshop-ship { transition: none; }
   .workshop-ship.flying, #workshop button.nudge, .workshop-finger { animation: none; }
 }
+
+/* After the test flight: a glowing trail behind each ship, a flag on the planet it reached, a cup for the farther rocket */
+.workshop-rail::before {
+  content: ""; position: absolute; left: calc(100% / 12); top: 17px; height: 8px; border-radius: 4px;
+  width: calc(var(--at, 0) * 100% / 6); background: linear-gradient(90deg, #fff3a0, #ffd23f 60%, #ff9f43);
+  box-shadow: 0 0 8px #ffd23f; transition: width 1.6s cubic-bezier(.45, 0, .3, 1);
+}
+.workshop-stop { position: relative; transition: transform .3s; }
+.workshop-stop.reached { transform-origin: 50% 90%; transform: scale(1.45); animation: workshop-reach .6s cubic-bezier(.2, 1.8, .4, 1); }
+.workshop-stop.reached::after { content: "🚩"; position: absolute; right: -4px; top: -12px; font-size: 13px; }
+@keyframes workshop-reach { from { transform: scale(.6); } }
+.workshop-build.winner::after {
+  content: "🏆"; position: absolute; right: 8px; top: 6px; font-size: 30px; line-height: 1;
+  animation: workshop-reach .6s cubic-bezier(.2, 1.8, .4, 1);
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .workshop-rail::before { top: 14px; height: 7px; }
+  .workshop-build.winner::after { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .workshop-rail::before { transition: none; } }

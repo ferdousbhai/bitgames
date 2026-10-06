@@ -326,3 +326,32 @@ body.portrait .countdown { top: 80%; }
   body.portrait .swatch { width: 52px; height: 52px; }
   body.portrait .swatch::before { width: 42px; }
 }
+
+/* --- Pass 2 --- */
+/* New parts stay in one row (they shrink a little), so the card's buttons never drop off short screens */
+.reward-new { flex-wrap: nowrap; max-width: 100%; }
+.reward-new { min-width: 0; align-items: center; }
+.reward-new .gift { flex: 0 1 70px; width: auto; min-width: 0; height: auto; aspect-ratio: 1; }
+@media (max-height: 500px) { .reward-new .gift { flex-basis: 46px; } }
+body.portrait .reward-new .gift { flex-basis: 58px; width: auto; height: auto; }
+/* Lots of new parts (a fly-by and a landing in one trip): closer together, and a wider card on sideways screens */
+.reward-new.many { gap: 4px; }
+body.landscape #reward:has(.reward-new.many) { width: min(62vw, 560px); }
+/* A part found while flying past a planet wears that planet's badge */
+.reward-new .gift .from { position: absolute; left: -6px; bottom: -6px; font-size: 18px; line-height: 1; }
+@media (max-height: 500px) { .reward-new .gift .from { font-size: 15px; } }
+/* Paint dots: two tidy rows of five when one row of ten won't fit (never eight and two) */
+#tray { container-type: inline-size; }
+@container (max-width: 470px) {
+  .paints { display: grid; grid-template-columns: repeat(5, auto); justify-content: center; }
+}
+@media (max-height: 500px) { body.landscape .paints { display: flex; } }
+/* The GO button's yellow ring stays clear of the screen edge in portrait */
+body.portrait #actions { left: calc(16px + env(safe-area-inset-left)); }
+/* Sideways tablets: bigger parts in the tray, which has plenty of room */
+@media (orientation: landscape) and (min-width: 1000px) and (min-height: 700px) {
+  body.landscape .items { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+  body.landscape .tab { max-width: 58px; }
+}
+body.portrait .reward-new.many { flex-wrap: wrap; gap: 6px; }
+body.portrait .reward-new.many .gift { flex: 0 0 44px; }
