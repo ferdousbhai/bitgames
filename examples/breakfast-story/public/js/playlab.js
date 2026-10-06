@@ -403,11 +403,8 @@ function spell(c, g, a) {
   let spelled = ''
   let misses = 0
   let idle = null
-  const status = a.readout([...name].map(() => '_').join(' '))
-  const showProgress = () => {
-    status.textContent = [...name].map((l, i) => (i < spelled.length ? l : '_')).join(' ')
-  }
-  const receiver = a.actor(spellReceivers[g.id] || 'basket', 1.4, 0, -2.15)
+  // A word can name its own toy, e.g. the clay dog who waits to hear its name spelled.
+  const receiver = a.actor(c.friend || spellReceivers[g.id] || 'basket', 1.4, 0, -2.15)
   const picture = a.tile({ symbol: c.picture, x: 0, z: -0.5, size: 1.6, depth: 1.4, visual: true })
   const spaces = Array.from({ length: word.length }, (_, i) => a.tile({
     x: (i - (word.length - 1) / 2) * 1.2, z: 0.9, size: 1, depth: 1, label: '_', visual: true, colour: '#f7e5c1',
@@ -452,13 +449,14 @@ function spell(c, g, a) {
       spaces[spelled.length].label(letter.toLowerCase())
       spaces[spelled.length].hop()
       spelled += letter
-      showProgress()
       if (spelled === word) {
         clearTimeout(idle)
         picture.hop()
         // The rocket lifts off; other receivers hop.
         a.animate(1.4, (t) => {
           receiver.position.y = 0.2 + (g.id === 'word-rocket' ? t * 2 : Math.sin(t * Math.PI) * 0.4)
+          // A word friend spins round once, happy to hear its name.
+          if (c.friend) receiver.rotation.y = t * Math.PI * 2
         }, receiver)
         a.success(`${[...name].join(' – ')} spells ${name}!`, [...word].map((l) => l + '.').concat(`That spells ${name}!`))
         return
@@ -478,7 +476,6 @@ function spell(c, g, a) {
     if (!spelled || spelled === word) return
     spelled = spelled.slice(0, -1)
     spaces[spelled.length].label('_')
-    showProgress()
     glow(false)
     misses = 0
     wait()

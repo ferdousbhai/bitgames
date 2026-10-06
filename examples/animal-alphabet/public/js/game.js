@@ -14,27 +14,33 @@ export default {
   "words": [
     [
       "FOX",
-      "🦊"
+      "🦊",
+      "fox"
     ],
     [
       "CAT",
-      "🐱"
+      "🐱",
+      "cat"
     ],
     [
       "PIG",
-      "🐷"
+      "🐷",
+      "pig"
     ],
     [
       "HEN",
-      "🐔"
+      "🐔",
+      "hen"
     ],
     [
       "BAT",
-      "🦇"
+      "🦇",
+      "bat"
     ],
     [
       "DOG",
-      "🐶"
+      "🐶",
+      "dog"
     ]
   ],
   "sky": "#dcebd6",

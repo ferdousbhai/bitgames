@@ -147,7 +147,10 @@ def export_selected(path):
 ANIMAL_COLOURS = {
     'rabbit': WHITE, 'fox': ORANGE, 'bear': '#c79872', 'frog': GREEN, 'penguin': DARK,
     'duck': GOLD, 'bird': BLUE, 'dino': '#9ac1aa', 'robot': BLUE,
+    # Animal Alphabet's word friends.
+    'cat': '#bdb6cf', 'dog': '#d0a77c', 'pig': '#f6b9c6', 'hen': WHITE, 'bat': '#857aa3',
 }
+RED = '#e5604f'
 FRUIT_COLOURS = {'apple': '#ee887e', 'pear': '#bbd587', 'strawberry': '#e9829b', 'acorn': '#bc916c', 'egg': WHITE}
 
 
@@ -162,7 +165,9 @@ def build_animal(name):
         sphere((0, 0, .35), (.36, .3, .4), colour)
         sphere((0, -.03, .8), (.37, .32, .31), colour)
     for x in [-.19, .19]:
-        sphere((x, -.14, .1), (.13, .19, .1), colour)
+        sphere((x, -.14, .1), (.13, .19, .1), GOLD if name == 'hen' else colour)
+    if name in ['cat', 'dog', 'pig', 'hen', 'bat']:
+        build_word_friend(name, colour)
     if name == 'rabbit':
         for x in [-.17, .17]:
             sphere((x, 0, 1.24), (.105, .09, .36), WHITE)
@@ -187,6 +192,49 @@ def build_animal(name):
         for z in [.45, .65, .85]:
             cone((0, .23, z), .09, .15, GOLD)
     eyes(.85, -.34, .14)
+
+
+def build_word_friend(name, colour):
+    """Features that turn the clay body into a cat, dog, pig, hen or bat."""
+    if name == 'cat':
+        for side in [-1, 1]:
+            cone((side * .22, 0, 1.12), .13, .3, colour)
+            cone((side * .22, -.06, 1.1), .07, .18, PINK)
+            for z in [.66, .72]:
+                sphere((side * .3, -.3, z), (.13, .008, .008), DARK).rotation_euler[1] = side * (z - .69) * 4
+        sphere((0, -.3, .67), (.15, .08, .085), WHITE)
+        tail = cone((.24, .3, .55), .07, .62, colour, .045)
+        tail.rotation_euler[1] = -.35
+    if name == 'dog':
+        for side in [-1, 1]:
+            ear = sphere((side * .35, -.02, .86), (.1, .13, .25), '#8d6648')
+            ear.rotation_euler[1] = side * -.25
+        sphere((0, -.3, .68), (.19, .12, .12), WHITE)
+        sphere((0, -.42, .73), (.065, .04, .05), DARK)
+        sphere((.2, -.12, .42), (.12, .2, .14), '#8d6648')
+        cone((0, .36, .5), .06, .32, colour, .03).rotation_euler[0] = -.6
+    if name == 'pig':
+        for side in [-1, 1]:
+            cone((side * .21, -.02, 1.09), .11, .2, colour).rotation_euler[0] = .45
+            sphere((side * .045, -.43, .71), (.025, .012, .035), '#b86a7c')
+        cone((0, -.36, .71), .13, .12, '#ef9eb0', .13).rotation_euler[0] = QUARTER_TURN
+        torus((0, .33, .42), .07, .025, colour).rotation_euler[0] = QUARTER_TURN
+    if name == 'hen':
+        for y, z in [(-.08, 1.11), (.03, 1.15), (.14, 1.1)]:
+            sphere((0, y, z), (.05, .07, .09), RED)
+        cone((0, -.37, .76), .07, .16, GOLD).rotation_euler[0] = QUARTER_TURN
+        sphere((0, -.33, .6), (.045, .03, .07), RED)
+        for side in [-1, 1]:
+            sphere((side * .36, .03, .42), (.09, .24, .17), '#f1e2c2')
+        sphere((0, .34, .62), (.16, .1, .22), WHITE).rotation_euler[0] = -.4
+    if name == 'bat':
+        for side in [-1, 1]:
+            cone((side * .2, 0, 1.14), .12, .32, colour)
+            for x, z, size in [(.5, .62, .3), (.72, .5, .2)]:
+                wing = sphere((side * x, .05, z), (size, .05, size * .75), '#5e5180')
+                wing.rotation_euler[1] = side * -.35
+            cone((side * .06, -.33, .6), .02, .06, WHITE).rotation_euler[0] = math.pi
+        sphere((0, -.24, .36), (.22, .07, .26), '#b0a4cb')
 
 
 def build_critter(name):
@@ -697,7 +745,7 @@ TOYS = [
     'bird', 'dino', 'robot', 'bee', 'firefly', 'butterfly', 'fish', 'turtle', 'snail', 'tree', 'flower',
     'mushroom', 'apple', 'pear', 'strawberry', 'acorn', 'egg', 'carrot', 'leaf', 'stone', 'gem', 'star',
     'planet', 'rocket', 'house', 'castle', 'train', 'boat', 'shell', 'coral', 'bottle', 'basket', 'parcel',
-    'book', 'bread', 'drum', 'gear', 'kite', 'cloud',
+    'book', 'bread', 'drum', 'gear', 'kite', 'cloud', 'cat', 'dog', 'pig', 'hen', 'bat',
 ]
 
 # Build the whole library once, hidden. Each game exports only the toys it uses,
@@ -722,7 +770,7 @@ GAME_TOYS = {
     'bead-bridge': ['snail'], 'sleepy-owl-lullaby': ['owl'], 'picnic-pairs': ['apple', 'pear', 'strawberry'],
     'frog-choir': ['frog'], 'butterfly-patterns': ['leaf'], 'firefly-lanterns': ['lantern'],
     'giraffe-ruler': ['giraffe'], 'bridge-builder': ['boat'], 'garden-fence': ['flower'],
-    'word-rocket': ['rocket'], 'animal-alphabet': ['fox'], 'picnic-word-basket': ['basket'],
+    'word-rocket': ['rocket'], 'animal-alphabet': ['fox', 'cat', 'dog', 'pig', 'hen', 'bat'], 'picnic-word-basket': ['basket'],
     'rhyming-river': ['frog', 'leaf'],
     # Clock games: the character who keeps the time.
     'cuckoo-clock-garden': ['bird'], 'space-station-schedule': ['rocket'], 'bunny-bedtime': ['rabbit'],

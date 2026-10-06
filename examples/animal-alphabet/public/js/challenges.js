@@ -394,10 +394,12 @@ export function challenge(g, level, round, seed) {
 
     case 'spell': {
       // Each adventure starts at a different word, then walks the list without repeats.
-      const [word, picture] = g.words[(round + level + Math.abs(Math.floor(seed))) % g.words.length]
-      const extraLetters = shuffle('AEIOURSTLM'.split(''), rng).slice(0, level)
+      const [word, picture, friend] = g.words[(round + level + Math.abs(Math.floor(seed))) % g.words.length]
+      // Extra letters are never in the word, so each difficulty always adds `level` new tiles.
+      const extraLetters = shuffle('AEIOURSTLM'.split('').filter((l) => !word.includes(l)), rng).slice(0, level)
       c.word = word
       c.picture = picture
+      if (friend) c.friend = friend
       c.tiles = shuffle([...new Set([...word, ...extraLetters])], rng)
       c.prompt = `Spell ${word.toLowerCase()}.`
       break
