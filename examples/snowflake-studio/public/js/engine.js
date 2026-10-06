@@ -528,7 +528,10 @@ function resize() {
   renderer.setSize(w, h, false)
   const aspect = w / h
   const tracing = state.screen === 'play' && state.challenge?.mode === 'trace'
-  const halfWidth = Math.max(tracing ? 3.9 : 5, 3.6 * aspect)
+  // Spelling's letters and blanks span about 7 units too, so upright screens frame them the
+  // same way: bigger letter tiles for small fingers, with only the board's rim cropped.
+  const spelling = state.screen === 'play' && state.challenge?.mode === 'spell' && aspect < 1
+  const halfWidth = Math.max(tracing || spelling ? 3.9 : 5, 3.6 * aspect)
   const halfHeight = halfWidth / aspect
   camera.left = -halfWidth
   camera.right = halfWidth
@@ -642,8 +645,13 @@ function finish() {
     : traced.length
       ? ['A wonderful adventure!', 'You traced', ...traced.slice(0, -1).map((l) => l.toUpperCase()), 'and', traced.at(-1).toUpperCase()]
       : 'A wonderful adventure! Every try helped you learn.')
-  const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true })
-  if (game.carrier && spelled.some((c) => c.friend)) launch(hero.figure, spelled.map((c) => c.friend).filter(Boolean))
+  // A carrier (Word Rocket's rocket) stands tall on the board itself, towering over its crew.
+  const carrier = game.carrier && spelled.some((c) => c.friend)
+  const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true, scale: carrier ? 1.7 : 1 })
+  if (carrier) {
+    hero.base.visible = false
+    launch(hero.figure, spelled.map((c) => c.friend).filter(Boolean))
+  }
   burst()
 }
 

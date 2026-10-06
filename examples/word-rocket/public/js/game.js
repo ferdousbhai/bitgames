@@ -43,17 +43,17 @@ export default {
       "hat"
     ]
   ],
+  "scenery": [
+    "planet",
+    "rocket",
+    "star",
+    "star"
+  ],
   "hero": "rocket",
   "carrier": "rocket",
   "sky": "#282955",
   "ground": "#7c7bbb",
   "accent": "#ffd179",
-  "scenery": [
-    "planet",
-    "rocket",
-    "gem",
-    "star"
-  ],
   "seed": 9254,
   "instructions": "Look at the picture and listen to the word. Tap its letters in order.",
   "activityNumber": 18
