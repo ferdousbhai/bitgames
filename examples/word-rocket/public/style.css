@@ -227,6 +227,7 @@ canvas { touch-action: none; }
   pointer-events: none;
   transform: translate(calc(var(--side-x, 0) * (20px + .6em)), calc(var(--side-y, 0) * (20px + .6em)));
 }
+.world-action.tried .label { opacity: .5; }
 .world-action.current { outline: 4px solid var(--accent); border-radius: 50%; box-shadow: 0 0 24px var(--accent) !important; }
 
 /* Controls and feedback below the stage */

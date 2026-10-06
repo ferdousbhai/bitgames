@@ -586,6 +586,9 @@ function rhyme(c, g, a) {
       if (word !== c.target) {
         misses++
         a.audio.note(262, 0.13)
+        // A tried lily pad fades, so the pads still to try stand out.
+        t.button.classList.add('tried')
+        t.base.material.color.set('#c3c9b6')
         if (misses < 2) {
           a.feedback(`${first} – ${word}: they don’t rhyme. Try another lily pad.`, false,
             [`${word}.`, `${first}, ${word}.`, 'They don’t sound the same at the end.', 'Try another lily pad.'])
@@ -595,13 +598,14 @@ function rhyme(c, g, a) {
       }
       clearTimeout(idle)
       glow(false)
-      // The frog hops onto the lily pad beside its picture, and both pictures bounce.
+      // The frog hops onto the lily pad's front-right edge, in front of the picture where it stays
+      // in sight, and both pictures bounce.
       const from = frog.position.clone()
-      const to = new THREE.Vector3(t.x + 0.55, 0.2, t.z - 0.3)
+      const to = new THREE.Vector3(t.x + 0.62, 0.2, t.z + 0.12)
       a.animate(0.8, (p) => {
         frog.position.lerpVectors(from, to, p)
         frog.position.y += Math.sin(p * Math.PI) * 1.1
-        frog.scale.setScalar(1 - 0.3 * p)
+        frog.scale.setScalar(1 - 0.15 * p)
       }, frog)
       a.later(() => {
         t.hop()

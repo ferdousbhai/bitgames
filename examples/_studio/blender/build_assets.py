@@ -465,9 +465,15 @@ def build_shapes(name):
             torus((x, 0, .08), .15, .025, GOLD).scale.y = .75
         cube((0, 0, .08), (.1, .03, .04), GOLD, .015)
     elif name == 'hat':
+        # A straw sun hat with a pink band, leaning back so the play camera sees its crown rise
+        # above the brim (from straight above it read as a bun on a plate).
+        hat_start = set(bpy.context.scene.objects)
         cone((0, 0, .1), .48, .05, '#e8c391', .48)
-        cone((0, 0, .28), .27, .33, '#e8c391', .23)
-        torus((0, 0, .15), .273, .035, PINK)
+        cone((0, 0, .29), .27, .35, '#ddb47c', .22)
+        torus((0, 0, .16), .273, .04, PINK)
+        for part in objects_since(hat_start):
+            part.matrix_world = Matrix.Rotation(-.5, 4, 'X') @ part.matrix_world
+        bake(objects_since(hat_start))
     elif name == 'bed':
         # Seen from the side, like the bed emoji: tall headboard and pillow on the left,
         # blanket over the rest and a low footboard, so it never reads as a chair.
@@ -830,12 +836,19 @@ def build_shapes(name):
             part.matrix_world = Matrix.Translation((0, 0, .31 * math.sin(.9) + .02)) @ tilt @ part.matrix_world
         bake(objects_since(map_start))
     elif name == 'lamp':
-        # A bedside lamp: a round base, a slim stand, a wide shade and a warm bulb peeking below it.
+        # A bedside lamp: a round base, a tall slim stand, a flared shade with white rims and a warm
+        # bulb peeking below it, leaning back a little so the play camera sees the stand and the
+        # shade's sloping side (from straight above it would read as a dome).
+        lamp_start = set(bpy.context.scene.objects)
         cone((0, 0, .05), .3, .1, '#8bbddf', .26)
-        cone((0, 0, .38), .04, .6, '#c9b08f', .04)
-        sphere((0, 0, .66), (.12, .12, .12), '#fff1b0')
-        cone((0, 0, .86), .4, .45, GOLD, .22)
-        torus((0, 0, .64), .4, .025, WHITE)
+        cone((0, 0, .45), .04, .8, '#c9b08f', .04)
+        sphere((0, 0, .8), (.1, .1, .1), '#fff1b0')
+        cone((0, 0, .98), .38, .42, GOLD, .2)
+        torus((0, 0, .77), .38, .025, WHITE)
+        torus((0, 0, 1.19), .2, .02, WHITE)
+        for part in objects_since(lamp_start):
+            part.matrix_world = Matrix.Rotation(-.4, 4, 'X') @ part.matrix_world
+        bake(objects_since(lamp_start))
     elif name == 'sailboat':
         # Rhyming River's boat, side on like the emoji: a hull with a pointed bow, a mast and two sails.
         cube((-.05, 0, .2), (.75, .34, .22), ORANGE, .1)

@@ -105,7 +105,7 @@ G('picnic-word-basket','Picnic Word Basket','🧺',[5,8],'orchard','spell','Food
   scenery:['tree','apple','pear','strawberry'],hero:'basket',carrier:'basket',
   // Said and shown on the win card as the foods hop onto the blanket (no lone "a", which spelling games print as a letter).
   cheer:'Picnic time!'}),
-G('rhyming-river','Rhyming River','📖',[5,8],'pond','rhyme','Rhyming word families','Hop between lily pads with words that rhyme.',{hero:'frog',
+G('rhyming-river','Rhyming River','🐸',[5,8],'pond','rhyme','Rhyming word families','Hop between lily pads with words that rhyme.',{hero:'frog',
   // Each set: a word, the word that rhymes with it, then words that don't. Little steps offers the
   // rhyme and one other word, Growing two others, and Explorer adds a word that only BEGINS the same
   // (cat, cup), so a child learns that a rhyme is about the ending. Every word is shown as a clay picture.

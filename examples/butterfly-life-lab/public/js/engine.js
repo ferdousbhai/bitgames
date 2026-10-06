@@ -543,7 +543,7 @@ function resize() {
   camera.top = halfHeight
   camera.bottom = -halfHeight
   // The menu and win cards cover part of the stage, so their hero is framed in the clear space.
-  if (state.screen === 'win') frameBesideCard($('win'), game.carrier ? 2.7 : 2, [8, 4.5, 1.8], w, h, halfWidth, halfHeight)
+  if (state.screen === 'win') frameBesideCard($('win'), game.mode === 'rhyme' ? 2.85 : game.carrier ? 2.7 : 2, [8, 4.5, 1.8], w, h, halfWidth, halfHeight)
   if (state.screen === 'menu') frameBesideCard($('menu'), 2, [5, 3.4, 2.2], w, h, halfWidth, halfHeight)
   camera.updateProjectionMatrix()
   // Letters and numbers on the pieces scale with them, so short wide windows don't crowd the board.
@@ -674,6 +674,7 @@ function finish() {
     if (game.carrier === 'rocket') launch(hero.figure, crew)
     else picnic(hero.figure, crew)
   }
+  if (rhymed.length) rhymePads(rhymed)
   burst()
 }
 
@@ -748,6 +749,33 @@ function picnic(basket, foods) {
   later(() => animate(0.9, (p) => {
     basket.position.y = ground + Math.abs(Math.sin(p * Math.PI * 2)) * 0.4
   }, basket), 700 + foods.length * step + 300)
+}
+
+// A rhyming adventure's win card: the five rhymes pop up in front of the hero one at a time,
+// each pair of pictures sharing a lily pad, in the order the voice reads them.
+function rhymePads(rhymes) {
+  const picture = (word) => game.pictures?.[word.toUpperCase()] || word
+  rhymes.forEach((c, i) => {
+    const pad = new THREE.Group()
+    const leaf = mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.06, 32), '#9cc987')
+    leaf.position.y = 0.03
+    pad.add(leaf)
+    ;[c.word, c.target].forEach((word, side) => {
+      const toy = model(picture(word), 0.58)
+      toy.position.x += (side - 0.5) * 0.6
+      toy.position.y += 0.06
+      pad.add(toy)
+    })
+    place(pad, (i - (rhymes.length - 1) / 2) * 1.5, 0.02, 3.35)
+    pad.scale.setScalar(0.001)
+    later(() => {
+      audio.note(523 + i * 70, 0.16)
+      animate(0.45, (p) => {
+        pad.scale.setScalar(Math.max(0.001, p))
+        pad.position.y = 0.02 + Math.sin(p * Math.PI) * 0.5
+      }, pad)
+    }, 900 + i * 450)
+  })
 }
 
 function burst() {

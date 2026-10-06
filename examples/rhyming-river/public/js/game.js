@@ -2,7 +2,7 @@
 export default {
   "id": "rhyming-river",
   "title": "Rhyming River",
-  "emoji": "📖",
+  "emoji": "🐸",
   "ages": [
     5,
     8

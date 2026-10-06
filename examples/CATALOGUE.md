@@ -75,7 +75,7 @@ The original 12 games plus 88 learning adventures. New games are playable locall
 | [🧵 Rainbow Quilt](./rainbow-quilt/public/index.html) | 5–8 | Fractions of a collection |
 | [🥤 Rainbow Smoothies](./rainbow-smoothies/public/index.html) | 3–6 | Colour mixing |
 | [♻️ Recycling Robots](./recycling-robots/public/index.html) | 4–8 | Materials and recycling |
-| [📖 Rhyming River](./rhyming-river/public/index.html) | 5–8 | Rhyming word families |
+| [🐸 Rhyming River](./rhyming-river/public/index.html) | 5–8 | Rhyming word families |
 | [🎀 Ribbon Tailor](./ribbon-tailor/public/index.html) | 3–6 | Length comparison |
 | [🤖 Robot Dance Code](./robot-dance-code/public/index.html) | 4–8 | Following ordered instructions |
 | [🤖 Robot Reflections](./robot-reflections/public/index.html) | 5–8 | Spatial reasoning |
