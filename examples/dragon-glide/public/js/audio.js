@@ -145,7 +145,7 @@ export class Sound {
   wind(level) {
     if (!this.ctx) return
     const t = this.ctx.currentTime
-    this.windGain.gain.setTargetAtTime(0.025 + level * 0.05, t, 0.3)
+    this.windGain.gain.setTargetAtTime(0.015 + level * 0.03, t, 0.3)
     this.windFilter.frequency.setTargetAtTime(380 + level * 700, t, 0.3)
   }
 
@@ -157,8 +157,8 @@ export class Sound {
 
   gem(combo, big) {
     const step = PENTA[Math.min(combo, PENTA.length - 1)]
-    this.note(hz(step), { len: 0.25, type: 'triangle', gain: 0.13, echo: true })
-    this.note(hz(step + 12), { at: 0.03, len: 0.18, gain: 0.05 })
+    this.note(hz(step), { len: 0.25, type: 'triangle', gain: 0.2, echo: true })
+    this.note(hz(step + 12), { at: 0.03, len: 0.18, gain: 0.07 })
     if (big) [7, 12, 16].forEach((s, i) => this.note(hz(step + s), { at: 0.06 + i * 0.05, len: 0.3, type: 'triangle', gain: 0.08, echo: true }))
   }
 
@@ -173,9 +173,9 @@ export class Sound {
   }
 
   fire() {
-    this.hiss({ len: 0.35, freq: 900, q: 0.6, gain: 0.16, type: 'lowpass', sweep: 0.35 })
-    this.note(330, { len: 0.25, type: 'sawtooth', gain: 0.025, slide: 0.5 })
-    for (let i = 0; i < 4; i++) this.note(hz(24 + PENTA[i * 2]), { at: 0.05 + i * 0.04, len: 0.08, gain: 0.03 })
+    this.hiss({ len: 0.35, freq: 900, q: 0.6, gain: 0.26, type: 'lowpass', sweep: 0.35 })
+    this.note(330, { len: 0.25, type: 'sawtooth', gain: 0.04, slide: 0.5 })
+    for (let i = 0; i < 4; i++) this.note(hz(24 + PENTA[i * 2]), { at: 0.05 + i * 0.04, len: 0.08, gain: 0.05 })
   }
 
   pop() {
@@ -222,15 +222,21 @@ export class Sound {
 
   /** A happy family of dragons going "rawr!" */
   rawr(pitch = 1) {
-    this.note(180 * pitch, { len: 0.35, type: 'sawtooth', gain: 0.04, slide: 1.6 })
-    this.note(360 * pitch, { len: 0.35, type: 'triangle', gain: 0.08, slide: 1.4 })
-    this.hiss({ len: 0.3, freq: 700 * pitch, q: 2, gain: 0.05, sweep: 1.5 })
+    this.note(180 * pitch, { len: 0.35, type: 'sawtooth', gain: 0.07, slide: 1.6 })
+    this.note(360 * pitch, { len: 0.35, type: 'triangle', gain: 0.16, slide: 1.4 })
+    this.hiss({ len: 0.3, freq: 700 * pitch, q: 2, gain: 0.08, sweep: 1.5 })
   }
 
   finish() {
     const tune = [0, 4, 7, 12, 7, 12, 16, 19, 24]
     tune.forEach((s, i) => this.note(hz(s, 392), { at: i * 0.11, len: 0.3, type: 'triangle', gain: 0.13, echo: true }))
     ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 0.9, len: 1.4, type: 'sine', gain: 0.1 }))
+  }
+
+  /** Four rising chimes, one per ring counted, then a sparkle. */
+  counted() {
+    ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 523.25), { at: 0.35 + i * 0.16, len: 0.35, type: 'triangle', gain: 0.12, echo: true }))
+    ;[16, 19, 24].forEach((s, i) => this.note(hz(s, 523.25), { at: 1.05 + i * 0.05, len: 0.5, type: 'sine', gain: 0.07, echo: true }))
   }
 
   click() {

@@ -155,3 +155,77 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 }
 
 body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38%; }
+
+/* --- Counting mission ------------------------------------------------------------ */
+/* The choice on the title: a chunky toy button that says itself out loud when tapped */
+#title .adventure-choice {
+  margin: 0; min-height: 52px; padding: 6px 22px; border-radius: 999px; border: 3px solid #fff; white-space: nowrap;
+  font: 900 20px/1.1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
+  background: linear-gradient(#ffffff, #d9efff); color: #2c5fa8; box-shadow: 0 5px 0 rgba(40, 70, 140, 0.35);
+}
+#title .adventure-choice:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(40, 70, 140, 0.35); }
+/* The goal: four rings that fill in as Ember flies through them, bottom left, clear of 🔥 */
+#hud .adventure-goal {
+  left: calc(12px + env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom)); transform: none; max-width: none;
+  display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 10px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28); border: 3px solid rgba(255, 255, 255, 0.85); color: #fff;
+  font: 900 22px/1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+#hud .adventure-goal[hidden] { display: none; }
+#hud .adventure-goal.done { background: linear-gradient(#fff3a0, #ffcf1a); color: #6b3d00; text-shadow: none; }
+.goal-rings { display: inline-flex; gap: 5px; }
+.goal-rings i { width: 26px; height: 26px; border-radius: 50%; border: 5px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; }
+.goal-rings i.got { border-color: #fff; background: radial-gradient(circle, transparent 42%, rgba(255, 207, 26, 0.9) 45%); box-shadow: 0 0 8px #fff3a0; }
+.goal-rings i.new { animation: pop .45s cubic-bezier(.2, 1.8, .4, 1); }
+.done .goal-rings i.got { border-color: #ff9f1c; background: none; box-shadow: none; }
+/* the hints go up a little so they never sit on the rings */
+body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
+/* the counting party: big and golden */
+.banner.mission { text-shadow: 0 5px 0 #ff9f1c, 0 10px 26px rgba(0,0,0,0.3); letter-spacing: 4px; }
+/* one message at a time up top */
+#hud.bannering .combo { opacity: 0; }
+
+@media (max-width: 520px) {
+  .big-go { white-space: nowrap; }
+  #results .big-go { font-size: 28px; padding: 12px 28px; }
+  #hud .adventure-goal { font-size: 18px; gap: 6px; padding: 4px 12px 4px 8px; }
+  .goal-rings { gap: 4px; }
+  .goal-rings i { width: 22px; height: 22px; border-width: 4px; }
+  body.mission .tip { bottom: calc(118px + env(safe-area-inset-bottom)); }
+}
+/* Upright phones: the place name waits below the sound buttons and above Ember */
+@media (max-width: 520px) and (orientation: portrait) {
+  .banner { top: max(24%, calc(196px + env(safe-area-inset-top))); font-size: clamp(30px, 10vw, 44px); }
+}
+/* Big screens: a bigger mission chip */
+@media (min-width: 760px) and (min-height: 640px) {
+  #hud .adventure-goal { font-size: 28px; padding: 8px 18px 8px 12px; gap: 10px; }
+  .goal-rings i { width: 34px; height: 34px; border-width: 6px; }
+  #title .adventure-choice { font-size: 24px; min-height: 60px; }
+  .worlds { gap: 14px; }
+  .worlds button { width: 78px; height: 78px; font-size: 42px; }
+}
+@media (max-width: 360px) { .sub { font-size: 17px; } }
+
+/* Phones held sideways: the worlds stand in a column at the side and the title buttons sit in
+   one row, so Ember shows in the middle and Let's fly never falls off the bottom */
+@media (max-height: 480px) and (orientation: landscape) {
+  #title .worlds { position: fixed; left: calc(14px + env(safe-area-inset-left)); top: 50%; translate: 0 -50%; flex-direction: column; gap: 8px; }
+  #title .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px 14px; }
+  #title .best { display: none; }
+  #title .adventure-choice { font-size: 17px; min-height: 48px; padding: 4px 16px; }
+  .banner { top: calc(54px + env(safe-area-inset-top)); font-size: clamp(30px, 7vw, 48px); }
+  .banner small { margin-top: 2px; }
+  #hud .adventure-goal { bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 17px; padding: 3px 10px 3px 6px; gap: 5px; border-width: 2px; }
+  .goal-rings { gap: 3px; }
+  .goal-rings i { width: 20px; height: 20px; border-width: 4px; }
+  body.mission .tip { bottom: calc(58px + env(safe-area-inset-bottom)); }
+}
+@media (max-height: 340px) and (orientation: landscape) {
+  #title .sub { display: none; }
+  #title .worlds button { width: 44px; height: 44px; font-size: 24px; }
+  #title .worlds { gap: 6px; }
+  #title .big-go { font-size: 24px; padding: 8px 30px; }
+  .banner small { display: none; }
+  .banner.mission small { display: block; }
+}

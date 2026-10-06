@@ -112,19 +112,54 @@ const game = {
 }
 if (new URLSearchParams(location.search).has('debug')) window.game = game
 
-// Optional learning missions: a slower flight, or counting rings.
+// Optional learning missions: a slower flight, or counting rings (four in every world).
 const adventure = createAdventure({
   id: 'dragon-glide',
   anchor: $('play'),
   hud: $('hud'),
   isMuted: () => sound.muted,
-  celebrate: (text) => banner('⭐ Discovery!', text),
+  // The reward is spoken; the screen shows the four rings and a party, no reading needed
+  celebrate: () => {
+    banner('⭕⭕⭕⭕', '🎉 1, 2, 3, 4! 🎉', 2800, 'mission')
+    sound.counted()
+    dragon.twirl()
+    for (let i = 0; i < 3; i++) sparks.burst(tmp.set(pos.x + (i - 1) * 1.6, pos.y + 1.2, pos.z - 2), RAINBOW, 22, 7, 0.8, { vz: -game.speed * 0.5 })
+  },
+  // Rings to fill in as you count, so a child who can't read can follow along
+  renderProgress: (el, option, count) => {
+    if (!option.goal) return
+    const row = document.createElement('span')
+    row.className = 'goal-rings'
+    row.setAttribute('aria-hidden', 'true')
+    for (let i = 0; i < option.target; i++) {
+      const r = document.createElement('i')
+      if (i < count) r.className = i === count - 1 ? 'got new' : 'got'
+      row.append(r)
+    }
+    const n = document.createElement('b')
+    n.textContent = count >= option.target ? '⭐' : `${count} / ${option.target}`
+    el.replaceChildren(row, n)
+    el.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
+    el.classList.toggle('done', count >= option.target)
+  },
   options: [
     { emoji: '🐉', label: 'Free flight' },
-    { emoji: '🐢', label: 'Gentle discovery flight', pace: 0.6 },
-    { emoji: '⭕', label: 'Count four rings', pace: 0.65, goal: 'Fly through 4 rings', target: 4, reward: 'Four rings along your discovery route!' },
+    { emoji: '🐢', label: 'Gentle flight', pace: 0.6 },
+    { emoji: '⭕', label: 'Count 4 rings', pace: 0.75, goal: 'Fly through 4 rings', target: 4, reward: 'One, two, three, four! Four rings!' },
   ],
 })
+document.body.classList.toggle('mission', !!adventure.option.goal)
+$('adventure-choice').addEventListener('click', () => document.body.classList.toggle('mission', !!adventure.option.goal))
+
+/** Says the counting goal as each world starts, for children who can't read it yet. */
+function sayGoal() {
+  if (game.state !== 'play' || !adventure.option.goal || sound.muted || !('speechSynthesis' in window)) return
+  const u = new SpeechSynthesisUtterance("Let's count four rings!")
+  u.lang = 'en-US'
+  u.rate = 0.85
+  speechSynthesis.cancel()
+  speechSynthesis.speak(u)
+}
 
 let templates, dragon, world, course, sparks, dots, rings, popups
 const pos = new THREE.Vector3(0, 4, 0) // Ember
@@ -234,6 +269,7 @@ function start(from = 0) {
   banner(`${w.emoji} ${w.name}`, 'Fly to the nest! 🪺')
   sound.play(w.music)
   tip('👆 Drag to fly!', 3.5)
+  setTimeout(sayGoal, 900)
 }
 
 function finishTrip() {
@@ -258,8 +294,13 @@ function finishTrip() {
 // --- HUD ----------------------------------------------------------------------------
 
 let bannerTimer
-function banner(text, small, ms = 2400) {
+let bannerHold = 0 // the counting party isn't cut short by a smaller message
+function banner(text, small, ms = 2400, kind = '') {
+  const now = performance.now()
+  if (!kind && now < bannerHold && game.state === 'play') return
+  bannerHold = kind === 'mission' ? now + ms : 0
   const el = $('banner')
+  el.className = `banner ${kind}`
   el.textContent = text
   if (small) {
     const s = document.createElement('small')
@@ -267,8 +308,12 @@ function banner(text, small, ms = 2400) {
     el.append(s)
   }
   el.classList.add('show')
+  $('hud').classList.add('bannering')
   clearTimeout(bannerTimer)
-  bannerTimer = setTimeout(() => el.classList.remove('show'), ms)
+  bannerTimer = setTimeout(() => {
+    el.classList.remove('show')
+    $('hud').classList.remove('bannering')
+  }, ms)
 }
 
 let tipTimer
@@ -288,13 +333,17 @@ function bumpScore() {
   $('score-num').textContent = game.score
 }
 
+let comboTimer
 function updateCombo() {
   const el = $('combo')
+  clearTimeout(comboTimer)
   if (game.hoops >= 2) {
     el.textContent = `💫 ${game.hoops} rings in a row!`
     el.classList.remove('show')
     void el.offsetWidth
     el.classList.add('show')
+    // it goes again after a moment instead of hanging over the sky until the next miss
+    comboTimer = setTimeout(() => el.classList.remove('show'), 2400)
   } else el.classList.remove('show')
 }
 
@@ -375,6 +424,7 @@ addEventListener('pointermove', (e) => {
   if (game.state !== 'play') return
   if (e.pointerType === 'mouse') {
     mouseAim = [e.clientX, e.clientY]
+    game.steered = 1
     return
   }
   if (e.pointerId !== touch.id) return
@@ -410,7 +460,10 @@ addEventListener('keydown', (e) => {
     if (game.state === 'results') return start(0)
     return fire()
   }
-  if (e.code.startsWith('Arrow')) e.preventDefault()
+  if (e.code.startsWith('Arrow')) {
+    e.preventDefault()
+    game.steered = 1
+  }
   keys.add(e.code)
 })
 addEventListener('keyup', (e) => keys.delete(e.code))
@@ -570,7 +623,9 @@ function leaveNest() {
   game.speed = 2
   const w = WORLDS[game.world]
   world.addNest(game.world)
+  adventure.begin()
   banner(`${w.emoji} ${w.name}`, 'Off we go! 🐉')
+  setTimeout(sayGoal, 900)
   sound.play(w.music)
   target.set(0, 4.5)
 }
@@ -650,6 +705,8 @@ function updatePlay(dt) {
     showPower()
   }
   if (game.tipT > 6 && game.tipT - dt <= 6 && !game.fired) tip('👆 Tap or 🔥 to puff fire!', 4)
+  // a child who hasn't found out how to steer yet gets the hint again
+  if (!game.steered && game.tipT > 12 && (game.tipT - 12) % 14 < dt) tip('👆 Drag to fly!', 3.5)
 
   // Speed: each world a little quicker; the rainbow star makes it zoom
   const w = WORLDS[game.world]
