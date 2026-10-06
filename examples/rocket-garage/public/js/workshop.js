@@ -112,6 +112,7 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
   const garageButton = $('workshop-garage')
   const finger = dialog.querySelector('.workshop-finger')
   const predictButtons = [...dialog.querySelectorAll('[data-predict]')]
+  const predictionRow = dialog.querySelector('.workshop-prediction')
   let said = ''
   const feedback = (text, voice = text) => {
     $('workshop-feedback').textContent = text
@@ -139,6 +140,13 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
   /** The pointing hand shows the next thing to tap. */
   function point(target) {
     for (const b of dialog.querySelectorAll('.nudge')) b.classList.remove('nudge')
+    predictionRow.classList.remove('choose')
+    // Asking for a guess: all three answers glow in turn, so the hand never hints at one of them
+    // (or covers the question under them)
+    if (target === predictionRow) {
+      predictionRow.classList.add('choose')
+      return finger.classList.remove('show')
+    }
     if (!target) return finger.classList.remove('show')
     target.classList.add('nudge')
     requestAnimationFrame(() => {
@@ -201,7 +209,7 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
       point(garageButton)
     } else {
       feedback(QUESTION, say ? (changed.length === 1 ? `You changed the ${SLOT_WORDS[changed[0]]}. ${QUESTION}` : `You changed ${changed.length} parts. ${QUESTION}`) : '')
-      point(predictButtons[1])
+      point(predictionRow)
     }
     onChange()
   }
@@ -252,9 +260,11 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', sp
       }
       const matched = prediction === result.answer
       const verdict = matched ? '✔ Your prediction matched!' : '💡 A new discovery!'
-      const outcome = result.answer === 'same' ? 'They fly the same.' : `${result.answer.toUpperCase()} flies farther.`
       const why = explain(reference, current, result)
-      feedback(`${verdict} ${outcome} ${why}`, `${matched ? 'Yes! You were right!' : 'Ooh, a new discovery!'} ${result.answer === 'same' ? 'They fly the same.' : `Rocket ${result.answer.toUpperCase()} flies farther.`} ${why}`)
+      // "Same boosters, same distance" already says they tie, so it isn't said twice
+      const outcome = result.answer !== 'same' ? `${result.answer.toUpperCase()} flies farther.` : why.startsWith('Same') ? '' : 'They fly the same.'
+      const spoken = result.answer !== 'same' ? `Rocket ${result.answer.toUpperCase()} flies farther.` : outcome
+      feedback(`${verdict} ${outcome} ${why}`.replace('  ', ' '), `${matched ? 'Yes! You were right!' : 'Ooh, a new discovery!'} ${spoken} ${why}`)
       sound(matched ? 'yay' : 'hmm')
       setBusy(false)
       point(garageButton)

@@ -144,3 +144,40 @@
   .workshop-build.winner::after { font-size: 24px; }
 }
 @media (prefers-reduced-motion: reduce) { .workshop-rail::before { transition: none; } }
+
+/* --- Pass 3 --- */
+/* "Which rocket will fly farther?": A, = and B glow one after another, so no answer looks like the right one */
+#workshop .workshop-prediction.choose button:not(:disabled) { animation: workshop-nudge 1.5s ease-in-out infinite; }
+#workshop .workshop-prediction.choose button:nth-child(2) { animation-delay: .5s; }
+#workshop .workshop-prediction.choose button:nth-child(3) { animation-delay: 1s; }
+/* The pointing hand may hang below the card (under 🔧 and ▶) instead of being cut off */
+#workshop { overflow: visible; }
+/* The farther rocket does a happy hop */
+.workshop-build.winner .workshop-rocket { animation: workshop-hop .7s cubic-bezier(.3, 1.6, .5, 1) 2; }
+@keyframes workshop-hop { 0%, 100% { translate: 0 0; } 40% { translate: 0 -14px; } }
+/* Tablets: a bigger workshop with bigger rockets, track and buttons (there is lots of room) */
+@media (min-width: 740px) and (min-height: 700px) {
+  #workshop { width: min(900px, calc(100vw - 48px)); padding: 18px 22px 22px; gap: 14px; font-size: 20px; }
+  .workshop-head h2 { font-size: 28px; }
+  #workshop button { min-height: 64px; min-width: 64px; font-size: 30px; border-radius: 20px; }
+  #workshop .workshop-round { width: 60px; min-height: 60px; min-width: 60px; font-size: 28px; }
+  #workshop .workshop-prediction button { min-width: 104px; font-size: 38px; }
+  #workshop .workshop-footer button { min-width: 96px; }
+  .workshop-prediction, .workshop-footer { gap: 18px; }
+  .workshop-builds { gap: 16px; }
+  .workshop-badge { width: 52px; height: 52px; font-size: 34px; }
+  .workshop-rocket { height: clamp(150px, 26vh, 240px); }
+  .workshop-rail { font-size: 30px; padding: 54px 0 6px; border-radius: 16px; }
+  .workshop-rail::before { top: 23px; height: 10px; }
+  .workshop-ship { width: 58px; height: 58px; }
+  .workshop-stop.reached::after { font-size: 18px; top: -16px; }
+  .workshop-build.winner::after { font-size: 42px; }
+  .workshop-part { width: 64px; height: 64px; font-size: 38px; }
+  .workshop-pair i { font-size: 24px; }
+  #workshop-rule { font-size: 20px; }
+  #workshop-feedback { font-size: 20px; }
+  .workshop-finger { font-size: 52px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #workshop .workshop-prediction.choose button, .workshop-build.winner .workshop-rocket { animation: none; }
+}

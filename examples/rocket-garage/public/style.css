@@ -355,3 +355,17 @@ body.portrait #actions { left: calc(16px + env(safe-area-inset-left)); }
 }
 body.portrait .reward-new.many { flex-wrap: wrap; gap: 6px; }
 body.portrait .reward-new.many .gift { flex: 0 0 44px; }
+
+/* --- Pass 3 --- */
+/* Title words stay readable over the peach wall and the beam: a white rim round the logo letters, a plum outline behind the tagline */
+.tag { text-shadow: 2px 0 #3a2a7a, -2px 0 #3a2a7a, 0 2px #3a2a7a, 0 -2px #3a2a7a, 1.5px 1.5px #3a2a7a, -1.5px 1.5px #3a2a7a, 1.5px -1.5px #3a2a7a, -1.5px -1.5px #3a2a7a, 0 4px 0 #3a2a7a; }
+.logo span {
+  -webkit-text-stroke: 0;
+  text-shadow: 3px 0 #fff, -3px 0 #fff, 0 3px #fff, 0 -3px #fff, 2px 2px #fff, -2px 2px #fff, 2px -2px #fff, -2px -2px #fff, 0 7px 0 rgba(58, 42, 122, 0.4);
+}
+/* Very short sideways phones: the flight's journey stops are smaller and start higher, so they don't pile up */
+@media (max-height: 330px) {
+  .journey { top: calc(58px + env(safe-area-inset-top)); bottom: calc(10px + env(safe-area-inset-bottom)); width: 34px; }
+  .journey .stop { font-size: 19px; } .journey .stop.goal { font-size: 25px; }
+  .journey .me { font-size: 20px; }
+}
