@@ -124,3 +124,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   /* results in one row, leaving Pip and his burrow in view */
   #results .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; column-gap: 22px; }
 }
+/* The shortest sideways phones (browser bars showing): the best score and the mission sit beside
+   'Let's hop!' rather than stacked above it, so the button stays on screen */
+@media (max-height: 300px) {
+  #menu .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; column-gap: 14px; }
+  #menu .menu-bottom .adventure-choice { margin: 0; }
+  #menu .menu-bottom .hint { flex-basis: 100%; }
+}
