@@ -261,6 +261,12 @@ body.dark { background: radial-gradient(ellipse at 50% 30%, #355069, var(--sky))
   footer { padding: 8px 14px calc(14px + env(safe-area-inset-bottom)); flex-wrap: wrap; font-size: 10px; }
 }
 
+@media (max-width: 600px) and (max-height: 600px) {
+  .hero-emoji { font-size: 38px; }
+  .panel p { margin: 8px 0; }
+  .levels { margin: 12px 0; }
+}
+
 @media (max-height: 650px) and (min-width: 650px) {
   header { height: 64px; }
   .brand span { display: none; }
@@ -271,6 +277,80 @@ body.dark { background: radial-gradient(ellipse at 50% 30%, #355069, var(--sky))
   .prompt-row h2 { margin: 4px 0; }
   #hint { font-size: 11px; }
   #stage { min-height: 200px; }
+}
+
+/* Short sideways phones: the stage fills the left; heading, prompt and controls stack beside it. */
+@media (orientation: landscape) and (max-height: 500px) {
+  body {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(250px, 40vw, 390px);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    overflow: hidden;
+  }
+  main { display: contents; }
+  header {
+    grid-column: 2;
+    grid-row: 1;
+    height: auto;
+    margin: 0;
+    gap: 8px;
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 2px 8px;
+  }
+  header > button { width: 46px; min-width: 46px; height: 46px; min-height: 46px; font-size: 21px; }
+  .brand span { display: none; }
+  h1 { font-size: 17px; letter-spacing: -.5px; }
+  #stage { grid-column: 1; grid-row: 1 / -1; height: auto; min-height: 0; max-height: none; }
+  #lesson { grid-column: 2; grid-row: 2; padding: 0 max(10px, env(safe-area-inset-right)) 0 10px; margin: 0; }
+  .lesson-head { font-size: 10px; }
+  .prompt-row { gap: 6px; }
+  .prompt-row h2 { font-size: 16px; margin: 2px 0; }
+  .prompt-row button { width: 44px; min-width: 44px; height: 44px; min-height: 44px; font-size: 18px; }
+  #hint { font-size: 11px; margin: 0; min-height: 0; }
+  #actions {
+    grid-column: 2;
+    grid-row: 3;
+    /* Many controls scroll inside the column instead of pushing the page. */
+    overflow-y: auto;
+    align-content: flex-start;
+    align-content: safe center;
+    gap: 6px;
+    margin: 0;
+    min-height: 0;
+    max-width: none;
+    padding: 4px max(8px, env(safe-area-inset-right)) 4px 8px;
+  }
+  #actions button { padding: 6px 11px; font-size: 13px; min-height: 44px; }
+  #actions .primary { font-size: 15px; min-width: 0; }
+  #actions .readout { padding: 6px 10px; font-size: 13px; }
+  #feedback { grid-column: 2; grid-row: 4; font-size: 13px; min-height: 0; margin: 0; padding: 0 max(10px, env(safe-area-inset-right)) 8px 10px; }
+  footer { display: none; }
+  /* Menu, win and error cards sit below the header row, centred over the whole screen. */
+  .panel {
+    grid-column: 1 / -1;
+    grid-row: 2 / -1;
+    top: 4px !important;
+    left: 50%;
+    transform: translateX(-50%);
+    max-height: calc(100% - 8px);
+    overflow-y: auto;
+    width: min(600px, calc(100% - 24px));
+    padding: 10px 20px;
+    border-radius: 24px;
+  }
+  .panel p { margin: 5px 0; line-height: 1.35; }
+  .panel #tagline { font-size: 16px; }
+  .hero-emoji { font-size: 30px; line-height: 1.1; }
+  .levels { margin: 8px 0; }
+  .levels button { padding: 6px; font-size: 13px; }
+  .panel .primary { padding: 10px 18px; font-size: 18px; }
+  #win h2 { font-size: 20px; margin: 4px 0; }
+  #win-home { margin-top: 8px; }
+}
+@media (orientation: landscape) and (max-height: 340px) {
+  .hero-emoji, .age, #menu-instructions, .saved { display: none; }
+  .levels button span { display: none; }
+  #hint { display: none; }
 }
 
 @media (hover: none) {

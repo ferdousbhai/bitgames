@@ -347,17 +347,18 @@ function readout(text) {
   return element
 }
 
-function feedback(message, good = false) {
+// `spoken` replaces the words read aloud, e.g. a list of letter names.
+function feedback(message, good = false, spoken = message) {
   $('feedback').textContent = message
   $('feedback').className = good ? 'good' : 'try'
-  audio.speak(message)
+  audio.speak(spoken)
 }
 
-function success(message = state.challenge.fact || 'Wonderful thinking!') {
+function success(message = state.challenge.fact || 'Wonderful thinking!', spoken = message) {
   if (state.solved) return
   state.solved = true
   audio.happy()
-  feedback(message, true)
+  feedback(message, true, spoken)
   burst()
   for (const button of $('actions').querySelectorAll('button')) button.disabled = true
   const last = state.round === 4

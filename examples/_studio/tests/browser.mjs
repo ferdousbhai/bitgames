@@ -187,7 +187,7 @@ async function solve(c) {
       await tapAction('Check length')
       break
     case 'spell':
-      for (const letter of c.word) await tapValue(letter)
+      for (const letter of c.word) await tapValue(letter.toLowerCase())
       break
     case 'experiment':
       await tapAction(c.target ? 'Yes' : 'No')

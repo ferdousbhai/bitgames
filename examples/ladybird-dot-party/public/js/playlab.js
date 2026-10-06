@@ -391,54 +391,101 @@ function tenframe(c, g, a) {
 }
 
 // --- Spell: choose a word's letters from left to right ---------------------------------
+// Tiles show lowercase letters, as children first build words; the voice says letter names.
+// A wrong letter is named and the word repeated; a second miss or a long pause makes
+// the next letter glow.
 
 const spellReceivers = { 'word-rocket': 'rocket', 'animal-alphabet': 'fox' }
 
 function spell(c, g, a) {
   const word = c.word
+  const name = word.toLowerCase()
   let spelled = ''
-  const status = a.readout('_ '.repeat(word.length))
-  const showProgress = () => { status.textContent = spelled + ' _'.repeat(word.length - spelled.length) }
+  let misses = 0
+  let idle = null
+  const status = a.readout([...name].map(() => '_').join(' '))
+  const showProgress = () => {
+    status.textContent = [...name].map((l, i) => (i < spelled.length ? l : '_')).join(' ')
+  }
   const receiver = a.actor(spellReceivers[g.id] || 'basket', 1.4, 0, -2.15)
-  a.tile({ symbol: c.picture, x: 0, z: -0.5, size: 1.6, depth: 1.4, visual: true })
+  const picture = a.tile({ symbol: c.picture, x: 0, z: -0.5, size: 1.6, depth: 1.4, visual: true })
   const spaces = Array.from({ length: word.length }, (_, i) => a.tile({
     x: (i - (word.length - 1) / 2) * 1.2, z: 0.9, size: 1, depth: 1, label: '_', visual: true, colour: '#f7e5c1',
   }))
 
-  a.grid(c.tiles, (letter) => ({
-    label: letter,
+  const next = () => word[spelled.length]
+  const glow = (on) => letters.forEach((t, i) => t.button.classList.toggle('current', on && c.tiles[i] === next()))
+  const question = () => (spelled ? 'Which letter comes next?' : `Which letter does ${name} begin with?`)
+
+  // Help grows with each miss or pause: first the word again, then a glowing letter.
+  function help(wrong) {
+    misses++
+    const intro = wrong ? ['That is', wrong + '.'] : []
+    const shown = wrong ? `That is ${wrong.toLowerCase()}. ` : ''
+    if (misses < 2) {
+      a.feedback(`${shown}Listen: ${name}. ${question()}`, false, [...intro, `Listen: ${name}.`, question()])
+    } else {
+      glow(true)
+      const lead = spelled ? `The next letter in ${name} is` : `${name[0].toUpperCase() + name.slice(1)} begins with`
+      a.feedback(`${shown}${lead} ${next().toLowerCase()}. Find the glowing letter.`, false,
+        [...intro, lead, next() + '.', 'Find the glowing letter.'])
+    }
+    wait()
+  }
+  function wait() {
+    clearTimeout(idle)
+    if (spelled !== word && misses < 2) idle = a.later(() => help(), 15000)
+  }
+
+  const letters = a.grid(c.tiles, (letter) => ({
+    label: letter.toLowerCase(),
     size: 1.25,
     depth: 1.1,
     onTap: () => {
       if (spelled === word) return
-      if (letter !== word[spelled.length]) {
-        a.feedback(`Listen to ${word.toLowerCase()}. Which letter comes next?`)
+      if (letter !== next()) {
+        help(letter)
         return
       }
-      spaces[spelled.length].label(letter)
+      glow(false)
+      misses = 0
+      spaces[spelled.length].label(letter.toLowerCase())
+      spaces[spelled.length].hop()
       spelled += letter
       showProgress()
-      a.audio.speak(letter)
       if (spelled === word) {
-        a.later(() => a.audio.speak(word.toLowerCase()), 350)
+        clearTimeout(idle)
+        picture.hop()
         // The rocket lifts off; other receivers hop.
         a.animate(1.4, (t) => {
           receiver.position.y = 0.2 + (g.id === 'word-rocket' ? t * 2 : Math.sin(t * Math.PI) * 0.4)
         }, receiver)
-        a.success(`You built ${word.toLowerCase()}!`)
+        a.success(`${[...name].join(' – ')} spells ${name}!`, [...word].map((l) => l + '.').concat(`That spells ${name}!`))
+        return
       }
+      if (spelled.length === 1) {
+        a.feedback(`${name[0].toUpperCase() + name.slice(1)} begins with ${name[0]}.`, true,
+          [letter + '.', `${name} begins with`, letter + '.'])
+      } else {
+        a.audio.speak(letter)
+      }
+      wait()
     },
   }), { columns: c.tiles.length, spacing: 1.45, z: 2.45 })
 
-  a.action('🔈 Hear word', () => a.audio.speak(word.toLowerCase()))
+  a.action('🔈 Hear word', () => a.audio.speak(name))
   a.action('⌫ Undo letter', () => {
-    if (!spelled) return
+    if (!spelled || spelled === word) return
     spelled = spelled.slice(0, -1)
     spaces[spelled.length].label('_')
     showProgress()
+    glow(false)
+    misses = 0
+    wait()
   })
   a.action('↶ Reset', () => a.reset())
-  a.hint('Listen to the whole word. Choose its letters from left to right. The voice names each letter.')
+  a.hint('Listen to the word. Tap its letters from left to right. The voice says each letter’s name. Stuck? A letter will glow.')
+  wait()
 }
 
 // --- Rhyme: hop the frog to the lily pad that rhymes -----------------------------------

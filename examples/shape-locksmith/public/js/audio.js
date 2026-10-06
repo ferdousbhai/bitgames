@@ -43,15 +43,18 @@ export class AudioGuide {
     notes.forEach((frequency, i) => this.note(frequency, 0.22, i * 0.09))
   }
 
+  // A list is spoken as separate utterances in turn, so single letters keep their names.
   speak(text) {
     if (this.muted || !('speechSynthesis' in window)) return
     speechSynthesis.cancel()
-    // Drop emoji and symbols so voices don't read them out.
-    const utterance = new SpeechSynthesisUtterance(text.replace(/[^\p{L}\p{N}\s.,?!:’'-]/gu, ''))
-    utterance.lang = 'en-US'
-    utterance.rate = 0.83
-    utterance.pitch = 1.12
-    speechSynthesis.speak(utterance)
+    for (const part of [text].flat()) {
+      // Drop emoji and symbols so voices don't read them out.
+      const utterance = new SpeechSynthesisUtterance(String(part).replace(/[^\p{L}\p{N}\s.,?!:’'-]/gu, ''))
+      utterance.lang = 'en-US'
+      utterance.rate = 0.83
+      utterance.pitch = 1.12
+      speechSynthesis.speak(utterance)
+    }
   }
 
   stop() {

@@ -393,7 +393,8 @@ export function challenge(g, level, round, seed) {
       break
 
     case 'spell': {
-      const [word, picture] = g.words[(round + level) % g.words.length]
+      // Each adventure starts at a different word, then walks the list without repeats.
+      const [word, picture] = g.words[(round + level + Math.abs(Math.floor(seed))) % g.words.length]
       const extraLetters = shuffle('AEIOURSTLM'.split(''), rng).slice(0, level)
       c.word = word
       c.picture = picture

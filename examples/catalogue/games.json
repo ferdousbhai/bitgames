@@ -219,7 +219,7 @@
     "category": "jump",
     "together": false,
     "featured": false,
-    "url": "https://97b18d5e-bitgames-bunny-hop.ferdousbd.workers.dev/",
+    "url": "https://ae39d691-bitgames-bunny-hop.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
@@ -413,7 +413,7 @@
     "category": "race",
     "together": true,
     "featured": false,
-    "url": "https://12839189-bitgames-crash-racers.ferdousbd.workers.dev/",
+    "url": "https://0b80d677-bitgames-crash-racers.ferdousbd.workers.dev/",
     "ages": [
       5,
       8
@@ -1229,13 +1229,13 @@
     "id": "rocket-garage",
     "title": "Rocket Garage",
     "tagline": "Snap together a silly rocket, then blast your animal pilot off to the Moon and beyond!",
-    "howToPlay": "Tap or drag parts from the tray to build your rocket: nose cones, windows, fuel tanks, fins, boosters and stickers (tap the rocket to swap a part, tap a colour to paint it). Press the big red button to launch! Drag, or use the arrow keys, to steer and catch stars. Bigger boosters fly farther, and every new planet you visit unlocks new parts.",
+    "howToPlay": "Tap or drag parts from the tray to build your rocket: nose cones, windows, fuel tanks, fins, boosters and stickers (tap the rocket to swap a part, tap a colour to paint it). Press the big red button to launch! Drag, or use the arrow keys, to steer and catch stars. Bigger boosters fly farther, and every new planet you visit unlocks new parts. Tap the 🧪 to save rocket A, change one part, and test which rocket flies farther.",
     "emoji": "🚀",
     "color": "#ff5a5f",
     "category": "space",
     "together": false,
     "featured": false,
-    "url": "https://7c7fd5ba-bitgames-rocket-garage.ferdousbd.workers.dev/",
+    "url": "https://b17afc1a-bitgames-rocket-garage.ferdousbd.workers.dev/",
     "ages": [
       4,
       8
@@ -1428,7 +1428,7 @@
     "category": "space",
     "together": false,
     "featured": false,
-    "url": "https://3cbc96df-bitgames-star-catcher.ferdousbd.workers.dev/",
+    "url": "https://6f6a81fb-bitgames-star-catcher.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
