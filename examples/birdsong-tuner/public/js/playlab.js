@@ -423,7 +423,7 @@ function spell(c, g, a) {
       a.feedback(`${shown}Listen: ${name}. ${question()}`, false, [...intro, `Listen: ${name}.`, question()])
     } else {
       glow(true)
-      const lead = spelled ? `The next letter in ${name} is` : `${name[0].toUpperCase() + name.slice(1)} begins with`
+      const lead = spelled ? `The next letter in ${name} is` : `${name} begins with`
       a.feedback(`${shown}${lead} ${next().toLowerCase()}. Find the glowing letter.`, false,
         [...intro, lead, next() + '.', 'Find the glowing letter.'])
     }
@@ -462,7 +462,7 @@ function spell(c, g, a) {
         return
       }
       if (spelled.length === 1) {
-        a.feedback(`${name[0].toUpperCase() + name.slice(1)} begins with ${name[0]}.`, true,
+        a.feedback(`${name} begins with ${name[0]}.`, true,
           [letter + '.', `${name} begins with`, letter + '.'])
       } else {
         // Replace the beginning-sound line with the letters built so far.

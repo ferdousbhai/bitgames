@@ -80,6 +80,50 @@ function fillLabel(text, value) {
   hidden.textContent = value
   text.replaceChildren(svg, hidden)
 }
+// In spelling games the letters and words a child builds are drawn in that same print in the
+// prompt, feedback and win card too, so "c – a – t spells cat" shows the a and l of the tiles.
+// Each letter's left and right ink edge in its 80-wide box, for spacing letters into words.
+const LETTER_EDGES = {
+  a: [12, 60], b: [20, 68], c: [14, 58], d: [12, 60], e: [16, 64], f: [20, 60], g: [12, 60], h: [20, 60],
+  i: [40, 40], j: [18, 48], k: [22, 60], l: [34, 50], m: [12, 68], n: [20, 60], o: [15, 65], p: [20, 68],
+  q: [12, 60], r: [24, 62], s: [20, 59], t: [22, 56], u: [20, 60], v: [18, 62], w: [8, 72], x: [20, 60],
+  y: [18, 63], z: [20, 60],
+}
+const PRINTED_WORDS = new Set(game.mode === 'spell' ? game.words.map(([word]) => word.toLowerCase()) : [])
+
+function drawnWord(word) {
+  const svg = document.createElementNS(SVG_NS, 'svg')
+  svg.setAttribute('aria-hidden', 'true')
+  let x = 0
+  for (const letter of word) {
+    const [left, right] = LETTER_EDGES[letter]
+    const path = document.createElementNS(SVG_NS, 'path')
+    path.setAttribute('d', LETTER_PATHS[letter])
+    path.setAttribute('transform', `translate(${x - left} 0)`)
+    svg.append(path)
+    x += right - left + 26
+  }
+  // Half a stroke of room on either side of the ink.
+  const width = x - 26 + 14
+  svg.setAttribute('viewBox', `-7 3 ${width} 135`)
+  svg.style.width = `${(1.25 * width) / 135}em`
+  const hidden = document.createElement('span')
+  hidden.className = 'letter-text'
+  hidden.textContent = word
+  const span = document.createElement('span')
+  span.className = 'print'
+  span.append(svg, hidden)
+  return span
+}
+
+// Sets an element's text; in spelling games single letters and the game's words are drawn.
+function printText(element, message) {
+  element.textContent = message
+  if (!PRINTED_WORDS.size) return
+  const parts = String(message).split(/([A-Za-z'’]+)/)
+  if (!parts.some((part) => /^[a-z]$/.test(part) || PRINTED_WORDS.has(part))) return
+  element.replaceChildren(...parts.map((part) => (/^[a-z]$/.test(part) || PRINTED_WORDS.has(part) ? drawnWord(part) : part)))
+}
 // Blender toy materials that a `tint` may repaint.
 const TINTABLE = ['#edab72', '#8bbddf']
 const MAX_CONFETTI = 180
@@ -410,7 +454,7 @@ function readout(text) {
 
 // `spoken` replaces the words read aloud, e.g. a list of letter names.
 function feedback(message, good = false, spoken = message) {
-  $('feedback').textContent = message
+  printText($('feedback'), message)
   $('feedback').className = good ? 'good' : 'try'
   audio.speak(spoken)
 }
@@ -503,7 +547,7 @@ function startRound(round = 0) {
   state.challenge = challenge(game, state.level, round, state.seed)
   $('round').textContent = `Step ${round + 1} of 5 · ${LEVEL_NAMES[state.level]}`
   $('progress').textContent = '★'.repeat(round) + '☆'.repeat(5 - round)
-  $('prompt').textContent = state.challenge.prompt
+  printText($('prompt'), state.challenge.prompt)
   $('hint').textContent = game.instructions
   runActivity(state.challenge, game, api)
   resize()
@@ -527,9 +571,9 @@ function finish() {
     ? Array.from({ length: 5 }, (_, round) => challenge(game, state.level, round, state.seed))
     : []
   const list = (words) => `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`
-  $('win-text').textContent = spelled.length
+  printText($('win-text'), spelled.length
     ? `You spelled ${list(spelled.map((c) => `${c.picture} ${c.word.toLowerCase()}`))}. Every try helped you learn!`
-    : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`
+    : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)
   audio.happy()
   audio.speak(spelled.length
     ? ['A wonderful adventure!', `You spelled ${list(spelled.map((c) => c.word.toLowerCase()))}.`]
@@ -641,7 +685,7 @@ const api = {
   screenPoint, onDrag, onTrace,
   invalidate: requestRender,
   hint(text) { $('hint').textContent = text },
-  prompt(text) { $('prompt').textContent = text },
+  prompt(text) { printText($('prompt'), text) },
   reset() { startRound(state.round) },
 }
 
