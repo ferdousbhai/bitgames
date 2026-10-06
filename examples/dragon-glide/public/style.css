@@ -100,6 +100,7 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
   color: #fff; text-shadow: 0 5px 0 #3fcf8c, 0 10px 26px rgba(0,0,0,0.3); opacity: 0; transform: scale(0.5); transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1);
   padding: 0 16px;
 }
+.banner .line { display: inline-block; white-space: nowrap; }
 .banner small {
   display: block; font-size: 0.46em; margin-top: 6px;
   /* a thick dark outline so the line stays readable on pale skies */
@@ -116,16 +117,20 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 .fire {
   pointer-events: auto; position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom));
   width: 96px; height: 96px; border-radius: 50%; font-size: 52px; background: radial-gradient(circle at 40% 35%, #fff3a0, #ff9f43 60%, #ff6b4a);
-  box-shadow: 0 6px 0 #c94a2a, 0 10px 22px rgba(0,0,0,0.25); transition: transform .08s;
+  box-shadow: 0 6px 0 #c94a2a, 0 10px 22px rgba(0,0,0,0.25); transition: transform .08s, opacity .4s, scale .4s;
 }
+/* at the nest there is nothing to puff at, so 🔥 steps aside until the next world */
+#hud.resting .fire { opacity: 0; scale: 0.6; pointer-events: none; }
+#hud.resting .tip { opacity: 0; }
 .fire:active, .fire.press { transform: translateY(4px) scale(0.95); box-shadow: 0 2px 0 #c94a2a; }
 
 #popups { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-.pop { position: absolute; translate: -50% -50%; font-size: 30px; font-weight: 900; color: #fff; text-shadow: 0 3px 0 #36a8ff, 0 5px 10px rgba(0,0,0,0.25); animation: float 1s ease-out forwards; white-space: nowrap; }
-.pop.big { font-size: 42px; text-shadow: 0 3px 0 #c98f00, 0 0 18px #ffcf1a; }
-.pop.oops { font-size: 38px; text-shadow: 0 3px 0 #ff6b9d, 0 5px 10px rgba(0,0,0,0.25); }
-.pop.hoop { font-size: 40px; text-shadow: 0 3px 0 #9b5de5, 0 5px 10px rgba(0,0,0,0.25); }
-@keyframes float { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 15% { transform: translateY(-10px) scale(1.2); opacity: 1; } 100% { transform: translateY(-80px) scale(1); opacity: 0; } }
+.pop { position: absolute; translate: -50% -50%; font-size: 30px; font-weight: 900; color: #fff; --o: #2a7fd0; text-shadow: 2px 2px 0 var(--o), -2px 2px 0 var(--o), 2px -2px 0 var(--o), -2px -2px 0 var(--o), 0px 2px 0 var(--o), 0px -2px 0 var(--o), 2px 0px 0 var(--o), -2px 0px 0 var(--o), 0 5px 0 var(--o); animation: float 1s ease-out forwards; white-space: nowrap; }
+/* thick outlines so the numbers read on pale day skies and stay bright as they float off at night */
+.pop.big { font-size: 42px; --o: #c98f00; }
+.pop.oops { font-size: 38px; --o: #e0457f; }
+.pop.hoop { font-size: 40px; --o: #7b3fc8; }
+@keyframes float { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 15% { transform: translateY(-10px) scale(1.2); opacity: 1; } 75% { transform: translateY(-62px) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.7); opacity: 0; } }
 
 @media (max-width: 520px) {
   .pill { font-size: 26px; }
@@ -159,6 +164,8 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 }
 
 body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38%; }
+/* upright, the end card's family fills the middle, so the sound buttons go back up to their corner */
+@media (orientation: portrait) { body[data-screen="results"] .corner { top: calc(70px + env(safe-area-inset-top)); } }
 
 /* --- Counting mission ------------------------------------------------------------ */
 /* The choice on the title: a chunky toy button that says itself out loud when tapped */

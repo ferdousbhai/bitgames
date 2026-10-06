@@ -267,6 +267,7 @@ function start(from = 0) {
   $('power').classList.add('hidden')
   updateCombo()
   show(null)
+  $('hud').classList.remove('resting')
   const w = WORLDS[from]
   rings.setGlow(!!w.night)
   banner(`${w.emoji} ${w.name}`, 'Fly to the nest! 🪺')
@@ -304,7 +305,13 @@ function banner(text, small, ms = 2400, kind = '') {
   bannerHold = kind === 'mission' ? now + ms : 0
   const el = $('banner')
   el.className = `banner ${kind}`
-  el.textContent = text
+  const line = document.createElement('span')
+  line.className = 'line'
+  line.textContent = text
+  el.replaceChildren(line)
+  // the big line stays on one line (shrinking a little on narrow phones), so the second line never drops onto the family
+  const room = el.clientWidth - 32
+  if (text && line.offsetWidth > room) line.style.fontSize = `${Math.max(0.6, room / line.offsetWidth)}em`
   if (small) {
     const s = document.createElement('small')
     s.textContent = small
@@ -642,6 +649,7 @@ function leaveNest() {
   const w = WORLDS[game.world]
   world.addNest(game.world)
   rings.setGlow(!!w.night)
+  $('hud').classList.remove('resting')
   adventure.begin()
   banner(`${w.emoji} ${w.name}`, 'Off we go! 🐉')
   setTimeout(sayGoal, 900)
@@ -768,6 +776,7 @@ function updatePlay(dt) {
   const nestZ = (game.world + 1) * WORLD_LENGTH
   if (game.z > nestZ - 55) {
     game.state = 'nest'
+    $('hud').classList.add('resting') // 🔥 rests while the family celebrates
     game.nestT = -1 // flying in
   }
   sound.wind(clamp(game.speed / 25, 0, 1))
