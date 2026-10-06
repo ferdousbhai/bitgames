@@ -90,7 +90,8 @@ G('comet-tail-measure','Comet Tail Measure','☄️',[5,8],'space','measure','Me
 G('word-rocket','Word Rocket','🔠',[5,8],'space','spell','CVC word building','Build short words to power a reading rocket.',{
   // One short vowel each (a e i o u, then a again), and a clay model of every word rides the rocket.
   words:[['CAT','🐱','cat'],['BED','🛏️','bed'],['PIG','🐷','pig'],['DOG','🐶','dog'],['SUN','☀️','sun'],['HAT','👒','hat']],
-  hero:'rocket'}),
+  // The rocket carries each spelled toy, and on the win card all five as its crew.
+  hero:'rocket',carrier:'rocket'}),
 G('animal-alphabet','Animal Alphabet','🦊',[4,7],'forest','spell','Beginning sounds and spelling','Build names for tiny animal friends.',{words:[['FOX','🦊','fox'],['CAT','🐱','cat'],['PIG','🐷','pig'],['HEN','🐔','hen'],['BAT','🦇','bat'],['DOG','🐶','dog']],
   // No scenery fox: the only animal on the island is the one being spelled. The fox greets on the menu and win card.
   scenery:['tree','mushroom','acorn','flower'],hero:'fox'}),

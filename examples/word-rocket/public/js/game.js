@@ -44,6 +44,7 @@ export default {
     ]
   ],
   "hero": "rocket",
+  "carrier": "rocket",
   "sky": "#282955",
   "ground": "#7c7bbb",
   "accent": "#ffd179",

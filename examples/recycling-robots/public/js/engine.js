@@ -594,8 +594,54 @@ function finish() {
     : traced.length
       ? ['A wonderful adventure!', 'You traced', ...traced.slice(0, -1).map((l) => l.toUpperCase()), 'and', traced.at(-1).toUpperCase()]
       : 'A wonderful adventure! Every try helped you learn.')
-  tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true })
+  const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true })
+  if (game.carrier && spelled.some((c) => c.friend)) launch(hero.figure, spelled.map((c) => c.friend).filter(Boolean))
   burst()
+}
+
+// A spelling carrier (Word Rocket's rocket) on the win card: the spelled toys pop up in a row
+// as its crew, one at a time, then it blasts off in a puff of smoke and comes back down to land.
+function launch(rocket, crew) {
+  const step = 450
+  crew.forEach((name, i) => {
+    const toy = actor(name, 0.75, (i - (crew.length - 1) / 2) * 1.15, 3.4)
+    toy.scale.setScalar(0.001)
+    later(() => {
+      audio.note(523 + i * 70, 0.16)
+      animate(0.45, (p) => {
+        toy.scale.setScalar(Math.max(0.001, p))
+        toy.position.y = 0.2 + Math.sin(p * Math.PI) * 0.6
+      }, toy)
+    }, 700 + i * step)
+  })
+  const ground = rocket.position.y
+  later(() => {
+    for (let i = 0; i < 12; i++) audio.note(80 + i * 40, 0.2, i * 0.07, 'triangle')
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2
+      const puff = mesh(new THREE.SphereGeometry(0.22, 12, 8), '#f4f0fb')
+      puff.material.transparent = true
+      puff.castShadow = false
+      puff.position.set(Math.cos(angle) * 0.5, 0.3, 2 + Math.sin(angle) * 0.4)
+      board.add(puff)
+      animate(1.4, (p) => {
+        puff.position.x = Math.cos(angle) * (0.5 + p * 1.2)
+        puff.position.z = 2 + Math.sin(angle) * (0.4 + p * 0.6)
+        puff.scale.setScalar(1 + p * 1.2)
+        puff.material.opacity = 1 - p
+        puff.visible = p < 1
+      }, puff)
+    }
+    animate(1.3, (p) => {
+      rocket.position.y = ground + p * p * 10
+      // Out of sight at the top, so no shadow hangs over the board.
+      rocket.visible = p < 1
+    }, rocket)
+    later(() => animate(2, (p) => {
+      rocket.visible = true
+      rocket.position.y = ground + (1 - p) * 10
+    }, rocket), 2000)
+  }, 700 + crew.length * step + 500)
 }
 
 function burst() {

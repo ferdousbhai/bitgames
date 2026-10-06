@@ -441,12 +441,18 @@ def build_shapes(name):
         cone((0, 0, .28), .27, .33, '#e8c391', .23)
         torus((0, 0, .15), .273, .035, PINK)
     elif name == 'bed':
-        cube((0, 0, .25), (.6, .85, .22), '#bc9479')
-        cube((0, 0, .4), (.59, .8, .16), WHITE)
-        cube((0, .05, .5), (.57, .55, .1), BLUE)
-        cube((0, -.28, .54), (.42, .2, .1), WHITE)
-        for x in [-.27, .27]:
-            cube((x, -.4, .4), (.06, .06, .6), '#bc9479')
+        # Seen from the side, like the bed emoji: tall headboard and pillow on the left,
+        # blanket over the rest and a low footboard, so it never reads as a chair.
+        wood = '#bc9479'
+        cube((0, 0, .2), (.9, .5, .16), wood)
+        for x in [-.4, .4]:
+            for y in [-.2, .2]:
+                cube((x, y, .07), (.07, .07, .14), wood, .02)
+        cube((0, 0, .33), (.84, .48, .12), WHITE)
+        cube((.09, 0, .41), (.64, .5, .07), BLUE)
+        sphere((-.3, 0, .44), (.12, .2, .07), WHITE)
+        cube((-.46, 0, .4), (.07, .5, .66), wood)
+        cube((.46, 0, .31), (.07, .5, .3), wood)
     elif name == 'washstand':
         cube((0, 0, .3), (.65, .5, .6), PINK)
         sphere((0, 0, .63), (.26, .19, .06), BLUE)

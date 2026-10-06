@@ -396,8 +396,6 @@ function tenframe(c, g, a) {
 // the next letter glow.
 
 const spellReceivers = { 'word-rocket': 'rocket', 'animal-alphabet': 'fox' }
-// A carrier stays on the board beside the word's own toy, which climbs aboard when spelled.
-const spellCarriers = { 'word-rocket': 'rocket' }
 
 function spell(c, g, a) {
   const word = c.word
@@ -406,7 +404,8 @@ function spell(c, g, a) {
   let misses = 0
   let idle = null
   // A word can name its own toy, e.g. the clay dog who waits to hear its name spelled.
-  const carrier = c.friend && spellCarriers[g.id] ? a.actor(spellCarriers[g.id], 1.4, 2.3, -1.95) : null
+  // A game's carrier (Word Rocket's rocket) waits beside it, and the toy climbs aboard when spelled.
+  const carrier = c.friend && g.carrier ? a.actor(g.carrier, 1.4, 2.3, -1.95) : null
   const receiver = a.actor(c.friend || spellReceivers[g.id] || 'basket', carrier ? 1.2 : 1.4, 0, -2.15)
   const picture = a.tile({ symbol: c.picture, x: 0, z: -0.6, size: 1.6, depth: 1.4, visual: true })
   const spaces = Array.from({ length: word.length }, (_, i) => a.tile({
@@ -477,7 +476,10 @@ function spell(c, g, a) {
             if (c.friend) receiver.rotation.y = t * Math.PI * 2
           }, receiver)
         }
-        a.success(`${[...name].join(' – ')} spells ${name}!`, [...word].map((l) => l + '.').concat(`That spells ${name}!`))
+        // The voice adds that the toy is on board; the shown line stays short for small screens.
+        const aboard = carrier ? [`The ${name} is on board!`] : []
+        a.success(`${[...name].join(' – ')} spells ${name}!`,
+          [...[...word].map((l) => l + '.'), `That spells ${name}!`, ...aboard])
         return
       }
       if (spelled.length === 1) {
