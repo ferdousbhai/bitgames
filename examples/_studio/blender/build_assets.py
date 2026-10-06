@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -123,6 +123,15 @@ def leaf(location, size=1, colour=GREEN):
     return o
 
 
+def bake(parts):
+    """Move each part's placement into its mesh. A joined toy keeps its first part's rotation as
+    its own, and the game resets every toy's rotation, so a toy whose first part is turned or
+    tilted (the lying log, the propped-up map) bakes its parts first."""
+    for part in parts:
+        part.data.transform(part.matrix_basis)
+        part.matrix_basis.identity()
+
+
 def objects_since(before):
     return [o for o in bpy.context.scene.objects if o not in before]
 
@@ -140,8 +149,10 @@ def show(o, visible):
 
 def export_selected(path):
     path.parent.mkdir(parents=True, exist_ok=True)
+    # The clay toys are plain colours with no textures, so they ship without texture coordinates.
     bpy.ops.export_scene.gltf(filepath=str(path), export_format='GLB', use_selection=True,
-                              export_yup=True, export_cameras=False, export_lights=False)
+                              export_yup=True, export_cameras=False, export_lights=False,
+                              export_texcoords=False)
 
 
 ANIMAL_COLOURS = {
@@ -149,6 +160,8 @@ ANIMAL_COLOURS = {
     'duck': GOLD, 'bird': BLUE, 'dino': '#9ac1aa', 'robot': BLUE,
     # Animal Alphabet's word friends.
     'cat': '#bdb6cf', 'dog': '#d0a77c', 'pig': '#f6b9c6', 'hen': WHITE, 'bat': '#857aa3',
+    # Rhyming River's goat (it rhymes with boat).
+    'goat': '#ece6da',
 }
 RED = '#e5604f'
 FRUIT_COLOURS = {'apple': '#ee887e', 'pear': '#bbd587', 'strawberry': '#e9829b', 'acorn': '#bc916c', 'egg': WHITE}
@@ -166,7 +179,7 @@ def build_animal(name):
         sphere((0, -.03, .8), (.37, .32, .31), colour)
     for x in [-.19, .19]:
         sphere((x, -.14, .1), (.13, .19, .1), GOLD if name == 'hen' else colour)
-    if name in ['cat', 'dog', 'pig', 'hen', 'bat']:
+    if name in ['cat', 'dog', 'pig', 'hen', 'bat', 'goat']:
         build_word_friend(name, colour)
     if name == 'rabbit':
         for x in [-.17, .17]:
@@ -195,7 +208,7 @@ def build_animal(name):
 
 
 def build_word_friend(name, colour):
-    """Features that turn the clay body into a cat, dog, pig, hen or bat."""
+    """Features that turn the clay body into a cat, dog, pig, hen, bat or goat."""
     if name == 'cat':
         for side in [-1, 1]:
             cone((side * .22, 0, 1.12), .13, .3, colour)
@@ -235,6 +248,21 @@ def build_word_friend(name, colour):
                 wing.rotation_euler[1] = side * -.35
             cone((side * .06, -.33, .6), .02, .06, WHITE).rotation_euler[0] = math.pi
         sphere((0, -.24, .36), (.22, .07, .26), '#b0a4cb')
+    if name == 'goat':
+        # Big curved grey horns, floppy ears out to the sides, a pale muzzle and a pointed beard.
+        for side in [-1, 1]:
+            for k in range(7):
+                a = k * .4
+                sphere((side * (.12 + k * .02), .02 + math.sin(a) * .2, 1.07 + math.cos(a) * .17),
+                       (.075 - k * .007,) * 3, '#8f8478')
+            ear = sphere((side * .42, -.02, .86), (.2, .08, .07), colour)
+            ear.rotation_euler[1] = side * .45
+            sphere((side * .44, -.06, .85), (.12, .03, .035), PINK).rotation_euler[1] = side * .45
+        sphere((0, -.3, .68), (.17, .12, .12), '#f2dcd2')
+        for x in [-.05, .05]:
+            sphere((x, -.415, .71), (.022, .012, .02), DARK)
+        cone((0, -.36, .44), .085, .3, '#8f8478').rotation_euler[0] = math.pi
+        sphere((0, .33, .55), (.07, .08, .1), colour)
 
 
 def build_critter(name):
@@ -769,6 +797,80 @@ def build_shapes(name):
         cone((-.4, 0, .26), .07, .3, WHITE, .07).rotation_euler[1] = QUARTER_TURN
         sphere((-.57, .05, .26), (.07, .07, .08), WHITE)
         sphere((-.57, -.05, .26), (.07, .07, .08), WHITE)
+    elif name == 'log':
+        # Rhyming River's log, lying on its side: brown bark, pale cut ends with growth rings.
+        log_start = set(bpy.context.scene.objects)
+        body = cone((0, 0, .24), .24, .95, '#a77a58', .24)
+        body.rotation_euler[1] = QUARTER_TURN
+        for side in [-1, 1]:
+            end = cone((side * .476, 0, .24), .225, .012, '#ecc99a', .225)
+            end.rotation_euler[1] = QUARTER_TURN
+            torus((side * .484, 0, .24), .12, .01, '#c49a6c').rotation_euler[1] = QUARTER_TURN
+        for x, z in [(-.15, .46), (.18, .44), (.02, .47)]:
+            cube((x, -.05, z), (.2, .025, .02), '#8a6146', .008)
+        cone((.12, -.02, .55), .05, .2, '#8a6146', .03).rotation_euler[1] = .6
+        leaf((.2, -.02, .66), .35)
+        bake(objects_since(log_start))
+    elif name == 'map':
+        map_start = set(bpy.context.scene.objects)
+        # A treasure map: a cream sheet rolled at both ends, with land, a lake, a dotted path and a red X.
+        cube((0, 0, .05), (.86, .62, .03), '#f6e4bd', .012)
+        for y in [-.31, .31]:
+            roll = cone((0, y, .085), .055, .9, '#e9d3a5', .055)
+            roll.rotation_euler[1] = QUARTER_TURN
+        sphere((-.2, .06, .07), (.22, .15, .012), '#a9d19a')
+        sphere((.2, -.08, .07), (.16, .12, .012), '#9fcde0')
+        for x, y in [(-.33, .15), (-.24, .07), (-.13, .02), (-.03, -.05), (.06, -.13), (.17, .05), (.25, .12)]:
+            sphere((x, y, .072), (.025, .025, .01), '#c46b4f')
+        for turn in [.785, -.785]:
+            cube((.3, .14, .074), (.2, .045, .012), '#d8453c', .006).rotation_euler[2] = turn
+        # Propped up towards the viewer, so it reads as a map and not a thin line from the play camera.
+        tilt = Matrix.Rotation(.9, 4, 'X')
+        for part in objects_since(map_start):
+            part.matrix_world = Matrix.Translation((0, 0, .31 * math.sin(.9) + .02)) @ tilt @ part.matrix_world
+        bake(objects_since(map_start))
+    elif name == 'lamp':
+        # A bedside lamp: a round base, a slim stand, a wide shade and a warm bulb peeking below it.
+        cone((0, 0, .05), .3, .1, '#8bbddf', .26)
+        cone((0, 0, .38), .04, .6, '#c9b08f', .04)
+        sphere((0, 0, .66), (.12, .12, .12), '#fff1b0')
+        cone((0, 0, .86), .4, .45, GOLD, .22)
+        torus((0, 0, .64), .4, .025, WHITE)
+    elif name == 'sailboat':
+        # Rhyming River's boat, side on like the emoji: a hull with a pointed bow, a mast and two sails.
+        cube((-.05, 0, .2), (.75, .34, .22), ORANGE, .1)
+        sphere((.32, 0, .22), (.24, .17, .12), ORANGE)
+        cube((-.05, -.172, .25), (.8, .01, .04), WHITE, .01)
+        for x in [-.3, -.05, .2]:
+            sphere((x, -.175, .17), (.035, .01, .035), WHITE)
+        cone((-.05, 0, .74), .022, 1.05, '#bc9479', .018)
+        slab('sail', [(-.1, -.02, .4), (-.1, -.02, 1.2), (-.55, -.02, .4)], WHITE, .04)
+        slab('jib', [(0, -.02, .4), (0, -.02, 1.05), (.36, -.02, .4)], PINK, .04)
+        slab('flag', [(-.07, -.02, 1.27), (-.07, -.02, 1.15), (.12, -.02, 1.21)], RED, .02)
+    elif name == 'car':
+        # A little red toy car seen from the side, like the car emoji: windows, wheels and a headlight.
+        cube((0, 0, .26), (.95, .46, .24), '#e5604f', .09)
+        cube((-.06, 0, .47), (.52, .42, .24), '#e5604f', .08)
+        for x in [-.19, .09]:
+            cube((x, -.212, .48), (.19, .01, .14), '#a8d5ec', .02)
+        for x in [-.3, .3]:
+            for y in [-.22, .22]:
+                wheel = cone((x, y, .14), .14, .09, DARK, .14)
+                wheel.rotation_euler[0] = QUARTER_TURN
+                hub = cone((x, y + (-.05 if y < 0 else .05), .14), .055, .02, '#d9dde6', .055)
+                hub.rotation_euler[0] = QUARTER_TURN
+        sphere((.47, -.12, .3), (.025, .06, .045), GOLD)
+        sphere((-.47, -.12, .3), (.02, .05, .035), '#f6a49a')
+    elif name == 'box':
+        # An open cardboard box with its four flaps folded out, so it reads as a box, not a present.
+        cardboard, inside = '#d7a66d', '#9e6f43'
+        cube((0, 0, .24), (.62, .52, .48), cardboard, .03)
+        cube((0, 0, .47), (.56, .46, .02), inside, .005)
+        for x, y, size, axis, turn in [(0, -.3, (.6, .22, .02), 0, .5), (0, .3, (.6, .22, .02), 0, -.5),
+                                       (-.36, 0, (.22, .5, .02), 1, -.5), (.36, 0, (.22, .5, .02), 1, .5)]:
+            flap = cube((x, y, .52), size, '#e2b47c', .008)
+            flap.rotation_euler[axis] = turn
+        cube((0, -.262, .24), (.62, .01, .07), '#c08f58', .003)
     elif name == 'parcel':
         cube((0, 0, .3), (.55, .55, .55), ORANGE)
         cube((0, -.283, .3), (.1, .01, .56), WHITE)
@@ -830,6 +932,8 @@ TOYS = [
     'book', 'bread', 'drum', 'gear', 'kite', 'cloud', 'cat', 'dog', 'pig', 'hen', 'bat',
     # Picnic Word Basket's foods and its picnic blanket.
     'jam', 'bun', 'fig', 'nut', 'pod', 'ham', 'blanket',
+    # Rhyming River's word pictures that no other game needs.
+    'goat', 'log', 'map', 'car', 'box', 'sailboat', 'lamp',
 ]
 
 # Build the whole library once, hidden. Each game exports only the toys it uses,
@@ -879,7 +983,7 @@ COVER_HEROES = {
 }
 
 # Toys either side of the cover hero, in place of the scenery's second and third toys.
-COVER_SIDES = {'picnic-word-basket': ['jam', 'bun']}
+COVER_SIDES = {'picnic-word-basket': ['jam', 'bun'], 'rhyming-river': ['cat', 'hat']}
 
 
 def toybox_toys(g):
@@ -897,6 +1001,9 @@ def toybox_toys(g):
         needed.update(['bottle', VESSEL_TOYS[g['vessel']]])
     if g['mode'] == 'experiment':
         needed.update(entry[2] for entry in g['sets'])
+    if g['mode'] == 'rhyme':
+        # Every word is shown as a clay picture named after it.
+        needed.update(g.get('pictures', {}).get(word, word.lower()) for entry in g['sets'] for word in entry)
     return needed
 
 

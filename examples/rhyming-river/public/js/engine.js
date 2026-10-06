@@ -68,6 +68,10 @@ function fillLabel(text, value) {
   text.classList.toggle('glyph', GLYPH.test(value) || !!d)
   text.classList.toggle('letter', !!d)
   text.classList.toggle('blank', value === '_')
+  // A whole word on a piece (Rhyming River's lily pads) is drawn in the same print.
+  const word = !d && value.length > 1 && PRINTED_WORDS.has(value)
+  text.classList.toggle('word', word)
+  if (word) text.replaceChildren(drawnWord(value))
   if (!d) return
   const svg = document.createElementNS(SVG_NS, 'svg')
   svg.setAttribute('viewBox', '0 3 80 135')
@@ -80,7 +84,7 @@ function fillLabel(text, value) {
   hidden.textContent = value
   text.replaceChildren(svg, hidden)
 }
-// In spelling games the letters and words a child builds are drawn in that same print in the
+// In spelling and rhyming games the letters and words a child builds are drawn in that same print in the
 // prompt, feedback and win card too, so "c – a – t spells cat" shows the a and l of the tiles.
 // Each letter's left and right ink edge in its 80-wide box, for spacing letters into words
 // (f's is its crossbar: the hook above leans over the next letter, as in print).
@@ -90,9 +94,10 @@ const LETTER_EDGES = {
   q: [12, 60], r: [24, 62], s: [20, 59], t: [22, 56], u: [20, 60], v: [18, 62], w: [8, 72], x: [20, 60],
   y: [18, 63], z: [20, 60],
 }
-const PRINTED_WORDS = new Set(game.mode === 'spell' ? game.words.map(([word]) => word.toLowerCase()) : [])
+const PRINTED_WORDS = new Set(game.mode === 'spell' ? game.words.map(([word]) => word.toLowerCase())
+  : game.mode === 'rhyme' ? game.sets.flat().map((word) => word.toLowerCase()) : [])
 // Letter games (`printLetters` in their design) draw single lowercase letters in their messages too.
-const PRINTS = game.mode === 'spell' || !!game.printLetters
+const PRINTS = game.mode === 'spell' || game.mode === 'rhyme' || !!game.printLetters
 
 function drawnWord(word) {
   const svg = document.createElementNS(SVG_NS, 'svg')
@@ -639,18 +644,27 @@ function finish() {
   const traced = game.trace === 'letter'
     ? Array.from({ length: 5 }, (_, round) => challenge(game, state.level, round, state.seed).glyph)
     : []
+  // Rhyming adventures recap the five rhymes the child found.
+  const rhymed = game.mode === 'rhyme'
+    ? Array.from({ length: 5 }, (_, round) => challenge(game, state.level, round, state.seed))
+    : []
   const list = (words) => `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`
-  printText($('win-text'), spelled.length
-    ? `You spelled ${list(spelled.map((c) => (c.picture ? `${c.picture}\u00a0` : '') + c.word.toLowerCase()))}. ${game.cheer || 'Every try helped you learn!'}`
-    : traced.length
-      ? `You traced ${list(traced)}. Every try helped you learn!`
-      : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)
+  const rhymes = rhymed.map((c) => `${c.word}\u00a0–\u00a0${c.target}`)
+  printText($('win-text'), rhymed.length
+    ? `You found ${list(rhymes)}. They rhyme! Every try helped you learn!`
+    : spelled.length
+      ? `You spelled ${list(spelled.map((c) => (c.picture ? `${c.picture}\u00a0` : '') + c.word.toLowerCase()))}. ${game.cheer || 'Every try helped you learn!'}`
+      : traced.length
+        ? `You traced ${list(traced)}. Every try helped you learn!`
+        : `You explored ${game.skill.toLowerCase()}. Every try helped you learn!`)
   audio.happy()
-  audio.speak(spelled.length
-    ? ['A wonderful adventure!', `You spelled ${list(spelled.map((c) => c.word.toLowerCase()))}.`, ...(game.cheer ? [game.cheer] : [])]
-    : traced.length
-      ? ['A wonderful adventure!', 'You traced', ...traced.slice(0, -1).map((l) => l.toUpperCase()), 'and', traced.at(-1).toUpperCase()]
-      : 'A wonderful adventure! Every try helped you learn.')
+  audio.speak(rhymed.length
+    ? ['A wonderful adventure!', 'You found five rhymes.', ...rhymed.map((c) => `${c.word}, ${c.target}.`)]
+    : spelled.length
+      ? ['A wonderful adventure!', `You spelled ${list(spelled.map((c) => c.word.toLowerCase()))}.`, ...(game.cheer ? [game.cheer] : [])]
+      : traced.length
+        ? ['A wonderful adventure!', 'You traced', ...traced.slice(0, -1).map((l) => l.toUpperCase()), 'and', traced.at(-1).toUpperCase()]
+        : 'A wonderful adventure! Every try helped you learn.')
   // A carrier (Word Rocket's rocket) stands tall on the board itself, towering over its crew.
   const carrier = game.carrier && spelled.some((c) => c.friend)
   const hero = tile({ model: game.hero || 'rabbit', size: 2, x: 0, z: 2, visual: true, scale: carrier ? 1.7 : 1 })

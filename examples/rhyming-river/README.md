@@ -6,7 +6,7 @@ Hop between lily pads with words that rhyme.
 - Learning: Rhyming word families
 - Activity: rhyme
 
-Listen to the word. Pick a word with the same ending sound.
+Listen to the word. Hop to the lily pad whose word ends with the same sound.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/rhyming-river assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

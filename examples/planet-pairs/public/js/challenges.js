@@ -518,12 +518,17 @@ export function challenge(g, level, round, seed) {
     }
 
     case 'rhyme': {
-      const [word, answer, ...others] = g.sets[(round + level) % g.sets.length]
+      // Each adventure starts at a different set, then walks the list without repeats. Words are
+      // lowercase, as children first read them; each one names its clay picture.
+      const [word, answer, ...others] = g.sets[(round + level + Math.abs(Math.floor(seed))) % g.sets.length].map((w) => w.toLowerCase())
       c.word = word
       c.target = answer
-      c.tiles = shuffle([answer, ...others], rng)
-      c.prompt = `Which word rhymes with ${word.toLowerCase()}?`
-      c.fact = `${word.toLowerCase()} and ${answer.toLowerCase()} have the same ending sound.`
+      // Little steps: the rhyme and one other word; Growing: two others; Explorer: three.
+      c.tiles = shuffle([answer, ...others.slice(0, level + 1)], rng)
+      c.prompt = `Which word rhymes with ${word}?`
+      // The choices are read aloud one by one, so a child who can't read yet hears every word.
+      c.say = [`Which word rhymes with ${word}?`, ...c.tiles.map((w, i) => (i === c.tiles.length - 1 ? `or ${w}?` : `${w},`))]
+      c.fact = `${word}, ${answer}. They rhyme!`
       break
     }
 

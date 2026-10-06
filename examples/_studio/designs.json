@@ -2323,42 +2323,52 @@
     "mode": "rhyme",
     "skill": "Rhyming word families",
     "tagline": "Hop between lily pads with words that rhyme.",
+    "hero": "frog",
+    "pictures": {
+      "BOAT": "sailboat"
+    },
     "sets": [
       [
         "CAT",
         "HAT",
         "DOG",
-        "SUN"
+        "SUN",
+        "CUP"
       ],
       [
         "LOG",
         "DOG",
         "HEN",
-        "CUP"
+        "CUP",
+        "LAMP"
       ],
       [
         "BEE",
         "TREE",
         "CAT",
-        "MAP"
+        "MAP",
+        "BED"
       ],
       [
         "FOX",
         "BOX",
         "SUN",
-        "PIG"
+        "PIG",
+        "FISH"
       ],
       [
         "STAR",
         "CAR",
         "BED",
-        "HEN"
+        "HEN",
+        "SUN"
       ],
       [
         "BOAT",
         "GOAT",
         "FISH",
-        "CAT"
+        "PIG",
+        "BED"
       ]
     ],
     "sky": "#e0efd9",

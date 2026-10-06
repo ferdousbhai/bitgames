@@ -11,42 +11,52 @@ export default {
   "mode": "rhyme",
   "skill": "Rhyming word families",
   "tagline": "Hop between lily pads with words that rhyme.",
+  "hero": "frog",
+  "pictures": {
+    "BOAT": "sailboat"
+  },
   "sets": [
     [
       "CAT",
       "HAT",
       "DOG",
-      "SUN"
+      "SUN",
+      "CUP"
     ],
     [
       "LOG",
       "DOG",
       "HEN",
-      "CUP"
+      "CUP",
+      "LAMP"
     ],
     [
       "BEE",
       "TREE",
       "CAT",
-      "MAP"
+      "MAP",
+      "BED"
     ],
     [
       "FOX",
       "BOX",
       "SUN",
-      "PIG"
+      "PIG",
+      "FISH"
     ],
     [
       "STAR",
       "CAR",
       "BED",
-      "HEN"
+      "HEN",
+      "SUN"
     ],
     [
       "BOAT",
       "GOAT",
       "FISH",
-      "CAT"
+      "PIG",
+      "BED"
     ]
   ],
   "sky": "#e0efd9",
@@ -59,6 +69,6 @@ export default {
     "snail"
   ],
   "seed": 9473,
-  "instructions": "Listen to the word. Pick a word with the same ending sound.",
+  "instructions": "Listen to the word. Hop to the lily pad whose word ends with the same sound.",
   "activityNumber": 19
 };

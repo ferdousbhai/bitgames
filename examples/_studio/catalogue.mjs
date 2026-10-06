@@ -105,7 +105,14 @@ G('picnic-word-basket','Picnic Word Basket','🧺',[5,8],'orchard','spell','Food
   scenery:['tree','apple','pear','strawberry'],hero:'basket',carrier:'basket',
   // Said and shown on the win card as the foods hop onto the blanket (no lone "a", which spelling games print as a letter).
   cheer:'Picnic time!'}),
-G('rhyming-river','Rhyming River','📖',[5,8],'pond','rhyme','Rhyming word families','Hop between lily pads with words that rhyme.',{sets:[['CAT','HAT','DOG','SUN'],['LOG','DOG','HEN','CUP'],['BEE','TREE','CAT','MAP'],['FOX','BOX','SUN','PIG'],['STAR','CAR','BED','HEN'],['BOAT','GOAT','FISH','CAT']]}),
+G('rhyming-river','Rhyming River','📖',[5,8],'pond','rhyme','Rhyming word families','Hop between lily pads with words that rhyme.',{hero:'frog',
+  // Each set: a word, the word that rhymes with it, then words that don't. Little steps offers the
+  // rhyme and one other word, Growing two others, and Explorer adds a word that only BEGINS the same
+  // (cat, cup), so a child learns that a rhyme is about the ending. Every word is shown as a clay picture.
+  // A word's clay picture is the toy of the same name, unless named here.
+  pictures:{BOAT:'sailboat'},
+  sets:[['CAT','HAT','DOG','SUN','CUP'],['LOG','DOG','HEN','CUP','LAMP'],['BEE','TREE','CAT','MAP','BED'],['FOX','BOX','SUN','PIG','FISH'],['STAR','CAR','BED','HEN','SUN'],['BOAT','GOAT','FISH','PIG','BED']],
+}),
 G('weather-wardrobe','Weather Wardrobe','🌦️',[3,6],'village','choice','Weather and practical reasoning','Dress a toy explorer for sun, rain, and snow.',{challenges:[['🌧️ Rain! What keeps us dry?','☂️ Umbrella','🕶️ Sunglasses','🩴 Sandals'],['❄️ Snow! What keeps hands warm?','🧤 Mittens','🪭 Fan','🩴 Sandals'],['☀️ Sunshine! What shades our head?','👒 Sun hat','🧣 Scarf','🛷 Sled'],['🌧️ Puddles! What keeps feet dry?','🥾 Rain boots','🩴 Sandals','🧦 Socks']],storyToys:['umbrella','gloves','hat','boots','glasses','sandal','scarf']}),
 G('kindness-cafe','Kindness Café','💛',[3,7],'bakery','choice','Empathy and cooperation','Choose caring actions at a tiny toy café.',{
   challenges:[
@@ -199,7 +206,7 @@ export const instructions = {
  rotate:'Turn the colourful key in quarter turns until it matches the pale outline. Press Check.',
  measure:'Place equal units along the glowing length without gaps. Press Check.',
  spell:'Look at the picture and listen to the word. Tap its letters in order.',
- rhyme:'Listen to the word. Pick a word with the same ending sound.',
+ rhyme:'Listen to the word. Hop to the lily pad whose word ends with the same sound.',
  choice:'Listen to the little story, then choose the helpful answer.',
  experiment:'Make a prediction, press Test, and see what happens. Try both ideas.',
  pitch:'Play both sounds, then choose the higher or lower one. Replay as often as you like.',

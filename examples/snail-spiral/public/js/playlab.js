@@ -526,36 +526,96 @@ function spell(c, g, a) {
 
 // --- Rhyme: hop the frog to the lily pad that rhymes -----------------------------------
 
+// The frog sits by the first word's picture. Every word is a clay picture with its word in
+// early-years print under it, and all the words are read aloud, so a child needn't read them.
+// A wrong pad says the two words together; a second miss or a long pause sets the rhyme glowing.
+// The rhyme's shared ending lights up in both words when the frog hops across.
 function rhyme(c, g, a) {
-  const frog = a.actor('frog', 0.8, -3, -1.5)
-  a.tile({ label: c.word, x: 0, z: -1.8, size: 1.4, visual: true })
-  const water = a.block(7, 0.045, 2.8, '#a8cdd0')
-  water.position.y = 0.04
-  a.board.add(water)
+  const first = c.word
+  let misses = 0
+  let pauses = 0
+  let idle = null
+  const frog = a.actor('frog', 0.8, -1.9, -1.75)
+  // A word's clay picture is the toy of the same name, unless the design names another.
+  const toy = (word) => g.pictures?.[word.toUpperCase()] || word
+  const start = a.tile({ model: toy(first), label: first, x: 0, z: -1.75, size: 1.6, depth: 1.45, colour: '#f1ddb8', visual: true, scale: 1.15 })
+  // Each picture stands towards the back of its piece, clear of the word printed in front of it.
+  const picture = (piece) => {
+    if (piece.figure) piece.figure.position.z -= 0.3
+  }
+  picture(start)
 
-  a.grid(c.tiles, (word) => ({
+  const glow = (on) => pads.forEach((pad, i) => pad.button.classList.toggle('current', on && c.tiles[i] === c.target))
+  // The letters two rhyming words share at their end: the at of cat and hat.
+  let shared = 0
+  while (shared < Math.min(first.length, c.target.length) && first.at(-1 - shared) === c.target.at(-1 - shared)) shared++
+  const lightEnding = (root) => {
+    for (const word of root.querySelectorAll('.print')) {
+      const paths = [...word.querySelectorAll('path')]
+      paths.slice(-shared).forEach((path) => path.classList.add('rime'))
+    }
+  }
+
+  // Help: the two rhyming words said together, and the rhyme's lily pad glows.
+  function help(wrong) {
+    glow(true)
+    const intro = wrong ? [`${wrong}.`, `${first}, ${wrong}. They don’t rhyme.`] : []
+    a.feedback(`Listen: ${first} … ${c.target}. They end the same. Hop to the glowing lily pad!`, false,
+      [...intro, `Listen: ${first}.`, `${c.target}.`, 'They end the same.', 'Hop to the glowing lily pad!'])
+  }
+  // A child who stops hears the words again, then gets help.
+  function wait() {
+    clearTimeout(idle)
+    if (pauses < 2) idle = a.later(() => {
+      pauses++
+      if (pauses === 1 && misses < 2) a.audio.speak(c.say)
+      else help()
+      wait()
+    }, 15000)
+  }
+
+  const pads = a.grid(c.tiles, (word) => ({
     label: word,
-    model: 'leaf',
+    model: toy(word),
+    thin: true,
     size: 1.75,
     depth: 1.6,
-    colour: '#bad6ae',
+    colour: '#9cc987',
+    scale: 1.15,
     onTap: (t) => {
-      a.audio.speak(word.toLowerCase())
       if (word !== c.target) {
-        a.feedback(`Listen to the ending of ${c.word.toLowerCase()} and ${word.toLowerCase()}. Try another word.`)
+        misses++
+        a.audio.note(262, 0.13)
+        if (misses < 2) {
+          a.feedback(`${first} – ${word}: they don’t rhyme. Try another lily pad.`, false,
+            [`${word}.`, `${first}, ${word}.`, 'They don’t sound the same at the end.', 'Try another lily pad.'])
+        } else help(word)
+        wait()
         return
       }
+      clearTimeout(idle)
+      glow(false)
+      // The frog hops onto the lily pad beside its picture, and both pictures bounce.
       const from = frog.position.clone()
-      const to = new THREE.Vector3(t.x, 0.2, t.z)
+      const to = new THREE.Vector3(t.x + 0.55, 0.2, t.z - 0.3)
       a.animate(0.8, (p) => {
         frog.position.lerpVectors(from, to, p)
-        frog.position.y += Math.sin(p * Math.PI) * 0.9
+        frog.position.y += Math.sin(p * Math.PI) * 1.1
+        frog.scale.setScalar(1 - 0.3 * p)
       }, frog)
-      a.success(c.fact)
+      a.later(() => {
+        t.hop()
+        start.hop()
+      }, 800)
+      lightEnding(start.button)
+      lightEnding(t.button)
+      a.success(`${first} – ${c.target}. They rhyme!`, [`${c.target}!`, `${first}, ${c.target}.`, 'They rhyme!'])
+      lightEnding(document.getElementById('feedback'))
     },
-  }), { spacing: 2.2, z: 0.65 })
+  }), { spacing: c.tiles.length > 3 ? 2.05 : 2.35, z: 1.05 })
+  pads.forEach(picture)
 
-  a.action('🔈 Hear first word', () => a.audio.speak(c.word.toLowerCase()))
-  for (const word of c.tiles) a.action(`Hear ${word}`, () => a.audio.speak(word.toLowerCase()))
-  a.hint('Listen to each word separately. Find a word with the same ending sound.')
+  a.action('🔈 Hear the words', () => a.audio.speak(c.say))
+  a.hint('Listen to the words. Tap the picture whose word ends with the same sound. Stuck? A lily pad will glow.')
+  wait()
 }

@@ -106,6 +106,8 @@ function requiredToys(g) {
     match: () => ['parcel', 'rocket', 'tree', 'rabbit', 'boat', 'fox', 'bird', 'duck', 'snail'],
     pitch: () => ['bird'],
     build: () => ['parcel'],
+    // Every rhyming word is shown as its clay picture.
+    rhyme: () => ['frog', ...g.sets.flat().map((word) => g.pictures?.[word] || word.toLowerCase())],
   }
   for (const toy of [...(byGame[g.id] || []), ...(byMode[g.mode]?.() || [])]) toys.add(toy)
   return toys
@@ -188,6 +190,16 @@ function checkChallenge(c, level) {
     case 'spell':
       assert.ok([...c.word].every((letter) => c.tiles.includes(letter)))
       break
+    case 'rhyme': {
+      // The rhyme shares its last two letters with the word (cat, hat; boat, goat); no other choice
+      // shares even the last letter, so no near-rhyme confuses. Harder levels offer more choices.
+      const end = (word, n) => word.slice(-n)
+      assert.equal(end(c.target, 2), end(c.word, 2))
+      for (const other of c.tiles.filter((w) => w !== c.target)) assert.notEqual(end(other, 1), end(c.word, 1), `${c.word}/${other}`)
+      assert.equal(c.tiles.length, level + 2)
+      assert.ok(Array.isArray(c.say) && c.say.length === c.tiles.length + 1)
+      break
+    }
     case 'tenframe':
       assert.ok(c.target >= 1 && c.target <= 10)
       break
