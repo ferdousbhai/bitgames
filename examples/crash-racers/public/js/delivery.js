@@ -24,16 +24,15 @@ function numberLabel(number) {
   return label
 }
 
-export function createDelivery(scene, onVisit) {
+export function createDelivery(scene, onVisit, onWrong) {
   const group = new THREE.Group()
   group.visible = false
   scene.add(group)
   const geometry = new THREE.BoxGeometry(2, 2, 2)
-  const material = new THREE.MeshStandardMaterial({ color: '#bca3df', roughness: 0.5 })
   const ribbonMaterial = new THREE.MeshStandardMaterial({ color: '#ffe1a2' })
   const markers = Array.from({ length: STOPS }, (_, i) => {
     const marker = new THREE.Group()
-    marker.add(new THREE.Mesh(geometry, material))
+    marker.add(new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: '#bca3df', roughness: 0.5 })))
     const ribbon = new THREE.Mesh(geometry, ribbonMaterial)
     ribbon.scale.set(0.2, 1.03, 1.03)
     marker.add(ribbon)
@@ -44,12 +43,21 @@ export function createDelivery(scene, onVisit) {
 
   let next = 0
   let points = []
+  let wrongNearby = -1
+  function highlightNext() {
+    markers.forEach((marker, i) => {
+      marker.children[0].material.color.set(i === next ? '#ffbe0b' : '#bca3df')
+      marker.children[0].material.emissive.set(i === next ? '#4c2600' : '#000000')
+    })
+  }
   return {
     get points() { return points },
     get next() { return next },
     // Spread the stops evenly along the lap, between the start and the finish.
     configure(track) {
       next = 0
+      wrongNearby = -1
+      highlightNext()
       points = markers.map((marker, i) => {
         const point = track.curve.getPointAt((i + 1) / (STOPS + 1))
         marker.position.copy(point)
@@ -62,9 +70,17 @@ export function createDelivery(scene, onVisit) {
     // Stops only count in order: the car must reach the next numbered marker.
     update(position, radius) {
       const point = points[next]
-      if (!point || Math.hypot(position.x - point.x, position.z - point.z) > radius) return
-      markers[next].visible = false
-      onVisit(next++)
+      if (!point) return
+      if (Math.hypot(position.x - point.x, position.z - point.z) <= radius) {
+        markers[next].visible = false
+        wrongNearby = -1
+        onVisit(next++)
+        highlightNext()
+        return
+      }
+      const wrong = points.findIndex((other, i) => i > next && Math.hypot(position.x - other.x, position.z - other.z) <= radius)
+      if (wrong !== wrongNearby && wrong >= 0) onWrong?.(next + 1)
+      wrongNearby = wrong
     },
   }
 }

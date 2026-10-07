@@ -175,19 +175,59 @@ const game = {
 }
 
 // Optional learning mission (race mode only): visit four numbered stops in map order.
+function renderDeliveryProgress(goal, option, count) {
+  if (!option.goal) return
+  goal.replaceChildren()
+  goal.setAttribute('aria-label', `${option.goal}. ${count} of 4 stops delivered.`)
+  const caption = document.createElement('span')
+  caption.textContent = count < 4 ? `🎁 Stop ${count + 1} · ${count} / 4` : '🎁 All 4 stops! · 4 / 4'
+  const steps = document.createElement('span')
+  steps.className = 'delivery-steps'
+  for (let i = 0; i < 4; i++) {
+    const number = document.createElement('span')
+    number.textContent = String(i + 1)
+    number.className = i < count ? 'done' : i === count ? 'next' : ''
+    steps.append(number)
+  }
+  goal.append(caption, steps)
+}
+
+function speakDelivery(text) {
+  if (!('speechSynthesis' in window)) return
+  speechSynthesis.cancel()
+  const words = new SpeechSynthesisUtterance(text)
+  words.lang = 'en-US'
+  words.rate = 0.82
+  speechSynthesis.speak(words)
+}
+
 const adventure = createAdventure({
   id: 'crash-racers',
   anchor: document.querySelector('[data-mode="race"]'),
   hud: $('hud'),
   isMuted: () => audio.muted,
   celebrate: (text) => banner(text),
+  renderProgress: renderDeliveryProgress,
   options: [
     { emoji: '🏎️', label: 'Free driving' },
     { emoji: '🎁', label: 'Follow the delivery map', goal: 'Deliver to stops 1 → 2 → 3 → 4', target: 4, reward: 'Four deliveries in map order!' },
   ],
 })
 adventure.enable(game.mode === 'race')
-const delivery = createDelivery(scene, () => adventure.event())
+function renderDeliveryChoice() {
+  const button = $('adventure-choice')
+  button.textContent = adventure.option.goal ? '🎁 1 → 2 → 3 → 4  ↻' : '🏎️ Free driving  ↻'
+}
+renderDeliveryChoice()
+$('adventure-choice').addEventListener('click', renderDeliveryChoice)
+const delivery = createDelivery(scene, () => {
+  adventure.event()
+  if (delivery.next < 4) later(() => {
+    if (game.raceOn && deliveryOn()) speakDelivery(`Now drive to stop ${delivery.next + 1}!`)
+  }, 650)
+}, (next) => {
+  if (game.raceOn && deliveryOn()) speakDelivery(`Find stop ${next} on the map!`)
+})
 const deliveryOn = () => game.mode === 'race' && !!adventure.option.goal
 
 const isHost = () => game.room && game.hostId === game.room.selfId
@@ -330,6 +370,7 @@ function buildMenu() {
     el.onclick = () => {
       game.mode = el.dataset.mode
       adventure.enable(game.mode === 'race')
+      renderDeliveryChoice()
       document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b === el))
       document.querySelector('.laps').classList.toggle('hidden', game.mode === 'smash')
       audio.beep()
@@ -363,6 +404,7 @@ function enterLobbyScreen() {
   $('countdown').classList.add('hidden')
   if (isHost()) {
     game.state = 'menu'
+    renderDeliveryChoice()
     show('menu')
   } else {
     game.state = 'waiting'
@@ -773,6 +815,7 @@ function runCountdown() {
         game.state = 'race'
         game.raceOn = true
         show(null)
+        if (deliveryOn()) speakDelivery('Drive to stop 1!')
         later(() => el.classList.add('hidden'), 700)
       }
     }, i * 900),

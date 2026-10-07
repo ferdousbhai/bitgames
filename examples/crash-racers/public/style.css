@@ -81,6 +81,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .player { background: rgba(255,255,255,0.18); border-radius: 18px; padding: 6px 14px; font-size: 20px; font-weight: 800; }
 
 #hud { position: fixed; inset: 0; pointer-events: none; }
+#adventure-goal { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 200px; }
+#adventure-goal[hidden] { display: none; }
+.delivery-steps { display: flex; gap: 6px; }
+.delivery-steps span { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; background: #ded6ec; color: #655978; font-size: 17px; font-weight: 900; }
+.delivery-steps .done { background: #8ac926; color: #fff; }
+.delivery-steps .next { background: #ffbe0b; color: #47315b; box-shadow: 0 0 0 3px #fff; }
 .hud-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); display: flex; gap: 8px; }
 .pill { display: flex; align-items: center; background: rgba(0,0,0,0.45); border-radius: 18px; padding: 6px 14px; font-size: 22px; font-weight: 900; }
 .pill.big { font-size: 34px; color: #ffbe0b; }
@@ -190,6 +196,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 /* Narrow phones: smaller pills so the HUD stays on one row, left of the store's 🏠 and ✕ buttons. */
 @media (max-width: 520px) {
+  #adventure-goal { top: calc(184px + env(safe-area-inset-top)); bottom: auto; }
   .pill { font-size: 15px; padding: 4px 7px; border-radius: 14px; }
   .pill.big { font-size: 18px; }
   .hud-top { gap: 4px; }
@@ -255,6 +262,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .podium { gap: 4px; } .podium .place { padding: 4px 12px; font-size: 18px; } .podium .place .medal { font-size: 26px; }
   .pill { font-size: 17px; padding: 4px 10px; } .pill.big { font-size: 24px; }
   #minimap { width: 100px; height: 100px; }
+  #adventure-goal { top: calc(10px + env(safe-area-inset-top)); bottom: auto; left: auto; right: calc(120px + env(safe-area-inset-right)); transform: none; }
   /* Nudged left, clear of the store's 🏠 and ✕ buttons in the top-right corner. */
   #menu .modes { margin-right: 80px; }
 }
