@@ -30,7 +30,7 @@
       7
     ],
     "learning": "Beginning sounds and spelling",
-    "url": "https://3ce61d70-bitgames-animal-alphabet.ferdousbd.workers.dev/"
+    "url": "https://61144914-bitgames-animal-alphabet.ferdousbd.workers.dev/"
   },
   {
     "id": "bakery-alarm",
@@ -402,7 +402,8 @@
       3,
       6
     ],
-    "learning": "Environmental care and classification"
+    "learning": "Environmental care and classification",
+    "url": "https://c38e9e68-bitgames-coral-cleanup.ferdousbd.workers.dev/"
   },
   {
     "id": "crash-racers",
@@ -549,7 +550,7 @@
       4
     ],
     "learning": "One-to-one counting",
-    "url": "https://3be9a1b9-bitgames-firefly-lanterns.ferdousbd.workers.dev/"
+    "url": "https://cc6afdef-bitgames-firefly-lanterns.ferdousbd.workers.dev/"
   },
   {
     "id": "fish-pond",
@@ -807,7 +808,7 @@
       7
     ],
     "learning": "Uppercase and lowercase letters",
-    "url": "https://fad33a19-bitgames-letter-buddies.ferdousbd.workers.dev/"
+    "url": "https://cb90495e-bitgames-letter-buddies.ferdousbd.workers.dev/"
   },
   {
     "id": "letter-trails",
@@ -824,7 +825,7 @@
       7
     ],
     "learning": "Letter formation",
-    "url": "https://852c58fc-bitgames-letter-trails.ferdousbd.workers.dev/"
+    "url": "https://4dd577b2-bitgames-letter-trails.ferdousbd.workers.dev/"
   },
   {
     "id": "magnet-discovery",
@@ -873,7 +874,8 @@
       3,
       6
     ],
-    "learning": "Counting and stopping at a target"
+    "learning": "Counting and stopping at a target",
+    "url": "https://84fd2400-bitgames-moon-pebbles.ferdousbd.workers.dev/"
   },
   {
     "id": "number-spark-trails",
@@ -905,7 +907,8 @@
       2,
       5
     ],
-    "learning": "Counting and quantity"
+    "learning": "Counting and quantity",
+    "url": "https://f346974a-bitgames-orchard-baskets.ferdousbd.workers.dev/"
   },
   {
     "id": "paint-a-planet",
@@ -1036,7 +1039,7 @@
       8
     ],
     "learning": "Food word spelling",
-    "url": "https://c85684cc-bitgames-picnic-word-basket.ferdousbd.workers.dev/"
+    "url": "https://444afa67-bitgames-picnic-word-basket.ferdousbd.workers.dev/"
   },
   {
     "id": "pizza-moon",
@@ -1100,7 +1103,8 @@
       2,
       4
     ],
-    "learning": "Colour recognition"
+    "learning": "Colour recognition",
+    "url": "https://b4e22b48-bitgames-rainbow-postoffice.ferdousbd.workers.dev/"
   },
   {
     "id": "rainbow-quilt",
@@ -1165,7 +1169,7 @@
       8
     ],
     "learning": "Rhyming word families",
-    "url": "https://d2a672d0-bitgames-rhyming-river.ferdousbd.workers.dev/"
+    "url": "https://79920a1a-bitgames-rhyming-river.ferdousbd.workers.dev/"
   },
   {
     "id": "ribbon-tailor",
@@ -1616,6 +1620,6 @@
       8
     ],
     "learning": "CVC word building",
-    "url": "https://3ab78df6-bitgames-word-rocket.ferdousbd.workers.dev/"
+    "url": "https://f0e853b8-bitgames-word-rocket.ferdousbd.workers.dev/"
   }
 ]
