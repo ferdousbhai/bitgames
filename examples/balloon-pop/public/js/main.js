@@ -75,19 +75,94 @@ try {
 
 // Optional learning missions. Hunts also make their balloons more common (see spawn).
 const RED = '#ff595e'
+const COOL_COLORS = ['#8ac926', '#2ec4b6', '#4d96ff', '#9b5de5']
+const missionPictures = {
+  'Count three balloons': ['🎈', '🎈', '🎈'],
+  'Heart shape hunt': ['💖', '💖', '💖'],
+  'Red colour hunt': ['red', 'red', 'red'],
+}
+
+function picture(type, filled = true) {
+  const slot = document.createElement('span')
+  slot.className = `mission-picture${filled ? ' filled' : ''}${type === 'red' ? ' red-balloon' : ''}`
+  slot.textContent = type === 'red' ? '' : type
+  slot.setAttribute('aria-hidden', 'true')
+  return slot
+}
+
+function renderMissionProgress(goal, option, count) {
+  if (!option.goal) return
+  goal.textContent = ''
+  goal.setAttribute('aria-label', `${option.goal}. ${count} of ${option.target}.`)
+  const caption = document.createElement('span')
+  caption.className = 'mission-caption'
+  caption.textContent = `${option.goal} · ${count} / ${option.target}`
+  const slots = document.createElement('span')
+  slots.className = 'mission-slots'
+  missionPictures[option.label].forEach((type, i) => slots.append(picture(type, i < count)))
+  goal.append(caption, slots)
+}
+
+let rewardTimer
+function celebrateMission(text) {
+  const reward = $('mission-reward')
+  reward.replaceChildren()
+  const pictures = document.createElement('span')
+  pictures.className = 'mission-reward-pictures'
+  missionPictures[adventure.option.label].forEach((type) => pictures.append(picture(type)))
+  const words = document.createElement('span')
+  words.textContent = `⭐ ${text} ⭐`
+  reward.append(pictures, words)
+  reward.classList.remove('show')
+  void reward.offsetWidth
+  reward.classList.add('show')
+  const { w, h } = halfSize(0)
+  effects.shower(w, h)
+  clearTimeout(rewardTimer)
+  rewardTimer = setTimeout(() => reward.classList.remove('show'), 3500)
+}
+
 const adventure = createAdventure({
   id: 'balloon-pop',
   anchor: $('play'),
   hud: $('hud'),
   isMuted: () => audio.muted,
-  celebrate: (text) => banner(text, 'combo'),
+  celebrate: celebrateMission,
+  renderProgress: renderMissionProgress,
   options: [
     { emoji: '🎈', label: 'Free play' },
-    { emoji: '🐢', label: 'Count three balloons', pace: 0.6, goal: 'Pop 3 balloons', target: 3, reward: 'Three balloons, one pop each!' },
-    { emoji: '❤️', label: 'Heart shape hunt', pace: 0.6, goal: 'Find 3 heart balloons', target: 3, huntKind: 'heart', accept: (b) => b.kindName === 'heart', reward: 'Three matching heart shapes!' },
-    { emoji: '🎨', label: 'Red colour hunt', pace: 0.6, goal: 'Find 3 red balloons', target: 3, huntColor: RED, accept: (b) => b.color === RED, reward: 'Three red balloons!' },
+    { emoji: '🐢', label: 'Count three balloons', pace: 0.6, goal: 'Pop three balloons', target: 3, reward: 'Three! You counted three balloons!' },
+    { emoji: '❤️', label: 'Heart shape hunt', pace: 0.6, goal: 'Pop three heart balloons', target: 3, huntKind: 'heart', accept: (b) => b.kindName === 'heart', reward: 'Three! You found three hearts!' },
+    { emoji: '🎨', label: 'Red colour hunt', pace: 0.6, goal: 'Pop three red balloons', target: 3, huntColor: RED, accept: (b) => ['round', 'smile', 'heart', 'mini'].includes(b.kindName) && b.color === RED, reward: 'Three! You found three red balloons!' },
   ],
 })
+
+function renderMissionChoice() {
+  const option = adventure.option
+  const button = $('adventure-choice')
+  button.replaceChildren()
+  const pictures = document.createElement('span')
+  pictures.className = 'mission-choice-pictures'
+  for (const type of missionPictures[option.label] || ['🎈']) pictures.append(picture(type))
+  const label = document.createElement('span')
+  label.textContent = option.label === 'Free play' ? 'Free play' : option.label.replace(' three balloons', '').replace(' shape hunt', 's').replace(' colour hunt', '')
+  const next = document.createElement('span')
+  next.className = 'mission-next'
+  next.textContent = '↻'
+  next.setAttribute('aria-hidden', 'true')
+  button.append(pictures, label, next)
+}
+renderMissionChoice()
+$('adventure-choice').addEventListener('click', renderMissionChoice)
+
+function announceMission() {
+  if (!adventure.option.goal || audio.muted || !('speechSynthesis' in window)) return
+  speechSynthesis.cancel()
+  const words = new SpeechSynthesisUtterance(adventure.option.goal)
+  words.lang = 'en-US'
+  words.rate = 0.82
+  speechSynthesis.speak(words)
+}
 
 function saveBest() {
   if (game.score <= game.best) return false
@@ -126,9 +201,12 @@ function pickKind(kinds) {
 
 function spawn(kindName, opts = {}) {
   const lv = level(game.level)
-  const hunt = game.state === 'play' && Math.random() < 0.55 ? adventure.option : {}
-  if (hunt.huntKind) kindName = hunt.huntKind
-  if (hunt.huntColor && ['round', 'smile', 'heart'].includes(kindName)) opts = { ...opts, color: hunt.huntColor }
+  const mission = game.state === 'play' ? adventure.option : {}
+  const targetSpawn = Math.random() < 0.55
+  if (targetSpawn && mission.huntKind) kindName = mission.huntKind
+  if (mission.huntColor && ['round', 'smile', 'heart'].includes(kindName)) {
+    opts = { ...opts, color: targetSpawn ? mission.huntColor : COOL_COLORS[(Math.random() * COOL_COLORS.length) | 0] }
+  }
   const s = balloonScale()
   const b = balloons.make(kindName, { scale: s, ...opts })
   const z = -1.5 + Math.random() * 2
@@ -327,6 +405,8 @@ function toTitle() {
   const newBest = saveBest()
   game.state = 'title'
   game.party = 0
+  clearTimeout(rewardTimer)
+  $('mission-reward').classList.remove('show')
   $('best').textContent = game.best
   $('last').textContent = game.score ? (newBest ? `🎉 New best: ${game.score}!` : `Last time: ${game.score}`) : ''
   show('title')
@@ -334,6 +414,8 @@ function toTitle() {
 
 function start() {
   adventure.begin()
+  clearTimeout(rewardTimer)
+  $('mission-reward').classList.remove('show')
   audio.unlock()
   audio.click()
   balloons.clear()
@@ -342,7 +424,8 @@ function start() {
   $('best-badge').classList.add('hidden')
   updateHud()
   showIntro('🎈', 'Pop the balloons!', 'Tap them before they fly away')
-  if (!game.firstPop) $('hint').classList.remove('hidden')
+  announceMission()
+  if (!game.firstPop || adventure.option.goal) $('hint').classList.remove('hidden')
 }
 
 $('play').addEventListener('click', start)
@@ -472,8 +555,8 @@ function updatePin(dt) {
 // The "tap here" finger follows the first balloon until the first pop.
 function updateHint() {
   const el = $('hint')
-  if (game.firstPop || game.state !== 'play') return
-  const b = balloons.list.find((x) => x.group.position.y > -halfSize().h * 0.6)
+  if (game.state !== 'play' || (adventure.option.goal ? adventure.progress > 0 : game.firstPop)) return el.classList.add('hidden')
+  const b = balloons.list.find((x) => x.group.position.y > -halfSize().h * 0.6 && (!adventure.option.accept || adventure.option.accept(x)))
   if (!b) return el.classList.add('hidden')
   el.classList.remove('hidden')
   v3.copy(b.group.position).project(camera)
