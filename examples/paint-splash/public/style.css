@@ -30,7 +30,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 .logo { font-size: clamp(42px, 10vw, 92px); font-weight: 900; letter-spacing: 2px; white-space: nowrap; line-height: 1.05; }
 .logo.small { font-size: clamp(34px, 7vw, 62px); }
-.logo span { display: inline-block; -webkit-text-stroke: 2px #fff; text-shadow: 0 5px 0 rgba(60,20,120,0.35); animation: bob 1.6s ease-in-out infinite; }
+.logo span { display: inline-block; -webkit-text-stroke: 0.13em #fff; paint-order: stroke fill; text-shadow: 0 5px 0 rgba(60,20,120,0.35); animation: bob 1.6s ease-in-out infinite; }
 .logo span:nth-child(5n+1) { color: #ff4d8d; } .logo span:nth-child(5n+2) { color: #ff9f1c; animation-delay: .1s; }
 .logo span:nth-child(5n+3) { color: #ffd23f; animation-delay: .2s; } .logo span:nth-child(5n+4) { color: #2ec27e; animation-delay: .3s; }
 .logo span:nth-child(5n) { color: #3a86ff; animation-delay: .4s; }
@@ -68,6 +68,17 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .big-go.alt { background: linear-gradient(#5be0d3, #2ec4b6); box-shadow: 0 7px 0 #1b8178; color: #fff; }
 .big-go:active { transform: translateY(5px); box-shadow: 0 2px 0 #c48a00; }
+/* The colour workshop and the picture gallery: chunky white pills under Let's paint. */
+.picks { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.menu-extras { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+#menu .extra-btn {
+  display: flex; align-items: center; gap: 8px; min-height: 52px; margin: 0; padding: 8px 20px 8px 14px; border-radius: 999px;
+  background: #fff; color: #5a2d91; font: 900 19px/1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
+  box-shadow: 0 5px 0 rgba(60,20,120,.35); transition: transform .1s;
+}
+#menu .extra-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(60,20,120,.35); }
+#menu .extra-btn .ico { font-size: 22px; letter-spacing: -6px; padding-right: 6px; }
+#gallery-open .ico { letter-spacing: 0; padding-right: 0; }
 #go { position: sticky; bottom: calc(6px + env(safe-area-inset-bottom)); z-index: 3; animation: pulse 1.6s ease-in-out infinite; box-shadow: 0 7px 0 #c48a00, 0 10px 30px rgba(0,0,0,.3); }
 @keyframes pulse { 50% { transform: scale(1.06); } }
 .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
@@ -90,7 +101,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .voice-btn:active { transform: translateY(3px); }
 .banner {
   position: absolute; left: 50%; top: 26%; transform: translate(-50%, -50%) scale(0); font-size: clamp(34px, 8vw, 64px); font-weight: 900;
-  white-space: nowrap; color: #fff; text-shadow: 0 4px 0 #b65cff, 0 8px 18px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.2, 1.8, .4, 1), opacity .3s; opacity: 0;
+  white-space: nowrap; color: #fff; -webkit-text-stroke: 0.18em #9b5de5; paint-order: stroke fill; text-shadow: 0 4px 0 #5a2d91, 0 8px 18px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.2, 1.8, .4, 1), opacity .3s; opacity: 0;
 }
 .banner.show { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
 .drag-hint { position: absolute; left: 50%; top: 62%; font-size: 64px; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
@@ -103,7 +114,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 .countdown {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
-  font-size: clamp(120px, 30vw, 240px); font-weight: 900; color: #fff; text-shadow: 0 10px 0 #ff4d8d, 0 20px 40px rgba(0,0,0,.3);
+  font-size: clamp(120px, 30vw, 240px); font-weight: 900; color: #fff; -webkit-text-stroke: 0.12em #ff4d8d; paint-order: stroke fill; text-shadow: 0 10px 0 #b8245c, 0 20px 40px rgba(0,0,0,.3);
 }
 .countdown.pop { animation: count-pop .9s ease-out; }
 @keyframes count-pop { 0% { transform: scale(.3); opacity: 0; } 25% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
@@ -113,8 +124,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .results { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none;
   padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left)); }
 .results-top { text-align: center; animation: drop-in .6s cubic-bezier(.2, 1.6, .4, 1); }
-.results h1 { margin: 0; font-size: clamp(30px, 6vw, 54px); text-shadow: 0 4px 0 #b65cff, 0 8px 20px rgba(0,0,0,.25); }
-.together { display: inline-block; margin-top: 6px; background: rgba(255,255,255,.9); color: #5a2d91; border-radius: 999px; padding: 4px 18px; font-size: clamp(20px, 3.6vw, 28px); font-weight: 900; }
+.results h1 { margin: 0; font-size: clamp(30px, 6vw, 54px); -webkit-text-stroke: 0.2em #9b5de5; paint-order: stroke fill; text-shadow: 0 4px 0 #5a2d91, 0 8px 20px rgba(0,0,0,.25); }
+.keep-btn { vertical-align: middle; margin: 6px 0 0 8px; box-shadow: 0 4px 0 rgba(90,45,145,.3), 0 0 0 4px #ffd23f; animation: pulse 1.6s ease-in-out 2s 3; }
+.together { display: inline-block; vertical-align: middle; margin-top: 6px; background: rgba(255,255,255,.9); color: #5a2d91; border-radius: 999px; padding: 4px 18px; font-size: clamp(20px, 3.6vw, 28px); font-weight: 900; }
 @keyframes drop-in { from { transform: translateY(-60px); opacity: 0; } }
 .panel { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; animation: rise-in .6s cubic-bezier(.2, 1.4, .4, 1) .2s both; }
 @keyframes rise-in { from { transform: translateY(120px); opacity: 0; } }
@@ -157,6 +169,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #go { font-size: 26px; padding: 10px 30px; }
   .results-top { display: flex; align-items: center; justify-content: center; gap: 10px; }
   .results h1 { font-size: 22px; } .together { font-size: 15px; margin: 0; padding: 2px 12px; }
+  .keep-btn { margin: 0; width: 44px; height: 44px; font-size: 22px; }
   .panel { flex-direction: row; align-items: center; justify-content: center; gap: 10px; }
   .card { width: 96px; padding: 2px 3px 4px; border-width: 3px; border-radius: 16px; gap: 0; }
   .card .who { font-size: 20px; } .card .who small { font-size: 11px; } .card .pct { font-size: 17px; }
@@ -165,4 +178,42 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .big-go { font-size: 20px; padding: 7px 18px; }
   .big-go.alt, #again { box-shadow: 0 4px 0 #1b8178; } #again { box-shadow: 0 4px 0 #c48a00; }
   .voice-btn { width: 60px; height: 60px; font-size: 30px; }
+  /* The animals and the places side by side; the workshop and gallery wait in the top corners. */
+  .picks { flex-direction: row; gap: 18px; }
+  #menu > #go { margin-bottom: auto; }
+  .picks .pick-label { display: none; }
+  .picks .animal-row { flex-wrap: nowrap; gap: 8px; }
+  .picks .animal { width: 58px; height: 58px; font-size: 34px; border-radius: 16px; }
+  .picks .places { flex-wrap: nowrap; gap: 8px; }
+  .picks .place { width: 112px; }
+  .menu-extras { position: fixed; inset: 0 auto auto 0; margin: 0 !important; width: 100%; justify-content: space-between; pointer-events: none;
+    padding: calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) 0 calc(10px + env(safe-area-inset-left)); }
+  #menu .extra-btn { pointer-events: auto; flex-direction: column; gap: 0; width: 64px; min-height: 56px; padding: 4px 2px; border-radius: 20px; font-size: 11px; line-height: 1.05; }
+  #menu .extra-btn .ico { font-size: 18px; letter-spacing: -5px; padding-right: 5px; }
+  #menu #gallery-open .ico { font-size: 24px; letter-spacing: 0; padding: 0; }
+}
+/* Small sideways phones: everything a size smaller so the row fits. */
+@media (max-height: 500px) and (max-width: 620px) {
+  .picks { gap: 10px; }
+  .picks .animal-row, .picks .places { gap: 6px; }
+  .picks .animal { width: 50px; height: 50px; font-size: 30px; border-radius: 14px; }
+  .picks .place { width: 96px; padding: 3px; border-width: 4px; } .picks .place .emoji { font-size: 28px; } .picks .place .name { font-size: 13px; }
+}
+/* Narrow upright phones: the workshop and gallery as two small tiles side by side. */
+@media (max-width: 420px) and (min-height: 501px) {
+  #menu .extra-btn { flex-direction: column; gap: 2px; min-width: 116px; padding: 6px 10px; border-radius: 22px; font-size: 14px; }
+  #menu .extra-btn .ico { font-size: 20px; }
+}
+@media (max-width: 360px) {
+  .animal { width: 64px; height: 64px; font-size: 38px; }
+  .animal-row { gap: 6px; }
+}
+/* Very short sideways phones: the picks shrink a little more. */
+@media (max-height: 340px) {
+  .logo.small { font-size: 28px; }
+  .screen { gap: 6px; }
+  .player { font-size: 20px; padding: 2px 10px 2px 4px; } .player .dot { width: 20px; height: 20px; }
+  .picks .place .emoji { font-size: 28px; line-height: 1.1; } .picks .place .name { font-size: 13px; }
+  .picks .place { width: 100px; padding: 3px; border-width: 4px; border-radius: 20px; }
+  .picks .animal { width: 52px; height: 52px; font-size: 30px; }
 }

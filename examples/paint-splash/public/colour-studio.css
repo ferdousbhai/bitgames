@@ -1,0 +1,132 @@
+/* "Mix my colours": Paint Splash's own look for the shared studio dialog. Everything fits on
+   screen without scrolling, from 320px phones and 280px-tall sideways phones to iPads. */
+#colour-studio.learning-studio {
+  --sq: clamp(34px, min(11vw, 6.6svh), 64px);
+  --pot: clamp(52px, min(17vw, 9svh), 84px);
+  width: min(980px, calc(100vw - 16px)) !important;
+  height: min(780px, calc(100svh - 16px));
+  max-height: none;
+  padding: 10px 12px 8px !important;
+  border: 5px solid #fff !important;
+  border-radius: 30px !important;
+  color: #5a2d91 !important;
+  background:
+    radial-gradient(circle at 6% 92%, #ff4d8d22 0 60px, transparent 61px),
+    radial-gradient(circle at 96% 8%, #3a86ff22 0 70px, transparent 71px),
+    #fff8ec !important;
+  font: 800 17px/1.2 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
+  overflow: hidden auto;
+  box-shadow: 0 10px 0 #5a2d9133, 0 20px 50px #0004;
+}
+#colour-studio.learning-studio[open] { display: flex !important; flex-direction: column; align-items: stretch; gap: 6px; }
+#colour-studio::backdrop { background: #5a2d9199; backdrop-filter: blur(4px); }
+#colour-studio .studio-heading { position: static; padding: 0 0 2px; background: none; flex-shrink: 0; }
+#colour-studio h2 {
+  font-size: clamp(22px, 4vw, 32px); font-weight: 900; color: #fff; letter-spacing: .5px;
+  -webkit-text-stroke: 7px #9b5de5; paint-order: stroke fill; text-shadow: 0 4px 0 #5a2d9155;
+}
+#colour-studio button {
+  background: #fff; color: #5a2d91; border-radius: 18px; font-weight: 900;
+  box-shadow: 0 4px 0 #5a2d9140, inset 0 0 0 3px #e3d4f4; transition: transform .1s;
+}
+#colour-studio button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #5a2d9140, inset 0 0 0 3px #e3d4f4; }
+#colour-studio .studio-close { border-radius: 50%; font-size: 22px; background: #ff4d8d; color: #fff; box-shadow: 0 4px 0 #b8245c; }
+
+#colour-studio .cs-body {
+  flex: 1; min-height: 0; display: grid; gap: 10px;
+  grid-template: "mix" minmax(0, 1fr) "pots" auto "art" auto / minmax(0, 1fr);
+}
+#colour-studio .cs-pots { grid-area: pots; display: flex; justify-content: center; align-items: center; gap: clamp(10px, 5vw, 28px); }
+#colour-studio .cs-mix { grid-area: mix; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+#colour-studio .cs-art { grid-area: art; display: flex; align-items: center; justify-content: center; }
+
+/* The paint pots: big, round and the colour they add. */
+#colour-studio .cs-pot {
+  position: relative; width: var(--pot); height: var(--pot); min-width: 0; padding: 0; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff8 0 14%, transparent 15%), var(--paint);
+  box-shadow: 0 6px 0 #0003, inset 0 0 0 5px #fff; font-size: calc(var(--pot) * .42);
+}
+#colour-studio .cs-pot:active:not(:disabled) { transform: translateY(4px) scale(.94); box-shadow: 0 2px 0 #0003, inset 0 0 0 5px #fff; }
+#colour-studio .cs-pot b {
+  position: absolute; right: -4px; top: -4px; min-width: 26px; height: 26px; padding: 0 5px; border-radius: 13px;
+  background: #fff; color: #5a2d91; font-size: 16px; line-height: 26px; box-shadow: 0 2px 0 #0002;
+}
+#colour-studio .cs-pot b:empty { display: none; }
+
+/* The table, with the mixed colour named on top. */
+#colour-studio .studio-preview { flex: 1 1 0; min-height: 0; height: 0; width: 100%; border-radius: 22px; box-shadow: inset 0 0 0 3px #f3e3cc; }
+#colour-studio .cs-readout { display: flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; }
+#colour-studio .studio-status {
+  margin: 0; min-height: 0; flex: 0 1 auto; display: flex; align-items: center; gap: 10px; padding: 5px 16px 5px 6px;
+  background: #fff; border-radius: 999px; box-shadow: 0 3px 0 #5a2d9126; text-align: left;
+}
+#colour-studio .cs-swatch { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 0 0 2px #5a2d9133; display: block; }
+#colour-studio .cs-swatch.cs-empty { background: repeating-conic-gradient(#f3e8f9 0 25%, #fff 0 50%) 0 0 / 12px 12px; }
+#colour-studio .cs-words { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; }
+#colour-studio .cs-words b { font-size: 24px; }
+#colour-studio .cs-words small { font-size: 15px; opacity: .8; }
+#colour-studio .cs-dots { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+#colour-studio .cs-dots i { width: 13px; height: 13px; border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #5a2d9126; }
+#colour-studio .cs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#colour-studio .cs-kept { display: flex; align-items: center; gap: 2px; padding: 5px 8px; background: #fff; border-radius: 999px; font-size: 22px; box-shadow: 0 3px 0 #5a2d9126; }
+
+#colour-studio .cs-tools { display: flex; justify-content: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+#colour-studio .cs-tools button { font-size: 17px; padding: 6px 12px; min-height: 48px; }
+
+/* The mosaic. */
+#colour-studio .paint-grid { grid-template-columns: repeat(5, var(--sq)); gap: 5px; padding: 8px; background: #b6a3c9; border-radius: 18px; box-shadow: 0 5px 0 #8f78a8; }
+#colour-studio .paint-grid button {
+  width: var(--sq); height: var(--sq); min-width: 0; min-height: 0; border: 0; border-radius: 9px;
+  box-shadow: inset 0 -4px 0 #0000001a; transition: background .2s;
+}
+#colour-studio .paint-grid button.cs-pop { animation: cs-pop .35s cubic-bezier(.2, 1.8, .4, 1); }
+@keyframes cs-pop { from { transform: scale(.5) rotate(-12deg); } }
+
+#colour-studio .cs-note { margin: 0; font-size: 11px; font-weight: 700; opacity: .6; flex-shrink: 0; }
+
+/* A child who stops touching: the next thing to touch wiggles. */
+#colour-studio.cs-nudge-pots .cs-pot:not(:disabled) { animation: cs-wiggle .5s ease-in-out 3; }
+#colour-studio.cs-nudge-pots .cs-pot:nth-child(2) { animation-delay: .1s; }
+#colour-studio.cs-nudge-pots .cs-pot:nth-child(3) { animation-delay: .2s; }
+#colour-studio.cs-nudge-art .paint-grid { animation: cs-wiggle .5s ease-in-out 3; }
+@keyframes cs-wiggle { 25% { transform: rotate(-8deg) scale(1.08); } 75% { transform: rotate(8deg) scale(1.08); } }
+
+/* Tall tablets: use the height, so the table and its toys get room. */
+@media (max-aspect-ratio: 5/4) and (min-height: 900px) {
+  #colour-studio.learning-studio { height: min(1100px, calc(100svh - 120px)); --pot: clamp(52px, min(17vw, 8svh), 96px); }
+}
+/* Sideways: pots in a column on the left, the cup in the middle, the mosaic on the right. */
+@media (min-aspect-ratio: 5/4) {
+  #colour-studio.learning-studio { --sq: clamp(30px, calc((100svh - 150px) / 5.6), 64px); --pot: clamp(52px, calc((100svh - 160px) / 3.4), 88px); }
+  #colour-studio .cs-body { grid-template: "pots mix art" minmax(0, 1fr) / auto minmax(0, 1fr) auto; }
+  #colour-studio .cs-pots { flex-direction: column; padding: 0 4px; }
+}
+/* Short sideways phones: the title steps aside so the mosaic keeps finger-sized squares. */
+@media (min-aspect-ratio: 5/4) and (max-height: 500px) {
+  #colour-studio.learning-studio { --sq: clamp(30px, calc((100svh - 62px) / 5.5), 54px); --pot: clamp(44px, calc((100svh - 104px) / 3.3), 72px); padding: 6px 8px !important; border-width: 4px !important; }
+  #colour-studio .studio-heading { position: absolute; left: 8px; top: 6px; width: auto; }
+  #colour-studio h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #colour-studio .studio-close { width: 44px; height: 44px; min-width: 44px; min-height: 44px; font-size: 18px; }
+  #colour-studio .cs-pots { padding-top: 52px; gap: 8px; }
+  #colour-studio .cs-body { gap: 8px; }
+  #colour-studio .cs-note { display: none; }
+  #colour-studio .cs-tools { gap: 6px; }
+  #colour-studio .cs-tools button { min-height: 42px; min-width: 44px; padding: 4px 8px; font-size: 18px; }
+  #colour-studio .cs-tools span { display: none; }
+  #colour-studio .cs-swatch { width: 36px; height: 36px; border-width: 3px; }
+  #colour-studio .cs-words b { font-size: 19px; }
+  #colour-studio .cs-dots i { width: 10px; height: 10px; }
+  #colour-studio .paint-grid { gap: 4px; padding: 5px; }
+  #colour-studio .cs-pot b { min-width: 22px; height: 22px; line-height: 22px; font-size: 14px; }
+}
+/* Narrow phones held upright: icon-only tools. */
+@media (max-width: 420px) and (max-aspect-ratio: 5/4) {
+  #colour-studio .cs-tools span { display: none; }
+  #colour-studio .cs-tools button { min-width: 52px; font-size: 20px; }
+  #colour-studio .cs-note { font-size: 10px; }
+}
+/* A white paint drop on each pot. */
+#colour-studio .cs-drop {
+  display: block; width: 38%; height: 38%; margin: 8% auto 0; background: #fffe; border-radius: 0 50% 50% 50%;
+  transform: rotate(45deg); box-shadow: inset -3px -3px 0 #0001;
+}

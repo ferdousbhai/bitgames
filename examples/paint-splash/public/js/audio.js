@@ -165,6 +165,23 @@ export class Audio {
     }
   }
 
+  /** Colour studio: a paint drop plops in (each paint its own note), a square gets a dab, tools click. */
+  studio(kind, i = 0) {
+    if (kind === 'drip') {
+      this.tone({ freq: note(2 + i * 2, 392), type: 'sine', gain: 0.3, decay: 0.18, slide: -180 })
+      this.burst({ freq: 900, q: 1.2, gain: 0.2, decay: 0.12, type: 'lowpass', delay: 0.02 })
+    } else if (kind === 'dab') {
+      this.burst({ freq: 1800, q: 0.8, gain: 0.22, decay: 0.1 })
+      this.tone({ freq: note(i % 10, 523.25), type: 'triangle', gain: 0.12, decay: 0.16 })
+    } else if (kind === 'keep') {
+      this.tone({ freq: note(4, 523.25), type: 'triangle', gain: 0.14, decay: 0.15 })
+      this.tone({ freq: note(7, 523.25), type: 'triangle', gain: 0.14, decay: 0.25, delay: 0.1 })
+    } else if (kind === 'empty') {
+      this.burst({ freq: 600, q: 0.6, gain: 0.3, decay: 0.4, type: 'lowpass' })
+      this.tone({ freq: 500, type: 'sine', gain: 0.15, decay: 0.35, slide: -300 })
+    } else this.click()
+  }
+
   beep(high = false) {
     this.tone({ freq: high ? 988 : 659, type: 'triangle', gain: 0.2, decay: high ? 0.5 : 0.22 })
     if (high) this.tone({ freq: 1318, type: 'sine', gain: 0.12, decay: 0.5, delay: 0.05 })

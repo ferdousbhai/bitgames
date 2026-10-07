@@ -1,26 +1,50 @@
+/* "My pictures": the last three paintings, in Paint Splash's chunky toy style, on screen at every size. */
 #art-gallery {
-  width: min(680px, calc(100vw - 32px));
-  max-height: 80svh;
-  overflow: auto;
-  border: 2px solid #fff8;
-  border-radius: 28px;
-  padding: 24px;
-  background: #fff5e3;
-  color: #3e3c59;
+  width: min(720px, calc(100vw - 16px));
+  max-height: calc(100svh - 16px);
+  overflow: hidden auto;
+  border: 5px solid #fff;
+  border-radius: 30px;
+  padding: 14px 16px 16px;
+  background: #fff8ec;
+  color: #5a2d91;
   text-align: center;
-  font-family: ui-rounded, system-ui, sans-serif;
+  font: 800 16px/1.25 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
+  box-shadow: 0 10px 0 #5a2d9133, 0 20px 50px #0004;
+  box-sizing: border-box;
 }
-#art-gallery::backdrop { background: #33334c99; }
-#art-gallery h2 { font-size: 24px; margin: 0 0 10px; }
+#art-gallery::backdrop { background: #5a2d9199; backdrop-filter: blur(4px); }
+#art-gallery h2 {
+  font-size: clamp(22px, 4vw, 32px); font-weight: 900; margin: 0; color: #fff;
+  -webkit-text-stroke: 7px #9b5de5; paint-order: stroke fill; text-shadow: 0 4px 0 #5a2d9155;
+}
+#gallery-note { margin: 0 0 12px; font-size: 13px; font-weight: 700; opacity: .65; }
 
-#gallery-pictures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
-#gallery-pictures figure { margin: 0; }
-#gallery-pictures img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 15px; box-shadow: 0 3px 0 #45435322; }
-#gallery-pictures figcaption { padding: 8px; font-size: 13px; }
+#gallery-pictures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0 8px; }
+#gallery-pictures figure { position: relative; margin: 0; padding: 7px; background: #fff; border-radius: 18px; box-shadow: 0 5px 0 #5a2d9126; }
+#gallery-pictures img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; max-height: calc(100svh - 200px); }
+#gallery-pictures figcaption { position: absolute; top: -8px; left: -6px; font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 0 #0002); }
+#gallery-pictures .gallery-empty { grid-column: 1 / -1; padding: 6px 12px; font-size: 17px; }
+#gallery-pictures .gallery-steps { display: block; font-size: 40px; margin-bottom: 6px; }
 
-#gallery-close { min-height: 48px; border: 0; border-radius: 16px; background: #ecc486; padding: 12px 18px; font: 750 16px system-ui; cursor: pointer; }
-#gallery-open { min-width: 48px; min-height: 48px; padding: 10px 16px; border: 0; border-radius: 18px; background: #fff9; font: 750 14px system-ui; margin-top: 8px; }
+#gallery-close {
+  min-height: 52px; border: 0; border-radius: 999px; padding: 10px 26px; cursor: pointer;
+  background: linear-gradient(#ffe066, #ffbe0b); color: #5a2d91; box-shadow: 0 6px 0 #c48a00;
+  font: 900 20px ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
+}
+#gallery-close:active { transform: translateY(4px); box-shadow: 0 2px 0 #c48a00; }
 
-@media (max-width: 600px) {
+@media (max-width: 600px) and (max-aspect-ratio: 1/1) {
   #gallery-pictures { grid-template-columns: 1fr 1fr; }
+  #gallery-pictures img { max-height: none; }
+}
+/* Short sideways phones: a thin title, pictures sized to the height that's left. */
+@media (max-height: 500px) {
+  #art-gallery { padding: 8px 12px 10px; }
+  #art-gallery h2 { font-size: 20px; -webkit-text-stroke-width: 6px; }
+  #gallery-pictures { margin: 6px 0; gap: 10px; grid-template-columns: repeat(3, minmax(0, calc((100svh - 156px) * 4 / 3))); justify-content: center; }
+  #gallery-pictures img { max-height: calc(100svh - 156px); }
+  #gallery-pictures .gallery-steps { font-size: 28px; }
+  #gallery-note { margin-bottom: 6px; font-size: 11px; }
+  #gallery-close { min-height: 44px; padding: 6px 20px; font-size: 17px; }
 }

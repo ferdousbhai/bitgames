@@ -1,4 +1,4 @@
 /* iPad controls keep a generous hit area, including compact toggles. */
-@media (pointer: coarse) and (min-width: 600px) {
+@media (pointer: coarse) and (min-width: 600px) and (min-height: 600px) {
   button { min-width: 48px; min-height: 48px; touch-action: manipulation; }
 }

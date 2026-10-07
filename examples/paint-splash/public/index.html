@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="./ipad.css" />
 <link rel="stylesheet" href="./gallery.css" />
 <link rel="stylesheet" href="./studio-dialog.css" />
+<link rel="stylesheet" href="./colour-studio.css" />
 </head>
 <body>
 <canvas id="view"></canvas>
@@ -30,11 +31,15 @@
 <div id="menu" class="screen hidden">
   <div class="logo small"><span>P</span><span>A</span><span>I</span><span>N</span><span>T</span> <span>S</span><span>P</span><span>L</span><span>A</span><span>S</span><span>H</span></div>
   <div id="players" class="players"></div>
-  <div class="pick-row"><span class="pick-label">🙋</span><div id="animals" class="animal-row"></div></div>
-  <div class="pick-row"><span class="pick-label">🗺️</span><div id="places" class="places"></div></div>
+  <div class="picks">
+    <div class="pick-row"><span class="pick-label">🙋</span><div id="animals" class="animal-row"></div></div>
+    <div class="pick-row"><span class="pick-label">🗺️</span><div id="places" class="places"></div></div>
+  </div>
   <button id="go" class="big-go">🎨 Let's paint!</button>
-  <button id="colour-open">🎨 Mix my colours</button>
-  <button id="gallery-open">🖼️ My pictures</button>
+  <div class="menu-extras">
+    <button id="colour-open" class="extra-btn" aria-label="Mix my colours"><span class="ico">🔴🟡🔵</span><span class="lbl">Mix my colours</span></button>
+    <button id="gallery-open" class="extra-btn" aria-label="My pictures"><span class="ico">🖼️</span><span class="lbl">My pictures</span></button>
+  </div>
 </div>
 
 <div id="waiting" class="screen hidden">
@@ -68,6 +73,7 @@
   <div class="results-top">
     <h1 id="results-title">🎨 Look what we painted!</h1>
     <div id="together" class="together"></div>
+    <button id="results-save" class="round-btn keep-btn" title="Keep this picture" aria-label="Keep this picture in your gallery">📷</button>
   </div>
   <div class="panel">
     <div id="cards" class="cards"></div>

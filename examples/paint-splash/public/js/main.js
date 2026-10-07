@@ -26,6 +26,8 @@ const SEND_MS = 100
 const SNAP_MS = 66
 const RAINBOW_MS = 6000
 const REVEAL_MS = 2600
+/** A child who hasn't rolled for this long sees the dragging finger again. */
+const IDLE_HINT_MS = 4000
 /** Seats start in the four corners, facing the middle. Seat 0 is nearest the camera on the left. */
 const START = [[-11, 6.5], [11, 6.5], [-11, -6.5], [11, -6.5]]
 const AWARDS = [
@@ -154,7 +156,7 @@ const game = {
   assetsReady: false,
   templates: {},
   placeScenes: {},
-  touched: false,
+  lastMoveAt: 0,
   build: 0,
 }
 
@@ -165,10 +167,29 @@ function releaseControls() {
   if (game.me) game.me.controls = { x: 0, z: 0 }
 }
 const gallery = createGallery({ renderer, scene, camera, openButton: $('gallery-open'), saveButton: $('gallery-save'), onOpen: releaseControls })
+/** Spoken words for children who can't read yet (quiet when the sound is off or there is no voice). */
+function speak(text) {
+  if (!settings.sound || !text || !('speechSynthesis' in window)) return
+  try {
+    speechSynthesis.cancel()
+    const words = new SpeechSynthesisUtterance(text)
+    words.rate = 0.95
+    words.pitch = 1.15
+    speechSynthesis.speak(words)
+  } catch {}
+}
 const colourStudio = createColourStudio({
   openButton: $('colour-open'),
-  onOpen: releaseControls,
-  onClose: releaseControls,
+  onOpen: () => {
+    audio.unlock()
+    releaseControls()
+  },
+  onClose: () => {
+    if ('speechSynthesis' in window) speechSynthesis.cancel()
+    releaseControls()
+  },
+  speak,
+  sound: (kind, i) => audio.studio(kind, i),
 })
 
 const isHost = () => game.room && game.hostId === game.room.selfId
@@ -327,6 +348,8 @@ function buildMenu() {
     updateToggles()
   }
   $('voice').onclick = () => say()
+  // The finished picture, seen from above, is the best one to keep.
+  $('results-save').onclick = () => $('gallery-save').click()
   updateToggles()
   input.on('key', (k) => {
     audio.unlock()
@@ -335,7 +358,6 @@ function buildMenu() {
   })
   input.on('touch', () => {
     audio.unlock()
-    game.touched = true
     $('hint').classList.add('hidden')
   })
   addEventListener('pointerdown', () => audio.unlock())
@@ -721,10 +743,8 @@ function startPainting() {
   input.enabled = true
   show(null)
   later(() => $('countdown').classList.add('hidden'), 700)
-  if (!game.touched) {
-    $('hint').classList.remove('hidden')
-    later(() => $('hint').classList.add('hidden'), 4500)
-  }
+  // The dragging finger shows straight away, and again whenever the child stops rolling for a while.
+  game.lastMoveAt = now() - IDLE_HINT_MS
 }
 
 /** The time is up: everyone stops and the camera swoops up to look at the picture. */
@@ -1020,6 +1040,7 @@ function updatePainters(dt, t) {
   if (playing && game.me) {
     const v = gallery.open || colourStudio.open ? { x: 0, y: 0 } : input.read()
     game.me.controls = { x: v.x, z: v.y }
+    if (Math.hypot(v.x, v.y) > 0.05 || input.stick.id !== null || game.me.bot || gallery.open) game.lastMoveAt = t
   }
   const world = { paint, items, obstacles: game.arena.obstacles, painters: [...game.painters.values()] }
   if (playing) for (const bot of game.bots) if (bot.p.local && game.painters.has(bot.p.id)) bot.update(dt, world)
@@ -1142,6 +1163,7 @@ function updateHud(t) {
   game.lastHud = t
   updateBar()
   if (game.state !== 'play') return
+  $('hint').classList.toggle('hidden', t - game.lastMoveAt < IDLE_HINT_MS)
   const left = Math.max(0, Math.ceil(game.setup.seconds - (t - game.roundStart) / 1000))
   $('timer').textContent = `⏱️ ${left}`
   $('timer').classList.toggle('hurry', left <= 10)

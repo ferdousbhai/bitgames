@@ -14,7 +14,7 @@ export function createGallery({ renderer, scene, camera, openButton, saveButton,
 
   const dialog = document.createElement('dialog')
   dialog.id = 'art-gallery'
-  dialog.innerHTML = '<h2>Our little art gallery</h2><p id="gallery-note"></p><div id="gallery-pictures"></div><button id="gallery-close">Back to painting</button>'
+  dialog.innerHTML = '<h2>🖼️ My pictures</h2><div id="gallery-pictures"></div><p id="gallery-note"></p><button id="gallery-close">🎨 Back to painting</button>'
   document.body.append(dialog)
   const list = dialog.querySelector('#gallery-pictures')
   const note = dialog.querySelector('#gallery-note')
@@ -27,11 +27,12 @@ export function createGallery({ renderer, scene, camera, openButton, saveButton,
       img.src = url
       img.alt = `Our playground painting ${i + 1}`
       const caption = document.createElement('figcaption')
-      caption.textContent = `Painting ${i + 1}`
+      caption.textContent = i === pictures.length - 1 ? '✨' : '' // the newest picture sparkles
+      caption.setAttribute('aria-hidden', 'true')
       frame.append(img, caption)
       list.append(frame)
     }
-    if (!pictures.length) list.textContent = 'Paint a playground, then touch the camera to keep a picture.'
+    if (!pictures.length) list.innerHTML = '<div class="gallery-empty"><span class="gallery-steps" aria-hidden="true">🎨 ➜ 📷 ➜ 🖼️</span>Paint a playground, then touch the camera to keep a picture.</div>'
     note.textContent = persistent ? 'Your last three pictures stay on this device.' : 'Your pictures are kept for this visit.'
   }
 
