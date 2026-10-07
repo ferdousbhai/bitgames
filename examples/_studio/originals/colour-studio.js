@@ -41,7 +41,7 @@ export function describeMix(drops) {
       say = `More ${major.word}: a ${major.ish} ${base.toLowerCase()}!`
     }
   } else if (used.length === 3) {
-    // Brown leans toward whatever there is more of, so the words match the swatch (1 red, 1 yellow, 2 blue is a bluish brown).
+    // Brown leans toward whatever there is more of, so the words match the swatch (colour-model.js tints three-paint browns).
     const top = Math.max(...drops)
     const most = [0, 1, 2].filter((i) => drops[i] === top)
     if (most.length === 3) say = 'Red, yellow and blue together make brown!'

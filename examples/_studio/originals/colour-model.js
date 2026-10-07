@@ -11,7 +11,7 @@ const CORNERS = [
   [78, 138, 213], // blue
   [160, 104, 185], // red + blue: purple
   [95, 172, 112], // yellow + blue: green
-  [135, 104, 79], // all three: earthy brown
+  [122, 82, 54], // all three: earthy brown
 ]
 export const MAX_DROPS = 12
 const sum = (numbers) => numbers.reduce((a, b) => a + b, 0)
@@ -30,9 +30,16 @@ export function mixToyPaint(drops) {
     const weight = (index & 1 ? r : 1 - r) * (index & 2 ? y : 1 - y) * (index & 4 ? b : 1 - b)
     corner.forEach((channel, j) => { channels[j] += channel * weight })
   })
+  const used = drops.filter((n) => n > 0).length
+  // Any drop of the third paint muddies a mixture, as real paint does: three-paint mixtures sit
+  // close to brown, tinted by whichever paint there is more of (1 red, 1 yellow, 2 blue is a bluish
+  // brown, not a slate blue). The less even the recipe, the more of the strongest paint shows.
+  if (used === 3) {
+    const pull = 0.25 + 0.75 * Math.min(r, y, b)
+    channels.forEach((channel, j) => { channels[j] = channel + (CORNERS[7][j] - channel) * pull })
+  }
   const hex = '#' + channels.map((n) => Math.round(n).toString(16).padStart(2, '0')).join('')
 
-  const used = drops.filter((n) => n > 0).length
   let name
   if (used === 3) name = 'Earthy mixture'
   else if (used === 1) name = ['Red', 'Yellow', 'Blue'][drops.findIndex((n) => n > 0)]
