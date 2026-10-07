@@ -103,7 +103,38 @@ function drawConstellation(el, count) {
     star.textContent = i < count ? '★' : '☆'
     svg.append(star)
   })
-  el.append(document.createElement('br'), svg)
+  el.append(svg)
+}
+
+function drawGemProgress(el, count) {
+  const gems = document.createElement('span')
+  gems.className = 'gem-steps'
+  for (let i = 0; i < 3; i++) {
+    const gem = document.createElement('span')
+    gem.textContent = '💎'
+    gem.className = i < count ? 'done' : i === count ? 'next' : ''
+    gems.append(gem)
+  }
+  el.append(gems)
+}
+
+function renderMissionProgress(el, option, count) {
+  if (!option.goal) return
+  el.replaceChildren()
+  const caption = document.createElement('span')
+  caption.textContent = option.constellation ? `⭐ Catch stars · ${count} / 5` : `💎 Catch gems · ${count} / 3`
+  el.append(caption)
+  if (option.constellation) drawConstellation(el, count)
+  else drawGemProgress(el, count)
+}
+
+function speakMission(text) {
+  if (audio.muted || !('speechSynthesis' in window)) return
+  speechSynthesis.cancel()
+  const words = new SpeechSynthesisUtterance(text)
+  words.lang = 'en-US'
+  words.rate = 0.82
+  speechSynthesis.speak(words)
 }
 
 const adventure = createAdventure({
@@ -112,13 +143,31 @@ const adventure = createAdventure({
   hud: $('hud'),
   isMuted: () => audio.muted,
   celebrate: (text) => banner('⭐ Mission complete!', text),
-  renderProgress: (el, option, count) => { if (option.constellation) drawConstellation(el, count) },
+  renderProgress: renderMissionProgress,
   options: [
     { emoji: '🚀', label: 'Free space flight' },
-    { emoji: '🐢', label: 'Gentle star counting', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => it.kind === 'star', reward: 'Five stars for a new constellation!' },
+    { emoji: '🐢', label: 'Gentle star counting', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => ['star', 'pink', 'rainbow'].includes(it.kind), reward: 'Five stars for a new constellation!' },
     { emoji: '💎', label: 'Three-gem mission', pace: 0.65, goal: 'Catch 3 gems', target: 3, accept: (it) => it.kind === 'gem', reward: 'Three gems on your space journey!' },
   ],
 })
+
+function renderMissionChoice() {
+  const option = adventure.option
+  const button = $('adventure-choice')
+  button.replaceChildren()
+  const pictures = document.createElement('span')
+  pictures.className = 'mission-choice-pictures'
+  pictures.textContent = option.constellation ? '⭐ ⭐ ⭐ ⭐ ⭐' : option.goal ? '💎 💎 💎' : '🚀'
+  const caption = document.createElement('span')
+  caption.textContent = option.constellation ? 'Count 5 stars' : option.goal ? 'Catch 3 gems' : 'Free flight'
+  const next = document.createElement('span')
+  next.className = 'mission-choice-next'
+  next.textContent = '↻'
+  next.setAttribute('aria-hidden', 'true')
+  button.append(pictures, caption, next)
+}
+renderMissionChoice()
+$('adventure-choice').addEventListener('click', renderMissionChoice)
 
 const items = []
 const pools = {}
@@ -135,7 +184,7 @@ function leg(i) {
     need: 12 + 5 * Math.min(i, 5),
     speed: 2.3 + d * 0.33,
     interval: Math.max(0.55, 1.05 - d * 0.08),
-    gem: i >= 1 ? 0.14 : 0,
+    gem: i >= 1 || adventure.option.label === 'Three-gem mission' ? 0.14 : 0,
     pink: i >= 2 ? 0.14 : 0,
     rainbow: i >= 3 ? 0.05 : 0,
     power: i >= 2 ? 0.05 : 0,
@@ -561,6 +610,7 @@ function start() {
   game.spawnTimer = 0.8
   game.idle = 0
   banner(`🚀 Blast off!`, `Fly to ${STOPS[0].emoji} ${STOPS[0].name}`)
+  if (adventure.option.goal) speakMission(adventure.option.goal)
   renderJourney()
   updateScore()
 }

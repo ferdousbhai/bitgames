@@ -11,6 +11,16 @@ html, body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 button { font: inherit; cursor: pointer; border: 0; color: inherit; }
+#adventure-choice { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.mission-choice-pictures { white-space: nowrap; }
+.mission-choice-next { font-size: 20px; line-height: 1; }
+#adventure-goal { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 188px; top: calc(102px + env(safe-area-inset-top)); bottom: auto; }
+#adventure-goal[hidden] { display: none; }
+#adventure-goal svg { display: block; width: 150px; height: 38px; }
+.gem-steps { display: flex; gap: 10px; font-size: 25px; line-height: 1.25; }
+.gem-steps span { opacity: .3; filter: grayscale(1); }
+.gem-steps .done { opacity: 1; filter: none; }
+.gem-steps .next { opacity: .75; filter: none; }
 .hidden { display: none !important; }
 
 /* --- Start screen --- */
@@ -111,6 +121,27 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @media (max-width: 520px) {
   .pill.big { font-size: 24px; }
   .journey { font-size: 16px; top: calc(58px + env(safe-area-inset-top)); }
+}
+
+@media (max-width: 400px) {
+  .logo { font-size: 28px; letter-spacing: 1px; }
+}
+
+@media (max-height: 380px) and (orientation: landscape) {
+  .screen { gap: 3px; padding: 4px 12px; }
+  .logo { font-size: 30px; letter-spacing: 1px; }
+  .tag { font-size: 14px; }
+  .legend { gap: 4px; }
+  .legend span { font-size: 13px; padding: 2px 6px; }
+  #adventure-choice { min-height: 44px; padding: 5px 9px; margin: 1px auto; }
+  .big-go { font-size: 24px; padding: 7px 26px; margin-top: 0; }
+  .hint { font-size: 12px; }
+  .hint.small { font-size: 11px; }
+  #adventure-goal { top: auto; bottom: calc(8px + env(safe-area-inset-bottom)); left: calc(10px + env(safe-area-inset-left)); transform: none; }
+}
+
+@media (min-width: 700px) and (min-height: 700px) {
+  #adventure-goal { top: calc(142px + env(safe-area-inset-top)); }
 }
 
 /* Sideways phones: one slim HUD row, so the short screen is all sky */
