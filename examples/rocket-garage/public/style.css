@@ -413,3 +413,22 @@ body.portrait .reward-new.many .gift { flex: 0 0 44px; }
   body.portrait #actions .launch { grid-column: 1 / -1; grid-row: 2; }
   body.portrait #actions .dice { margin: 0; }
 }
+
+/* --- Pass 7 --- */
+/* The 3-2-1 keeps a plum rim outside its white one, so it still reads on the white launch smoke
+   (upright phones and iPads put it right over the pad, where "2" and "1" used to fade away) */
+.countdown { text-shadow: 0 8px 0 #ff4f6d; filter: drop-shadow(2px 0 0 #3a2a7a) drop-shadow(-2px 0 0 #3a2a7a) drop-shadow(0 2px 0 #3a2a7a) drop-shadow(0 -2px 0 #3a2a7a); }
+/* Upright tablets: the reward card (the payoff of every flight) grows to match the screen; new parts
+   used to shrink to phone-sized 44px squares on a card with lots of room around it */
+@media (orientation: portrait) and (min-width: 700px) and (min-height: 900px) {
+  body.portrait #reward .card { max-width: min(720px, 100%); column-gap: 28px; padding: 16px 24px 20px; border-radius: 36px; }
+  body.portrait .reward-head { font-size: 60px; }
+  body.portrait .reward-stars { font-size: 34px; }
+  body.portrait .btn { width: 104px; height: 104px; font-size: 56px; border-radius: 32px; }
+  body.portrait .reward-new { gap: 12px; margin-top: 8px; }
+  body.portrait .reward-new .gift { flex-basis: 84px; border-radius: 22px; }
+  /* at most six in a row, so the rows stay even (nine gifts used to leave one alone on a second row) */
+  body.portrait .reward-new.many { gap: 10px; max-width: 458px; justify-self: center; }
+  body.portrait .reward-new.many .gift { flex: 0 0 68px; }
+  .reward-new .gift .from { font-size: 24px; }
+}
