@@ -59,8 +59,8 @@ def smooth(o):
         face.use_smooth = True
 
 
-def sphere(location, scale, colour):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, location=location)
+def sphere(location, scale, colour, segments=16, rings=8):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=segments, ring_count=rings, location=location)
     o = bpy.context.object
     o.scale = scale
     o.data.materials.append(mat(colour))
@@ -89,8 +89,8 @@ def cone(location, radius, depth, colour, top=0):
     return o
 
 
-def torus(location, radius, thickness, colour):
-    bpy.ops.mesh.primitive_torus_add(major_segments=24, minor_segments=8, location=location,
+def torus(location, radius, thickness, colour, segments=24):
+    bpy.ops.mesh.primitive_torus_add(major_segments=segments, minor_segments=8 if segments > 12 else 4, location=location,
                                      major_radius=radius, minor_radius=thickness)
     o = bpy.context.object
     o.data.materials.append(mat(colour))
@@ -159,7 +159,8 @@ ANIMAL_COLOURS = {
     'rabbit': WHITE, 'fox': '#e9945a', 'bear': '#c79872', 'frog': GREEN, 'penguin': DARK,
     'duck': GOLD, 'bird': BLUE, 'dino': '#9ac1aa', 'robot': BLUE,
     # Animal Alphabet's word friends.
-    'cat': '#bdb6cf', 'dog': '#d0a77c', 'pig': '#f6b9c6', 'hen': WHITE, 'bat': '#857aa3',
+    # A ginger tabby: a lilac-grey cat read as a mouse from above.
+    'cat': '#f4a94f', 'dog': '#d0a77c', 'pig': '#f6b9c6', 'hen': WHITE, 'bat': '#857aa3',
     # Rhyming River's goat (it rhymes with boat).
     'goat': '#ece6da',
 }
@@ -253,6 +254,22 @@ def build_fox(colour):
     tip.rotation_euler[2] = -.5
 
 
+def stripe_on(centre, radii, angles, along, size, colour):
+    """A thin stripe lying on a clay ellipsoid: `angles` (turn from the front, height) picks the spot,
+    `along` the direction the stripe runs, `size` its half-width and half-length."""
+    turn, up = angles
+    u = Vector((math.sin(turn) * math.cos(up), -math.cos(turn) * math.cos(up), math.sin(up)))
+    r = Vector(radii)
+    normal = Vector((u.x / r.x, u.y / r.y, u.z / r.z)).normalized()
+    length = Vector(along)
+    length = (length - normal * length.dot(normal)).normalized()
+    width = length.cross(normal)
+    # Low-poly: a flat stripe needs few faces, and every game shipping the toy downloads them.
+    o = sphere(Vector(centre) + Vector((u.x * r.x, u.y * r.y, u.z * r.z)) - normal * .012, (size[0], size[1], .03), colour, 8, 4)
+    o.rotation_euler = Matrix((width, length, normal)).transposed().to_euler()
+    return o
+
+
 def build_word_friend(name, colour):
     """Features that turn the clay body into a cat, dog, pig, hen, bat or goat."""
     if name == 'cat':
@@ -264,6 +281,20 @@ def build_word_friend(name, colour):
         sphere((0, -.3, .67), (.15, .08, .085), WHITE)
         tail = cone((.24, .3, .55), .07, .62, colour, .045)
         tail.rotation_euler[1] = -.35
+        # Tabby stripes lying flat on the clay, bold enough to see from above: bars from the
+        # forehead over the crown, stripes on the cheeks, down the flanks and back, and tail rings.
+        stripe = '#b4561c'
+        head, body = ((0, -.03, .8), (.37, .32, .31)), ((0, 0, .35), (.36, .3, .4))
+        for turn in [-.42, 0, .42]:
+            stripe_on(*head, (turn, 1.05), (0, .6, 1), (.032, .15), stripe)
+        for side in [-1, 1]:
+            for up in [.0, .28]:
+                stripe_on(*head, (side * 1.25, up), (0, -1, 0), (.025, .1), stripe)
+            for turn in [1.2, 1.75, 2.3, 2.85]:
+                stripe_on(*body, (side * turn, .15), (0, 0, 1), (.04, .17), stripe)
+        for t in [-.12, .04, .2]:
+            ring = torus((.24 - .343 * t, .3, .55 + .939 * t), .058 - .025 * (t + .31) / .62 + .004, .014, stripe, 12)
+            ring.rotation_euler[1] = -.35
     if name == 'dog':
         for side in [-1, 1]:
             ear = sphere((side * .35, -.02, .86), (.1, .13, .25), '#8d6648')

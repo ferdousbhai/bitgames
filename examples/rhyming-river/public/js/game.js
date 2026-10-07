@@ -21,6 +21,9 @@ export default {
   "pictures": {
     "BOAT": "sailboat"
   },
+  "turns": {
+    "BEE": 0.8
+  },
   "sets": [
     [
       "CAT",

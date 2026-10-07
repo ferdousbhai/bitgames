@@ -539,9 +539,12 @@ function rhyme(c, g, a) {
   // A word's clay picture is the toy of the same name, unless the design names another.
   const toy = (word) => g.pictures?.[word.toUpperCase()] || word
   const start = a.tile({ model: toy(first), label: first, x: 0, z: -1.75, size: 1.6, depth: 1.45, colour: '#f1ddb8', visual: true, scale: 1.15 })
-  // Each picture stands towards the back of its piece, clear of the word printed in front of it.
-  const picture = (piece) => {
-    if (piece.figure) piece.figure.position.z -= 0.3
+  // Each picture stands towards the back of its piece, clear of the word printed in front of it,
+  // turned if the design says it reads better from the side (a bee shows its stripes).
+  const picture = (piece, i) => {
+    if (!piece.figure) return
+    piece.figure.position.z -= 0.3
+    piece.figure.rotation.y = g.turns?.[(i === undefined ? first : c.tiles[i]).toUpperCase()] || 0
   }
   picture(start)
 
@@ -599,9 +602,10 @@ function rhyme(c, g, a) {
       clearTimeout(idle)
       glow(false)
       // The frog hops onto the lily pad's front-right edge, in front of the picture where it stays
-      // in sight, and both pictures bounce.
+      // in sight (front-left on the far-right pad of four, so upright phones don't crop it), and
+      // both pictures bounce.
       const from = frog.position.clone()
-      const to = new THREE.Vector3(t.x + 0.68, 0.2, t.z + 0.15)
+      const to = new THREE.Vector3(t.x + (t.x > 2.5 ? -0.68 : 0.68), 0.2, t.z + 0.15)
       a.animate(0.8, (p) => {
         frog.position.lerpVectors(from, to, p)
         frog.position.y += Math.sin(p * Math.PI) * 1.1
@@ -617,7 +621,7 @@ function rhyme(c, g, a) {
       lightEnding(document.getElementById('feedback'))
     },
   }), { spacing: c.tiles.length > 3 ? 2.05 : 2.35, z: 1.05 })
-  pads.forEach(picture)
+  pads.forEach((pad, i) => picture(pad, i))
 
   a.action('🔈 Hear the words', () => a.audio.speak(c.say))
   a.hint('Listen to the words. Tap the picture whose word ends with the same sound. Stuck? A lily pad will glow.')

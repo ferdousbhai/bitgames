@@ -539,8 +539,9 @@ function resize() {
   // Spelling's letters and blanks span about 7 units too, so upright screens frame them the
   // same way: bigger letter tiles for small fingers, with only the board's rim cropped.
   const spelling = state.screen === 'play' && state.challenge?.mode === 'spell' && aspect < 1
-  // A row of four rhyming lily pads spans about 8 units, so upright screens frame just that row.
-  const rhyming = state.screen === 'play' && state.challenge?.mode === 'rhyme' && aspect < 1
+  // A row of four rhyming lily pads spans about 8 units, so upright screens frame just that row,
+  // as do the near-square stages of small phones (320 × 568), where the whole pond left pads tiny.
+  const rhyming = state.screen === 'play' && state.challenge?.mode === 'rhyme' && aspect < 1.3
   const halfWidth = Math.max(tracing || spelling ? 3.9 : rhyming ? 4.15 : 5, 3.6 * aspect)
   const halfHeight = halfWidth / aspect
   camera.left = -halfWidth
@@ -609,7 +610,7 @@ function menu() {
   const hero = tile({ model: game.hero || game.item || game.scenery[3], x: 0, z: 2, size: 1.8, visual: true, scale: game.carrier ? 1.7 : 1, ...heroPad })
   if (game.carrier) hero.base.visible = false
   const completed = saved.completed.reduce((sum, count) => sum + count, 0)
-  $('saved').textContent = completed ? `${completed} adventures completed. Keep exploring!` : ''
+  $('saved').textContent = completed ? `${completed} ${completed === 1 ? 'adventure' : 'adventures'} completed. Keep exploring!` : ''
 }
 
 function startRound(round = 0) {
@@ -773,6 +774,7 @@ function rhymePads(rhymes) {
     pad.add(leaf)
     ;[c.word, c.target].forEach((word, side) => {
       const toy = model(picture(word), 0.58)
+      toy.rotation.y = game.turns?.[word.toUpperCase()] || 0
       toy.position.x += (side - 0.5) * 0.6
       toy.position.y += 0.06
       pad.add(toy)

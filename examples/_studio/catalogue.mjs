@@ -113,6 +113,8 @@ G('rhyming-river','Rhyming River','🐸',[5,8],'pond','rhyme','Rhyming word fami
   // (cat, cup), so a child learns that a rhyme is about the ending. Every word is shown as a clay picture.
   // A word's clay picture is the toy of the same name, unless named here.
   pictures:{BOAT:'sailboat'},
+  // Pictures turned to show their side: face-on, a bee's wings look like a mouse's ears.
+  turns:{BEE:0.8},
   sets:[['CAT','HAT','DOG','SUN','CUP'],['LOG','DOG','HEN','CUP','LAMP'],['BEE','TREE','CAT','MAP','BED'],['FOX','BOX','SUN','PIG','FISH'],['STAR','CAR','BED','HEN','SUN'],['BOAT','GOAT','FISH','PIG','BED']],
 }),
 G('weather-wardrobe','Weather Wardrobe','🌦️',[3,6],'village','choice','Weather and practical reasoning','Dress a toy explorer for sun, rain, and snow.',{challenges:[['🌧️ Rain! What keeps us dry?','☂️ Umbrella','🕶️ Sunglasses','🩴 Sandals'],['❄️ Snow! What keeps hands warm?','🧤 Mittens','🪭 Fan','🩴 Sandals'],['☀️ Sunshine! What shades our head?','👒 Sun hat','🧣 Scarf','🛷 Sled'],['🌧️ Puddles! What keeps feet dry?','🥾 Rain boots','🩴 Sandals','🧦 Socks']],storyToys:['umbrella','gloves','hat','boots','glasses','sandal','scarf']}),
