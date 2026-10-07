@@ -1,4 +1,5 @@
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
+import { createIsomorphicFn } from '@tanstack/react-start'
 import { eq, useLiveQuery } from '@tanstack/react-db'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
@@ -7,19 +8,42 @@ import { GameShelf, Loading } from '#/components/GameShelf'
 import { playLink } from '#/components/GameTile'
 import { findCategory } from '#/lib/categories'
 import { countPlay, gamesCollection, likeGame } from '#/lib/collections'
+import { shareMeta } from '#/lib/share'
 import type { Game } from '#/lib/types'
 import { toy } from '#/lib/ui'
+import { getGameShare } from '#/server/games'
+
+/**
+ * The game's share details. On the server (the first request for a page, which
+ * is all a link preview reads) they come straight from the database; in the
+ * browser, from the games collection the page uses anyway.
+ */
+const loadGameShare = createIsomorphicFn()
+  .server((id: string) => getGameShare({ data: { id } }))
+  .client(async (id: string) => {
+    await gamesCollection.preload()
+    const game = gamesCollection.get(id)
+    return game ? { title: game.title, tagline: game.tagline, cover: game.cover } : null
+  })
 
 export const Route = createFileRoute('/game/$id')({
   // ?play=true: the game is on screen. Tapping a game anywhere goes straight here.
   validateSearch: z.object({ play: z.boolean().optional().catch(undefined) }),
+  // The loader and head run on the server so shared links get the game's own preview; the page renders in the browser.
+  ssr: 'data-only',
   loader: async ({ params }) => {
-    await gamesCollection.preload()
-    const game = gamesCollection.get(params.id)
+    const game = await loadGameShare(params.id)
     if (!game) throw notFound()
-    return { title: game.title }
+    return game
   },
-  head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.title ?? 'Game'} · BitGames` }] }),
+  // Shared links always point at the game page itself, never straight into ?play=true.
+  head: ({ loaderData }) => ({
+    meta: shareMeta({
+      title: `${loaderData?.title ?? 'Game'} · BitGames`,
+      description: loaderData?.tagline,
+      image: loaderData?.cover ?? undefined,
+    }),
+  }),
   component: GamePage,
   pendingComponent: Loading,
 })

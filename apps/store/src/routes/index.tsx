@@ -45,7 +45,58 @@ function Home() {
       <GameShelf title="New games" emoji="✨" games={newest} />
       <GameShelf title="Everyone loves these" emoji="🔥" games={popular} />
       <GameShelf title="Play together" emoji="👫" games={together} />
+      <ForGrownUps />
     </>
+  )
+}
+
+/**
+ * A quiet note for parents. Every point here must stay true of the code:
+ * check the store before changing a claim (see the review flow, game CSP and
+ * the absence of accounts, analytics and cookies for players).
+ */
+const GROWN_UP_POINTS = [
+  {
+    emoji: '🚫',
+    title: 'No ads, no buying',
+    text: 'Nothing to buy and no ads. Games can’t link out to other websites.',
+  },
+  {
+    emoji: '🔒',
+    title: 'No accounts, no tracking',
+    text: 'Kids don’t sign up or type their name. No analytics, no tracking cookies. Likes are remembered on this device only.',
+  },
+  {
+    emoji: '✅',
+    title: 'Checked before it’s listed',
+    text: 'Every game is played and checked before it appears here: gentle, easy to play, no chat and no scary bits.',
+  },
+  {
+    emoji: '📱',
+    title: 'Right in the browser',
+    text: 'Nothing to install. On an iPad, tap Share then Add to Home Screen. To play together, share the three-animal code.',
+  },
+]
+
+function ForGrownUps() {
+  return (
+    <section aria-labelledby="grown-ups" className="mt-14 rounded-[28px] border-4 border-white bg-white/60 p-5 sm:p-7">
+      <h2 id="grown-ups" className="flex items-center gap-2 text-xl font-bold text-ink-soft sm:text-2xl">
+        <span aria-hidden>👋</span>
+        For grown-ups
+      </h2>
+      <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+        {GROWN_UP_POINTS.map((point) => (
+          <li key={point.title} className="flex gap-3">
+            <span aria-hidden className="text-2xl leading-7">{point.emoji}</span>
+            <div>
+              <h3 className="text-lg font-semibold">{point.title}</h3>
+              <p className="mt-0.5 text-base leading-snug text-ink-soft">{point.text}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

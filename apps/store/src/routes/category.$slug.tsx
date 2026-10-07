@@ -4,15 +4,29 @@ import { CategoryBar } from '#/components/CategoryBar'
 import { Empty, GameGrid, Loading } from '#/components/GameShelf'
 import { TOGETHER, findCategory } from '#/lib/categories'
 import { gamesCollection } from '#/lib/collections'
+import { shareMeta } from '#/lib/share'
 
 export const Route = createFileRoute('/category/$slug')({
   loader: async ({ params }) => {
     const category = findCategory(params.slug)
     if (!category) throw notFound()
-    await gamesCollection.preload()
+    // Games load in the browser; the server only needs the category for the page's title and preview.
+    if (typeof window !== 'undefined') await gamesCollection.preload()
     return category
   },
-  head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.name ?? 'Games'} · BitGames` }] }),
+  ssr: 'data-only',
+  head: ({ loaderData }) => {
+    const together = loaderData?.slug === TOGETHER.slug
+    const name = loaderData?.name ?? 'Games'
+    return {
+      meta: shareMeta({
+        title: `${together ? name : `${name} games`} · BitGames`,
+        description: together
+          ? 'Games to play side by side on two screens. Bright, simple games for kids. No ads, just play.'
+          : `Bright, simple ${name.toLowerCase()} games for kids. No ads, just play.`,
+      }),
+    }
+  },
   component: CategoryPage,
   pendingComponent: Loading,
 })
