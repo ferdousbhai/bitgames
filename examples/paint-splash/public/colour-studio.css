@@ -104,18 +104,25 @@
 }
 /* Short sideways phones: the title steps aside so the mosaic keeps finger-sized squares. */
 @media (min-aspect-ratio: 5/4) and (max-height: 500px) {
-  #colour-studio.learning-studio { --sq: clamp(30px, calc((100svh - 62px) / 5.5), 54px); --pot: clamp(44px, calc((100svh - 104px) / 3.3), 72px); padding: 6px 8px !important; border-width: 4px !important; }
+  #colour-studio.learning-studio { --sq: clamp(30px, calc((100svh - 62px) / 5.9), 54px); --pot: clamp(44px, calc((100svh - 104px) / 3.3), 72px); padding: 6px 8px !important; border-width: 4px !important; }
   #colour-studio .studio-heading { position: absolute; left: 8px; top: 6px; width: auto; }
   #colour-studio h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   #colour-studio .studio-close { width: 44px; height: 44px; min-width: 44px; min-height: 44px; font-size: 18px; }
   #colour-studio .cs-pots { padding-top: 52px; gap: 8px; }
   #colour-studio .cs-body { gap: 8px; }
   #colour-studio .cs-note { display: none; }
-  #colour-studio .cs-tools { gap: 6px; }
-  #colour-studio .cs-tools button { min-height: 42px; min-width: 44px; padding: 4px 8px; font-size: 18px; }
+  #colour-studio .cs-tools { gap: 4px; flex-wrap: nowrap; }
+  #colour-studio .cs-tools button { min-height: 42px; min-width: 42px; padding: 4px 6px; font-size: 18px; }
   #colour-studio .cs-tools span { display: none; }
   #colour-studio .cs-swatch { width: 36px; height: 36px; border-width: 3px; }
   #colour-studio .cs-words b { font-size: 19px; }
+  /* One slim row under the table: the lean ("more blue") is spoken, the dots still show it. */
+  #colour-studio .cs-readout { gap: 4px; }
+  #colour-studio .cs-name small { display: none; }
+  #colour-studio .studio-status { gap: 6px; padding: 3px 12px 3px 3px; }
+  #colour-studio .cs-dots { max-width: 80px; }
+  #colour-studio .cs-kept { padding: 3px 5px; font-size: 15px; }
+  #colour-studio .cs-kept .cs-swatch { width: 30px; height: 30px; }
   #colour-studio .cs-dots i { width: 10px; height: 10px; }
   #colour-studio .paint-grid { gap: 4px; padding: 5px; }
   #colour-studio .cs-pot b { min-width: 22px; height: 22px; line-height: 22px; font-size: 14px; }
@@ -125,6 +132,8 @@
   #colour-studio .cs-tools span { display: none; }
   #colour-studio .cs-tools button { min-width: 52px; font-size: 20px; }
   #colour-studio .cs-note { font-size: 10px; }
+  /* The lean ("more blue") is spoken and shown by the dots, so the table keeps the room. */
+  #colour-studio .cs-name small { display: none; }
 }
 /* Upright phones: the close button floats on the table's corner, so the cup and bottles get the room. */
 @media (max-aspect-ratio: 5/4) and (max-height: 820px) {
@@ -140,4 +149,14 @@
 #colour-studio .cs-drop {
   display: block; width: 38%; height: 38%; margin: 8% auto 0; background: #fffe; border-radius: 0 50% 50% 50%;
   transform: rotate(45deg); box-shadow: inset -3px -3px 0 #0001;
+}
+/* iPads and big windows: a bigger swatch and colour name, in scale with the table and pots. */
+@media (min-width: 700px) and (min-height: 700px) {
+  #colour-studio .studio-status { gap: 12px; padding: 6px 22px 6px 6px; }
+  #colour-studio .cs-swatch { width: 62px; height: 62px; border-width: 5px; }
+  #colour-studio .cs-words b { font-size: 32px; }
+  #colour-studio .cs-words small { font-size: 18px; }
+  #colour-studio .cs-dots { gap: 4px; margin-top: 5px; }
+  #colour-studio .cs-dots i { width: 17px; height: 17px; }
+  #colour-studio .cs-kept { padding: 6px 10px; font-size: 28px; }
 }

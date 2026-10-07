@@ -8,6 +8,8 @@ const PAINTS = [
   { name: 'Yellow', word: 'yellow', ish: 'yellowish', emoji: '🟡', hex: '#f8d64e' },
   { name: 'Blue', word: 'blue', ish: 'bluish', emoji: '🔵', hex: '#4e8ad5' },
 ]
+/** The brown two equal favourites lean to, by index sum - 1: red+yellow, red+blue, yellow+blue. */
+const LEANS = ['an orangey', 'a purplish', 'a greenish']
 const BLANK = '#fff9eb'
 const SQUARES = 25
 const POUR_MS = 520
@@ -38,7 +40,20 @@ export function describeMix(drops) {
       more = `more ${major.word}`
       say = `More ${major.word}: a ${major.ish} ${base.toLowerCase()}!`
     }
-  } else if (used.length === 3) say = 'Red, yellow and blue together make brown!'
+  } else if (used.length === 3) {
+    // Brown leans toward whatever there is more of, so the words match the swatch (1 red, 1 yellow, 2 blue is a bluish brown).
+    const top = Math.max(...drops)
+    const most = [0, 1, 2].filter((i) => drops[i] === top)
+    if (most.length === 3) say = 'Red, yellow and blue together make brown!'
+    else if (most.length === 1) {
+      more = `more ${PAINTS[most[0]].word}`
+      say = `More ${PAINTS[most[0]].word}: a ${PAINTS[most[0]].ish} brown!`
+    } else {
+      const [i, j] = most
+      more = `more ${PAINTS[i].word} and ${PAINTS[j].word}`
+      say = `More ${PAINTS[i].word} and ${PAINTS[j].word}: ${LEANS[i + j - 1]} brown!`
+    }
+  }
   return { ...result, base, more, say }
 }
 
@@ -249,7 +264,7 @@ export function createColourStudio({ openButton, onOpen, onClose, speak = () => 
 
   function readout(colour, counts) {
     const words = counts.map((n, i) => n && `${n} ${PAINTS[i].word}`).filter(Boolean).join(', ')
-    return `<i class="cs-swatch" style="background:${colour.hex}"></i><span class="cs-words"><b>${colour.base}</b>${colour.more ? `<small> ${colour.more}</small>` : ''}<span class="cs-dots" aria-hidden="true">${dots(counts)}</span><span class="cs-sr"> (${words})</span></span>`
+    return `<i class="cs-swatch" style="background:${colour.hex}"></i><span class="cs-words"><span class="cs-name"><b>${colour.base}</b>${colour.more ? `<small> ${colour.more}</small>` : ''}</span><span class="cs-dots" aria-hidden="true">${dots(counts)}</span><span class="cs-sr"> (${words})</span></span>`
   }
 
   function draw() {
