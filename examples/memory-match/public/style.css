@@ -84,7 +84,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   display: grid; place-items: center; font-size: 16px; transition: transform .25s cubic-bezier(.3,1.8,.5,1);
 }
 .pairs span.done { background: #fff; border: 2px solid #ffbe0b; transform: scale(1.15); }
-@media (max-width: 520px) { .hud-center { left: auto; right: auto; left: calc(126px + env(safe-area-inset-left)); transform: none; align-items: flex-start; } .pairs { max-width: calc(100vw - 190px); } }
+@media (max-width: 520px) {
+  /* Home, sound and peek use the first 176px; the level and pairs start beyond them. */
+  .hud-center { left: calc(184px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); transform: none; align-items: flex-start; }
+  .pairs { max-width: 100%; }
+}
 
 /* Sits just under the HUD (main.js sets top), so it never hides the animals that just matched. */
 .banner {
