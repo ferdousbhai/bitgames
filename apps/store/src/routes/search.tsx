@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ilike, or, useLiveQuery } from '@tanstack/react-db'
 import { z } from 'zod'
 import { Empty, GameGrid, Loading } from '#/components/GameShelf'
+import { useGamePreferences } from '#/lib/use-game-preferences'
 import { gamesCollection } from '#/lib/collections'
 
 export const Route = createFileRoute('/search')({
@@ -16,13 +17,16 @@ function SearchPage() {
   const { q } = Route.useSearch()
   const term = q.trim()
   const pattern = `%${term.replace(/[%_]/g, '')}%`
-  const { data: games } = useLiveQuery({
+  const { hidden } = useGamePreferences()
+  const { data: allGames } = useLiveQuery({
     query: (query) =>
       query
         .from({ g: gamesCollection })
         .where(({ g }) => or(ilike(g.title, pattern), ilike(g.tagline, pattern)))
         .orderBy(({ g }) => g.plays, 'desc'),
   })
+
+  const games = allGames.filter((game) => !hidden.includes(game.id))
 
   return (
     <>

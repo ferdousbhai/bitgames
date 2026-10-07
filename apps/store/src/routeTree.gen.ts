@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as FavoritesRouteImport } from './routes/favorites'
+import { Route as HiddenRouteImport } from './routes/hidden'
 import { Route as MakeRouteImport } from './routes/make'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as SearchRouteImport } from './routes/search'
@@ -27,6 +29,16 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FavoritesRoute = FavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HiddenRoute = HiddenRouteImport.update({
+  id: '/hidden',
+  path: '/hidden',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MakeRoute = MakeRouteImport.update({
@@ -68,6 +80,8 @@ const TryTokenRoute = TryTokenRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/favorites': typeof FavoritesRoute
+  '/hidden': typeof HiddenRoute
   '/make': typeof MakeRoute
   '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
@@ -79,6 +93,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/favorites': typeof FavoritesRoute
+  '/hidden': typeof HiddenRoute
   '/make': typeof MakeRoute
   '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
@@ -91,6 +107,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/favorites': typeof FavoritesRoute
+  '/hidden': typeof HiddenRoute
   '/make': typeof MakeRoute
   '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
@@ -104,6 +122,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/favorites'
+    | '/hidden'
     | '/make'
     | '/mcp'
     | '/search'
@@ -115,6 +135,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/favorites'
+    | '/hidden'
     | '/make'
     | '/mcp'
     | '/search'
@@ -126,6 +148,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/favorites'
+    | '/hidden'
     | '/make'
     | '/mcp'
     | '/search'
@@ -138,6 +162,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  FavoritesRoute: typeof FavoritesRoute
+  HiddenRoute: typeof HiddenRoute
   MakeRoute: typeof MakeRoute
   McpRoute: typeof McpRoute
   SearchRoute: typeof SearchRoute
@@ -161,6 +187,20 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favorites': {
+      id: '/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof FavoritesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hidden': {
+      id: '/hidden'
+      path: '/hidden'
+      fullPath: '/hidden'
+      preLoaderRoute: typeof HiddenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/make': {
@@ -218,6 +258,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  FavoritesRoute: FavoritesRoute,
+  HiddenRoute: HiddenRoute,
   MakeRoute: MakeRoute,
   McpRoute: McpRoute,
   SearchRoute: SearchRoute,

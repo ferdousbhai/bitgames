@@ -1,8 +1,11 @@
 import type { Game } from '#/lib/types'
+import { useGamePreferences } from '#/lib/use-game-preferences'
 import { GameTile } from './GameTile'
 
 /** A titled row of game tiles that a finger swipes sideways, like a row of videos. */
 export function GameShelf({ title, emoji, games, replace }: { title: string; emoji: string; games: Game[]; replace?: boolean }) {
+  const { hidden } = useGamePreferences()
+  games = games.filter((game) => !hidden.includes(game.id))
   if (games.length === 0) return null
   return (
     <section className="mt-8 sm:mt-10">
@@ -22,6 +25,8 @@ export function GameShelf({ title, emoji, games, replace }: { title: string; emo
 }
 
 export function GameGrid({ games }: { games: Game[] }) {
+  const { hidden } = useGamePreferences()
+  games = games.filter((game) => !hidden.includes(game.id))
   return (
     <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
       {games.map((game) => (

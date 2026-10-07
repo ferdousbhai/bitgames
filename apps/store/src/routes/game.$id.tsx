@@ -3,6 +3,8 @@ import { createIsomorphicFn } from '@tanstack/react-start'
 import { eq, useLiveQuery } from '@tanstack/react-db'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
+import { useGamePreferences, updateGamePreference } from '#/lib/use-game-preferences'
+import { GameActions } from '#/components/GameActions'
 import { PlayScreen } from '#/components/PlayScreen'
 import { GameShelf, Loading } from '#/components/GameShelf'
 import { playLink } from '#/components/GameTile'
@@ -49,6 +51,7 @@ export const Route = createFileRoute('/game/$id')({
 })
 
 function GamePage() {
+  const { hidden } = useGamePreferences()
   const { id } = Route.useParams()
   const { data } = useLiveQuery({
     query: (q) => q.from({ g: gamesCollection }).where(({ g }) => eq(g.id, id)),
@@ -62,14 +65,13 @@ function GamePage() {
       q
         .from({ g: gamesCollection })
         .where(({ g }) => eq(g.category, category?.slug ?? ''))
-        .orderBy(({ g }) => g.plays, 'desc')
-        .limit(13),
+        .orderBy(({ g }) => g.plays, 'desc'),
   })
   const { data: popularAll } = useLiveQuery({
-    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.plays, 'desc').limit(13),
+    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.plays, 'desc'),
   })
   const { data: newestAll } = useLiveQuery({
-    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.createdAt, 'desc').limit(13),
+    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.createdAt, 'desc'),
   })
 
   const { play } = Route.useSearch()
@@ -77,13 +79,26 @@ function GamePage() {
   // The game frame needs the browser, so it only opens once the page is running there.
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
-  const playing = mounted && play === true && game !== undefined
+  const playing = mounted && play === true && game !== undefined && !hidden.includes(id)
   useEffect(() => {
     if (playing) countPlay(id)
   }, [playing, id])
 
   if (!game) return <Loading />
-  const others = (games: Game[]) => games.filter((g) => g.id !== id).slice(0, 12)
+  if (hidden.includes(id)) return (
+    <div className="py-16 text-center">
+      <h1 className="text-3xl font-bold">This game is hidden</h1>
+      <p className="mt-3 text-lg text-ink-soft">It won’t appear in your games unless you restore it.</p>
+      <div className="mt-5 flex justify-center gap-3">
+        <Link to="/" className="rounded-full bg-cloud px-5 py-3 font-semibold">Go home</Link>
+        <button type="button" className="rounded-full bg-cloud px-5 py-3 font-semibold" onClick={() => {
+          updateGamePreference(id, 'restore')
+          void navigate({ search: {}, replace: true })
+        }}>Restore game</button>
+      </div>
+    </div>
+  )
+  const others = (games: Game[]) => games.filter((g) => g.id !== id && !hidden.includes(g.id)).slice(0, 12)
   const more = others(sameKind)
   // Empty shelves don't show.
   const shelves = [
@@ -100,7 +115,7 @@ function GamePage() {
           title={game.title}
           emoji={game.emoji}
           src={game.url + game.entry}
-          menu={shelves.map((shelf) => <GameShelf key={shelf.title} {...shelf} replace />)}
+          menu={<><div className="mt-4"><GameActions game={game} /></div>{shelves.map((shelf) => <GameShelf key={shelf.title} {...shelf} replace />)}</>}
           onStop={() => void navigate({ search: {}, replace: true })}
         />
       )}
@@ -117,6 +132,7 @@ function GamePage() {
           </div>
         </div>
         <div className="flex flex-wrap items-start gap-3 lg:flex-col">
+          <GameActions game={game} />
           <LikeButton game={game} />
           <span className="rounded-full bg-cloud px-5 py-3 text-lg font-semibold text-ink-soft">
             🎮 {game.plays.toLocaleString()} plays

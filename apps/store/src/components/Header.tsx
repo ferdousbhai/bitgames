@@ -58,6 +58,7 @@ export function Header() {
             />
           </label>
         </form>
+        <Link to="/favorites" className="shrink-0 rounded-full bg-cloud px-4 py-2.5 text-lg font-semibold">❤️ Favorites</Link>
         <Link
           to="/make"
           className="toy ml-auto shrink-0 rounded-full px-5 py-2.5 text-lg font-semibold text-white"

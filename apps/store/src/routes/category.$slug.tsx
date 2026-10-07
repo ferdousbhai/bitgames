@@ -3,6 +3,7 @@ import { eq, useLiveQuery } from '@tanstack/react-db'
 import { CategoryBar } from '#/components/CategoryBar'
 import { Empty, GameGrid, Loading } from '#/components/GameShelf'
 import { TOGETHER, findCategory } from '#/lib/categories'
+import { useGamePreferences } from '#/lib/use-game-preferences'
 import { gamesCollection } from '#/lib/collections'
 import { shareMeta } from '#/lib/share'
 
@@ -33,13 +34,16 @@ export const Route = createFileRoute('/category/$slug')({
 
 function CategoryPage() {
   const category = Route.useLoaderData()
-  const { data: games } = useLiveQuery({
+  const { hidden } = useGamePreferences()
+  const { data: allGames } = useLiveQuery({
     query: (q) =>
       q
         .from({ g: gamesCollection })
         .where(({ g }) => (category.slug === TOGETHER.slug ? eq(g.together, true) : eq(g.category, category.slug)))
         .orderBy(({ g }) => g.plays, 'desc'),
   })
+
+  const games = allGames.filter((game) => !hidden.includes(game.id))
 
   return (
     <>

@@ -1,4 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { useGamePreferences } from '#/lib/use-game-preferences'
+import { GameActions } from '#/components/GameActions'
 import { eq, useLiveQuery } from '@tanstack/react-db'
 import { CategoryBar } from '#/components/CategoryBar'
 import { GameShelf, Loading } from '#/components/GameShelf'
@@ -14,37 +16,38 @@ export const Route = createFileRoute('/')({
 })
 
 function Home() {
+  const { favorites, hidden } = useGamePreferences()
   const { data: featured } = useLiveQuery({
     query: (q) =>
       q
         .from({ g: gamesCollection })
         .where(({ g }) => eq(g.featured, true))
-        .orderBy(({ g }) => g.createdAt, 'desc')
-        .limit(1),
+        .orderBy(({ g }) => g.createdAt, 'desc'),
   })
   const { data: newest } = useLiveQuery({
-    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.createdAt, 'desc').limit(12),
+    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.createdAt, 'desc'),
   })
   const { data: popular } = useLiveQuery({
-    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.plays, 'desc').limit(12),
+    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.plays, 'desc'),
   })
   const { data: together } = useLiveQuery({
     query: (q) =>
       q
         .from({ g: gamesCollection })
         .where(({ g }) => eq(g.together, true))
-        .orderBy(({ g }) => g.plays, 'desc')
-        .limit(12),
+        .orderBy(({ g }) => g.plays, 'desc'),
   })
 
-  const hero = featured[0] ?? newest[0]
+  const visible = (games: Game[]) => games.filter((game) => !hidden.includes(game.id))
+  const hero = visible(featured)[0] ?? visible(newest)[0]
   return (
     <>
       <CategoryBar />
       {hero && <Hero game={hero} />}
-      <GameShelf title="New games" emoji="✨" games={newest} />
-      <GameShelf title="Everyone loves these" emoji="🔥" games={popular} />
-      <GameShelf title="Play together" emoji="👫" games={together} />
+      <GameShelf title="Favorites" emoji="❤️" games={visible(newest).filter((game) => favorites.includes(game.id))} />
+      <GameShelf title="New games" emoji="✨" games={visible(newest).slice(0, 12)} />
+      <GameShelf title="Everyone loves these" emoji="🔥" games={visible(popular).slice(0, 12)} />
+      <GameShelf title="Play together" emoji="👫" games={visible(together).slice(0, 12)} />
       <ForGrownUps />
     </>
   )
@@ -64,7 +67,7 @@ const GROWN_UP_POINTS = [
   {
     emoji: '🔒',
     title: 'No accounts, no tracking',
-    text: 'Kids don’t sign up or type their name. No analytics, no tracking cookies. Likes are remembered on this device only.',
+    text: 'Kids don’t sign up or type their name. No analytics, no tracking cookies. Likes, favorites and hidden games are remembered in this browser only.',
   },
   {
     emoji: '✅',
@@ -117,6 +120,7 @@ function Hero({ game }: { game: Game }) {
           <p className="text-lg font-semibold uppercase tracking-wide text-white/85">Game of the day</p>
           <h1 className="mt-1 text-4xl font-bold drop-shadow sm:text-6xl">{game.title}</h1>
           <p className="mt-2 max-w-md text-xl text-white/90">{game.tagline}</p>
+          <div className="mt-4"><GameActions game={game} /></div>
           <Link
             {...playLink(game.id)}
             className="toy mt-6 inline-flex items-center gap-2 rounded-full px-8 py-4 text-2xl font-bold text-ink"
