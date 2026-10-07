@@ -125,6 +125,16 @@
   #colour-studio .cs-tools button { min-width: 52px; font-size: 20px; }
   #colour-studio .cs-note { font-size: 10px; }
 }
+/* Upright phones: the close button floats on the table's corner, so the cup and bottles get the room. */
+@media (max-aspect-ratio: 5/4) and (max-height: 820px) {
+  #colour-studio .studio-heading { position: absolute; right: 12px; top: 12px; width: auto; z-index: 2; padding: 0; }
+  #colour-studio h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #colour-studio .cs-body { gap: 8px; }
+}
+@media (max-aspect-ratio: 5/4) and (max-height: 600px) {
+  #colour-studio .cs-note { display: none; }
+  #colour-studio .cs-tools button { min-height: 44px; }
+}
 /* A white paint drop on each pot. */
 #colour-studio .cs-drop {
   display: block; width: 38%; height: 38%; margin: 8% auto 0; background: #fffe; border-radius: 0 50% 50% 50%;

@@ -26,6 +26,8 @@ const SEND_MS = 100
 const SNAP_MS = 66
 const RAINBOW_MS = 6000
 const REVEAL_MS = 2600
+/** Once the camera has settled over the finished picture, it goes into My pictures by itself. */
+const AUTO_KEEP_MS = 1500
 /** A child who hasn't rolled for this long sees the dragging finger again. */
 const IDLE_HINT_MS = 4000
 /** Seats start in the four corners, facing the middle. Seat 0 is nearest the camera on the left. */
@@ -158,6 +160,7 @@ const game = {
   placeScenes: {},
   lastMoveAt: 0,
   build: 0,
+  keptRound: null,
 }
 
 // Opening (or closing) the gallery or colour studio lets go of the roller so the animal stops.
@@ -166,7 +169,10 @@ function releaseControls() {
   input.keys.clear()
   if (game.me) game.me.controls = { x: 0, z: 0 }
 }
-const gallery = createGallery({ renderer, scene, camera, openButton: $('gallery-open'), saveButton: $('gallery-save'), onOpen: releaseControls })
+const gallery = createGallery({
+  renderer, scene, camera, openButton: $('gallery-open'), saveButton: $('gallery-save'), onOpen: releaseControls,
+  hideInPicture: () => [effects.drops.mesh, effects.sparks.mesh, effects.confetti.mesh, meMarker],
+})
 /** Spoken words for children who can't read yet (quiet when the sound is off or there is no voice). */
 function speak(text) {
   if (!settings.sound || !text || !('speechSynthesis' in window)) return
@@ -348,8 +354,12 @@ function buildMenu() {
     updateToggles()
   }
   $('voice').onclick = () => say()
-  // The finished picture, seen from above, is the best one to keep.
-  $('results-save').onclick = () => $('gallery-save').click()
+  // The finished picture is kept by itself; 🖼️ shows it in My pictures (keeping it first if it's early).
+  $('results-save').onclick = () => {
+    audio.unlock()
+    keepFinishedPicture(false)
+    gallery.show()
+  }
   updateToggles()
   input.on('key', (k) => {
     audio.unlock()
@@ -823,9 +833,45 @@ function sendFinal() {
 
 function showResults() {
   if (game.state !== 'reveal' && game.state !== 'results') return
+  const first = game.state === 'reveal'
   game.state = 'results'
   show(null)
   renderResults()
+  if (first) later(() => keepFinishedPicture(true), AUTO_KEEP_MS)
+}
+
+/** Where the playground is on screen (CSS pixels), a little wider than 4:3 like the gallery frames. */
+function pictureRect() {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+  const v = new THREE.Vector3()
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    v.set(x * (HALF_W + 1), 0, z * (HALF_D + 1)).project(camera)
+    const sx = ((v.x + 1) / 2) * innerWidth, sy = ((1 - v.y) / 2) * innerHeight
+    x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy)
+  }
+  let w = x1 - x0, h = y1 - y0
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2
+  if (w / h > 4 / 3) h = (w * 3) / 4
+  else w = (h * 4) / 3
+  if (!(w > 40 && h > 30)) return undefined
+  return [cx - w / 2, cy - h / 2, w, h]
+}
+
+/** Puts this round's finished picture in My pictures, once, with a camera flash. */
+function keepFinishedPicture(flash) {
+  if (game.state !== 'results' || game.keptRound === roundId()) return
+  game.keptRound = roundId()
+  gallery.keep(pictureRect())
+  if (!flash) return
+  audio.studio('keep')
+  const el = $('flash')
+  el.classList.remove('go')
+  void el.offsetWidth
+  el.classList.add('go')
+  const btn = $('results-save')
+  btn.classList.remove('kept')
+  void btn.offsetWidth
+  btn.classList.add('kept')
 }
 
 function renderResults() {
@@ -1095,7 +1141,7 @@ function followTarget(pos, look) {
 function revealTarget(pos, look) {
   const fov = THREE.MathUtils.degToRad(camera.fov)
   const shown = game.state === 'results'
-  const top = shown ? $('together').getBoundingClientRect().bottom + 8 : innerHeight * 0.16
+  const top = shown ? $('results').querySelector('.results-top').getBoundingClientRect().bottom + 8 : innerHeight * 0.16
   const bottom = shown ? $('cards').getBoundingClientRect().top - 8 : innerHeight * 0.62
   const free = Math.max(innerHeight * 0.3, bottom - top)
   const pxPerM = Math.min(free / (2 * HALF_D + 1.5), innerWidth / (2 * HALF_W + 2))

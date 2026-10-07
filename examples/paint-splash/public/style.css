@@ -125,7 +125,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left)); }
 .results-top { text-align: center; animation: drop-in .6s cubic-bezier(.2, 1.6, .4, 1); }
 .results h1 { margin: 0; font-size: clamp(30px, 6vw, 54px); -webkit-text-stroke: 0.2em #9b5de5; paint-order: stroke fill; text-shadow: 0 4px 0 #5a2d91, 0 8px 20px rgba(0,0,0,.25); }
-.keep-btn { vertical-align: middle; margin: 6px 0 0 8px; box-shadow: 0 4px 0 rgba(90,45,145,.3), 0 0 0 4px #ffd23f; animation: pulse 1.6s ease-in-out 2s 3; }
+.keep-btn { vertical-align: middle; margin: 6px 0 0 8px; box-shadow: 0 4px 0 rgba(90,45,145,.3), 0 0 0 4px #ffd23f; }
+/* The finished picture was just kept: the frame button hops and sparkles. */
+.keep-btn.kept { animation: kept-hop .7s cubic-bezier(.2, 1.8, .4, 1), pulse 1.6s ease-in-out .7s 3; }
+@keyframes kept-hop { 0% { transform: scale(.4) rotate(-20deg); } 60% { transform: scale(1.35) rotate(8deg); } }
+.flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }
+.flash.go { animation: flash .6s ease-out; }
+@keyframes flash { 0% { opacity: .6; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .flash.go { animation: none; } }
 .together { display: inline-block; vertical-align: middle; margin-top: 6px; background: rgba(255,255,255,.9); color: #5a2d91; border-radius: 999px; padding: 4px 18px; font-size: clamp(20px, 3.6vw, 28px); font-weight: 900; }
 @keyframes drop-in { from { transform: translateY(-60px); opacity: 0; } }
 .panel { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; animation: rise-in .6s cubic-bezier(.2, 1.4, .4, 1) .2s both; }
@@ -178,6 +185,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .big-go { font-size: 20px; padding: 7px 18px; }
   .big-go.alt, #again { box-shadow: 0 4px 0 #1b8178; } #again { box-shadow: 0 4px 0 #c48a00; }
   .voice-btn { width: 60px; height: 60px; font-size: 30px; }
+  /* Four slimmer corner buttons, so the camera never touches the timer on small sideways phones. */
+  .hud-left { gap: 6px; }
+  .round-btn { width: 42px; height: 42px; font-size: 21px; }
   /* The animals and the places side by side; the workshop and gallery wait in the top corners. */
   .picks { flex-direction: row; gap: 18px; }
   #menu > #go { margin-bottom: auto; }
@@ -191,6 +201,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #menu .extra-btn { pointer-events: auto; flex-direction: column; gap: 0; width: 64px; min-height: 56px; padding: 4px 2px; border-radius: 20px; font-size: 11px; line-height: 1.05; }
   #menu .extra-btn .ico { font-size: 18px; letter-spacing: -5px; padding-right: 5px; }
   #menu #gallery-open .ico { font-size: 24px; letter-spacing: 0; padding: 0; }
+}
+/* Short laptop windows: a little tighter so the workshop and gallery buttons show without scrolling. */
+@media (min-height: 501px) and (max-height: 620px) and (min-width: 700px) {
+  .screen { gap: 8px; }
+  .logo.small { font-size: 46px; }
 }
 /* Small sideways phones: everything a size smaller so the row fits. */
 @media (max-height: 500px) and (max-width: 620px) {
