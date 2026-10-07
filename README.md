@@ -124,6 +124,8 @@ The 88 learning adventures cover 26 activities, from firefly counting and colour
 
 [The studio guide](examples/_studio/README.md) covers editing the games, browser checks and iPad design.
 
+[The polish handoff](docs/POLISH_HANDOFF.md) records the current release queue and the next pass for agents continuing the 100+ games effort.
+
 ## Crash Racers
 
 Race or smash up to 4 cars around Ubud, Helsinki or Montreal, on separate devices in the same home (BitGames' family lobby, WebRTC between devices) or alone against bots.
