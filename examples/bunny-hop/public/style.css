@@ -87,6 +87,27 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tap-hint.gone { opacity: 0; }
 @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
+/* Picture steps replace the free-play tap hint during a learning mission. */
+#menu .adventure-choice { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 7px 10px; font-size: 14px; }
+.mission-steps { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+.mission-step { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 2px solid #fff; border-radius: 9px; background: #fff8; color: #536c87; font-size: 23px; line-height: 1; opacity: .45; }
+.mission-step.done { background: #8ac926; color: #fff; opacity: 1; }
+.mission-step.next { background: #ffcf1a; color: #603d00; opacity: 1; box-shadow: 0 0 0 3px #ffcf1a55; }
+#menu .mission-step { width: 25px; height: 25px; font-size: 19px; }
+.mission-next { color: #aa679f; font-size: 22px; line-height: 1; }
+#hud .adventure-goal {
+  bottom: calc(18px + env(safe-area-inset-bottom)); min-width: 190px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 12px 8px; border: 2px solid #fff; border-radius: 18px;
+  background: #fffaf0ee; box-shadow: 0 4px 0 #45605866;
+}
+#hud .adventure-goal[hidden] { display: none; }
+.mission-caption { font-size: 14px; font-weight: 900; line-height: 1.2; white-space: nowrap; }
+#hud .mission-step { width: 31px; height: 31px; }
+@media (orientation: landscape) and (max-height: 380px) {
+  #hud .adventure-goal { left: auto; right: calc(10px + env(safe-area-inset-right)); transform: none; }
+}
+
 #popups { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 /* Floating words: a thick coloured outline keeps them readable on grass, sky and snow alike. */
 .popup {

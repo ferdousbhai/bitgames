@@ -97,18 +97,77 @@ try {
 } catch {}
 
 // Optional learning missions. A flip is the bunny's 'double' hop.
+const missionSteps = {
+  'Gentle hop counting': ['↑', '↑', '↑', '↑'],
+  'Hop, hop, flip pattern': ['↑', '↑', '↻'],
+}
+
+function missionIcon(symbol, state = '') {
+  const icon = document.createElement('span')
+  icon.className = `mission-step ${state}`
+  icon.textContent = symbol
+  icon.setAttribute('aria-hidden', 'true')
+  return icon
+}
+
+function renderMissionProgress(goal, option, count) {
+  if (!option.goal) return
+  goal.replaceChildren()
+  goal.setAttribute('aria-label', `${option.goal}. ${count} of ${option.target} steps.`)
+  const caption = document.createElement('span')
+  caption.className = 'mission-caption'
+  caption.textContent = option.sequence
+    ? count === 2 ? 'Hop, then tap to flip!' : count === 3 ? 'Pattern complete!' : '👆 Hop · hop · flip'
+    : `👆 Tap to hop · ${count} / 4`
+  const steps = document.createElement('span')
+  steps.className = 'mission-steps'
+  missionSteps[option.label].forEach((symbol, i) => steps.append(missionIcon(symbol, i < count ? 'done' : i === count ? 'next' : '')))
+  goal.append(caption, steps)
+}
+
+function speakMission(text) {
+  if (sound.muted || !('speechSynthesis' in window)) return
+  speechSynthesis.cancel()
+  const words = new SpeechSynthesisUtterance(text)
+  words.lang = 'en-US'
+  words.rate = 0.82
+  speechSynthesis.speak(words)
+}
+
 const adventure = createAdventure({
   id: 'bunny-hop',
   anchor: $('play'),
   hud: $('hud'),
   isMuted: () => sound.muted,
-  celebrate: (text) => banner(text),
+  celebrate: () => {
+    banner(adventure.option.sequence ? '⭐ Pattern! ⭐' : '⭐ Four hops! ⭐', 2600)
+    effects.confettiBurst(new THREE.Vector3(game.x, bunny.y + 1, 0), 35)
+  },
+  renderProgress: renderMissionProgress,
   options: [
     { emoji: '🐰', label: 'Free hopping' },
-    { emoji: '🐢', label: 'Gentle hop counting', pace: 0.6, goal: 'Make 4 hops', target: 4, reward: 'Four hops helped Pip along the trail!' },
-    { emoji: '🎶', label: 'Hop, hop, flip pattern', pace: 0.6, goal: 'Hop → hop → flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => kind === ['hop', 'hop', 'double'][n], reward: 'You made the hop, hop, flip pattern!' },
+    { emoji: '🐢', label: 'Gentle hop counting', pace: 0.6, goal: 'Make four hops', target: 4, reward: 'Four! You made four hops!' },
+    { emoji: '🎶', label: 'Hop, hop, flip pattern', pace: 0.6, goal: 'Hop twice, then hop and tap again in the air to flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => kind === ['hop', 'hop', 'double'][n], reward: 'You made the hop, hop, flip pattern!' },
   ],
 })
+
+function renderMissionChoice() {
+  const option = adventure.option
+  const button = $('adventure-choice')
+  button.replaceChildren()
+  const steps = document.createElement('span')
+  steps.className = 'mission-steps'
+  for (const symbol of missionSteps[option.label] || ['🐰']) steps.append(missionIcon(symbol, 'done'))
+  const caption = document.createElement('span')
+  caption.textContent = option.sequence ? 'Hop, hop, flip' : option.goal ? 'Count 4 hops' : 'Free hop'
+  const next = document.createElement('span')
+  next.className = 'mission-next'
+  next.textContent = '↻'
+  next.setAttribute('aria-hidden', 'true')
+  button.append(steps, caption, next)
+}
+renderMissionChoice()
+$('adventure-choice').addEventListener('click', renderMissionChoice)
 
 let bunny, world, course, effects, weather, glints, popups
 const camPos = new THREE.Vector3(1.2, 2, 8)
@@ -184,10 +243,11 @@ function start() {
   camLook.set(game.x + 0.1, 1.1, 0)
   weather.setKind(BIOMES[game.biome].weather)
   $('score-num').textContent = '0'
-  $('tap-hint').classList.remove('gone')
+  $('tap-hint').classList.toggle('gone', !!adventure.option.goal)
   show(null)
   fitPopups()
   banner(`${BIOMES[game.biome].emoji} ${BIOMES[game.biome].name}`)
+  if (adventure.option.goal) speakMission(adventure.option.goal)
 }
 
 // Floating words start a little below the score and the trip bar, so a word
@@ -220,7 +280,10 @@ function hop() {
   if (game.state !== 'play') return
   const kind = bunny.hop()
   if (!kind) return
-  adventure.event(kind)
+  if (adventure.option.sequence && adventure.progress === 2 && kind === 'hop') {
+    banner('👆 Tap again!', 900)
+    speakMission('Tap again in the air to flip!')
+  } else adventure.event(kind)
   sound.hop(kind === 'double')
   tmp.set(game.x, 0, 0)
   if (kind === 'hop') effects.puff(tmp, 6, dustColor(), 0.9)
