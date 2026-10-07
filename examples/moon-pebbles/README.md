@@ -6,7 +6,7 @@ Gather moon gems for a friendly astronaut.
 - Learning: Counting and stopping at a target
 - Activity: collect
 
-Tap the requested number of objects, then press Done. Tap again to undo.
+Tap moon gems or carry them to the rocket. Tap Done when you have the right number.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/moon-pebbles assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

@@ -6,7 +6,7 @@ Pick a tiny picnic from a candy-coloured orchard.
 - Learning: Counting and quantity
 - Activity: collect
 
-Tap the requested number of objects, then press Done. Tap again to undo.
+Tap apples or carry them into the basket. Tap Done when you have the right number.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/orchard-baskets assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

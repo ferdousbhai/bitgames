@@ -349,12 +349,19 @@ def build_critter(name):
             for y in [-.12, .12]:
                 torus((0, y, .4), .22, .035, DARK).rotation_euler[0] = QUARTER_TURN
         else:
-            lantern = sphere((0, .2, .41), (.235, .24, .22), '#dafe7a')
+            # Expose the glowing abdomen beyond the wings in the elevated game view.
+            lantern = sphere((0, .32, .43), (.25, .29, .24), '#dafe7a')
             shader = lantern.data.materials[0].node_tree.nodes.get('Principled BSDF')
             shader.inputs['Emission Color'].default_value = (.55, .9, .16, 1)
             shader.inputs['Emission Strength'].default_value = .7
         for x in [-.24, .24]:
-            sphere((x, .07, .66), (.22, .25, .055), WHITE)
+            wing_x = x if name == 'bee' else x * 1.5
+            wing_y = .07 if name == 'bee' else .02
+            sphere((wing_x, wing_y, .66), (.22, .25, .055), WHITE)
+            if name == 'firefly':
+                antenna = cone((x * .5, -.28, .71), .018, .25, DARK, .012)
+                antenna.rotation_euler[1] = -.3 if x < 0 else .3
+                sphere((x * .65, -.28, .84), (.035,) * 3, DARK)
         eyes(.46, -.36, .095)
     if name == 'butterfly':
         for side in [-1, 1]:
@@ -801,6 +808,50 @@ def build_shapes(name):
         cone((0, 0, .3), .14, .5, BLUE, .14)
         cone((0, 0, .65), .055, .25, BLUE, .055)
         cube((0, 0, .77), (.13, .13, .05), WHITE)
+    elif name in ['orchard-basket', 'recycling-bin']:
+        # Dedicated open receivers: collected objects remain visible, with no lid.
+        recycling = name == 'recycling-bin'
+        width, depth, height = (.65, .55, .65) if recycling else (.9, .7, .38)
+        colour = '#7fad8a' if recycling else '#d9a865'
+        rim = '#4e826b' if recycling else '#a7773f'
+        cube((0, 0, .045), (width, depth, .09), rim, .025)
+        for side in [-1, 1]:
+            cube((side * (width / 2 - .025), 0, height / 2), (.05, depth, height), colour, .02)
+            cube((0, side * (depth / 2 - .025), height / 2), (width, .05, height), colour, .02)
+            cube((side * (width / 2 - .025), 0, height), (.07, depth, .07), rim, .02)
+            cube((0, side * (depth / 2 - .025), height), (width, .07, .07), rim, .02)
+        if recycling:
+            # Three thick clockwise arrows, in the front plane, form the familiar recycle loop.
+            for i in range(3):
+                a = i * math.tau / 3
+                tangent = a + math.pi / 2
+                x, z = math.sin(a) * .135, .36 + math.cos(a) * .135
+                shaft = cube((x, -depth / 2 - .006, z), (.055, .035, .15), WHITE, .009)
+                shaft.rotation_euler[1] = tangent
+                tip_x, tip_z = x + math.sin(tangent) * .07, z + math.cos(tangent) * .07
+                arrow = cone((tip_x, -depth / 2 - .007, tip_z), .06, .095, WHITE)
+                arrow.rotation_euler[1] = tangent
+        else:
+            for z in [.12, .25]:
+                for side in [-1, 1]:
+                    cube((0, side * (depth / 2 + .004), z), (width, .025, .025), rim, .008)
+            # A high rear handle leaves the front opening clear of collected apples.
+            curve = bpy.data.curves.new('open picnic handle', 'CURVE')
+            curve.dimensions = '3D'
+            curve.bevel_depth = .035
+            curve.bevel_resolution = 2
+            curve.use_fill_caps = True
+            arc = curve.splines.new('POLY')
+            arc.points.add(24)
+            for i, point in enumerate(arc.points):
+                a = i * math.pi / 24
+                point.co = (math.cos(a) * .41, depth / 2 - .03, height + math.sin(a) * .38, 1)
+            handle = bpy.data.objects.new('picnic handle', curve)
+            bpy.context.collection.objects.link(handle)
+            handle.data.materials.append(mat(rim))
+            select_only([handle])
+            bpy.context.view_layer.objects.active = handle
+            bpy.ops.object.convert(target='MESH')
     elif name == 'basket':
         # A wicker picnic basket: woven bands, a red-and-white cloth peeking out, a tall handle.
         cube((0, 0, .22), (.72, .52, .4), '#d9a865')
@@ -1010,6 +1061,7 @@ def toy(name):
 
 
 TOYS = [
+    'orchard-basket', 'recycling-bin',
     'ribbon', 'pizza', 'watermelon', 'quilt', 'clock', 'key', 'tangram', 'ladybird', 'suitcase', 'lemon',
     'umbrella', 'boots', 'owl', 'jar', 'can', 'newspaper', 'spoon', 'broccoli', 'cabbage', 'gloves', 'scarf',
     'coat', 'sandal', 'glasses', 'hat', 'bed', 'washstand', 'bowl', 'toothbrush', 'sunflowerseed', 'sprout',
@@ -1045,6 +1097,7 @@ MODE_TOYS = {
     'build': ['parcel'],
 }
 GAME_TOYS = {
+    'orchard-baskets': ['orchard-basket'], 'coral-cleanup': ['recycling-bin'],
     'bead-bridge': ['snail'], 'sleepy-owl-lullaby': ['owl'], 'picnic-pairs': ['apple', 'pear', 'strawberry'],
     'frog-choir': ['frog'], 'butterfly-patterns': ['leaf'], 'firefly-lanterns': ['lantern'],
     'giraffe-ruler': ['giraffe'], 'bridge-builder': ['boat'], 'garden-fence': ['flower'],

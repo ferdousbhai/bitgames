@@ -16,6 +16,18 @@ pnpm examples:assets       # rebuild every GLB and cover with Blender CLI; run e
 
 The committed GLBs and 720 × 480 covers were generated with Blender 5.2; playing needs no Blender. Rebuild one game's art with `pnpm --dir examples/bee-pollen-trail assets`. The builders are reproducible from the seeded designs. Commit the generated `.glb` models and `.jpg` covers; each shipment's `bitgames.json` is generated and ignored, like the original examples'.
 
+Agents use **Blender CLI** for all asset work, including inspection renders. Edit the builder source and rebuild only the affected games; do not use Blender GUI automation or Blender MCP as the asset workflow. From the repository root:
+
+Reuse a suitable existing asset first, then consider trusted libraries such as [Poly Haven](https://polyhaven.com/models). Adapt through Blender CLI when that is cheaper than making a suitable model. Use custom assets for educational shapes, recognizable silhouettes, or a style and browser budget that library assets cannot meet economically. Keep adaptive counters, grids, and outlines as runtime geometry. Imported assets need recorded source URLs, licences, checksums, and reproducible adaptation steps, and their optimized files must ship locally. Poly Haven assets use [CC0](https://polyhaven.com/license); CLI is the preparation workflow for either reused or custom assets.
+
+```sh
+blender --version           # use Blender 5.2
+blender --background --python-exit-code 1 --python examples/_studio/blender/build_assets.py -- firefly-lanterns
+pnpm examples:build
+```
+
+The builder bounds CPU rendering to eight threads. For experiments, import the builder and redirect its `ROOT` to a temporary output directory so a render cannot replace shipped art. Validate the rebuilt toys in the game, including phone and iPad views. Native ARM installations can live under `~/.local/opt/`, with `blender` linked into `~/.local/bin/`.
+
 Edit `catalogue.mjs` for titles, ages, learning objectives, stories, themes and activity data; `runtime/challenges.js` for the deterministic puzzles; `runtime/activities.js` and its specialised modules for the interactions; and `runtime/engine.js` for the Three.js world and navigation. Then run `examples:build`. Each game's `public/` ships on its own, with its scene, the toys it uses, its configuration and local copies of the runtime. Three.js comes from BitGames' approved vendor path, so the playback gateway needs no other CDN or shared origin.
 
 The original games' shared learning helpers live in `originals/`; `package-originals.mjs` copies them into each original's `public/` during `examples:build` without touching the originals' main game code.
@@ -54,6 +66,15 @@ node examples/_studio/tests/catalogue.mjs          # root catalogue and filters
 The playtest emulates iPad touch viewports (834 × 1194 and 1194 × 834, or 768 × 1024 and 1024 × 768 with `--mini`) and checks bounds, target sizes, real touch solutions, completion, saved progress, runtime errors and missing assets. Screenshots and JSON results go to `/tmp/bitgames-playtest`. `--offset N` and `--limit N` run part of the catalogue, `--activities` picks one game per interaction type, and `--smoke` only loads each game and its first puzzle. Original-game checks cover menus and controls in both orientations but do not finish the games.
 
 Linux WebKit renders in software, so automated WebKit runs add a debug-only `renderScale=0.6`; layout and touch targets still use the full iPad viewport. These checks cover WebKit compatibility and emulated touch; real iPad performance still needs a device check, and the games still need child playtests and educator review.
+
+On hosts where bundled Chromium or its Vulkan backend is unavailable, the same suites can use an installed Chromium and software rendering:
+
+```sh
+EXAMPLES_CHROMIUM_EXECUTABLE=/usr/bin/chromium EXAMPLES_CHROMIUM_ANGLE=swiftshader \
+  EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --browser chromium
+```
+
+Set those environment variables for the other Chromium suites too. Keep WebKit validation separate; a Chromium pass does not establish WebKit compatibility.
 
 ## Art and source
 

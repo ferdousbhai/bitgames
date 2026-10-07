@@ -6,7 +6,7 @@ Deliver rainbow parcels to their matching mailboxes.
 - Learning: Colour recognition
 - Activity: match
 
-Look at the delivery request and tap its matching toy.
+Match the parcel to the mailbox colour. Tap a parcel or carry it to the mailbox.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/rainbow-postoffice assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

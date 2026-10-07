@@ -335,7 +335,8 @@ try {
     network = []
     const started = Date.now()
     await page.setViewportSize(portraitSize)
-    await page.goto(`${origin}/${g.id}/?debug${browserName === 'webkit' ? '&renderScale=0.6' : ''}`, { waitUntil: 'domcontentloaded' })
+    const renderScale = process.env.EXAMPLES_RENDER_SCALE || (browserName === 'webkit' ? '0.6' : '')
+    await page.goto(`${origin}/${g.id}/?debug${renderScale ? `&renderScale=${encodeURIComponent(renderScale)}` : ''}`, { waitUntil: 'domcontentloaded' })
     if (originalsOnly) await checkOriginal(g)
     else await checkLearningGame(g, i, started)
     writeReport()

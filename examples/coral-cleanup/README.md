@@ -6,7 +6,7 @@ Help sea turtles by collecting litter and leaving shells.
 - Learning: Environmental care and classification
 - Activity: collect
 
-Tap the requested number of objects, then press Done. Tap again to undo.
+Collect bottles for recycling. Leave shells in the sea. Tap Done when you have the right number.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/coral-cleanup assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

@@ -8,7 +8,9 @@ export const origin = process.env.EXAMPLES_ORIGIN || 'http://localhost:4173'
 /** `--webkit` on the command line switches a check from Chromium to WebKit. */
 export const engineFromArgs = () => (process.argv.includes('--webkit') ? 'webkit' : 'chromium')
 
-const chromiumArgs = ['--no-sandbox', '--use-angle=vulkan', '--enable-gpu', '--ignore-gpu-blocklist']
+const angle = process.env.EXAMPLES_CHROMIUM_ANGLE || 'vulkan'
+const chromiumArgs = ['--no-sandbox', `--use-angle=${angle}`, '--enable-gpu', '--ignore-gpu-blocklist']
+if (angle === 'swiftshader') chromiumArgs.push('--enable-unsafe-swiftshader')
 
 /**
  * Launch a touch-enabled iPad mini page that records uncaught page errors.
@@ -17,7 +19,10 @@ const chromiumArgs = ['--no-sandbox', '--use-angle=vulkan', '--enable-gpu', '--i
 export async function startBrowser({ engine = 'chromium', out, extraArgs = [], context: contextOptions = {} } = {}) {
   const browser = await { chromium, webkit }[engine].launch({
     headless: true,
-    ...(engine === 'chromium' ? { args: [...chromiumArgs, ...extraArgs] } : {}),
+    ...(engine === 'chromium' ? {
+      ...(process.env.EXAMPLES_CHROMIUM_EXECUTABLE ? { executablePath: process.env.EXAMPLES_CHROMIUM_EXECUTABLE } : {}),
+      args: [...chromiumArgs, ...extraArgs],
+    } : {}),
   })
   const context = await browser.newContext({
     viewport: { width: 768, height: 1024 },
@@ -59,6 +64,9 @@ export async function runChecks({ browser, page, errors, out }, body) {
 
 /** Load a generated learning game and wait until its Play button is ready. */
 export async function loadLearningGame(page, id, query = '') {
+  if (process.env.EXAMPLES_RENDER_SCALE && !query.includes('renderScale=')) {
+    query += `&renderScale=${encodeURIComponent(process.env.EXAMPLES_RENDER_SCALE)}`
+  }
   await page.goto(`${origin}/${id}/?debug${query}`)
   await page.waitForFunction(() => window.__learning && !document.getElementById('play').disabled)
 }

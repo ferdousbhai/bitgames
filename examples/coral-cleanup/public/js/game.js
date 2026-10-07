@@ -17,6 +17,7 @@ export default {
   "noun": "bottles",
   "verb": "Recycle",
   "reward": "A cleaner reef for everyone!",
+  "instructions": "Collect bottles for recycling. Leave shells in the sea. Tap Done when you have the right number.",
   "sky": "#d3f3f5",
   "ground": "#79ced2",
   "accent": "#ffb0bc",
@@ -27,6 +28,5 @@ export default {
     "turtle"
   ],
   "seed": 4436,
-  "instructions": "Tap the requested number of objects, then press Done. Tap again to undo.",
   "activityNumber": 0
 };

@@ -12,6 +12,7 @@ export default {
   "skill": "Colour recognition",
   "tagline": "Deliver rainbow parcels to their matching mailboxes.",
   "variant": "colour",
+  "instructions": "Match the parcel to the mailbox colour. Tap a parcel or carry it to the mailbox.",
   "sky": "#e9dff7",
   "ground": "#b6a7d3",
   "accent": "#f2b572",
@@ -22,6 +23,5 @@ export default {
     "flower"
   ],
   "seed": 4509,
-  "instructions": "Look at the delivery request and tap its matching toy.",
   "activityNumber": 1
 };

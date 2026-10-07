@@ -56,7 +56,9 @@ function match(c, g, a) {
     if (value !== c.target) {
       a.feedback(c.variant === 'tracks'
         ? 'Compare the toes, the webbing, or the trail. Try another animal.'
-        : 'Look at the colour, outline, or shape. Try again.')
+        : c.variant === 'colour'
+          ? `That parcel is ${value.toLowerCase()}. Find the ${c.target.toLowerCase()} parcel for this mailbox.`
+          : 'Look at the outline or shape. Try again.')
       return
     }
     done = true
@@ -70,7 +72,7 @@ function match(c, g, a) {
     move(a, carrier, goal)
     card.enable(false)
     const fallback = c.variant === 'colour'
-      ? 'The matching parcel is delivered!'
+      ? `The ${c.target.toLowerCase()} parcel reached its matching mailbox!`
       : c.variant === 'shape' ? 'The key fits. The castle door opens!' : 'Your puppet matches its shadow!'
     a.later(() => a.success(c.fact || fallback), 750)
   }
@@ -100,7 +102,9 @@ function match(c, g, a) {
 
   a.hint(c.variant === 'tracks'
     ? 'Look at the real marks on the ground. Which animal made them?'
-    : 'Tap a matching piece, or carry it to the request.')
+    : c.variant === 'colour'
+      ? 'Match the parcel to the mailbox colour. Tap a parcel, or carry it to the mailbox.'
+      : 'Tap a matching piece, or carry it to the request.')
 }
 
 // Authored track silhouettes communicate the clue without a text label.

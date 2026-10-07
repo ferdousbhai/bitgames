@@ -33,7 +33,10 @@ async function drag(from, to, end = 'touchEnd') {
 
 await runChecks(session, async (pass) => {
   await open('firefly-lanterns')
-  const lantern = await screenPoint({ x: 0, y: 0.9, z: -2.35 })
+  const lantern = await page.evaluate(() => {
+    const destination = window.__learning.api.board.getObjectByName('collection-destination')
+    return window.__learning.api.screenPoint({ x: destination.position.x, y: 0.9, z: destination.position.z })
+  })
   await drag(await targetCentre(0), lantern)
   assert.equal(await pressedCount(), 1)
   assert.ok((await readout()).startsWith('1 /'))

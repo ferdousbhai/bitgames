@@ -15,14 +15,17 @@ export function runExperience(c, g, a) {
 
 const collectionSpots = {
   'firefly-lanterns': 'lantern',
-  'orchard-baskets': 'basket',
+  'orchard-baskets': 'orchard-basket',
   'moon-pebbles': 'rocket',
-  'coral-cleanup': 'coral',
+  'coral-cleanup': 'recycling-bin',
 }
 
 function collect(c, g, a) {
   const lantern = g.id === 'firefly-lanterns'
-  const spotZ = -2.35
+  const orchard = g.id === 'orchard-baskets'
+  const moon = g.id === 'moon-pebbles'
+  const recycling = g.id === 'coral-cleanup'
+  const spotZ = lantern ? -1.65 : -2.35
   const objects = Array.from({ length: c.total }, () => c.item)
   if (c.distractor) objects.splice(1, 0, c.distractor)
   const selected = new Set()
@@ -36,9 +39,10 @@ function collect(c, g, a) {
     size: 1.15,
     depth: 1.15,
   })
-  const receiver = a.tile({ model: collectionSpots[g.id], x: 0, z: spotZ, size: 1.8, scale: 2.35, label: '', visual: true })
+  const receiver = a.tile({ model: collectionSpots[g.id], x: 0, z: spotZ, size: 1.8, scale: recycling ? 1.8 : 2.35, label: recycling ? 'Recycle' : '', visual: true })
   receiver.base.visible = false
   receiver.group.name = 'collection-destination'
+  if (lantern) receiver.figure.rotation.x = -0.65
   const centre = new THREE.Vector3(0, 0.4, spotZ)
 
   // The lantern has a faint glass shell and a light that brightens with each firefly.
@@ -48,7 +52,8 @@ function collect(c, g, a) {
     glass.material.transparent = true
     glass.material.opacity = 0.1
     glass.material.depthWrite = false
-    glass.position.set(centre.x, 1, centre.z)
+    glass.rotation.x = -0.65
+    glass.position.set(centre.x, 0.85, centre.z - 0.5)
     a.board.add(glass)
     glow = new THREE.PointLight('#cfff84', 0, 7, 2)
     glow.position.set(0, 1, spotZ)
@@ -57,7 +62,15 @@ function collect(c, g, a) {
 
   // Each card has a small hidden copy that travels to and rests in the collection spot.
   const cargo = objects.map((name) => {
-    const copy = a.actor(name, lantern ? 0.28 : 0.38)
+    // One glow dot per caught firefly makes the lantern's quantity unambiguous.
+    // Full winged models remain on the cards, where their silhouettes are readable.
+    const copy = lantern
+      ? a.place(a.mesh(new THREE.SphereGeometry(0.12, 12, 8), '#dafe7a'), 0, 0)
+      : a.actor(name, orchard || moon ? 0.5 : 0.38)
+    if (lantern) {
+      copy.material.emissive.set('#78b82e')
+      copy.material.emissiveIntensity = 0.45
+    }
     copy.visible = false
     return copy
   })
@@ -69,7 +82,22 @@ function collect(c, g, a) {
       const destination = centre.clone()
       destination.x += Math.sin(angle) * 0.34
       destination.z += Math.cos(angle) * 0.25
-      destination.y = lantern ? 0.45 + (n % 3) * 0.38 : 0.35 + (n % 3) * 0.12
+      destination.y = 0.35 + (n % 3) * 0.12
+      if (lantern) {
+        // The tilted lantern faces the camera so its lid cannot hide the lights.
+        // Separate rows keep extra catches countable while the child undoes them.
+        const row = Math.floor(n / 3)
+        const height = 0.65 + row * 0.22
+        destination.set((n % 3 - 1) * 0.4, height, spotZ + 0.3 - height * 0.76)
+      }
+      if (orchard) {
+        const row = Math.floor(n / 3)
+        destination.set((n % 3 - 1) * 0.5, 1.02 + row * 0.25, spotZ + 0.45 - row * 0.38)
+      } else if (moon) {
+        // Gems wait in separate rows beside the rocket, then travel with it.
+        const row = Math.floor(n / 3)
+        destination.set((n % 3 - 1) * 0.55 - 1.8, 0.35 + row * 0.28, spotZ + 0.5 - row * 0.4)
+      }
       const copy = cargo[i]
       const origin = copy.position.clone()
       a.animate(0.55, (t) => copy.position.lerpVectors(origin, destination, t), copy)
@@ -82,9 +110,11 @@ function collect(c, g, a) {
 
   function toggle(i, fromDrag = false) {
     if (objects[i] !== c.item) {
-      a.feedback('Leave the shell in its animal’s home. Look for a bottle.')
+      a.feedback('Shells belong in the sea. Look for a bottle.')
       return
     }
+    // Retry counts become stale as soon as the child changes the collection.
+    a.feedback('')
     const card = cards[i]
     const copy = cargo[i]
     if (selected.has(i)) {
@@ -129,22 +159,22 @@ function collect(c, g, a) {
     })
   }
 
-  a.hint(lantern ? 'Tap fireflies, or carry them to the lantern. Tap a tick to let one go.' : 'Tap to collect, or carry a toy to the collection spot. Tap a tick to undo.')
+  a.hint(orchard ? 'Tap apples, or carry them into the basket. Tap a tick to put one back.' : moon ? 'Tap moon gems, or carry them to the rocket. Tap a tick to put one back.' : recycling ? 'Collect bottles for recycling. Leave shells in the sea. Tap a tick to put a bottle back.' : lantern ? 'Tap fireflies, or carry them to the lantern. Tap a tick to let one go.' : 'Tap to collect, or carry a toy to the collection spot. Tap a tick to undo.')
   doneButton = a.action(
     'Done ✓',
     () => {
       if (selected.size !== c.target) {
-        a.feedback(`There are ${selected.size}. We need ${c.target}. Add one or tap a tick to undo.`)
+        a.feedback(`You have ${selected.size}. We need ${c.target}. ${selected.size < c.target ? 'Collect some more.' : 'Tap a tick to put one back.'}`)
         return
       }
       if (glow) glow.intensity = 4
       if (g.id === 'moon-pebbles') {
         const initial = receiver.figure.position.y
-        a.animate(1.8, (t) => { receiver.figure.position.y = initial + t * 2 })
-      }
-      if (g.id === 'coral-cleanup') {
-        const scale = receiver.figure.scale.x
-        a.animate(0.8, (t) => receiver.figure.scale.setScalar(scale * (1 + t * 0.25)))
+        const gems = [...selected].map((i) => ({ copy: cargo[i], y: cargo[i].position.y }))
+        a.animate(1.8, (t) => {
+          receiver.figure.position.y = initial + t * 2
+          for (const gem of gems) gem.copy.position.y = gem.y + t * 2
+        })
       }
       a.success(c.fact)
     },

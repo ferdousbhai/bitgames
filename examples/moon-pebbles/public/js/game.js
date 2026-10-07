@@ -15,7 +15,8 @@ export default {
   "one": "moon gem",
   "noun": "moon gems",
   "verb": "Gather",
-  "reward": "The moon rover is ready!",
+  "reward": "The moon rocket is ready!",
+  "instructions": "Tap moon gems or carry them to the rocket. Tap Done when you have the right number.",
   "sky": "#282955",
   "ground": "#7c7bbb",
   "accent": "#ffd179",
@@ -26,6 +27,5 @@ export default {
     "star"
   ],
   "seed": 4363,
-  "instructions": "Tap the requested number of objects, then press Done. Tap again to undo.",
   "activityNumber": 0
 };

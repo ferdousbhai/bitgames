@@ -95,6 +95,8 @@ function requiredToys(g) {
     'picnic-pairs': ['apple', 'pear', 'strawberry'],
     'butterfly-patterns': ['leaf'],
     'firefly-lanterns': ['lantern'],
+    'orchard-baskets': ['orchard-basket'],
+    'coral-cleanup': ['recycling-bin'],
     'giraffe-ruler': ['giraffe'],
     'bridge-builder': ['boat'],
     'garden-fence': ['flower'],

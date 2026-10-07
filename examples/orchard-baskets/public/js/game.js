@@ -16,6 +16,7 @@ export default {
   "noun": "apples",
   "verb": "Pick",
   "reward": "A delicious picnic!",
+  "instructions": "Tap apples or carry them into the basket. Tap Done when you have the right number.",
   "sky": "#ffe5cf",
   "ground": "#b8d58b",
   "accent": "#ef796e",
@@ -26,6 +27,5 @@ export default {
     "basket"
   ],
   "seed": 4290,
-  "instructions": "Tap the requested number of objects, then press Done. Tap again to undo.",
   "activityNumber": 0
 };
