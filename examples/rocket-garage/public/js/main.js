@@ -230,20 +230,18 @@ async function load() {
 }
 
 /**
- * The robot and the toolbox stand beside the rocket. In portrait the 🧪, 🎲 and GO buttons
- * sit on the left, so the robot swaps sides with the toolbox and stays in view (and tappable).
+ * The robot and the toolbox stand beside the rocket. The 🧪, 🎲 and GO buttons sit at the
+ * bottom left on every screen, so the robot always stands on the right (in view and tappable)
+ * and the toolbox takes the left.
  */
+const ROBOT_X = 2.1
 function placeHelpers() {
   if (!robot) return
-  // Only short sideways phones keep the buttons out of the rocket's picture (they get their own
-  // strip); on taller screens the 🧪 🎲 GO corner would hide the robot, so it stands on the right.
-  const side = view.landscape && innerHeight <= 500 ? 1 : -1
-  if (side > 0) robot.obj.position.set(-2.6, 0, 1.1)
-  else robot.obj.position.set(2.1, 0, 1.2) // a little closer, so the right edge never cuts it off
-  robot.turn = 0.35 * side
+  robot.obj.position.set(ROBOT_X, 0, 1.2) // close enough that the tray's edge never cuts it off
+  robot.turn = -0.35
   robot.obj.rotation.y = robot.turn
-  robot.toolbox.position.set(2.5 * side, 0, 1.5)
-  robot.toolbox.rotation.y = -0.4 * side
+  robot.toolbox.position.set(-2.5, 0, 1.5)
+  robot.toolbox.rotation.y = 0.4
 }
 
 const padLights = []
@@ -365,6 +363,8 @@ function camTarget(out) {
     const H = rocket ? rocket.half * 2 + 0.7 : 5
     const W = rocket ? Math.max(rocket.width, 1.8) + 1.0 : 3
     let d = Math.max((H * innerHeight) / (0.72 * f.h * 2 * TAN), (W * innerHeight) / (0.6 * f.w * 2 * TAN))
+    // In the garage the robot beside the rocket stays in the picture too (not under the tray)
+    if (game.state === 'garage') d = Math.max(d, (2 * (ROBOT_X + 0.65) * innerHeight) / (0.97 * f.w * 2 * TAN))
     d = clamp(d, 8, 60)
     out.x = 0
     out.y = padTop + (rocket ? rocket.half : 2.4)
@@ -597,8 +597,8 @@ function fitItems() {
   const W = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
   const H = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 4
   // Big trays (tablets, desktops) used to show small parts above a large empty space: the parts
-  // grow into it (up to a chunky 132px, keeping as many in a row as fit), so they are easier to see and tap.
-  const cap = overflow ? Infinity : 132
+  // grow into it (up to a chunky 168px, keeping as many in a row as fit), so they are easier to see and tap.
+  const cap = overflow ? Infinity : 168
   let best = 0
   let cols = n
   for (let c = 1; c <= n; c++) {

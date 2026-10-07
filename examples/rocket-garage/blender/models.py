@@ -1119,6 +1119,14 @@ def garage(m):
     for s, side in ((-1, "l"), (1, "r")):
         d = box(f"garage_door_{side}", (2.4, 0.2, 2.6), (s * 1.2, 3.2, wall_h + 1.5), r, banded_door, bev=0.06)
         set_origin(d, (s * 0.0, 3.2, wall_h + 1.5))
+    # The hatch's housing: the doors slide into a pocket on each side, under a striped lintel,
+    # so they never float on their own in the sky at lift-off
+    pocket = wb  # the same peach as the wall, so the hatch is part of the building
+    for s, side in ((-1, "l"), (1, "r")):
+        box(f"garage_hatch_pocket_{side}", (2.7, 0.3, 2.75), (s * 3.75, 2.95, wall_h + 1.5), r, pocket, bev=0.06)
+        box(f"garage_hatch_trim_{side}", (0.22, 0.34, 2.75), (s * 2.5, 2.93, wall_h + 1.5), r, yellow, bev=0.05)
+    lintel = box("garage_hatch_lintel", (10.2, 0.6, 0.45), (0, 3.05, wall_h + 3.05), r, None, bev=0.05)
+    banded(lintel, [yellow, black], lambda c: int(math.floor((c.x + c.z) * 1.5)) % 2)
 
     # Big round window with sky and a cloud
     win = empty("garage_window", r, (-4.6, 3.42, 5.0))
