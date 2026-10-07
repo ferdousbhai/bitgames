@@ -1,16 +1,22 @@
 import type { Game } from '#/lib/types'
 import { GameTile } from './GameTile'
 
-/** A titled grid of game tiles. */
-export function GameShelf({ title, emoji, games }: { title: string; emoji: string; games: Game[] }) {
+/** A titled row of game tiles that a finger swipes sideways, like a row of videos. */
+export function GameShelf({ title, emoji, games, replace }: { title: string; emoji: string; games: Game[]; replace?: boolean }) {
   if (games.length === 0) return null
   return (
-    <section className="mt-10">
-      <h2 className="mb-4 flex items-center gap-2 text-2xl font-bold sm:text-3xl">
+    <section className="mt-8 sm:mt-10">
+      <h2 className="mb-3 flex items-center gap-2 text-2xl font-bold sm:text-3xl">
         <span aria-hidden>{emoji}</span>
         {title}
       </h2>
-      <GameGrid games={games} />
+      <ul className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto overscroll-x-contain px-4 pt-1 pb-4 sm:gap-5">
+        {games.map((game) => (
+          <li key={game.id} className="w-[42vw] shrink-0 snap-start sm:w-60 lg:w-72">
+            <GameTile game={game} replace={replace} />
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }

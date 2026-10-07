@@ -41,9 +41,12 @@ body {
   box-shadow: 0 5px 0 var(--toy-shadow);
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
-.toy:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 7px 0 var(--toy-shadow);
+/* Hover lifts only where there is a mouse: on an iPad a hover "sticks" after a tap. */
+@media (hover: hover) {
+  .toy:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 0 var(--toy-shadow);
+  }
 }
 .toy:active {
   transform: translateY(4px);
@@ -54,15 +57,38 @@ body {
 .tile {
   transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 180ms ease;
 }
-.tile:hover,
+@media (hover: hover) {
+  .tile:hover {
+    transform: translateY(-4px) rotate(-1.5deg) scale(1.03);
+  }
+  .tile:hover .tile-emoji {
+    animation: wiggle 500ms ease-in-out;
+  }
+}
 .tile:focus-visible {
   transform: translateY(-4px) rotate(-1.5deg) scale(1.03);
 }
 .tile:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
-.tile:hover .tile-emoji {
-  animation: wiggle 500ms ease-in-out;
+
+/* Fingers, not mice: no grey tap flash, and on the big tappable things no text selection or link preview on a long press. */
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}
+.tile, .toy {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The "what next?" sheet over a game rises into view. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+.sheet {
+  animation: rise 200ms ease-out;
 }
 
 @keyframes wiggle {
@@ -95,7 +121,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .tile, .toy { transition: none; }
-  .float, .pop, .tile:hover .tile-emoji { animation: none; }
+  .float, .pop, .sheet, .tile:hover .tile-emoji { animation: none; }
 }
 
 .no-scrollbar {

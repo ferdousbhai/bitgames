@@ -1,8 +1,9 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { useState } from 'react'
 import { GameFrame } from '#/components/GameFrame'
-import { PlayScreen, enterFullscreen } from '#/components/PlayScreen'
+import { PlayScreen } from '#/components/PlayScreen'
 import { Loading } from '#/components/GameShelf'
+import { enterFullscreen } from '#/lib/fullscreen'
 import { isPreviewToken } from '#/server/limits'
 import { getPreview } from '#/server/preview'
 
@@ -59,7 +60,7 @@ function TryPage() {
           >
             ⛶ Try it full screen
           </button>
-          {fullscreen && <PlayScreen gameId={game.id} title={game.title} src={src} onClose={() => setFullscreen(false)} />}
+          {fullscreen && <PlayScreen gameId={game.id} title={game.title} src={src} onStop={() => setFullscreen(false)} />}
         </>
       ) : (
         <p className="rounded-[32px] border-4 border-white bg-cloud p-8 text-center text-xl">

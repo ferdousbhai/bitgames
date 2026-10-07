@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { eq, useLiveQuery } from '@tanstack/react-db'
 import { CategoryBar } from '#/components/CategoryBar'
 import { GameShelf, Loading } from '#/components/GameShelf'
+import { playLink } from '#/components/GameTile'
 import { gamesCollection } from '#/lib/collections'
 import type { Game } from '#/lib/types'
 import { toy } from '#/lib/ui'
@@ -22,10 +23,10 @@ function Home() {
         .limit(1),
   })
   const { data: newest } = useLiveQuery({
-    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.createdAt, 'desc').limit(8),
+    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.createdAt, 'desc').limit(12),
   })
   const { data: popular } = useLiveQuery({
-    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.plays, 'desc').limit(8),
+    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.plays, 'desc').limit(12),
   })
   const { data: together } = useLiveQuery({
     query: (q) =>
@@ -33,7 +34,7 @@ function Home() {
         .from({ g: gamesCollection })
         .where(({ g }) => eq(g.together, true))
         .orderBy(({ g }) => g.plays, 'desc')
-        .limit(8),
+        .limit(12),
   })
 
   const hero = featured[0] ?? newest[0]
@@ -66,8 +67,7 @@ function Hero({ game }: { game: Game }) {
           <h1 className="mt-1 text-4xl font-bold drop-shadow sm:text-6xl">{game.title}</h1>
           <p className="mt-2 max-w-md text-xl text-white/90">{game.tagline}</p>
           <Link
-            to="/game/$id"
-            params={{ id: game.id }}
+            {...playLink(game.id)}
             className="toy mt-6 inline-flex items-center gap-2 rounded-full px-8 py-4 text-2xl font-bold text-ink"
             style={toy('var(--color-sun)')}
           >

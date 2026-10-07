@@ -1,14 +1,18 @@
-import { createFileRoute, notFound } from '@tanstack/react-router'
-import { and, eq, not, useLiveQuery } from '@tanstack/react-db'
+import { Link, createFileRoute, notFound } from '@tanstack/react-router'
+import { eq, useLiveQuery } from '@tanstack/react-db'
 import { useEffect, useState } from 'react'
-import { PlayScreen, enterFullscreen } from '#/components/PlayScreen'
+import { z } from 'zod'
+import { PlayScreen } from '#/components/PlayScreen'
 import { GameShelf, Loading } from '#/components/GameShelf'
+import { playLink } from '#/components/GameTile'
 import { findCategory } from '#/lib/categories'
 import { countPlay, gamesCollection, likeGame } from '#/lib/collections'
 import type { Game } from '#/lib/types'
 import { toy } from '#/lib/ui'
 
 export const Route = createFileRoute('/game/$id')({
+  // ?play=true: the game is on screen. Tapping a game anywhere goes straight here.
+  validateSearch: z.object({ play: z.boolean().optional().catch(undefined) }),
   loader: async ({ params }) => {
     await gamesCollection.preload()
     const game = gamesCollection.get(params.id)
@@ -25,29 +29,57 @@ function GamePage() {
   const { data } = useLiveQuery({
     query: (q) => q.from({ g: gamesCollection }).where(({ g }) => eq(g.id, id)),
   })
-  const game = data[0]
+  // Straight from the collection too, so switching games never flashes "loading" (and drops out of fullscreen) for a frame.
+  const game = data[0] ?? gamesCollection.get(id)
   const category = findCategory(game?.category ?? '')
-  const { data: more } = useLiveQuery({
+  // Not keyed by this game, so switching games keeps these queries; the current game is dropped below.
+  const { data: sameKind } = useLiveQuery({
     query: (q) =>
       q
         .from({ g: gamesCollection })
-        .where(({ g }) => and(eq(g.category, category?.slug ?? ''), not(eq(g.id, id))))
+        .where(({ g }) => eq(g.category, category?.slug ?? ''))
         .orderBy(({ g }) => g.plays, 'desc')
-        .limit(8),
+        .limit(13),
   })
-  const { data: popular } = useLiveQuery({
-    query: (q) =>
-      q
-        .from({ g: gamesCollection })
-        .where(({ g }) => not(eq(g.id, id)))
-        .orderBy(({ g }) => g.plays, 'desc')
-        .limit(8),
+  const { data: popularAll } = useLiveQuery({
+    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.plays, 'desc').limit(13),
+  })
+  const { data: newestAll } = useLiveQuery({
+    query: (q) => q.from({ g: gamesCollection }).orderBy(({ g }) => g.createdAt, 'desc').limit(13),
   })
 
+  const { play } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  // The game frame needs the browser, so it only opens once the page is running there.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  const playing = mounted && play === true && game !== undefined
+  useEffect(() => {
+    if (playing) countPlay(id)
+  }, [playing, id])
+
   if (!game) return <Loading />
+  const others = (games: Game[]) => games.filter((g) => g.id !== id).slice(0, 12)
+  const more = others(sameKind)
+  // Empty shelves don't show.
+  const shelves = [
+    { title: `More ${category?.name ?? ''} games`, emoji: category?.emoji ?? '🎲', games: more },
+    { title: 'Everyone loves these', emoji: '🔥', games: others(popularAll).filter((g) => !more.some((m) => m.id === g.id)) },
+    { title: 'New games', emoji: '✨', games: others(newestAll) },
+  ]
   return (
     <>
-      <Player key={game.id} game={game} />
+      <PlayCover game={game} />
+      {playing && (
+        <PlayScreen
+          gameId={game.id}
+          title={game.title}
+          emoji={game.emoji}
+          src={game.url + game.entry}
+          menu={shelves.map((shelf) => <GameShelf key={shelf.title} {...shelf} replace />)}
+          onStop={() => void navigate({ search: {}, replace: true })}
+        />
+      )}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_auto]">
         <div>
           <h1 className="flex items-center gap-3 text-4xl font-bold">
@@ -60,7 +92,7 @@ function GamePage() {
             <p className="mt-1 text-lg">{game.howToPlay}</p>
           </div>
         </div>
-        <div className="flex items-start gap-3 lg:flex-col">
+        <div className="flex flex-wrap items-start gap-3 lg:flex-col">
           <LikeButton game={game} />
           <span className="rounded-full bg-cloud px-5 py-3 text-lg font-semibold text-ink-soft">
             🎮 {game.plays.toLocaleString()} plays
@@ -72,44 +104,31 @@ function GamePage() {
           )}
         </div>
       </div>
-      <GameShelf
-        title={more.length > 0 ? `More ${category?.name ?? ''} games` : 'More games'}
-        emoji={more.length > 0 ? (category?.emoji ?? '🎲') : '🎲'}
-        games={more.length > 0 ? more : popular}
-      />
+      {/* While playing, the same shelves are in the game's "what next?" sheet instead. */}
+      {!playing && shelves.map((shelf) => <GameShelf key={shelf.title} {...shelf} />)}
     </>
   )
 }
 
-/** The game's cover with a big Play button; playing fills the whole screen. */
-function Player({ game }: { game: Game }) {
-  const [playing, setPlaying] = useState(false)
-
-  function start() {
-    enterFullscreen()
-    setPlaying(true)
-    countPlay(game.id)
-  }
-
+/** The game's cover with a big Play button, for coming back to after stopping. */
+function PlayCover({ game }: { game: Game }) {
   return (
-    <>
-      <button
-        type="button"
-        onClick={start}
-        className="group flex aspect-video w-full flex-col items-center justify-center gap-4 overflow-hidden rounded-[32px] border-4 border-white text-white shadow-[0_10px_0_rgba(43,45,66,0.15)]"
-        style={{
-          background: game.cover
-            ? `radial-gradient(circle, transparent 30%, rgba(43,45,66,0.55)), center / cover no-repeat url("${game.cover}")`
-            : `radial-gradient(circle at 50% 40%, ${game.color}, color-mix(in oklab, ${game.color} 50%, #2b2d42))`,
-        }}
-      >
-        {!game.cover && <span aria-hidden className="float text-8xl drop-shadow-2xl sm:text-9xl">{game.emoji}</span>}
-        <span className="toy rounded-full px-10 py-4 text-3xl font-bold text-ink" style={toy('var(--color-sun)')}>
-          ▶ Play
-        </span>
-      </button>
-      {playing && <PlayScreen gameId={game.id} title={game.title} src={game.url + game.entry} onClose={() => setPlaying(false)} />}
-    </>
+    <Link
+      {...playLink(game.id)}
+      replace
+      // On a landscape iPad a full-width 16:9 cover would push everything else off the screen.
+      className="group mx-auto flex aspect-video w-full max-h-[60dvh] flex-col items-center justify-center gap-4 overflow-hidden rounded-[32px] border-4 border-white text-white shadow-[0_10px_0_rgba(43,45,66,0.15)]"
+      style={{
+        background: game.cover
+          ? `radial-gradient(circle, transparent 30%, rgba(43,45,66,0.55)), center / cover no-repeat url("${game.cover}"), ${game.color}`
+          : `radial-gradient(circle at 50% 40%, ${game.color}, color-mix(in oklab, ${game.color} 50%, #2b2d42))`,
+      }}
+    >
+      {!game.cover && <span aria-hidden className="float text-8xl drop-shadow-2xl sm:text-9xl">{game.emoji}</span>}
+      <span className="toy rounded-full px-10 py-4 text-3xl font-bold text-ink" style={toy('var(--color-sun)')}>
+        ▶ Play
+      </span>
+    </Link>
   )
 }
 
