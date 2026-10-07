@@ -172,7 +172,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #title .adventure-choice { min-height: 44px; margin: 1px auto; padding: 3px 9px; font-size: 14px; }
   #title .mission-picture { width: 24px; font-size: 20px; }
   #title .mission-next { font-size: 19px; }
-  #title .big-go { font-size: 27px; padding: 5px 34px; min-height: 48px; }
+  #title .big-go { font-size: 27px; padding: 5px 34px; min-height: 48px; margin-bottom: 8px; }
   #title .scores { font-size: 13px; }
   #title .scores .pill { padding: 3px 9px; font-size: 13px; }
   #hud .adventure-goal { bottom: calc(64px + env(safe-area-inset-bottom)); }
