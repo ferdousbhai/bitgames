@@ -147,7 +147,7 @@ const adventure = createAdventure({
   options: [
     { emoji: '🐰', label: 'Free hopping' },
     { emoji: '🐢', label: 'Gentle hop counting', pace: 0.6, goal: 'Make four hops', target: 4, reward: 'Four! You made four hops!' },
-    { emoji: '🎶', label: 'Hop, hop, flip pattern', pace: 0.6, goal: 'Hop twice, then hop and tap again in the air to flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => kind === ['hop', 'hop', 'double'][n], reward: 'You made the hop, hop, flip pattern!' },
+    { emoji: '🎶', label: 'Hop, hop, flip pattern', pace: 0.6, goal: 'Hop twice, then hop and tap again in the air to flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => n < 2 ? kind === 'hop' || kind === 'double' : kind === 'double', reward: 'You made the hop, hop, flip pattern!' },
   ],
 })
 
