@@ -56,7 +56,7 @@ The original 12 games plus 88 learning adventures. New games are playable locall
 | [🔤 Letter Buddies](./letter-buddies/public/index.html) | 4–7 | Uppercase and lowercase letters |
 | [✏️ Letter Trails](./letter-trails/public/index.html) | 4–7 | Letter formation |
 | [🧲 Magnet Discovery](./magnet-discovery/public/index.html) | 5–8 | Testing magnetic attraction |
-| [🧩 Memory Match](./memory-match/public/index.html) | 2–8 | Visual memory, matching and turn taking |
+| [🧩 Memory Match](./memory-match/public/index.html) | 2–8 | Visual memory, matching and spatial recall |
 | [🌙 Moon Pebbles](./moon-pebbles/public/index.html) | 3–6 | Counting and stopping at a target |
 | [🔢 Number Spark Trails](./number-spark-trails/public/index.html) | 4–7 | Numeral formation |
 | [🍎 Orchard Baskets](./orchard-baskets/public/index.html) | 2–5 | Counting and quantity |

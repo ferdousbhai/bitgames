@@ -221,6 +221,20 @@ for (const g of games) {
   })
 }
 
+test('collecting one toy uses its singular name in spoken prompts', () => {
+  const names = new Map([
+    ['firefly-lanterns', 'firefly'],
+    ['orchard-baskets', 'apple'],
+    ['moon-pebbles', 'moon gem'],
+    ['coral-cleanup', 'bottle'],
+  ])
+  for (const g of games.filter((game) => game.mode === 'collect')) {
+    const seed = Array.from({ length: 100 }, (_, i) => i).find((i) => challenge(g, 0, 0, i).target === 1)
+    assert.notEqual(seed, undefined, `${g.id}: a one-toy lesson exists`)
+    assert.equal(challenge(g, 0, 0, seed).prompt, `${g.verb} 1 ${names.get(g.id)}.`)
+  }
+})
+
 test('all new projects match the installed Cloudflare schema and enable tracing', async () => {
   // Worker names, preview URLs and wrangler.config.ts are compared with the
   // starter project in apps/store/scripts/starter.test.ts.

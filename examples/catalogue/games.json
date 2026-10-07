@@ -74,7 +74,7 @@
     "category": "pop",
     "together": false,
     "featured": true,
-    "url": "https://ae8ea8a8-bitgames-balloon-pop.ferdousbd.workers.dev/",
+    "url": "https://4c14797f-bitgames-balloon-pop.ferdousbd.workers.dev/",
     "ages": [
       2,
       6
@@ -220,7 +220,7 @@
     "category": "jump",
     "together": false,
     "featured": false,
-    "url": "https://ae39d691-bitgames-bunny-hop.ferdousbd.workers.dev/",
+    "url": "https://c1b0586f-bitgames-bunny-hop.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
@@ -414,7 +414,7 @@
     "category": "race",
     "together": true,
     "featured": false,
-    "url": "https://0b80d677-bitgames-crash-racers.ferdousbd.workers.dev/",
+    "url": "https://11943f1a-bitgames-crash-racers.ferdousbd.workers.dev/",
     "ages": [
       5,
       8
@@ -538,7 +538,7 @@
     "id": "firefly-lanterns",
     "title": "Firefly Lanterns",
     "tagline": "Light a woodland lantern with just enough fireflies.",
-    "howToPlay": "Tap the requested number of objects, then press Done. Tap again to undo. Three gentle difficulty settings. Ages 2–4. Learning: One-to-one counting.",
+    "howToPlay": "Tap fireflies or carry them into the lantern. Tap Done when you have the right number. Three gentle difficulty settings. Ages 2–4. Learning: One-to-one counting.",
     "emoji": "✨",
     "color": "#f2b36f",
     "category": "animals",
@@ -845,18 +845,18 @@
     "id": "memory-match",
     "title": "Memory Match",
     "tagline": "Flip the cards and find the matching animal twins!",
-    "howToPlay": "Tap a card to flip it and meet the animal inside, then find its twin. Match all the pairs to make the animals dance, and try six levels from 4 to 20 cards.",
+    "howToPlay": "Tap a card to flip it and meet the animal inside, then find its twin. Tap 👀 once each round to see a matching pair. Match all the pairs to make the animals dance, and try six levels from 4 to 20 cards.",
     "emoji": "🧩",
     "color": "#2ec4b6",
     "category": "puzzle",
     "together": false,
     "featured": false,
-    "url": "https://ed02918a-bitgames-memory-match.ferdousbd.workers.dev/",
+    "url": "https://6bc31d8c-bitgames-memory-match.ferdousbd.workers.dev/",
     "ages": [
       2,
       8
     ],
-    "learning": "Visual memory, matching and turn taking"
+    "learning": "Visual memory, matching and spatial recall"
   },
   {
     "id": "moon-pebbles",
@@ -932,7 +932,7 @@
     "category": "pop",
     "together": true,
     "featured": false,
-    "url": "https://c2a35457-bitgames-paint-splash.ferdousbd.workers.dev/",
+    "url": "https://ec40b8b4-bitgames-paint-splash.ferdousbd.workers.dev/",
     "ages": [
       2,
       8
@@ -1433,7 +1433,7 @@
     "category": "space",
     "together": false,
     "featured": false,
-    "url": "https://6f6a81fb-bitgames-star-catcher.ferdousbd.workers.dev/",
+    "url": "https://881b18f2-bitgames-star-catcher.ferdousbd.workers.dev/",
     "ages": [
       3,
       8

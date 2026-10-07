@@ -244,6 +244,7 @@ canvas { touch-action: none; }
   min-height: 70px;
 }
 #actions .primary { width: auto; font-size: 17px; min-width: 140px; }
+#actions .collect-ready { box-shadow: 0 0 0 3px #fff, 0 0 0 7px #ffce69; }
 #actions .readout { font-weight: 800; border-radius: 20px; padding: 10px; background: #fff7; }
 #actions button[aria-pressed=true] { background: var(--accent); }
 #feedback {

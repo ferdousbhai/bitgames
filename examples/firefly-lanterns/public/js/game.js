@@ -14,9 +14,11 @@ export default {
   "sky": "#263c50",
   "ground": "#4a745c",
   "item": "firefly",
+  "one": "firefly",
   "noun": "fireflies",
   "verb": "Catch",
   "reward": "The lantern is glowing!",
+  "instructions": "Tap fireflies or carry them into the lantern. Tap Done when you have the right number.",
   "accent": "#f2b36f",
   "scenery": [
     "tree",
@@ -25,6 +27,5 @@ export default {
     "fox"
   ],
   "seed": 4217,
-  "instructions": "Tap the requested number of objects, then press Done. Tap again to undo.",
   "activityNumber": 0
 };

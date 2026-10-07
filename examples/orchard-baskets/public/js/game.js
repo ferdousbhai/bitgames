@@ -12,6 +12,7 @@ export default {
   "skill": "Counting and quantity",
   "tagline": "Pick a tiny picnic from a candy-coloured orchard.",
   "item": "apple",
+  "one": "apple",
   "noun": "apples",
   "verb": "Pick",
   "reward": "A delicious picnic!",

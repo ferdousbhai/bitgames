@@ -13,6 +13,7 @@ export default {
   "tagline": "Help sea turtles by collecting litter and leaving shells.",
   "item": "bottle",
   "distractor": "shell",
+  "one": "bottle",
   "noun": "bottles",
   "verb": "Recycle",
   "reward": "A cleaner reef for everyone!",

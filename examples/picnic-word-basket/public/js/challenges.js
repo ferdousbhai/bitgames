@@ -215,7 +215,7 @@ export function challenge(g, level, round, seed) {
       c.total = c.target + 2 + level
       c.item = g.item
       c.distractor = g.distractor
-      c.prompt = `${g.verb} ${c.target} ${g.noun}.`
+      c.prompt = `${g.verb} ${c.target} ${c.target === 1 ? g.one : g.noun}.`
       c.fact = g.reward
       break
 

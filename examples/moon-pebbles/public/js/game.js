@@ -12,6 +12,7 @@ export default {
   "skill": "Counting and stopping at a target",
   "tagline": "Gather moon gems for a friendly astronaut.",
   "item": "gem",
+  "one": "moon gem",
   "noun": "moon gems",
   "verb": "Gather",
   "reward": "The moon rover is ready!",

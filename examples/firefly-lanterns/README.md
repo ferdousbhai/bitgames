@@ -6,7 +6,7 @@ Light a woodland lantern with just enough fireflies.
 - Learning: One-to-one counting
 - Activity: collect
 
-Tap the requested number of objects, then press Done. Tap again to undo.
+Tap fireflies or carry them into the lantern. Tap Done when you have the right number.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/firefly-lanterns assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

@@ -27,6 +27,7 @@ function collect(c, g, a) {
   if (c.distractor) objects.splice(1, 0, c.distractor)
   const selected = new Set()
   const counter = a.readout(`0 / ${c.target}`)
+  let doneButton
 
   const cards = a.grid(objects, (name, i) => ({ model: name, label: '', onTap: () => toggle(i) }), {
     columns: Math.min(4, objects.length),
@@ -75,6 +76,7 @@ function collect(c, g, a) {
     }
     if (glow) glow.intensity = Math.min(3, (selected.size / c.target) * 2.5)
     counter.textContent = `${selected.size} / ${c.target}`
+    doneButton?.classList.toggle('collect-ready', selected.size === c.target)
     a.invalidate()
   }
 
@@ -103,7 +105,7 @@ function collect(c, g, a) {
     card.button.setAttribute('aria-label', `${objects[i]}, ${collected ? 'collected' : 'available'}`)
     arrange()
     a.audio.note(262 + selected.size * 35)
-    a.audio.speak(String(selected.size))
+    a.audio.speak(selected.size === c.target ? `${selected.size}. Tap Done.` : String(selected.size))
   }
 
   for (const [i, card] of cards.entries()) {
@@ -128,7 +130,7 @@ function collect(c, g, a) {
   }
 
   a.hint(lantern ? 'Tap fireflies, or carry them to the lantern. Tap a tick to let one go.' : 'Tap to collect, or carry a toy to the collection spot. Tap a tick to undo.')
-  a.action(
+  doneButton = a.action(
     'Done ✓',
     () => {
       if (selected.size !== c.target) {

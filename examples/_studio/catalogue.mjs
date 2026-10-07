@@ -2,10 +2,10 @@
 // gameplay lives in the shared runtime/ modules rather than eighty-eight copied engines.
 const G = (id, title, emoji, ages, theme, mode, skill, tagline, data = {}) => ({id, title, emoji, ages, theme, mode, skill, tagline, ...data});
 export const games = [
-G('firefly-lanterns','Firefly Lanterns','✨',[2,4],'forest','collect','One-to-one counting','Light a woodland lantern with just enough fireflies.',{sky:'#263c50',ground:'#4a745c',item:'firefly',noun:'fireflies',verb:'Catch',reward:'The lantern is glowing!'}),
-G('orchard-baskets','Orchard Baskets','🍎',[2,5],'orchard','collect','Counting and quantity','Pick a tiny picnic from a candy-coloured orchard.',{item:'apple',noun:'apples',verb:'Pick',reward:'A delicious picnic!'}),
-G('moon-pebbles','Moon Pebbles','🌙',[3,6],'space','collect','Counting and stopping at a target','Gather moon gems for a friendly astronaut.',{item:'gem',noun:'moon gems',verb:'Gather',reward:'The moon rover is ready!'}),
-G('coral-cleanup','Coral Cleanup','🪸',[3,6],'ocean','collect','Environmental care and classification','Help sea turtles by collecting litter and leaving shells.',{item:'bottle',distractor:'shell',noun:'bottles',verb:'Recycle',reward:'A cleaner reef for everyone!'}),
+G('firefly-lanterns','Firefly Lanterns','✨',[2,4],'forest','collect','One-to-one counting','Light a woodland lantern with just enough fireflies.',{sky:'#263c50',ground:'#4a745c',item:'firefly',one:'firefly',noun:'fireflies',verb:'Catch',reward:'The lantern is glowing!',instructions:'Tap fireflies or carry them into the lantern. Tap Done when you have the right number.'}),
+G('orchard-baskets','Orchard Baskets','🍎',[2,5],'orchard','collect','Counting and quantity','Pick a tiny picnic from a candy-coloured orchard.',{item:'apple',one:'apple',noun:'apples',verb:'Pick',reward:'A delicious picnic!'}),
+G('moon-pebbles','Moon Pebbles','🌙',[3,6],'space','collect','Counting and stopping at a target','Gather moon gems for a friendly astronaut.',{item:'gem',one:'moon gem',noun:'moon gems',verb:'Gather',reward:'The moon rover is ready!'}),
+G('coral-cleanup','Coral Cleanup','🪸',[3,6],'ocean','collect','Environmental care and classification','Help sea turtles by collecting litter and leaving shells.',{item:'bottle',distractor:'shell',one:'bottle',noun:'bottles',verb:'Recycle',reward:'A cleaner reef for everyone!'}),
 G('rainbow-postoffice','Rainbow Post Office','📮',[2,4],'village','match','Colour recognition','Deliver rainbow parcels to their matching mailboxes.',{variant:'colour'}),
 G('shape-locksmith','Shape Locksmith','🔑',[2,5],'castle','match','Shape recognition','Open a fairy castle with wonderfully shaped keys.',{variant:'shape'}),
 G('footprint-detective','Footprint Detective','🐾',[4,7],'forest','match','Observation and animal tracks','Follow curious tracks to their woodland owners.',{variant:'tracks'}),
