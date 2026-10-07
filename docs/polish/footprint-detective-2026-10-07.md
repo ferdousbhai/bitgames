@@ -49,3 +49,8 @@ Fresh final scan: **NOTHING LEFT TO IMPROVE within the reviewed scope**. This is
 ## Release status
 
 Ready for the coordinator’s release gate. Final visual, interaction, gesture and label-fit checks passed; the coordinator reports the shared regression gate passed. Deployment and live/store smoke remain coordinator-owned. Browser emulation cannot establish real child comprehension, educator approval or physical iPad performance.
+
+
+## Completed release
+
+Published and listed on 2026-10-07 at <https://adeb9e6b-bitgames-footprint-detective.ferdousbd.workers.dev/>. Source `e2b9809` and recorded deployment `50df4e5` are pushed on `main`. Remote seeding listed all 26 examples; the live version and [store Play link](https://bitgames.store/game/footprint-detective) passed. Exact shipped-file hashes and phone/iPad touch completions are recorded in `/tmp/bitgames-live-shape-three/report.json`; store playback checks are `/tmp/bitgames-playtest/store-live-shape-release/report.json`.

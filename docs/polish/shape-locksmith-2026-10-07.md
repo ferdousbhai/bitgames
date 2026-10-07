@@ -35,3 +35,8 @@ Fresh final Shape scan finds **NOTHING LEFT TO IMPROVE within the code/art/brows
 ## Shared Footprint final corrections
 
 The Footprint reviewer later confirmed that the first duck web revision appeared as a five-point star because old toe bars extended behind a pointed fan heel. Corrected only Footprint's branch: a filled fan with a short flat heel, three slightly rounded front tips and no underlying three-bar toe drawing. The songbird label still overflowed by 1.06 px after reduced padding, established by a text Range measurement rather than guessing from a screenshot. Under coordinator authorization, Footprint alone now uses 1.7-unit card widths at unchanged 1.85-unit spacing, retaining the full word and existing font size. Footprint owner validates the final rebuild and records its final matrices in that game's history. These changes do not alter Shape or Shadow behavior.
+
+
+## Completed release
+
+Published and listed on 2026-10-07 at <https://550ead12-bitgames-shape-locksmith.ferdousbd.workers.dev/>. Source `e2b9809` and recorded deployment `50df4e5` are pushed on `main`. Remote seeding listed all 26 examples; the live version and [store Play link](https://bitgames.store/game/shape-locksmith) passed. Exact shipped-file hashes and phone/iPad touch completions are recorded in `/tmp/bitgames-live-shape-three/report.json`; store playback checks are `/tmp/bitgames-playtest/store-live-shape-release/report.json`.

@@ -35,3 +35,8 @@ Shadow's own **15 WebKit steps** passed wrong/correct trusted touchscreen recove
 No source changes during compatibility checks. **NOTHING LEFT TO IMPROVE within this Shadow browser/art/touch compatibility scope** remains justified; physical iPad and child assessment remain outstanding.
 
 Related-game final follow-up: latest Foot Explorer five steps (seed 1: fox, songbird, duck, snail, fox) passed all four viewports and wrong/correct touchscreen recovery in WebKit, no page/network errors, exit 0. The revised duck print reads as a rounded webbed fan rather than a star. The wider choice grid resolves the earlier clipped `songbird` label; separate explicit DOMRange checks prove the full text lies inside both its label pill and native button in all four layouts. Evidence `/tmp/bitgames-foot-final-webkit/{report,label-range}.json`. Shape's later settled fit screenshot confirms the key head mounted on the lock and both gate panels fully open; the earlier mid-flight capture was not a design defect.
+
+
+## Completed release
+
+Published and listed on 2026-10-07 at <https://3416403c-bitgames-shadow-theatre.ferdousbd.workers.dev/>. Source `e2b9809` and recorded deployment `50df4e5` are pushed on `main`. Remote seeding listed all 26 examples; the live version and [store Play link](https://bitgames.store/game/shadow-theatre) passed. Exact shipped-file hashes and phone/iPad touch completions are recorded in `/tmp/bitgames-live-shape-three/report.json`; store playback checks are `/tmp/bitgames-playtest/store-live-shape-release/report.json`.
