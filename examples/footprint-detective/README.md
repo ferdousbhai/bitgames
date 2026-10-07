@@ -6,7 +6,7 @@ Follow curious tracks to their woodland owners.
 - Learning: Observation and animal tracks
 - Activity: match
 
-Look at the delivery request and tap its matching toy.
+Look at the marks on the ground. Tap the animal that made them, or carry it to the tracks.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/footprint-detective assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

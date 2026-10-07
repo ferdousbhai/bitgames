@@ -10,10 +10,10 @@ const parcelColours = ['Red', 'Yellow', 'Blue', 'Green', 'Purple']
 const shapes = ['Circle', 'Triangle', 'Square', 'Star']
 
 const animalTracks = [
-  ['🐾 Four paw prints', 'fox'],
-  ['🐦 Three little toes', 'bird'],
-  ['🦆 Webbed feet', 'duck'],
-  ['🐌 One long slime trail', 'snail'],
+  ['Four toes and a paw pad', 'fox', 'The fox left four toe marks and a paw pad.'],
+  ['Three toes forward and one back', 'bird', 'The songbird left three toes pointing forward and one pointing back.'],
+  ['Wide webbed footprints', 'duck', 'The duck’s webbed feet left these wide prints.'],
+  ['One long winding trail', 'snail', 'The snail left a winding trail of slime.'],
 ]
 
 const compareWords = {
@@ -228,20 +228,21 @@ export function challenge(g, level, round, seed) {
       }
       if (g.variant === 'shape') {
         c.target = pick(shapes)
-        c.tiles = shuffle(shapes, rng)
+        c.tiles = shuffle([c.target, ...shuffle(shapes.filter((shape) => shape !== c.target), rng).slice(0, 1 + level)], rng)
         c.prompt = `Find the ${c.target.toLowerCase()} key.`
       }
       if (g.variant === 'shadow') {
         c.tiles = shuffle(['rocket', 'tree', 'rabbit', 'boat'], rng)
         c.target = pick(c.tiles)
+        c.tiles = shuffle([c.target, ...c.tiles.filter((toy) => toy !== c.target).slice(0, 1 + level)], rng)
         c.prompt = 'Which toy makes this shadow?'
       }
       if (g.variant === 'tracks') {
-        const [marks, animal] = animalTracks[round % animalTracks.length]
+        const [marks, animal, fact] = animalTracks[round % animalTracks.length]
         c.target = animal
-        c.tiles = shuffle(animalTracks.map((track) => track[1]), rng)
+        c.tiles = shuffle([animal, ...shuffle(animalTracks.map((track) => track[1]).filter((value) => value !== animal), rng).slice(0, 1 + level)], rng)
         c.prompt = `Who left these tracks? ${marks}`
-        c.fact = `These tracks belong to a ${animal}.`
+        c.fact = fact
       }
       break
 

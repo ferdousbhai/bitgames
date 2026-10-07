@@ -12,6 +12,7 @@ export default {
   "skill": "Observation and animal tracks",
   "tagline": "Follow curious tracks to their woodland owners.",
   "variant": "tracks",
+  "instructions": "Look at the marks on the ground. Tap the animal that made them, or carry it to the tracks.",
   "sky": "#dcebd6",
   "ground": "#4e8060",
   "accent": "#f2b36f",
@@ -22,6 +23,5 @@ export default {
     "fox"
   ],
   "seed": 4655,
-  "instructions": "Look at the delivery request and tap its matching toy.",
   "activityNumber": 1
 };

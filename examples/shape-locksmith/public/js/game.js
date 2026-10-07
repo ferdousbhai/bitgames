@@ -12,6 +12,7 @@ export default {
   "skill": "Shape recognition",
   "tagline": "Open a fairy castle with wonderfully shaped keys.",
   "variant": "shape",
+  "instructions": "Match the key shape to the castle lock. Tap a key or carry it to the lock.",
   "sky": "#f4dcef",
   "ground": "#c6a7d1",
   "accent": "#ffd786",
@@ -22,6 +23,5 @@ export default {
     "tree"
   ],
   "seed": 4582,
-  "instructions": "Look at the delivery request and tap its matching toy.",
   "activityNumber": 1
 };

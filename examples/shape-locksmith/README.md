@@ -6,7 +6,7 @@ Open a fairy castle with wonderfully shaped keys.
 - Learning: Shape recognition
 - Activity: match
 
-Look at the delivery request and tap its matching toy.
+Match the key shape to the castle lock. Tap a key or carry it to the lock.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/shape-locksmith assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

@@ -81,6 +81,8 @@ async function solve(c) {
       break
     }
     case 'match':
+      await tapTarget(c.tiles.indexOf(c.target))
+      break
     case 'pattern':
     case 'rhyme':
     case 'choice':

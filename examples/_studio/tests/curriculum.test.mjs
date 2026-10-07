@@ -97,6 +97,7 @@ function requiredToys(g) {
     'firefly-lanterns': ['lantern'],
     'orchard-baskets': ['orchard-basket'],
     'coral-cleanup': ['recycling-bin'],
+    'shape-locksmith': ['castle'],
     'giraffe-ruler': ['giraffe'],
     'bridge-builder': ['boat'],
     'garden-fence': ['flower'],
@@ -378,5 +379,22 @@ test('the RYB toy model conserves drop counts and compares relative colour recip
 test('toy paint rejects negative, fractional, unbounded or malformed recipes', () => {
   for (const drops of [[-1, 0, 0], [0.5, 1, 0], [13, 0, 0], [6, 6, 1], [1, 2], [NaN, 1, 0]]) {
     assert.throws(() => mixToyPaint(drops), RangeError)
+  }
+})
+
+
+test('shape, silhouette and track matching grow from two to four unambiguous choices', () => {
+  for (const id of ['shape-locksmith', 'shadow-theatre', 'footprint-detective']) {
+    const game = games.find((g) => g.id === id)
+    for (let level = 0; level < 3; level++) for (let round = 0; round < 5; round++) for (let seed = 0; seed < 20; seed++) {
+      const c = challenge(game, level, round, seed)
+      assert.equal(c.tiles.length, level + 2, `${id}: difficulty ${level}`)
+      assert.equal(new Set(c.tiles).size, c.tiles.length)
+      assert.equal(c.tiles.filter((value) => value === c.target).length, 1)
+      if (id === 'footprint-detective') {
+        assert.ok(!/[\p{Extended_Pictographic}]/u.test(c.prompt), 'Track clues must not show the answer animal')
+        assert.ok(c.fact.length > 20, 'Track completion explains an observable clue')
+      }
+    }
   }
 })

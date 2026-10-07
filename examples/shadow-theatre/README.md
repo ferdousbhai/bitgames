@@ -6,7 +6,7 @@ Find the toy behind each magical silhouette.
 - Learning: Visual discrimination
 - Activity: match
 
-Look at the delivery request and tap its matching toy.
+Look at the silhouette. Tap its matching toy, or carry the toy to the stage.
 
 Play locally with `pnpm examples:serve`, then select this game at http://localhost:4173. Rebuild graphics with `pnpm --dir examples/shadow-theatre assets`. Shared source and full build instructions: [studio](../_studio/README.md).
 

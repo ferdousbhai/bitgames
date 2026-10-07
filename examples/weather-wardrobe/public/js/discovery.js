@@ -24,18 +24,43 @@ function move(a, root, to) {
 function match(c, g, a) {
   const goal = new THREE.Vector3(0, 0.3, -1.7)
   let done = false
+  const doorPanels = []
 
   if (c.variant === 'colour') {
     a.actor('house', 1.7, 0, -2.3)
     a.place(a.block(1, 0.8, 0.8, colourHex[c.target]), 0, 0.7, -1.4)
     a.place(a.block(0.62, 0.08, 0.05, '#605674'), 0, 0.78, -0.975)
   } else if (c.variant === 'shape') {
-    a.place(a.block(2.1, 0.18, 2.2, '#b49dc7'), 0, 0.18, -1.8)
-    a.place(a.shape(c.target, '#62536f', 1.2), 0, 0.32, -1.8)
+    // Reuse the shipped castle; a working gate makes the key's purpose visible.
+    a.actor('castle', 2.6, 0, -2.45)
+    a.place(a.block(1.7, 1.45, 0.15, '#544566'), 0, 0.9, -1.5)
+    for (const side of [-1, 1]) {
+      const hinge = new THREE.Group()
+      hinge.position.set(side * 0.8, 0.9, -0.98)
+      a.board.add(hinge)
+      const panel = a.block(0.8, 1.4, 0.11, '#d69a5a')
+      panel.position.x = -side * 0.4
+      hinge.add(panel)
+      doorPanels.push({ hinge, side })
+    }
+    a.place(a.block(1.1, 0.85, 0.15, '#ffe0a0'), 0, 1.7, -0.88)
+    const lock = a.shape(c.target, '#544566', 0.8)
+    lock.name = 'shape-lock'
+    lock.rotation.x = Math.PI / 2
+    a.place(lock, 0, 1.7, -0.77)
+    goal.set(0, 1.5, -0.72)
+    const treasure = a.actor('gem', 0.45, 0, -1.28, 0.38)
+    treasure.name = 'castle-treasure'
+
   } else if (c.variant === 'shadow') {
     a.place(a.block(2.7, 0.08, 2.7, '#fff0d4'), 0, 0.2, -1.7)
     const shadow = a.actor(c.target, 1.7, 0, -1.7, 0.25)
-    shadow.traverse((o) => { if (o.isMesh) o.material = a.material('#51455f') })
+    const silhouette = a.material('#000000')
+    silhouette.metalness = 1
+    silhouette.roughness = 1
+    silhouette.emissive.set('#51455f')
+    silhouette.emissiveIntensity = 1
+    shadow.traverse((o) => { if (o.isMesh) o.material = silhouette })
     const lamp = a.place(a.mesh(new THREE.ConeGeometry(0.25, 0.5, 16), '#d6b78a'), -2.4, 0.7, -1.5)
     lamp.rotation.z = -Math.PI / 3
   } else {
@@ -47,9 +72,38 @@ function match(c, g, a) {
     shape: c.variant === 'shape' ? value : undefined,
     tint: c.variant === 'colour' ? colourHex[value] : undefined,
     colour: c.variant === 'colour' ? colourHex[value] : '#fff0df',
-    label: String(value),
+    label: c.variant === 'tracks' && value === 'bird' ? 'songbird' : String(value),
     onTap: () => choose(value),
-  }), { spacing: 1.85, z: 1.45, size: 1.5, depth: 1.45 })
+  }), { spacing: 1.85, z: 1.45, size: c.variant === 'tracks' ? 1.7 : 1.5, depth: 1.45 })
+
+  if (c.variant === 'tracks') {
+    for (const [i, card] of cards.entries()) {
+      if (c.tiles[i] === 'bird') card.button.querySelector('.label').style.paddingInline = '2px'
+    }
+  }
+
+  if (c.variant === 'shape') {
+    // Each key has an unmistakable shape head; stems and teeth are identical.
+    for (const card of cards) {
+      const head = card.figure
+      const key = new THREE.Group()
+      head.position.set(0, 0, 0)
+      head.scale.setScalar(0.8)
+      head.material = a.material('#865fa5')
+      key.add(head)
+      const shaft = a.block(0.13, 0.12, 0.65, '#efbd64')
+      shaft.position.set(0, 0, 0.58)
+      key.add(shaft)
+      for (const z of [0.62, 0.82]) {
+        const tooth = a.block(0.28, 0.12, 0.12, '#efbd64')
+        tooth.position.set(0.09, 0, z)
+        key.add(tooth)
+      }
+      card.group.add(key)
+      key.position.y = 0.28
+      card.figure = key
+    }
+  }
 
   function choose(value) {
     if (done) return
@@ -58,7 +112,9 @@ function match(c, g, a) {
         ? 'Compare the toes, the webbing, or the trail. Try another animal.'
         : c.variant === 'colour'
           ? `That parcel is ${value.toLowerCase()}. Find the ${c.target.toLowerCase()} parcel for this mailbox.`
-          : 'Look at the outline or shape. Try again.')
+          : c.variant === 'shape'
+            ? `Look at the lock. Find the ${c.target.toLowerCase()} key.`
+            : 'Look at the silhouette’s outline. Try another toy.')
       return
     }
     done = true
@@ -70,11 +126,19 @@ function match(c, g, a) {
     carrier.add(card.figure)
     card.figure.position.set(0, 0.2, 0)
     move(a, carrier, goal)
+    if (c.variant === 'shape') {
+      a.animate(0.65, (t) => { card.figure.rotation.x = t * Math.PI / 2 })
+      a.later(() => {
+        for (const { hinge, side } of doorPanels) {
+          a.animate(0.6, (t) => { hinge.rotation.y = side * t * 1.25 })
+        }
+      }, 650)
+    }
     card.enable(false)
     const fallback = c.variant === 'colour'
       ? `The ${c.target.toLowerCase()} parcel reached its matching mailbox!`
       : c.variant === 'shape' ? 'The key fits. The castle door opens!' : 'Your puppet matches its shadow!'
-    a.later(() => a.success(c.fact || fallback), 750)
+    a.later(() => a.success(c.fact || fallback), c.variant === 'shape' ? 1300 : 750)
   }
 
   // Dragging shows a copy of the piece; dropping it near the request chooses it.
@@ -94,17 +158,27 @@ function match(c, g, a) {
       },
       drop: (p) => {
         hideGhost()
-        if (Math.hypot(p.x - goal.x, p.z - goal.z) < 1.6) choose(c.tiles[i])
+        // The raised castle lock needs a screen-space drop, since drag points
+        // meet the board plane rather than the lock's vertical face.
+        const point = c.variant === 'shape' ? a.screenPoint(p) : null
+        const lock = c.variant === 'shape' ? a.screenPoint({ x: goal.x, y: goal.y + 0.2, z: goal.z }) : null
+        const edge = c.variant === 'shape' ? a.screenPoint({ x: goal.x + 0.6, y: goal.y + 0.2, z: goal.z }) : null
+        const near = c.variant === 'shape'
+          ? Math.hypot(point.x - lock.x, point.y - lock.y) < Math.max(32, Math.abs(edge.x - lock.x))
+          : Math.hypot(p.x - goal.x, p.z - goal.z) < 1.6
+        if (near) choose(c.tiles[i])
       },
       cancel: hideGhost,
     })
   }
 
   a.hint(c.variant === 'tracks'
-    ? 'Look at the real marks on the ground. Which animal made them?'
+    ? 'Look at the marks. Tap their animal, or carry it to the tracks.'
     : c.variant === 'colour'
       ? 'Match the parcel to the mailbox colour. Tap a parcel, or carry it to the mailbox.'
-      : 'Tap a matching piece, or carry it to the request.')
+      : c.variant === 'shape'
+        ? 'Match the key shape to the castle lock. Tap a key, or carry it to the lock.'
+        : 'Look at the silhouette. Tap the matching toy, or carry it to the stage.')
 }
 
 // Authored track silhouettes communicate the clue without a text label.
@@ -112,7 +186,8 @@ function drawTracks(a, animal) {
   const colour = '#b99586'
   if (animal === 'snail') {
     const points = Array.from({ length: 35 }, (_, i) => new THREE.Vector3(-2 + i / 8, 0.17, -1.5 + Math.sin(i / 4) * 0.12))
-    a.board.add(a.polyline(points, '#a4b68d'))
+    const curve = new THREE.CatmullRomCurve3(points)
+    a.board.add(a.mesh(new THREE.TubeGeometry(curve, 48, 0.065, 6, false), '#bfd69b'))
     return
   }
   const pad = (x, z, radius) => a.place(a.mesh(new THREE.CylinderGeometry(radius, radius, 0.04, 16), colour), x, 0.15, z)
@@ -121,14 +196,36 @@ function drawTracks(a, animal) {
     const z = -1.7 + (i % 2) * 0.35
     if (animal === 'fox') {
       pad(x, z, 0.13)
-      for (const dx of [-0.16, 0, 0.16]) pad(x + dx, z - 0.23, 0.065)
+      for (const dx of [-0.22, -0.075, 0.075, 0.22]) pad(x + dx, z - (Math.abs(dx) < 0.1 ? 0.29 : 0.22), 0.065)
       continue
     }
-    for (const dx of [-0.17, 0, 0.17]) {
-      const toe = a.place(a.block(0.045, 0.045, 0.35, colour), x + dx / 2, 0.15, z - 0.1)
-      toe.rotation.y = dx * 2.5
+    if (animal === 'duck') {
+      // A webbed fan joins three splayed toes; three visible tips avoid an arrow cue.
+      const outline = new THREE.Shape()
+      outline.moveTo(-0.07, -0.04)
+      outline.lineTo(-0.10, 0.08)
+      outline.lineTo(-0.225, 0.30)
+      outline.quadraticCurveTo(-0.25, 0.35, -0.21, 0.345)
+      outline.lineTo(-0.075, 0.29)
+      outline.lineTo(-0.025, 0.425)
+      outline.quadraticCurveTo(0, 0.47, 0.025, 0.425)
+      outline.lineTo(0.075, 0.29)
+      outline.lineTo(0.21, 0.345)
+      outline.quadraticCurveTo(0.25, 0.35, 0.225, 0.30)
+      outline.lineTo(0.10, 0.08)
+      outline.lineTo(0.07, -0.04)
+      outline.closePath()
+      const web = new THREE.ExtrudeGeometry(outline, { depth: 0.035, bevelEnabled: false })
+      web.rotateX(-Math.PI / 2)
+      a.place(a.mesh(web, colour), x, 0.145, z)
     }
-    if (animal === 'duck') a.place(a.shape('Triangle', colour, 0.5), x, 0.14, z - 0.1)
+    else {
+      for (const dx of [-0.17, 0, 0.17]) {
+        const toe = a.place(a.block(0.045, 0.045, 0.35, colour), x + dx / 2, 0.15, z - 0.1)
+        toe.rotation.y = dx * 2.5
+      }
+      a.place(a.block(0.055, 0.045, 0.25, colour), x, 0.15, z + 0.16)
+    }
   }
 }
 

@@ -182,7 +182,18 @@ def build_animal(name):
         sphere((0, 0, .35), (.36, .3, .4), colour)
         sphere((0, -.03, .8), (.37, .32, .31), colour)
     for x in [-.19, .19]:
-        sphere((x, -.14, .1), (.13, .19, .1), GOLD if name == 'hen' else colour)
+        if name == 'bird':
+            # Perching toes are separate; the track game's songbird must differ from a duck.
+            cone((x, -.08, .12), .025, .2, ORANGE, .025)
+            for spread in [-.06, 0, .06]:
+                toe = sphere((x + spread, -.19, .04), (.025, .12, .025), ORANGE)
+                toe.rotation_euler[2] = -spread * 4
+            sphere((x, .035, .04), (.025, .07, .025), ORANGE)
+        elif name == 'duck':
+            slab('webbed duck foot', [(x - .12, -.3, .04), (x + .12, -.3, .04),
+                                     (x + .06, -.02, .04), (x - .06, -.02, .04)], ORANGE, .045)
+        else:
+            sphere((x, -.14, .1), (.13, .19, .1), GOLD if name == 'hen' else colour)
     if name in ['cat', 'dog', 'pig', 'hen', 'bat', 'goat']:
         build_word_friend(name, colour)
     if name == 'rabbit':
@@ -200,7 +211,11 @@ def build_animal(name):
         sphere((0, -.25, .35), (.24, .06, .3), WHITE)
         cone((0, -.35, .7), .07, .18, ORANGE).rotation_euler[0] = QUARTER_TURN
     if name in ['duck', 'bird']:
-        sphere((0, -.36, .74), (.12, .15, .05), ORANGE)
+        if name == 'bird':
+            cone((0, -.43, .74), .075, .25, ORANGE).rotation_euler[0] = QUARTER_TURN
+            sphere((0, .35, .37), (.12, .3, .08), colour).rotation_euler[0] = -.35
+        else:
+            sphere((0, -.36, .74), (.14, .18, .055), ORANGE)
         for x in [-.37, .37]:
             sphere((x, 0, .4), (.09, .23, .16), colour)
     if name == 'dino':
