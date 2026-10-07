@@ -2,7 +2,7 @@
   "id": "memory-match",
   "title": "Memory Match",
   "tagline": "Flip the cards and find the matching animal twins!",
-  "howToPlay": "Tap a card to flip it and meet the animal inside, then find its twin. Match all the pairs to make the animals dance, and try six levels from 4 to 20 cards.",
+  "howToPlay": "Tap a card to flip it and meet the animal inside, then find its twin. Tap 👀 once each round to see a matching pair. Match all the pairs to make the animals dance, and try six levels from 4 to 20 cards.",
   "emoji": "🧩",
   "color": "#2ec4b6",
   "category": "puzzle",
@@ -13,5 +13,5 @@
     2,
     8
   ],
-  "learning": "Visual memory, matching and turn taking"
+  "learning": "Visual memory, matching and spatial recall"
 }

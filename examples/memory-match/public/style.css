@@ -74,6 +74,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   box-shadow: 0 4px 0 rgba(90, 61, 122, 0.3);
 }
 .round:active { transform: translateY(3px); }
+#peek:disabled { opacity: .45; cursor: default; }
 /* Centered, and clear of the top-right corner, which BitGames keeps for its ✕ button. */
 .hud-center { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .pill { background: rgba(255,255,255,0.9); color: #5a3d7a; border-radius: 999px; padding: 4px 16px; font-size: 20px; font-weight: 900; box-shadow: 0 3px 0 rgba(90, 61, 122, 0.25); white-space: nowrap; }

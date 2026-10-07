@@ -112,6 +112,7 @@ const game = {
   open: [],
   matched: 0,
   turns: 0,
+  peekUsed: false,
   busy: false,
   mismatch: null,
   layout: null,
@@ -825,6 +826,7 @@ function enterMenu() {
 
 /** Empties the table: cards, menu animals, particles and every running tween. */
 function resetScene() {
+  stopPeekSpeech()
   clearTweens() // also strands any pending waits from the old board, so they never resume
   effects.clear()
   parade.clear()
@@ -843,6 +845,9 @@ function startLevel(level) {
   game.level = level
   game.matched = 0
   game.turns = 0
+  game.peekUsed = false
+  $('peek').disabled = false
+  $('peek').setAttribute('aria-label', 'Peek at one matching pair')
   game.idle = 0
   game.state = 'dealing'
   show('play')
@@ -1181,6 +1186,7 @@ $('next').addEventListener('click', () => {
 $('mute').addEventListener('click', () => {
   progress.muted = !progress.muted
   sound.setMuted(progress.muted)
+  if (progress.muted) stopPeekSpeech()
   updateMute()
   save()
 })
@@ -1255,16 +1261,37 @@ async function main() {
 
 main()
 
-// A demonstration supports memory strategies without adding a failed turn.
+function stopPeekSpeech() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel()
+}
+
+function speakPeek() {
+  if (sound.muted || !('speechSynthesis' in window)) return
+  stopPeekSpeech()
+  const words = new SpeechSynthesisUtterance('These two match. Remember where they are.')
+  words.lang = 'en-US'
+  words.rate = 0.85
+  speechSynthesis.speak(words)
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopPeekSpeech()
+})
+
+// One demonstration per round supports memory without solving the whole board.
 $('peek').onclick = async () => {
-  if (game.state !== 'play' || game.busy || game.open.length) return
+  if (game.state !== 'play' || game.busy || game.open.length || game.peekUsed) return
   const first = game.cards.find((card) => card.state === 'down')
   const second = first && game.cards.find((card) => card !== first && card.state === 'down' && card.animal === first.animal)
   if (!second) return
+  game.peekUsed = true
+  $('peek').disabled = true
+  $('peek').setAttribute('aria-label', 'Pair peek used for this round')
   game.busy = true
+  speakPeek()
   await Promise.all([first.flipUp(), second.flipUp()])
-  banner('Remember these two places', 1800, [first, second])
-  await wait(1.8)
+  banner('Look! Twins!', 2200, [first, second])
+  await wait(2.4)
   if (game.state !== 'play') return
   await Promise.all([first.close(), second.close()])
   game.busy = false
