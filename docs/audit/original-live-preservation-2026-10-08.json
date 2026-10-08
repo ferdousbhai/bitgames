@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-08T09:39:14.064Z",
+  "results": [
+    {
+      "id": "balloon-pop",
+      "url": "https://4c14797f-bitgames-balloon-pop.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "bumper-ducks",
+      "url": "https://8c3a7eda-bitgames-bumper-ducks.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "bunny-hop",
+      "url": "https://c1b0586f-bitgames-bunny-hop.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "cake-stack",
+      "url": "https://95d7c383-bitgames-cake-stack.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "crash-racers",
+      "url": "https://11943f1a-bitgames-crash-racers.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "dragon-glide",
+      "url": "https://a85b2e28-bitgames-dragon-glide.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "fish-pond",
+      "url": "https://3055908f-bitgames-fish-pond.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "memory-match",
+      "url": "https://6bc31d8c-bitgames-memory-match.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "paint-splash",
+      "url": "https://ec40b8b4-bitgames-paint-splash.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "penguin-bowling",
+      "url": "https://31c2bc5a-bitgames-penguin-bowling.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "rocket-garage",
+      "url": "https://bfab9816-bitgames-rocket-garage.ferdousbd.workers.dev/",
+      "status": 200
+    },
+    {
+      "id": "star-catcher",
+      "url": "https://881b18f2-bitgames-star-catcher.ferdousbd.workers.dev/",
+      "status": 200
+    }
+  ]
+}

@@ -1,0 +1,3429 @@
+{
+  "date": "2026-10-08",
+  "method": "Three separate AI source-review lenses; votes are triage, not empirical fun measurements or statistically independent human judgments. Current worktree reviewed, not fresh pinned-live browser play.",
+  "counts": {
+    "remove_candidate": 73,
+    "retain_candidate": 12,
+    "rework": 16
+  },
+  "originalsProtected": 12,
+  "externalProtected": [
+    "Splash Tank \u2014 separate repository, untouched"
+  ],
+  "recommendedCurrentGameRetirements": 89,
+  "recordedDeploymentUrlsInRetirements": 14,
+  "executedDeletions": 0,
+  "records": [
+    {
+      "id": "acorn-addition",
+      "title": "Acorn Addition",
+      "generated": true,
+      "mode": "arithmetic",
+      "sourceDirectory": "examples/acorn-addition",
+      "configuredWorker": "bitgames-acorn-addition",
+      "configuration": "examples/acorn-addition/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Concrete joining can feed a woodland character; current numeric answer selection interrupts the pretend-play opportunity.",
+        "child": "Moving all prescribed acorns before numeric answers unlock makes a concrete demonstration, but child decisions do not change the story. The answer-gated stash exercise is unlikely to sustain a session independently.",
+        "distinctness": "Combining two stashes differs from subtraction/division; not an exact operation reskin. All toys must be moved before a numeric answer, with no feast/recipient system, so consolidate into one richer food-sharing game."
+      },
+      "closestDuplicates": [
+        "bakery-bundles",
+        "star-share",
+        "submarine-subtraction"
+      ]
+    },
+    {
+      "id": "animal-alphabet",
+      "title": "Animal Alphabet",
+      "generated": true,
+      "mode": "spell",
+      "sourceDirectory": "examples/animal-alphabet",
+      "configuredWorker": "bitgames-animal-alphabet",
+      "configuration": "examples/animal-alphabet/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://34b6e66f-bitgames-animal-alphabet.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Animal pictures/spelling largely duplicate Word Rocket without a materially different progression system.",
+        "child": "Six three-letter animal names change the picture bank in Word Rocket\u2019s spelling engine. Meeting animals is a potential theme, but there is no animal care or different word-building mechanic; consolidate literacy content.",
+        "distinctness": "Same 3-letter spell implementation as Word/Picnic and overlaps CAT/PIG/DOG words with Word. Friend spins rather than crew launch; not a standalone animal world."
+      },
+      "closestDuplicates": [
+        "picnic-word-basket",
+        "word-rocket"
+      ]
+    },
+    {
+      "id": "bakery-alarm",
+      "title": "Bakery Alarm",
+      "generated": true,
+      "mode": "clock",
+      "sourceDirectory": "examples/bakery-alarm",
+      "configuredWorker": "bitgames-bakery-alarm",
+      "configuration": "examples/bakery-alarm/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Quarter-hour prompts remain the same clock task; no baking timer consequences.",
+        "child": "Higher levels add elapsed-time reasoning, which is a real curriculum difference. It still presents clock questions without baking consequences or the creative bakery loop already present in Cake Stack.",
+        "distinctness": "Higher levels require start+duration inference, unlike other clock games. A kitchen whose cooking genuinely depends on elapsed time could preserve this learning; current target-hand-setting does not fulfill that world."
+      },
+      "closestDuplicates": [
+        "bunny-bedtime",
+        "cuckoo-clock-garden",
+        "space-station-schedule"
+      ]
+    },
+    {
+      "id": "bakery-bundles",
+      "title": "Bakery Bundles",
+      "generated": true,
+      "mode": "arithmetic",
+      "sourceDirectory": "examples/bakery-bundles",
+      "configuredWorker": "bitgames-bakery-bundles",
+      "configuration": "examples/bakery-bundles/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Equal groups are represented, but there is no bakery customer/order/equipment loop.",
+        "child": "Counting equal trays is concrete mathematics, but it lacks Cake Stack\u2019s timing, recipes, customer reaction and creative serving. Keep grouping/sharing inside the stronger bakery play rather than another answer board.",
+        "distinctness": "Equal tray filling materially teaches multiplication, not identical addition. Filling each tray by repeated taps and choosing total is repetitive; no recipe, customers, baking or serving system."
+      },
+      "closestDuplicates": [
+        "acorn-addition",
+        "cake-stack",
+        "star-share",
+        "submarine-subtraction"
+      ]
+    },
+    {
+      "id": "balloon-pop",
+      "title": "Balloon Pop",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/balloon-pop",
+      "configuredWorker": "bitgames-balloon-pop",
+      "configuration": "examples/balloon-pop/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://4c14797f-bitgames-balloon-pop.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Fast direct popping, evolving balloon kinds and chain effects provide immediate cause/effect and changing affordances.",
+        "child": "Direct popping, changing balloon behaviours, harmless misses and interactive scenery offer immediate agency before any counting mission. Check whether the optional mission/dialog layer now interrupts the original pleasure.",
+        "distinctness": "Tap-to-hit is shared broadly with other games, but moving targets, chain effects and scene secrets distinguish it from selecting a requested count from fixed cards."
+      },
+      "closestDuplicates": [
+        "dino-egg-nest",
+        "star-catcher"
+      ]
+    },
+    {
+      "id": "bead-bridge",
+      "title": "Bead Bridge",
+      "generated": true,
+      "mode": "pattern",
+      "sourceDirectory": "examples/bead-bridge",
+      "configuredWorker": "bitgames-bead-bridge",
+      "configuration": "examples/bead-bridge/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A snail crossing a completed bridge is a small causal reward worth exploring within one pattern construction game.",
+        "child": "The snail crossing is a consequence of one missing-token answer, not a bridge the child designs. Equivalent AB/AAB/ABC generation and three-token choices make this a reskin, not another substantial game.",
+        "distinctness": "Exact repeating-gap task as three siblings. Snail crossing is a scripted success reward, not building/testing a bridge; title alone does not create a construction mechanic."
+      },
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "constellation-code",
+        "reef-patterns",
+        "train-carriage-rhythm"
+      ]
+    },
+    {
+      "id": "bear-balance",
+      "title": "Bear Balance",
+      "generated": true,
+      "mode": "balance",
+      "sourceDirectory": "examples/bear-balance",
+      "configuredWorker": "bitgames-bear-balance",
+      "configuration": "examples/bear-balance/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Moving beam gives immediate meaningful feedback; one balance playground might support experimentation.",
+        "child": "Repeatedly choose weights until the counter equals a target and press Check. The seesaw is a representation of a missing addend, without physical experimentation or bear behaviour beyond the correct answer.",
+        "distinctness": "Identical target/base/+1/+2/+3 scales rules as Parcel/Pebble. Acorn load toy only changes art. If retained at all, combine into one exploratory balance toy."
+      },
+      "closestDuplicates": [
+        "parcel-weights",
+        "pebble-equations"
+      ]
+    },
+    {
+      "id": "bee-pollen-trail",
+      "title": "Bee Pollen Trail",
+      "generated": true,
+      "mode": "path",
+      "sourceDirectory": "examples/bee-pollen-trail",
+      "configuredWorker": "bitgames-bee-pollen-trail",
+      "configuration": "examples/bee-pollen-trail/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "rework",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Pollination is narrated on success rather than developing an interactive flowering ecosystem.",
+        "child": "Programming arrows to carry pollen has a causal navigation problem and animated execution. Keep the concept for one richer route-planning game with an evolving garden; four versions of the same 3\u20135 cell grid are unnecessary.",
+        "distinctness": "Same obstacle-grid route queue as Rover/Turtle/Penguin. Bee pollen/flowers have no distribution, pollination or growing rules; endpoint bob/text supplies the theme."
+      },
+      "closestDuplicates": [
+        "penguin-ice-path",
+        "rover-rescue",
+        "turtle-treasure-map"
+      ]
+    },
+    {
+      "id": "birdsong-tuner",
+      "title": "Birdsong Tuner",
+      "generated": true,
+      "mode": "pitch",
+      "sourceDirectory": "examples/birdsong-tuner",
+      "configuredWorker": "bitgames-birdsong-tuner",
+      "configuration": "examples/birdsong-tuner/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "The tones are synthesized fixed notes, not a distinctive birdsong discovery system.",
+        "child": "The same high/low exercise and composition controls swap crystals for birds. Sine tones do not amount to a bird-voice discovery system; consolidate musical play.",
+        "distinctness": "Same 220/440/660 Hz note pad comparison as Crystal; birds do not produce distinct song patterns or respond to compositions. Redundant pitch quiz."
+      },
+      "closestDuplicates": [
+        "sound-wave-lab"
+      ]
+    },
+    {
+      "id": "breakfast-story",
+      "title": "Breakfast Story",
+      "generated": true,
+      "mode": "order",
+      "sourceDirectory": "examples/breakfast-story",
+      "configuredWorker": "bitgames-breakfast-story",
+      "configuration": "examples/breakfast-story/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A fixed morning timeline offers neither cooking nor pretend breakfast play.",
+        "child": "Four fixed morning stages must be chosen in a predetermined order. Bear does not have needs to respond to or a routine the child can act out; knowing the sequence exhausts the play.",
+        "distinctness": "One prescribed four-step routine repeatedly reordered. Unlike an interactive pretend household, objects have no playable uses or branching results."
+      },
+      "closestDuplicates": [
+        "butterfly-life-lab",
+        "frog-life-lab",
+        "sprout-sunflower"
+      ]
+    },
+    {
+      "id": "bridge-builder",
+      "title": "Bridge Builder",
+      "generated": true,
+      "mode": "measure",
+      "sourceDirectory": "examples/bridge-builder",
+      "configuredWorker": "bitgames-bridge-builder",
+      "configuration": "examples/bridge-builder/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A measured strip is not a bridge with structural choices or creatures crossing it.",
+        "child": "A prescribed number of equal planks fills a length. No structural behaviour, route crossing or child-designed bridge distinguishes it from the other measurement versions.",
+        "distinctness": "Measurement has the clearest potential physical purpose here: closing a water gap followed by traversal. Current Add a unit auto-places all planks and boat travel is scripted; rebuild with actual construction choices."
+      },
+      "closestDuplicates": [
+        "comet-tail-measure",
+        "garden-fence",
+        "giraffe-ruler"
+      ]
+    },
+    {
+      "id": "bumper-ducks",
+      "title": "Bumper Ducks",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/bumper-ducks",
+      "configuredWorker": "bitgames-bumper-ducks",
+      "configuration": "examples/bumper-ducks/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://8c3a7eda-bitgames-bumper-ducks.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Steering, collisions, pickups and multiplayer/bots produce emergent play and social moments beyond question answering.",
+        "child": "Paddling, dashing, physical bonks, power-ups and cooperative play produce outcomes from the child\u2019s movements; counting sits alongside the activity instead of replacing it. Local multiplayer usability still needs observation.",
+        "distinctness": "Shares steering/collecting with racers and painting, but dash collisions, ring-outs and power physics produce distinct decisions and social play."
+      },
+      "closestDuplicates": [
+        "crash-racers",
+        "paint-splash"
+      ]
+    },
+    {
+      "id": "bunny-bedtime",
+      "title": "Bunny Bedtime",
+      "generated": true,
+      "mode": "clock",
+      "sourceDirectory": "examples/bunny-bedtime",
+      "configuredWorker": "bitgames-bunny-bedtime",
+      "configuration": "examples/bunny-bedtime/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Five fixed routines give context but do not produce a living bunny care loop.",
+        "child": "A small fixed set of routine times changes clock prompts but not play. Bunny has no needs or pretend-care interactions, so it repeats instructional time-setting rather than a bedtime experience.",
+        "distinctness": "Five routine labels/time pairs replace random targets; the rabbit does not enact an ongoing daily routine. Same clock matching, not bedtime role play."
+      },
+      "closestDuplicates": [
+        "bakery-alarm",
+        "cuckoo-clock-garden",
+        "space-station-schedule"
+      ]
+    },
+    {
+      "id": "bunny-hop",
+      "title": "Bunny Hop",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/bunny-hop",
+      "configuredWorker": "bitgames-bunny-hop",
+      "configuration": "examples/bunny-hop/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://c1b0586f-bitgames-bunny-hop.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Timing hops through a course, biome changes and pokeable scenery offer motor mastery and discovery.",
+        "child": "Single-tap and double-hop movement, carrots and changing environments support practice and visible mastery. Optional movement missions can remain subordinate to hopping.",
+        "distinctness": "Shares a scrolling journey with Dragon, but discrete vertical timing/double-jump is different from two-axis flight and puff shooting."
+      },
+      "closestDuplicates": [
+        "dragon-glide"
+      ]
+    },
+    {
+      "id": "butterfly-life-lab",
+      "title": "Butterfly Life Lab",
+      "generated": true,
+      "mode": "order",
+      "sourceDirectory": "examples/butterfly-life-lab",
+      "configuredWorker": "bitgames-butterfly-life-lab",
+      "configuration": "examples/butterfly-life-lab/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "rework",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Same four-stage ordering as Frog Life Lab, changing only lifecycle facts and toys.",
+        "child": "A caterpillar-to-butterfly transformation could support wonder and caring play. Current rules simply repeat one four-card order, with no feeding or habitat interaction; redesign rather than count new art as a full game.",
+        "distinctness": "Distinct lifecycle knowledge, same four sequential taps reused indefinitely. No feeding, metamorphosis timing or observation agency; merge learning into a richer living-world concept if desired."
+      },
+      "closestDuplicates": [
+        "breakfast-story",
+        "frog-life-lab",
+        "sprout-sunflower"
+      ]
+    },
+    {
+      "id": "butterfly-mirrors",
+      "title": "Butterfly Mirrors",
+      "generated": true,
+      "mode": "mirror",
+      "sourceDirectory": "examples/butterfly-mirrors",
+      "configuredWorker": "bitgames-butterfly-mirrors",
+      "configuration": "examples/butterfly-mirrors/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Reflection has clear visual feedback and free design; worth merging into one symmetry art toy.",
+        "child": "Copy random squares across a mirror line and Check. Wings are labels for grid cells rather than butterfly designs a child owns, and Castle Window/Robot versions use the same rule.",
+        "distinctness": "Exact 3\u00d73/4\u00d74 binary-grid reflection shared with Castle/Robot; wings outline and hop are cosmetic. No butterfly designing/flying/persistent collection."
+      },
+      "closestDuplicates": [
+        "castle-window-symmetry",
+        "robot-reflections",
+        "snowflake-studio"
+      ]
+    },
+    {
+      "id": "butterfly-patterns",
+      "title": "Butterfly Patterns",
+      "generated": true,
+      "mode": "pattern",
+      "sourceDirectory": "examples/butterfly-patterns",
+      "configuredWorker": "bitgames-butterfly-patterns",
+      "configuration": "examples/butterfly-patterns/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Token substitutions reproduce Bead Bridge\u2019s repeating-sequence logic without its crossing payoff.",
+        "child": "Pick the missing token in a fixed AB/AAB/ABC row. The child cannot design wings or grow a garden, and the same rule underlies Bead Bridge, Train Carriage Rhythm and Reef Patterns.",
+        "distinctness": "Exact AB/AAB/ABC gap-puzzle clone of Bead/Train/Reef; success bobs row instead of altering play. No butterfly behaviour depends on the pattern."
+      },
+      "closestDuplicates": [
+        "bead-bridge",
+        "constellation-code",
+        "reef-patterns",
+        "train-carriage-rhythm"
+      ]
+    },
+    {
+      "id": "cake-stack",
+      "title": "Cake Stack",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/cake-stack",
+      "configuredWorker": "bitgames-cake-stack",
+      "configuration": "examples/cake-stack/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://95d7c383-bitgames-cake-stack.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Timing a falling layer changes the physical cake; decoration and candle blowing extend a coherent playful loop.",
+        "child": "Timing a real moving layer, forgiving squishes, customer/flavour unlocks and blowing out candles make an understandable action-to-outcome loop. Recipe work is optional rather than the only play.",
+        "distinctness": "Stack timing and changing geometry differ from fixed tower height increments; real cake creation/party gives fraction learning context absent from Pizza/Watermelon drills."
+      },
+      "closestDuplicates": [
+        "bakery-bundles",
+        "pizza-moon",
+        "toy-town-builder",
+        "watermelon-picnic"
+      ]
+    },
+    {
+      "id": "castle-block-blueprints",
+      "title": "Castle Block Blueprints",
+      "generated": true,
+      "mode": "build",
+      "sourceDirectory": "examples/castle-block-blueprints",
+      "configuredWorker": "bitgames-castle-block-blueprints",
+      "configuration": "examples/castle-block-blueprints/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Castle-coloured towers reuse Toy Town\u2019s exact pads and height matching.",
+        "child": "Same pads, floor counts, roof construction and free-building toggle as Toy Town Builder. Castle colour/shape treatment does not provide castle-specific construction or play.",
+        "distinctness": "Exact floor-count blueprint/free-height build loop as Toy Town. Castle-coloured cubes/roofs introduce no castle architecture or blocks that can be moved."
+      },
+      "closestDuplicates": [
+        "toy-town-builder"
+      ]
+    },
+    {
+      "id": "castle-window-symmetry",
+      "title": "Castle Window Symmetry",
+      "generated": true,
+      "mode": "mirror",
+      "sourceDirectory": "examples/castle-window-symmetry",
+      "configuredWorker": "bitgames-castle-window-symmetry",
+      "configuration": "examples/castle-window-symmetry/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Grid reflection substitutes windows for wing cells; no castle construction or lighting story.",
+        "child": "Same random 3\u00d73/4\u00d74 reflection matrix in a castle setting. Completing it restores no explorable castle; additional jewel scenery cannot make the gameplay distinct.",
+        "distinctness": "Same binary mirror grid. Castle slab and glowing windows after success add presentation, not castle construction or inhabitation."
+      },
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "robot-reflections",
+        "snowflake-studio"
+      ]
+    },
+    {
+      "id": "cloud-number-race",
+      "title": "Cloud Number Race",
+      "generated": true,
+      "mode": "compare",
+      "sourceDirectory": "examples/cloud-number-race",
+      "configuredWorker": "bitgames-cloud-number-race",
+      "configuration": "examples/cloud-number-race/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Choosing the larger printed number does not control a race.",
+        "child": "Selecting the greatest/least printed number is a quiz; there is no race. Numbers vary but the child never steers a cloud or changes an unfolding situation.",
+        "distinctness": "No race state exists: select largest/smallest numeral/passenger group. The name supplies a competitive promise that the one-selection mechanism cannot fulfill."
+      },
+      "closestDuplicates": [
+        "deep-sea-divers",
+        "dinosaur-size-parade",
+        "ribbon-tailor"
+      ]
+    },
+    {
+      "id": "colour-cauldron",
+      "title": "Colour Cauldron",
+      "generated": true,
+      "mode": "mix",
+      "sourceDirectory": "examples/colour-cauldron",
+      "configuredWorker": "bitgames-colour-cauldron",
+      "configuration": "examples/colour-cauldron/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "One tactile stirring/mixing toy might survive if freed from requested-colour checking; do not retain four copies.",
+        "child": "Pouring and stirring are connected actions with visible mixtures and finger-circle input. Current three target secondary colours gate completion; preserve only if rebuilt as expressive potion play with useful surprising effects, or absorb mixing into Paint Splash.",
+        "distinctness": "All Mix games share three fixed recipes; Paint Splash already offers exploration, saved mixture comparisons and mosaic plus rolling paint. No potion effects, spells or open recipes; remove all four redundant mixing apps."
+      },
+      "closestDuplicates": [
+        "jellyfish-glow-lab",
+        "paint-a-planet",
+        "paint-splash",
+        "rainbow-smoothies"
+      ]
+    },
+    {
+      "id": "comet-tail-measure",
+      "title": "Comet Tail Measure",
+      "generated": true,
+      "mode": "measure",
+      "sourceDirectory": "examples/comet-tail-measure",
+      "configuredWorker": "bitgames-comet-tail-measure",
+      "configuration": "examples/comet-tail-measure/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Another horizontal unit-length task with a comet label.",
+        "child": "The same equal-unit count uses star units along a tail. There is no flight or astronomical exploration, and changing subject/units does not add a new game.",
+        "distinctness": "Same fixed horizontal length unit counter, with star and tail props. No comet movement/trajectory or meaningful space exploration."
+      },
+      "closestDuplicates": [
+        "bridge-builder",
+        "garden-fence",
+        "giraffe-ruler"
+      ]
+    },
+    {
+      "id": "constellation-code",
+      "title": "Constellation Code",
+      "generated": true,
+      "mode": "pattern",
+      "sourceDirectory": "examples/constellation-code",
+      "configuredWorker": "bitgames-constellation-code",
+      "configuration": "examples/constellation-code/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Numeric sequences are educationally different from picture patterns but remain a missing-number quiz.",
+        "child": "Five-number sequences with one missing number offer narrow academic practice and generic choice tiles. Repairing a star map has no navigation or construction consequence; weak reason to choose this instead of existing space play.",
+        "distinctness": "Number-step inference differs meaningfully from picture repetition, so this is not an exact token swap. It is still one arithmetic-gap answer with a connecting line; no constellation exploration or astronomical relationship."
+      },
+      "closestDuplicates": [
+        "bead-bridge",
+        "butterfly-patterns",
+        "reef-patterns",
+        "train-carriage-rhythm"
+      ]
+    },
+    {
+      "id": "coral-cleanup",
+      "title": "Coral Cleanup",
+      "generated": true,
+      "mode": "collect",
+      "sourceDirectory": "examples/coral-cleanup",
+      "configuredWorker": "bitgames-coral-cleanup",
+      "configuration": "examples/coral-cleanup/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://d8fd4cfa-bitgames-coral-cleanup.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "rework",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A rubbish distractor changes classification slightly, but there is no persistent reef restoration or ecological world response.",
+        "child": "Leaving shells while removing bottles gives actions an ecological purpose, and the receiver responds. Rework into an explorable reef with visible habitat recovery rather than another five exact-count cards-and-Done exercise.",
+        "distinctness": "Only extra rule versus other collect games is one noncollectible shell. The reef never changes beyond bottles in a bin; neither habitat recovery nor discovery is a system."
+      },
+      "closestDuplicates": [
+        "firefly-lanterns",
+        "moon-pebbles",
+        "orchard-baskets"
+      ]
+    },
+    {
+      "id": "crash-racers",
+      "title": "Crash Racers",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/crash-racers",
+      "configuredWorker": "bitgames-crash-racers",
+      "configuration": "examples/crash-racers/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://11943f1a-bitgames-crash-racers.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Driving, jumps, flips, collision damage, pickups and multiplayer create varied player-caused outcomes and recoverable experimentation.",
+        "child": "Continuous steering, permissive crashes, repair, multiplayer and changing locations provide meaningful spatial play. Delivery missions are an additional layer; verify steering is accessible at the lower advertised age.",
+        "distinctness": "Steering overlaps Ducks/flight, but road/lap constraints, damage and map deliveries change action consequences rather than only replacing the vehicle."
+      },
+      "closestDuplicates": [
+        "bumper-ducks"
+      ]
+    },
+    {
+      "id": "crystal-cave-echo",
+      "title": "Crystal Cave Echo",
+      "generated": true,
+      "mode": "echo",
+      "sourceDirectory": "examples/crystal-cave-echo",
+      "configuredWorker": "bitgames-crystal-cave-echo",
+      "configuration": "examples/crystal-cave-echo/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Crystal voices substitute for frog voices in the same sequence/composition system.",
+        "child": "The same echo rule and composition controls use gems and slightly different frequencies. Crystal appearance is not a distinct musical system; consolidate with one musical toy.",
+        "distinctness": "Same four-pad sequence-copy/composer as Frog with shifted pitches and crystal props. No cave exploration or acoustic mechanics."
+      },
+      "closestDuplicates": [
+        "frog-choir",
+        "robot-dance-code",
+        "sleepy-owl-lullaby"
+      ]
+    },
+    {
+      "id": "cuckoo-clock-garden",
+      "title": "Cuckoo Clock Garden",
+      "generated": true,
+      "mode": "clock",
+      "sourceDirectory": "examples/cuckoo-clock-garden",
+      "configuredWorker": "bitgames-cuckoo-clock-garden",
+      "configuration": "examples/cuckoo-clock-garden/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A setting-the-hands worksheet offers no reacting garden schedule or clockwork surprises.",
+        "child": "Setting a requested hour/quarter-hour has useful practice but a bird celebration does not make the garden an evolving place. Four clock apps share one hand-control system.",
+        "distinctness": "Exact random target clock setting shared with Space; bird bobs on success, never follows a time-controlled garden routine. Weak standalone activity."
+      },
+      "closestDuplicates": [
+        "bakery-alarm",
+        "bunny-bedtime",
+        "space-station-schedule"
+      ]
+    },
+    {
+      "id": "deep-sea-divers",
+      "title": "Deep Sea Divers",
+      "generated": true,
+      "mode": "compare",
+      "sourceDirectory": "examples/deep-sea-divers",
+      "configuredWorker": "bitgames-deep-sea-divers",
+      "configuration": "examples/deep-sea-divers/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Depth labels/positions offer vocabulary, not underwater movement or discovery.",
+        "child": "Select the deepest or nearest-surface fish. The child controls no diver and explores no sea; relative position answers do not constitute the promised diving adventure.",
+        "distinctness": "Fish depth comparison differs perceptually from object size, but there is no diving/exploration; tap shallowest/deepest fish against a line."
+      },
+      "closestDuplicates": [
+        "cloud-number-race",
+        "dinosaur-size-parade",
+        "ribbon-tailor"
+      ]
+    },
+    {
+      "id": "dino-egg-nest",
+      "title": "Dino Egg Nest",
+      "generated": true,
+      "mode": "tenframe",
+      "sourceDirectory": "examples/dino-egg-nest",
+      "configuredWorker": "bitgames-dino-egg-nest",
+      "configuration": "examples/dino-egg-nest/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Egg hatching gives concrete surprise to an early counting task; worthwhile only integrated into creature care/exploration.",
+        "child": "Filling a requested number of ten spaces is a counting representation with eggs. No hatching or dinosaur care gives the slots a play consequence; overlaps collect/count activities.",
+        "distinctness": "Egg-to-dinosaur hatching is the strongest consequential reward in the ten-frame pair. Presently a counting worksheet with no persisting animals; could become hatch/care/discover play, otherwise remove."
+      },
+      "closestDuplicates": [
+        "ladybird-dot-party"
+      ]
+    },
+    {
+      "id": "dinosaur-size-parade",
+      "title": "Dinosaur Size Parade",
+      "generated": true,
+      "mode": "compare",
+      "sourceDirectory": "examples/dinosaur-size-parade",
+      "configuredWorker": "bitgames-dinosaur-size-parade",
+      "configuration": "examples/dinosaur-size-parade/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "The parade does not become child-directed sorting, arranging or a dinosaur world.",
+        "child": "Three or four scaled dinosaur copies invite a biggest/smallest answer. No parade arranging, feeding or movement builds a session, and Compare uses the same alternating target logic elsewhere.",
+        "distinctness": "Tap largest/smallest among 3\u20134 stationary models. Dinosaurs do not parade or interact; source scalar changes are not ongoing dinosaur play."
+      },
+      "closestDuplicates": [
+        "cloud-number-race",
+        "deep-sea-divers",
+        "ribbon-tailor"
+      ]
+    },
+    {
+      "id": "dragon-glide",
+      "title": "Dragon Glide",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/dragon-glide",
+      "configuredWorker": "bitgames-dragon-glide",
+      "configuration": "examples/dragon-glide/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://a85b2e28-bitgames-dragon-glide.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A controllable dragon, encounters, powers and return-to-nest journey offer action, progression and a world identity.",
+        "child": "Free steering, sparkly fire, rings, boosts and harmless collisions give connected sensory feedback and a developing movement skill. It shares flight with Star Catcher but adds active fire and spatial routes.",
+        "distinctness": "Distinct from Star Catcher falling-item collection: forward course, rings/lanterns and puff shooting; shares space/flight fantasy but not exact state machine."
+      },
+      "closestDuplicates": [
+        "rocket-garage",
+        "star-catcher"
+      ]
+    },
+    {
+      "id": "drum-beat-builder",
+      "title": "Drum Beat Builder",
+      "generated": true,
+      "mode": "rhythm",
+      "sourceDirectory": "examples/drum-beat-builder",
+      "configuredWorker": "bitgames-drum-beat-builder",
+      "configuration": "examples/drum-beat-builder/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "A beat/rest sequencer and free composition can support self-directed music; develop one music playground rather than separate rain/echo/pitch titles.",
+        "child": "Beat/rest toggles, playback and composition mode are real authoring tools beyond a static quiz. The default copied pattern and small 4\u20136 step grid limit expression; develop one accessible musical playground instead of separate near-identical rhythm/echo/pitch releases.",
+        "distinctness": "Toggle beats/rests, hear immediately and compose is real musical agency. One voice/fixed tempo/4\u20136 events and no persistent composition remain thin; develop one musical playground and merge Echo/Pitch variants if warranted."
+      },
+      "closestDuplicates": [
+        "rain-drop-rhythm"
+      ]
+    },
+    {
+      "id": "firefly-lanterns",
+      "title": "Firefly Lanterns",
+      "generated": true,
+      "mode": "collect",
+      "sourceDirectory": "examples/firefly-lanterns",
+      "configuredWorker": "bitgames-firefly-lanterns",
+      "configuration": "examples/firefly-lanterns/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://aabec2a1-bitgames-firefly-lanterns.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Lantern fill/glow and carrying could make one gentle preschool toy; protect that sensory identity and test voluntary return.",
+        "child": "A lantern brightens as fireflies are carried in: good immediate counting feedback. The fireflies are nevertheless dealt as static cards and five exact-count submissions replace free catching or discovery; promising material for one integrated woodland game.",
+        "distinctness": "Glow changes continuously with collected fireflies, an immediate gentle cause/effect niche separate from real-time originals. Current targets/count/Done and five resets are too prescribed; rebuild as an explorable night habitat if retained."
+      },
+      "closestDuplicates": [
+        "coral-cleanup",
+        "moon-pebbles",
+        "orchard-baskets"
+      ]
+    },
+    {
+      "id": "fish-pond",
+      "title": "Fish Pond",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/fish-pond",
+      "configuredWorker": "bitgames-fish-pond",
+      "configuration": "examples/fish-pond/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://3055908f-bitgames-fish-pond.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Casting, anticipation, catching creatures and collecting field-guide discoveries produce a paced discovery loop.",
+        "child": "Casting, watching the bobber, timing a catch and discovering fish for a persistent book provide anticipation and collection goals. Waiting and timing accessibility need actual child testing, especially age two.",
+        "distinctness": "Collecting is embedded in uncertainty/anticipation and timed interaction, unlike static select-N collectibles. Different environments and a persistent book support discovery."
+      },
+      "closestDuplicates": [
+        "coral-cleanup",
+        "firefly-lanterns",
+        "orchard-baskets"
+      ]
+    },
+    {
+      "id": "float-boat-lab",
+      "title": "Float Boat Lab",
+      "generated": true,
+      "mode": "experiment",
+      "sourceDirectory": "examples/float-boat-lab",
+      "configuredWorker": "bitgames-float-boat-lab",
+      "configuration": "examples/float-boat-lab/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Waterline observations have value, but shapes/materials cannot be combined or changed; no boat building.",
+        "child": "A visible water test can support curiosity and checking a prediction. Six preset boolean outcomes provide little sustained experimentation; shape/material changes and child-built boats could make the title\u2019s promise real.",
+        "distinctness": "Float/sink is a meaningful physical phenomenon distinct from magnetism. Current six bool outcomes offer no shape/load/design experiment; rebuild around changing boats and watching consequences."
+      },
+      "closestDuplicates": [
+        "magnet-discovery",
+        "sunlight-sprouts"
+      ]
+    },
+    {
+      "id": "footprint-detective",
+      "title": "Footprint Detective",
+      "generated": true,
+      "mode": "match",
+      "sourceDirectory": "examples/footprint-detective",
+      "configuredWorker": "bitgames-footprint-detective",
+      "configuration": "examples/footprint-detective/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://adeb9e6b-bitgames-footprint-detective.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Tracks offer a distinct inference cue, but there is no tracking expedition, search or animal discovery world.",
+        "child": "Interpreting distinct animal tracks is a useful observation hook beyond a pure token reskin. Current play still selects from a four-animal answer bank; retain the concept only for a real follow-tracks investigation with discovery and clues.",
+        "distinctness": "Track silhouettes require clue inference different from colour/shape matching. Only four fixed clues and one-choice rounds cannot sustain detective play; expand into exploration and evidence gathering rather than polish the quiz."
+      },
+      "closestDuplicates": [
+        "rainbow-postoffice",
+        "shadow-theatre",
+        "shape-locksmith"
+      ]
+    },
+    {
+      "id": "frog-choir",
+      "title": "Frog Choir",
+      "generated": true,
+      "mode": "echo",
+      "sourceDirectory": "examples/frog-choir",
+      "configuredWorker": "bitgames-frog-choir",
+      "configuration": "examples/frog-choir/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Pads and free song composition could become one playful musical pond rather than four echo listings.",
+        "child": "Touching frogs produces tones and there is a genuine 12-note composition mode. Default play is still Simon-like sequence copying through the generic five steps; develop one expressive musical toy rather than release multiple tone reskins.",
+        "distinctness": "Immediate notes and Compose my song provide actual creation beyond testing memory. Four voices and 12-event ephemeral tunes support one music-playground seed; other Echo themes should not ship separately."
+      },
+      "closestDuplicates": [
+        "crystal-cave-echo",
+        "robot-dance-code",
+        "sleepy-owl-lullaby"
+      ]
+    },
+    {
+      "id": "frog-life-lab",
+      "title": "Frog Life Lab",
+      "generated": true,
+      "mode": "order",
+      "sourceDirectory": "examples/frog-life-lab",
+      "configuredWorker": "bitgames-frog-life-lab",
+      "configuration": "examples/frog-life-lab/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Metamorphosis offers a meaningful subject for an actual caring/discovery game, but the current ordering is insufficient.",
+        "child": "Recognisable frog stages provide useful subject-specific learning, but every level repeats the same four cards. Preserve assets/concept for a pond where the child tends eggs and discovers changing animals; current release remains a sequencing worksheet.",
+        "distinctness": "Authored egg/tadpole/froglet/frog models could support observable care/transformation. Current exact four-stage ordering repeats every round, so retain only the concept for a simulation rebuild."
+      },
+      "closestDuplicates": [
+        "breakfast-story",
+        "butterfly-life-lab",
+        "sprout-sunflower"
+      ]
+    },
+    {
+      "id": "fruit-veggie-ferry",
+      "title": "Fruit & Veggie Ferry",
+      "generated": true,
+      "mode": "sort",
+      "sourceDirectory": "examples/fruit-veggie-ferry",
+      "configuredWorker": "bitgames-fruit-veggie-ferry",
+      "configuration": "examples/fruit-veggie-ferry/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Ferry theme does not add navigation, cargo choices or transport consequences.",
+        "child": "Food models move to two fixed category bins. Ferry travel, picnic preparation and passenger choices are absent from the core sorting rule; another noun swap in the sorting family.",
+        "distinctness": "Same toy/bin mapping with two categories. Ferry/boats are stationary bin decoration, not transport play."
+      },
+      "closestDuplicates": [
+        "habitat-hotel",
+        "recycling-robots",
+        "season-suitcase"
+      ]
+    },
+    {
+      "id": "garden-fence",
+      "title": "Garden Fence",
+      "generated": true,
+      "mode": "measure",
+      "sourceDirectory": "examples/garden-fence",
+      "configuredWorker": "bitgames-garden-fence",
+      "configuration": "examples/garden-fence/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "The child does not design an enclosure or protect a growing garden.",
+        "child": "The same unit-placement measurement uses fence pieces. There is no garden layout choice, planting, animal behaviour or consequence that turns measuring into pretend construction.",
+        "distinctness": "Same Add unit/Undo/count check as Bridge/Comet; prepositioned rails do not enclose a user-designed garden. Flowers are static decoration."
+      },
+      "closestDuplicates": [
+        "bridge-builder",
+        "comet-tail-measure",
+        "giraffe-ruler"
+      ]
+    },
+    {
+      "id": "gem-turner",
+      "title": "Gem Turner",
+      "generated": true,
+      "mode": "rotate",
+      "sourceDirectory": "examples/gem-turner",
+      "configuredWorker": "bitgames-gem-turner",
+      "configuration": "examples/gem-turner/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Quarter-turn key fitting is too narrow for a dedicated game.",
+        "child": "A key is turned in quarter-turns until an outline matches. Very little solution space, no ongoing discovery, and no effect beyond the generic next-step loop; could be one encounter in a larger game.",
+        "distinctness": "Same asymmetric triangular key geometry and quarter-turn target as Rocket. No gem selection, faceting, treasure exploration or further spatial action."
+      },
+      "closestDuplicates": [
+        "rocket-docking",
+        "tangram-turntable"
+      ]
+    },
+    {
+      "id": "giraffe-ruler",
+      "title": "Giraffe Ruler",
+      "generated": true,
+      "mode": "measure",
+      "sourceDirectory": "examples/giraffe-ruler",
+      "configuredWorker": "bitgames-giraffe-ruler",
+      "configuration": "examples/giraffe-ruler/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Stacking units is useful but does not affect a living giraffe or game world.",
+        "child": "Place a generated number of fixed equal units along a target length. A giraffe is a measuring subject, not a character reacting to exploratory play; another exact-count board.",
+        "distinctness": "Vertical stacks differ visually from horizontal measurements, but Add unit auto-positions cubes until fixed target count. No actual measuring placement, animal care or varying tools."
+      },
+      "closestDuplicates": [
+        "bridge-builder",
+        "comet-tail-measure",
+        "garden-fence"
+      ]
+    },
+    {
+      "id": "habitat-hotel",
+      "title": "Habitat Hotel",
+      "generated": true,
+      "mode": "sort",
+      "sourceDirectory": "examples/habitat-hotel",
+      "configuredWorker": "bitgames-habitat-hotel",
+      "configuration": "examples/habitat-hotel/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Potential for habitat pretend play, but animals currently only travel to bins.",
+        "child": "Six animals go to three predetermined bins. The child does not build habitats or care for an animal, and the hotel metaphor supplies scenery rather than an interactive role.",
+        "distinctness": "Animal-category matching is useful content but six fixed placements do not produce hotel care or habitat simulation. Animals/bins change knowledge, not the sorting action; no strong standalone entertainment case."
+      },
+      "closestDuplicates": [
+        "fruit-veggie-ferry",
+        "recycling-robots",
+        "season-suitcase"
+      ]
+    },
+    {
+      "id": "healthy-plate-party",
+      "title": "Healthy Plate Party",
+      "generated": true,
+      "mode": "choice",
+      "sourceDirectory": "examples/healthy-plate-party",
+      "configuredWorker": "bitgames-healthy-plate-party",
+      "configuration": "examples/healthy-plate-party/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Selecting pictured food choices is not preparing or sharing a child-authored meal.",
+        "child": "Four fixed food/routine questions receive a generic praise message and small model placement. Children cannot compose meals or see characters enjoy them; the party premise does not become an activity.",
+        "distinctness": "Four fixed food/routine questions with 3 answer tiles. Plate is static and extra food appears after right answer; no assembling/serving meal or customer preferences."
+      },
+      "closestDuplicates": [
+        "kindness-cafe",
+        "senses-safari",
+        "weather-wardrobe"
+      ]
+    },
+    {
+      "id": "jellyfish-glow-lab",
+      "title": "Jellyfish Glow Lab",
+      "generated": true,
+      "mode": "mix",
+      "sourceDirectory": "examples/jellyfish-glow-lab",
+      "configuredWorker": "bitgames-jellyfish-glow-lab",
+      "configuration": "examples/jellyfish-glow-lab/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Jellyfish glow/bob after a target match; no controllable bioluminescent sea or creature interaction.",
+        "child": "Jellyfish changes colour after the identical paint-target rule. No creature care, swimming or light experimentation differentiates the activity from the other three mix titles.",
+        "distinctness": "Same fixed mixing recipes; jellyfish recolours and rises as success vignette. No light manipulation, animal movement or ongoing glowing-reef system."
+      },
+      "closestDuplicates": [
+        "colour-cauldron",
+        "paint-a-planet",
+        "paint-splash",
+        "rainbow-smoothies"
+      ]
+    },
+    {
+      "id": "kindness-cafe",
+      "title": "Kindness Caf\u00e9",
+      "generated": true,
+      "mode": "choice",
+      "sourceDirectory": "examples/kindness-cafe",
+      "configuredWorker": "bitgames-kindness-cafe",
+      "configuration": "examples/kindness-cafe/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Several acceptable answers avoid simplistic morality, but it remains a scenario quiz rather than interactive cooperation or cafe role play.",
+        "child": "Multiple caring answers are respected, but the child still selects written phrases about four fixed social situations. Friends do not sustain a conversation or respond to freely chosen actions; the cafe is a moral-choice quiz rather than pretend play.",
+        "distinctness": "Multiple acceptable caring answers avoids one-answer moral rigidity, but still four text-heavy choices and same bob/spill removal. No dialogue branches, role play or relationship state; content does not make an engaging caf\u00e9."
+      },
+      "closestDuplicates": [
+        "healthy-plate-party",
+        "senses-safari",
+        "weather-wardrobe"
+      ]
+    },
+    {
+      "id": "kite-flight-school",
+      "title": "Kite Flight School",
+      "generated": true,
+      "mode": "trace",
+      "sourceDirectory": "examples/kite-flight-school",
+      "configuredWorker": "bitgames-kite-flight-school",
+      "configuration": "examples/kite-flight-school/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A sine-wave trail does not let wind, kite control or authored flight paths emerge.",
+        "child": "The kite follows a prescribed sinusoidal trail rather than responding to free flight, wind or child-made routes. Three wave settings are limited tracing practice, not a flight school adventure.",
+        "distinctness": "One sinusoidal trail per difficulty repeated in all rounds. Finger follows prescribed dots; no wind, lift, steering dynamics or free flight, unlike original Dragon Glide."
+      },
+      "closestDuplicates": [
+        "letter-trails",
+        "number-spark-trails",
+        "snail-spiral"
+      ]
+    },
+    {
+      "id": "ladybird-dot-party",
+      "title": "Ladybird Dot Party",
+      "generated": true,
+      "mode": "tenframe",
+      "sourceDirectory": "examples/ladybird-dot-party",
+      "configuredWorker": "bitgames-ladybird-dot-party",
+      "configuration": "examples/ladybird-dot-party/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Fixed ten-frame spots repeat Dino Egg Nest without its hatching transformation.",
+        "child": "The same ten-frame placement/check uses ladybird spots. The party remains a label, not social or creative play, and it adds no meaningful loop beyond Dino Egg Nest.",
+        "distinctness": "Same ten-slot count puzzle as Dino, weaker static spot reward. No ladybird behaviour or party progression; redundant counting listing."
+      },
+      "closestDuplicates": [
+        "dino-egg-nest"
+      ]
+    },
+    {
+      "id": "letter-buddies",
+      "title": "Letter Buddies",
+      "generated": true,
+      "mode": "memory",
+      "sourceDirectory": "examples/letter-buddies",
+      "configuredWorker": "bitgames-letter-buddies",
+      "configuration": "examples/letter-buddies/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://471e06b3-bitgames-letter-buddies.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Upper/lowercase pairing is a worthwhile activity within one memory game, not a separate engaging game.",
+        "child": "Upper/lowercase association is a legitimate curriculum variation but the hidden-pair rule duplicates Memory Match. Treat it as an optional letter deck, not a stand-alone game promising another experience.",
+        "distinctness": "Big/little correspondence is a meaningful semantic matching relation. It does not change memory-play structure; consolidate as an optional letter deck in the stronger original rather than another app."
+      },
+      "closestDuplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "planet-pairs",
+        "tool-twins"
+      ]
+    },
+    {
+      "id": "letter-trails",
+      "title": "Letter Trails",
+      "generated": true,
+      "mode": "trace",
+      "sourceDirectory": "examples/letter-trails",
+      "configuredWorker": "bitgames-letter-trails",
+      "configuration": "examples/letter-trails/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://35797065-bitgames-letter-trails.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "The tracing pedagogy and multi-stroke support are substantial; preserve only as an optional tool in a richer language toy.",
+        "child": "Following stroke directions with a demonstrated firefly is purposeful motor practice and has accessible alternatives. Its 15 prescribed glyphs and five-step shell remain instruction-led; integrate tracing into a child-created picture/story rather than market it as a broad adventure.",
+        "distinctness": "Multi-stroke formation, lift handling, visual ink and tailored demonstration are a distinct learning interaction. Current fixed five-glyph practice is not an engaging standalone adventure; consolidate letters/digits into richer drawing play."
+      },
+      "closestDuplicates": [
+        "kite-flight-school",
+        "number-spark-trails",
+        "snail-spiral"
+      ]
+    },
+    {
+      "id": "magnet-discovery",
+      "title": "Magnet Discovery",
+      "generated": true,
+      "mode": "experiment",
+      "sourceDirectory": "examples/magnet-discovery",
+      "configuredWorker": "bitgames-magnet-discovery",
+      "configuration": "examples/magnet-discovery/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Visible attraction is promising cause/effect, but object properties/outcomes are fixed and the child cannot move a magnet through a playground.",
+        "child": "A prediction and visible test form a genuine inquiry loop with a magnet and materially named objects. Six hardcoded outcomes quickly exhaust it; allow children to select objects, move the magnet and compare combinations in one actual exploratory lab.",
+        "distinctness": "Visible attraction/non-attraction and success even after a wrong prediction support curiosity. Six hardcoded objects and no actual magnet handling make it a demo; salvage as a manipulable magnetic toy."
+      },
+      "closestDuplicates": [
+        "float-boat-lab",
+        "sunlight-sprouts"
+      ]
+    },
+    {
+      "id": "memory-match",
+      "title": "Memory Match",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/memory-match",
+      "configuredWorker": "bitgames-memory-match",
+      "configuration": "examples/memory-match/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://6bc31d8c-bitgames-memory-match.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "An established card game with animated animal rewards, difficulty levels and free toy pokes has clearer replay than separate themed clones.",
+        "child": "A bounded familiar game with animal reveals, graduated board sizes and a help pair has a clear independent play loop. It is less open-ended than the other originals, but is the existing canonical memory game; new reskins add no needed breadth.",
+        "distinctness": "Conventional genre is not a defect by itself. Its fuller pair-count progression and character response make Picnic/Planet variants redundant; Letter/Tool can become optional semantic decks."
+      },
+      "closestDuplicates": [
+        "letter-buddies",
+        "picnic-pairs",
+        "planet-pairs",
+        "tool-twins"
+      ]
+    },
+    {
+      "id": "moon-pebbles",
+      "title": "Moon Pebbles",
+      "generated": true,
+      "mode": "collect",
+      "sourceDirectory": "examples/moon-pebbles",
+      "configuredWorker": "bitgames-moon-pebbles",
+      "configuration": "examples/moon-pebbles/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://32ffea8f-bitgames-moon-pebbles.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Rocket payoff changes the celebration, not the collect-count-Done decisions.",
+        "child": "A rocket lifts when the chosen gem count is correct, but moment-to-moment play remains the same static collect-and-Done board. Star Catcher and Rocket Garage already provide stronger rocket agency.",
+        "distinctness": "Same bounded collect count; gems rise alongside rocket only after numeric success. Original Rocket Garage already builds/launches and Star Catcher flies/collects; this is a much thinner space alternative."
+      },
+      "closestDuplicates": [
+        "coral-cleanup",
+        "firefly-lanterns",
+        "orchard-baskets"
+      ]
+    },
+    {
+      "id": "number-spark-trails",
+      "title": "Number Spark Trails",
+      "generated": true,
+      "mode": "trace",
+      "sourceDirectory": "examples/number-spark-trails",
+      "configuredWorker": "bitgames-number-spark-trails",
+      "configuration": "examples/number-spark-trails/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Digit selection differs, but the compliance-to-glowing-dots loop duplicates Letter Trails.",
+        "child": "The same stroke-following system swaps letters for digits. Numeral coverage improves curriculum but does not create a different play loop; optional numeral content inside one creative tracing toy is enough.",
+        "distinctness": "Numbers have real educational value separate from letters, and newly cover 0\u20139. Underlying tracing is identical; combine as a glyph category in one drawing activity rather than a separate game."
+      },
+      "closestDuplicates": [
+        "kite-flight-school",
+        "letter-trails",
+        "snail-spiral"
+      ]
+    },
+    {
+      "id": "orchard-baskets",
+      "title": "Orchard Baskets",
+      "generated": true,
+      "mode": "collect",
+      "sourceDirectory": "examples/orchard-baskets",
+      "configuredWorker": "bitgames-orchard-baskets",
+      "configuration": "examples/orchard-baskets/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://f7235391-bitgames-orchard-baskets.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "The picnic theme mainly changes collection models and receiver; avoid a second count-and-fill store listing.",
+        "child": "Selecting a requested count of apples into a basket is the same exact-count exercise as Firefly Lanterns. The picnic is a completion message, not an evolving meal the child creates or serves.",
+        "distinctness": "Same collect counts and undo/Done as Firefly; basket/apple arrangement supplies theme, no fruit picking ecology, customers or persistent picnic. Remove the redundant listing rather than spend another polish pass."
+      },
+      "closestDuplicates": [
+        "coral-cleanup",
+        "firefly-lanterns",
+        "moon-pebbles"
+      ]
+    },
+    {
+      "id": "paint-a-planet",
+      "title": "Paint a Planet",
+      "generated": true,
+      "mode": "mix",
+      "sourceDirectory": "examples/paint-a-planet",
+      "configuredWorker": "bitgames-paint-a-planet",
+      "configuration": "examples/paint-a-planet/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Planet colour changes, but the child cannot actually paint a planet surface or compose a world.",
+        "child": "The planet is recoloured after the same exact two-paint mixture. The child cannot create continents, own a persistent planet or launch to it; Rocket Garage and Paint Splash already offer stronger creation.",
+        "distinctness": "Same two-colour recipe selection; whole model recolours. Child cannot paint regions/patterns or design a world; original Paint Splash contains substantially more creation."
+      },
+      "closestDuplicates": [
+        "colour-cauldron",
+        "jellyfish-glow-lab",
+        "paint-splash",
+        "rainbow-smoothies"
+      ]
+    },
+    {
+      "id": "paint-splash",
+      "title": "Paint Splash",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/paint-splash",
+      "configuredWorker": "bitgames-paint-splash",
+      "configuration": "examples/paint-splash/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://ec40b8b4-bitgames-paint-splash.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Movement creates visible painted territory and saved pictures; player expression and multiplayer interactions can produce unique sessions.",
+        "child": "Children move their rollers and create a shared picture that is saved. Ownership, experimentation and social play provide intrinsic reasons to continue; gallery and colour studio are genuine optional extensions.",
+        "distinctness": "Both colour and construction source agency: real persistent pictures and variable mixtures sharply exceed the four two-pour fixed-colour quizzes."
+      },
+      "closestDuplicates": [
+        "colour-cauldron",
+        "jellyfish-glow-lab",
+        "paint-a-planet",
+        "rainbow-smoothies"
+      ]
+    },
+    {
+      "id": "parcel-weights",
+      "title": "Parcel Weights",
+      "generated": true,
+      "mode": "balance",
+      "sourceDirectory": "examples/parcel-weights",
+      "configuredWorker": "bitgames-parcel-weights",
+      "configuration": "examples/parcel-weights/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Base-plus-missing-weight arithmetic uses the same beam and add/undo loop as Bear Balance.",
+        "child": "Same target/base and 1/2/3 weight choices as Bear Balance, with parcel labels. No parcel-delivery consequence or new balancing mechanic justifies another title.",
+        "distinctness": "Identical balance equations and beam simulation, parcels replacing acorns. No weighing by different material/size, deliveries or packing constraint."
+      },
+      "closestDuplicates": [
+        "bear-balance",
+        "pebble-equations"
+      ]
+    },
+    {
+      "id": "pebble-equations",
+      "title": "Pebble Equations",
+      "generated": true,
+      "mode": "balance",
+      "sourceDirectory": "examples/pebble-equations",
+      "configuredWorker": "bitgames-pebble-equations",
+      "configuration": "examples/pebble-equations/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Number decomposition is a curriculum variation of the same balance toy.",
+        "child": "Same missing-addend balance rule with stones and a pond. Different units do not create independent discovery or sensory behaviour.",
+        "distinctness": "Identical scales rules/ranges/weights as Bear/Parcel. Different unit noun does not create a separate equation game."
+      },
+      "closestDuplicates": [
+        "bear-balance",
+        "parcel-weights"
+      ]
+    },
+    {
+      "id": "penguin-bowling",
+      "title": "Penguin Bowling",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/penguin-bowling",
+      "configuredWorker": "bitgames-penguin-bowling",
+      "configuration": "examples/penguin-bowling/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://31c2bc5a-bitgames-penguin-bowling.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Swipe angle/power/hook affect visible pin collisions; predictive practice and optional bumpers support skill growth.",
+        "child": "A swipe determines direction, power and curve, and the resulting pin motion closes the causal loop. Bumpers and cheers support retries without requiring a written answer. Prediction controls must stay optional.",
+        "distinctness": "Prediction is embedded in an action the child controls, unlike preset Yes/No demonstrations. Unique launch/trajectory game within the catalogue."
+      },
+      "closestDuplicates": [
+        "float-boat-lab",
+        "gem-turner"
+      ]
+    },
+    {
+      "id": "penguin-ice-path",
+      "title": "Penguin Ice Path",
+      "generated": true,
+      "mode": "path",
+      "sourceDirectory": "examples/penguin-ice-path",
+      "configuredWorker": "bitgames-penguin-ice-path",
+      "configuration": "examples/penguin-ice-path/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Ice does not alter movement or introduce sliding; the penguin follows the same arrow queue.",
+        "child": "Navigating a penguin to fish is another identical command-grid puzzle. Ice does not crack, slide or otherwise behave as ice; the advertised theme has no mechanical role.",
+        "distinctness": "Same route-planning grid; no ice sliding, momentum or changing terrain. Source does not justify a separate penguin path game."
+      },
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "rover-rescue",
+        "turtle-treasure-map"
+      ]
+    },
+    {
+      "id": "picnic-pairs",
+      "title": "Picnic Pairs",
+      "generated": true,
+      "mode": "memory",
+      "sourceDirectory": "examples/picnic-pairs",
+      "configuredWorker": "bitgames-picnic-pairs",
+      "configuration": "examples/picnic-pairs/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Duplicates the more developed original Memory Match with food cards.",
+        "child": "Food-themed memory cards duplicate Memory Match\u2019s core loop with a smaller 4\u20138 card range. A different food picture bank does not justify another independent release.",
+        "distinctness": "Identity-pair memory clone with food cards, fewer available pairs and thinner progression than original Memory Match. No picnic creation or food interaction."
+      },
+      "closestDuplicates": [
+        "letter-buddies",
+        "memory-match",
+        "planet-pairs",
+        "tool-twins"
+      ]
+    },
+    {
+      "id": "picnic-word-basket",
+      "title": "Picnic Word Basket",
+      "generated": true,
+      "mode": "spell",
+      "sourceDirectory": "examples/picnic-word-basket",
+      "configuredWorker": "bitgames-picnic-word-basket",
+      "configuration": "examples/picnic-word-basket/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://699243a5-bitgames-picnic-word-basket.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Basket boarding is an alternate spelling reward, not a new game.",
+        "child": "Six food words fill the same letter-order rule and a basket carrier. Packing pictures after spelling is connected feedback, but not a distinct picnic-making system beyond the existing spelling games.",
+        "distinctness": "Distinct six-food vocabulary and basket reward, same letter sequence algorithm. Food drops into basket but never creates an interactive picnic; make a vocabulary theme in one game."
+      },
+      "closestDuplicates": [
+        "animal-alphabet",
+        "word-rocket"
+      ]
+    },
+    {
+      "id": "pizza-moon",
+      "title": "Pizza Moon",
+      "generated": true,
+      "mode": "fraction",
+      "sourceDirectory": "examples/pizza-moon",
+      "configuredWorker": "bitgames-pizza-moon",
+      "configuration": "examples/pizza-moon/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Choosing the requested wedges does not create a pizza, serve characters or test combinations.",
+        "child": "Colour a requested numerator of fixed equal slices and press Check. Cake Stack already provides contextual serving/sharing; this separates fractions from the social food-play purpose.",
+        "distinctness": "Toggle requested count of equal wedges; no sharing recipients, pizza making or travel. Existing Cake Stack equal-sharing studio gives fractions a richer party context."
+      },
+      "closestDuplicates": [
+        "cake-stack",
+        "rainbow-quilt",
+        "watermelon-picnic"
+      ]
+    },
+    {
+      "id": "planet-pairs",
+      "title": "Planet Pairs",
+      "generated": true,
+      "mode": "memory",
+      "sourceDirectory": "examples/planet-pairs",
+      "configuredWorker": "bitgames-planet-pairs",
+      "configuration": "examples/planet-pairs/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Planet pictures add no new matching rules or exploration.",
+        "child": "Matching pairs of planet tokens changes the Memory Match picture bank, not the play. Planet colours/rings add subject appearance but there is no exploration or orbital interaction.",
+        "distinctness": "Identity-pair memory clone of Picnic and original Memory Match; planet appearance/name adds content, not orbit, exploration or a new memory rule."
+      },
+      "closestDuplicates": [
+        "letter-buddies",
+        "memory-match",
+        "picnic-pairs",
+        "tool-twins"
+      ]
+    },
+    {
+      "id": "rain-drop-rhythm",
+      "title": "Rain Drop Rhythm",
+      "generated": true,
+      "mode": "rhythm",
+      "sourceDirectory": "examples/rain-drop-rhythm",
+      "configuredWorker": "bitgames-rain-drop-rhythm",
+      "configuration": "examples/rain-drop-rhythm/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Rain sounds/theme replace the drum in the same sequencer.",
+        "child": "Identical beat/rest sequence copying and composition use a rain-themed model. Rain has no different sound-generation or weather-control mechanism; redundant with Drum Beat Builder.",
+        "distinctness": "Exact rhythm sequencer/check/free mode as Drum with leaf/drop visual and tone. No weather accumulation or rain pattern consequences."
+      },
+      "closestDuplicates": [
+        "drum-beat-builder"
+      ]
+    },
+    {
+      "id": "rainbow-postoffice",
+      "title": "Rainbow Post Office",
+      "generated": true,
+      "mode": "match",
+      "sourceDirectory": "examples/rainbow-postoffice",
+      "configuredWorker": "bitgames-rainbow-postoffice",
+      "configuration": "examples/rainbow-postoffice/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://20b97f92-bitgames-rainbow-postoffice.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Parcel-to-door colour matching gives a satisfying delivery animation, but no postal route, open sorting or ongoing neighbourhood play.",
+        "child": "A parcel colour is requested and a matching choice is delivered. Charming delivery animation cannot supply a delivery route, changing customers or sustained pretend play; consolidate colour play into an existing stronger game.",
+        "distinctness": "Match one coloured parcel to one mailbox, then advance. Deliveries do not accumulate into a village or route; cute mailbox animation does not make a delivery game."
+      },
+      "closestDuplicates": [
+        "footprint-detective",
+        "shadow-theatre",
+        "shape-locksmith"
+      ]
+    },
+    {
+      "id": "rainbow-quilt",
+      "title": "Rainbow Quilt",
+      "generated": true,
+      "mode": "fraction",
+      "sourceDirectory": "examples/rainbow-quilt",
+      "configuredWorker": "bitgames-rainbow-quilt",
+      "configuration": "examples/rainbow-quilt/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Squares distinguish a collection fraction from wedges, but quilt design is not child authored.",
+        "child": "Rectangular patches change the fraction diagram but the child still selects a requested count and checks it. The child cannot design and keep a quilt; creative sewing is only the title.",
+        "distinctness": "Rectangular area representation is an educational difference from radial slices; same toggle-numerator check. No patch choice, sewing, pattern creation or saved quilt."
+      },
+      "closestDuplicates": [
+        "cake-stack",
+        "pizza-moon",
+        "watermelon-picnic"
+      ]
+    },
+    {
+      "id": "rainbow-smoothies",
+      "title": "Rainbow Smoothies",
+      "generated": true,
+      "mode": "mix",
+      "sourceDirectory": "examples/rainbow-smoothies",
+      "configuredWorker": "bitgames-rainbow-smoothies",
+      "configuration": "examples/rainbow-smoothies/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Vessel/drink theming changes none of the three paint-mix outcomes; no recipe experimentation.",
+        "child": "Same two-primary-paints/three-target-colours rule in a cup. It is not a fruit-preparation or customer-serving game and duplicates both Colour Cauldron and existing Paint Splash colour exploration.",
+        "distinctness": "Same two paint bottles and stir as Cauldron; the cup does not make a drink recipe system. Paint as smoothie theme also weakens educational clarity; redundant with existing colour studio."
+      },
+      "closestDuplicates": [
+        "colour-cauldron",
+        "jellyfish-glow-lab",
+        "paint-a-planet",
+        "paint-splash"
+      ]
+    },
+    {
+      "id": "recycling-robots",
+      "title": "Recycling Robots",
+      "generated": true,
+      "mode": "sort",
+      "sourceDirectory": "examples/recycling-robots",
+      "configuredWorker": "bitgames-recycling-robots",
+      "configuration": "examples/recycling-robots/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "The material sorting can belong inside one richer cleanup/robot game rather than a standalone worksheet.",
+        "child": "Dragging six fixed recyclables into three categories is a sorting worksheet. Robots do not form a controllable team or processing system; a cleanup game could absorb this learning without a separate near-identical board.",
+        "distinctness": "Same bin-delivery loop with material labels and robots as decorations. No robot control, recycling machine, transformation or ongoing environment consequence."
+      },
+      "closestDuplicates": [
+        "fruit-veggie-ferry",
+        "habitat-hotel",
+        "season-suitcase"
+      ]
+    },
+    {
+      "id": "reef-patterns",
+      "title": "Reef Patterns",
+      "generated": true,
+      "mode": "pattern",
+      "sourceDirectory": "examples/reef-patterns",
+      "configuredWorker": "bitgames-reef-patterns",
+      "configuration": "examples/reef-patterns/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "The 101st project is another repeating-picture pattern skin; no reef exploration or new interaction justifies it.",
+        "child": "Newly added fish/shell/turtle tokens use exactly the AB/AAB/ABC missing-token rule of Butterfly Patterns, Bead Bridge and Train Carriage Rhythm. This is precisely the catalogue expansion by reskin the new direction should stop.",
+        "distinctness": "Newest project is another exact AB/AAB/ABC gap puzzle, only fish/shell/turtle tokens. It adds no meaningful action, outcome or progression to Butterfly/Bead/Train; clearest unnecessary catalogue expansion."
+      },
+      "closestDuplicates": [
+        "bead-bridge",
+        "butterfly-patterns",
+        "constellation-code",
+        "train-carriage-rhythm"
+      ]
+    },
+    {
+      "id": "rhyming-river",
+      "title": "Rhyming River",
+      "generated": true,
+      "mode": "rhyme",
+      "sourceDirectory": "examples/rhyming-river",
+      "configuredWorker": "bitgames-rhyming-river",
+      "configuration": "examples/rhyming-river/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://b0b11c86-bitgames-rhyming-river.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Frog hopping between picture lily pads is coherent feedback; needs traversable journeys or playful combinations beyond one correct answer.",
+        "child": "A frog hops to the chosen rhyming picture and audio reads all choices, reducing reading burden. Six fixed rhyme sets still make a quiz; preserve the word-sound hook only if it becomes a navigable river or richer spoken play.",
+        "distinctness": "Rhyming is genuinely different language reasoning from spelling; frog hop and ending highlights connect answers to representation. Six fixed sets and answer selection need a playable traversal/discovery system to justify a game."
+      },
+      "closestDuplicates": []
+    },
+    {
+      "id": "ribbon-tailor",
+      "title": "Ribbon Tailor",
+      "generated": true,
+      "mode": "compare",
+      "sourceDirectory": "examples/ribbon-tailor",
+      "configuredWorker": "bitgames-ribbon-tailor",
+      "configuration": "examples/ribbon-tailor/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Selecting a length does not cut, dress or design anything.",
+        "child": "Choose the longest or shortest ribbon from a tiny set. The child cannot measure, cut, attach or design a costume; the tailor fantasy is not embodied in play.",
+        "distinctness": "Length comparison is legitimate new educational dimension, but there is no cutting, dressing, measuring choice or finished creation. Thin extreme-value selection."
+      },
+      "closestDuplicates": [
+        "cloud-number-race",
+        "deep-sea-divers",
+        "dinosaur-size-parade"
+      ]
+    },
+    {
+      "id": "robot-dance-code",
+      "title": "Robot Dance Code",
+      "generated": true,
+      "mode": "echo",
+      "sourceDirectory": "examples/robot-dance-code",
+      "configuredWorker": "bitgames-robot-dance-code",
+      "configuration": "examples/robot-dance-code/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A robot responds with directional movements; preserve as a candidate only if programming gets persistent, child-authored effects.",
+        "child": "A robot briefly moves in four directions and returns to rest for each echoed note. This is not an authored dance/program that transforms the world; the same memory sequence is merely recast as coding.",
+        "distinctness": "Arrows trigger brief actor excursions that return to rest; same index-sequence checking and composer as Frog. No cumulative robot program/world state, so coding promise is mainly decoration."
+      },
+      "closestDuplicates": [
+        "crystal-cave-echo",
+        "frog-choir",
+        "sleepy-owl-lullaby"
+      ]
+    },
+    {
+      "id": "robot-reflections",
+      "title": "Robot Reflections",
+      "generated": true,
+      "mode": "mirror",
+      "sourceDirectory": "examples/robot-reflections",
+      "configuredWorker": "bitgames-robot-reflections",
+      "configuration": "examples/robot-reflections/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Robot lights are another reflected grid decoration.",
+        "child": "A robot panel contains the same reflection matrix and verification as Butterfly Mirrors. No robot behaviour or authored robot design follows, making this a theme reskin.",
+        "distinctness": "Same binary mirror grid and success wobble. Robot does not respond to a designed program/pattern after completion."
+      },
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "castle-window-symmetry",
+        "snowflake-studio"
+      ]
+    },
+    {
+      "id": "rocket-docking",
+      "title": "Rocket Docking",
+      "generated": true,
+      "mode": "rotate",
+      "sourceDirectory": "examples/rocket-docking",
+      "configuredWorker": "bitgames-rocket-docking",
+      "configuration": "examples/rocket-docking/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Docking key rotates; the rocket does not have navigable docking physics.",
+        "child": "Same four possible orientations and check as Gem Turner, with a docking-key label. There is no steering, momentum, connection-building or station navigation to make docking a game.",
+        "distinctness": "Despite config shape:arrow, rotate() constructs identical triangular-tip/stem/tooth key as Gem. Only reward model is rocket; no docking flight, alignment axes or connection physics."
+      },
+      "closestDuplicates": [
+        "gem-turner",
+        "tangram-turntable"
+      ]
+    },
+    {
+      "id": "rocket-garage",
+      "title": "Rocket Garage",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/rocket-garage",
+      "configuredWorker": "bitgames-rocket-garage",
+      "configuration": "examples/rocket-garage/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://bfab9816-bitgames-rocket-garage.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Custom parts and paint, launch, steering and destination discovery connect creation with action and persistent unlocking.",
+        "child": "Part selection and colouring change a child-owned rocket, followed by launch/steering and part unlocks. Design-comparison mode connects experimentation to something the child built.",
+        "distinctness": "Shares star-catching during flight but retains a distinct design\u2192test\u2192unlock loop; later rocket quizzes/path themes cannot substitute for this agency."
+      },
+      "closestDuplicates": [
+        "dragon-glide",
+        "paint-a-planet",
+        "rocket-docking",
+        "star-catcher"
+      ]
+    },
+    {
+      "id": "rover-rescue",
+      "title": "Rover Rescue",
+      "generated": true,
+      "mode": "path",
+      "sourceDirectory": "examples/rover-rescue",
+      "configuredWorker": "bitgames-rover-rescue",
+      "configuration": "examples/rover-rescue/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Robot walking to a rocket is another skin of Turtle Treasure Map\u2019s grid navigation.",
+        "child": "Robot/rocket rewards are the same path generator and command queue as the bee/turtle/penguin versions. Calling it algorithms does not add mechanics; retain one route-planning concept rather than four releases.",
+        "distinctness": "Arrow programs enact visible routes and are materially distinct from original driving/flight games. All four path listings are clones; rebuild this one with consequential missions or interactive mechanisms, not four renamed grids."
+      },
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "penguin-ice-path",
+        "turtle-treasure-map"
+      ]
+    },
+    {
+      "id": "season-suitcase",
+      "title": "Season Suitcase",
+      "generated": true,
+      "mode": "sort",
+      "sourceDirectory": "examples/season-suitcase",
+      "configuredWorker": "bitgames-season-suitcase",
+      "configuration": "examples/season-suitcase/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Preset item-to-season classification overlaps Weather Wardrobe without travel or changing weather.",
+        "child": "Packing six predetermined warm/cold items has little child ownership or replay once the answers are known. It overlaps Weather Wardrobe\u2019s clothing quiz without becoming a dressing/pretend-play toy.",
+        "distinctness": "Same sorting action using warm/cold clothes. Substantially overlaps Weather Wardrobe subject; packing never leads to a trip or character experience."
+      },
+      "closestDuplicates": [
+        "fruit-veggie-ferry",
+        "habitat-hotel",
+        "recycling-robots"
+      ]
+    },
+    {
+      "id": "senses-safari",
+      "title": "Senses Safari",
+      "generated": true,
+      "mode": "choice",
+      "sourceDirectory": "examples/senses-safari",
+      "configuredWorker": "bitgames-senses-safari",
+      "configuration": "examples/senses-safari/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Selecting a sense and reading an exploration note cannot substitute for sensory interaction.",
+        "child": "Explore object mostly bobs a model, and smell/touch/taste are explicitly imagined. Then a body-part answer is chosen. This has neither a safari nor meaningful sensory experimentation.",
+        "distinctness": "Five body-part questions; Explore merely bobs/spins object and sometimes plays tone. No safari, search, texture or sensory puzzle system; narrated imagination is not a simulation."
+      },
+      "closestDuplicates": [
+        "healthy-plate-party",
+        "kindness-cafe",
+        "weather-wardrobe"
+      ]
+    },
+    {
+      "id": "shadow-theatre",
+      "title": "Shadow Theatre",
+      "generated": true,
+      "mode": "match",
+      "sourceDirectory": "examples/shadow-theatre",
+      "configuredWorker": "bitgames-shadow-theatre",
+      "configuration": "examples/shadow-theatre/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://3416403c-bitgames-shadow-theatre.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Silhouette matching does not permit moving lights or puppets; its title promises a richer theatre toy.",
+        "child": "The child matches one of four toy silhouettes; there is no placing objects, changing a light or making a shadow performance. The theatre promise exceeds the actual multiple-choice loop.",
+        "distinctness": "Recognizing a blacked-out model is a distinct perceptual task, not a colour reskin. No lamp movement, puppet arrangement, silhouette creation or show exists; title promises more theatre than one answer choice delivers."
+      },
+      "closestDuplicates": [
+        "footprint-detective",
+        "rainbow-postoffice",
+        "shape-locksmith"
+      ]
+    },
+    {
+      "id": "shape-locksmith",
+      "title": "Shape Locksmith",
+      "generated": true,
+      "mode": "match",
+      "sourceDirectory": "examples/shape-locksmith",
+      "configuredWorker": "bitgames-shape-locksmith",
+      "configuration": "examples/shape-locksmith/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://550ead12-bitgames-shape-locksmith.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "A physical-looking key entering a matching lock is a promising cause/effect toy; expand actual manipulation rather than more questions.",
+        "child": "Selecting a matching key opens a lock, which is connected feedback, but the same four shapes cycle through five answer boards. No room exploration or meaningful castle progression makes this a thin matching minigame.",
+        "distinctness": "Shape identity is distinct educational content and door opening is a clear response. Still a single correct key per round, no castle to explore or persistent locks; salvage shape matching inside a stronger game rather than another standalone quiz."
+      },
+      "closestDuplicates": [
+        "footprint-detective",
+        "rainbow-postoffice",
+        "shadow-theatre"
+      ]
+    },
+    {
+      "id": "sleepy-owl-lullaby",
+      "title": "Sleepy Owl Lullaby",
+      "generated": true,
+      "mode": "echo",
+      "sourceDirectory": "examples/sleepy-owl-lullaby",
+      "configuredWorker": "bitgames-sleepy-owl-lullaby",
+      "configuration": "examples/sleepy-owl-lullaby/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "An owl bobs while sine tones repeat; lullaby theme does not change the core sequence mechanic.",
+        "child": "The owl bobs as a short tone sequence is copied. A composition toggle exists, but this repeats the choir/cave rule and does not establish a distinct bedtime or caring loop for the youngest audience.",
+        "distinctness": "Three rather than four pads and a nighttime palette, same sequence-copy/composer. Owl has no sleep state influenced by tune; redundant with one musical playground."
+      },
+      "closestDuplicates": [
+        "crystal-cave-echo",
+        "frog-choir",
+        "robot-dance-code"
+      ]
+    },
+    {
+      "id": "snail-spiral",
+      "title": "Snail Spiral",
+      "generated": true,
+      "mode": "trace",
+      "sourceDirectory": "examples/snail-spiral",
+      "configuredWorker": "bitgames-snail-spiral",
+      "configuration": "examples/snail-spiral/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Three spiral densities offer motor practice, not changing goals or an exploratory snail toy.",
+        "child": "Following a prescribed spiral gives fine-motor practice but almost no choice, discovery or replay beyond three densities. The flower at the endpoint is a reward model, not a garden the child shapes.",
+        "distinctness": "One predefined spiral per difficulty is repeated through all five rounds. Hero and flower goal reward differ, but there is no navigation choice or evolving drawing artifact."
+      },
+      "closestDuplicates": [
+        "kite-flight-school",
+        "letter-trails",
+        "number-spark-trails"
+      ]
+    },
+    {
+      "id": "snowflake-studio",
+      "title": "Snowflake Studio",
+      "generated": true,
+      "mode": "mirror",
+      "sourceDirectory": "examples/snowflake-studio",
+      "configuredWorker": "bitgames-snowflake-studio",
+      "configuration": "examples/snowflake-studio/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Sixfold repeated motifs and free design create a genuinely different generative art affordance; needs exporting, richer materials and play validation.",
+        "child": "Six-arm reflection is an actual geometric variation rather than the exact square-grid reskin. It still copies a prescribed pattern; promising only as a free snowflake designer with saved creations, not as currently packaged symmetry questions.",
+        "distinctness": "Linked six-arm propagation plus free motif creation is genuine systemic difference from standard mirrors. Only 2\u20134 shared bits produces few creations; deserves redesign as one richer creative toy, not certification as finished."
+      },
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "castle-window-symmetry",
+        "robot-reflections"
+      ]
+    },
+    {
+      "id": "sound-wave-lab",
+      "title": "Sound Wave Lab",
+      "generated": true,
+      "mode": "pitch",
+      "sourceDirectory": "examples/sound-wave-lab",
+      "configuredWorker": "bitgames-sound-wave-lab",
+      "configuration": "examples/sound-wave-lab/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Two or three fixed tones plus simple composer overlap Frog Choir and Rhythm Builder.",
+        "child": "Listen to every tone before high/low answer buttons unlock; compose mode genuinely exists but repeats the same small note palette as other musical titles. Wave drawings alone do not justify a separate lab.",
+        "distinctness": "Same 2\u20133 pitch choices/composer as Bird, plus model sine waves. Echo/rhythm already supply richer music creation seeds; no wave manipulation or physical sound experimentation."
+      },
+      "closestDuplicates": [
+        "birdsong-tuner"
+      ]
+    },
+    {
+      "id": "space-station-schedule",
+      "title": "Space Station Schedule",
+      "generated": true,
+      "mode": "clock",
+      "sourceDirectory": "examples/space-station-schedule",
+      "configuredWorker": "bitgames-space-station-schedule",
+      "configuration": "examples/space-station-schedule/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Space scenery does not cause launches, shift changes or orbital events at chosen times.",
+        "child": "Same generated target times and hand controls as Cuckoo Clock Garden, with a rocket reward. No scheduling choices or controllable station develops beyond setting a clock.",
+        "distinctness": "Same hour/minute target and controls as Cuckoo; rocket reward is a prop. No schedule with multiple events, resource conflicts or actual launch timing."
+      },
+      "closestDuplicates": [
+        "bakery-alarm",
+        "bunny-bedtime",
+        "cuckoo-clock-garden"
+      ]
+    },
+    {
+      "id": "sprout-sunflower",
+      "title": "Sprout to Sunflower",
+      "generated": true,
+      "mode": "order",
+      "sourceDirectory": "examples/sprout-sunflower",
+      "configuredWorker": "bitgames-sprout-sunflower",
+      "configuration": "examples/sprout-sunflower/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Four prescribed plant stages do not let children grow or care for a plant.",
+        "child": "The same four life-cycle pictures are placed in order every round, with facts read out. This is useful instructional material but lacks plant tending, elapsed growth or decisions that make a garden respond.",
+        "distinctness": "Same four-stage order reconstruction on every difficulty/round. Models change to stages but child never supplies water/light or observes consequences from choices; not plant growing play."
+      },
+      "closestDuplicates": [
+        "breakfast-story",
+        "butterfly-life-lab",
+        "frog-life-lab"
+      ]
+    },
+    {
+      "id": "star-catcher",
+      "title": "Star Catcher",
+      "generated": false,
+      "mode": "bespoke",
+      "sourceDirectory": "examples/star-catcher",
+      "configuredWorker": "bitgames-star-catcher",
+      "configuration": "examples/star-catcher/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://881b18f2-bitgames-star-catcher.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": true,
+      "judgeVerdicts": {
+        "play": "retain_candidate",
+        "child": "retain_candidate",
+        "distinctness": "retain_candidate"
+      },
+      "majorityVerdict": "retain_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "protect_owner_favourite",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Continuous steering, waves, beneficial/harmful pickups and travel goals provide immediate feedback and motor mastery.",
+        "child": "Continuous rocket steering, changing planets and multiple pickups support action, mastery and movement-linked feedback. Distinct enough from the static counting boards; overlap with Dragon Glide should be tested rather than ignored.",
+        "distinctness": "Closest original overlap is Dragon/Rocket flight. Falling-target interception/powers differ from Dragon course/fire and Rocket design; keep as candidate but children may still prefer only one flight game."
+      },
+      "closestDuplicates": [
+        "dragon-glide",
+        "rocket-garage"
+      ]
+    },
+    {
+      "id": "star-share",
+      "title": "Star Share",
+      "generated": true,
+      "mode": "arithmetic",
+      "sourceDirectory": "examples/star-share",
+      "configuredWorker": "bitgames-star-share",
+      "configuration": "examples/star-share/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Actually distributing objects among groups provides agency and a fair-sharing story to develop.",
+        "child": "Actually distributing biscuits between recipients can make fairness visible. Current equal-share completion merely unlocks a numerical answer; consider a serving/caring game with hungry characters and child-chosen amounts, preferably consolidated with Cake Stack.",
+        "distinctness": "Equal distribution requires a real toy-to-recipient decision and conserved quantities, unlike simply typing an answer. Salvage as a cooperative picnic/feeding system; current numeric-answer gate still reads as a worksheet."
+      },
+      "closestDuplicates": [
+        "acorn-addition",
+        "bakery-bundles",
+        "submarine-subtraction"
+      ]
+    },
+    {
+      "id": "submarine-subtraction",
+      "title": "Submarine Subtraction",
+      "generated": true,
+      "mode": "arithmetic",
+      "sourceDirectory": "examples/submarine-subtraction",
+      "configuredWorker": "bitgames-submarine-subtraction",
+      "configuration": "examples/submarine-subtraction/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Counters disappearing do not make a navigable submarine or rescue mission.",
+        "child": "A specified number of fish must be moved away and then a numeric answer selected. There is no controllable submarine or changing marine encounter; the physical representation remains a subtraction worksheet.",
+        "distinctness": "Moving fish away conserves a visible remainder and is not identical addition. No submarine control or ocean story beyond a blue receiver; a manipulative subactivity, weak standalone game."
+      },
+      "closestDuplicates": [
+        "acorn-addition",
+        "bakery-bundles",
+        "star-share"
+      ]
+    },
+    {
+      "id": "sunlight-sprouts",
+      "title": "Sunlight Sprouts",
+      "generated": true,
+      "mode": "experiment",
+      "sourceDirectory": "examples/sunlight-sprouts",
+      "configuredWorker": "bitgames-sunlight-sprouts",
+      "configuration": "examples/sunlight-sprouts/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Yes/No supply choice grows a preset plant after a short animation; no persistent care or meaningful multivariable experiment.",
+        "child": "Choosing yes/no for six supplied objects triggers a plant-growth demonstration. It does not model tending over time or changing combinations of supplies; less engaging than an integrated garden-care concept.",
+        "distinctness": "Prediction+Test reduces plant response to hardcoded yes/no supply and scale animation. No tending, growing over play time or interaction among conditions; especially weak scientific/play depth."
+      },
+      "closestDuplicates": [
+        "float-boat-lab",
+        "magnet-discovery"
+      ]
+    },
+    {
+      "id": "tangram-turntable",
+      "title": "Tangram Turntable",
+      "generated": true,
+      "mode": "rotate",
+      "sourceDirectory": "examples/tangram-turntable",
+      "configuredWorker": "bitgames-tangram-turntable",
+      "configuration": "examples/tangram-turntable/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Seven-piece drag/rotate composition provides spatial agency and enough combinatorial potential to rework into a full puzzle toy.",
+        "child": "Seven real polygons can be dragged and rotated, offering tactile spatial reasoning that goes beyond the single-key rotation rule. All rounds target the same square partition; add different silhouettes and creative construction before treating it as a replayable release.",
+        "distinctness": "Seven different polygons with rotation and placement constitute a real spatial puzzle, not another quarter-turn key. Current one square outline on every round and auto matching-outline action limit replay; expand constructions before considering release."
+      },
+      "closestDuplicates": [
+        "gem-turner",
+        "rocket-docking"
+      ]
+    },
+    {
+      "id": "tool-twins",
+      "title": "Tool Twins",
+      "generated": true,
+      "mode": "memory",
+      "sourceDirectory": "examples/tool-twins",
+      "configuredWorker": "bitgames-tool-twins",
+      "configuration": "examples/tool-twins/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Semantic helper/object pairs add a learning distinction but not a new play loop.",
+        "child": "Matching hidden helpers with tools adds arbitrary association knowledge to an existing memory board. It is neither a workshop nor job role-play, and repeated memorisation contributes little beyond Memory Match.",
+        "distinctness": "Helper/object relation differs from identical-pair memory and has educational merit. Still the same flip/match system; ship as one original Memory Match card set at most, not a separate thin game."
+      },
+      "closestDuplicates": [
+        "letter-buddies",
+        "memory-match",
+        "picnic-pairs",
+        "planet-pairs"
+      ]
+    },
+    {
+      "id": "toy-town-builder",
+      "title": "Toy Town Builder",
+      "generated": true,
+      "mode": "build",
+      "sourceDirectory": "examples/toy-town-builder",
+      "configuredWorker": "bitgames-toy-town-builder",
+      "configuration": "examples/toy-town-builder/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Free height editing is a start, but four fixed towers with four levels is far below a construction toy\u2019s implied agency.",
+        "child": "Free-building toggle and undo allow actual child-authored tower heights. It remains 3\u20134 predetermined pads with four floors and no saving, characters or changing town use; rebuild as a creative town toy with a purpose rather than blueprint copying.",
+        "distinctness": "Free building mode is real creation, but just choosing heights on 3/4 fixed pads. Keep only as a concept for a spatial construction sandbox, not an endorsement of current quality."
+      },
+      "closestDuplicates": [
+        "castle-block-blueprints"
+      ]
+    },
+    {
+      "id": "train-carriage-rhythm",
+      "title": "Train Carriage Rhythm",
+      "generated": true,
+      "mode": "pattern",
+      "sourceDirectory": "examples/train-carriage-rhythm",
+      "configuredWorker": "bitgames-train-carriage-rhythm",
+      "configuration": "examples/train-carriage-rhythm/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "The train shifts sideways after the answer; children do not build or drive a train.",
+        "child": "The completed row slides a little after a missing-token answer. There is no train building, riding, passenger delivery or audible rhythm system; the title disguises the same pattern worksheet.",
+        "distinctness": "Exact repeating-gap task; row shifts 1.2 units after answer. No train travel, cargo ordering consequences or musical rhythm system despite the name."
+      },
+      "closestDuplicates": [
+        "bead-bridge",
+        "butterfly-patterns",
+        "constellation-code",
+        "reef-patterns"
+      ]
+    },
+    {
+      "id": "turtle-treasure-map",
+      "title": "Turtle Treasure Map",
+      "generated": true,
+      "mode": "path",
+      "sourceDirectory": "examples/turtle-treasure-map",
+      "configuredWorker": "bitgames-turtle-treasure-map",
+      "configuration": "examples/turtle-treasure-map/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "2/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Route planning gives multiple valid solutions and a useful foundation for one real exploration game.",
+        "child": "The turtle/pearl changes assets and prompt while the same generated grid, arrows, obstacle rule and Go execution remain. No map exploration or changing treasure system differentiates it from Bee Pollen Trail.",
+        "distinctness": "Same random grids, arrows, undo and Go as three path siblings. Shell goal introduces no treasure search, inventory or map-reading difference."
+      },
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "penguin-ice-path",
+        "rover-rescue"
+      ]
+    },
+    {
+      "id": "watermelon-picnic",
+      "title": "Watermelon Picnic",
+      "generated": true,
+      "mode": "fraction",
+      "sourceDirectory": "examples/watermelon-picnic",
+      "configuredWorker": "bitgames-watermelon-picnic",
+      "configuration": "examples/watermelon-picnic/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "The wedge geometry and numerator check duplicate Pizza Moon.",
+        "child": "The same fraction generator and coloured radial portions replace pizza with watermelon. There is no picnic construction or character feeding; clear near-duplicate.",
+        "distinctness": "Exact radial fraction-selection clone of Pizza with rind/seeds. Picnic is not a gameplay system."
+      },
+      "closestDuplicates": [
+        "cake-stack",
+        "pizza-moon",
+        "rainbow-quilt"
+      ]
+    },
+    {
+      "id": "weather-wardrobe",
+      "title": "Weather Wardrobe",
+      "generated": true,
+      "mode": "choice",
+      "sourceDirectory": "examples/weather-wardrobe",
+      "configuredWorker": "bitgames-weather-wardrobe",
+      "configuration": "examples/weather-wardrobe/cloudflare.config.ts",
+      "recordedDeploymentUrl": null,
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "remove_candidate",
+        "child": "remove_candidate",
+        "distinctness": "remove_candidate"
+      },
+      "majorityVerdict": "remove_candidate",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": false,
+      "reasons": {
+        "play": "Clothes change after a preset answer, but children cannot freely dress a character and observe comfort/weather consequences.",
+        "child": "Four weather questions move a correct garment to a rabbit but offer no free dressing, trying clothing in weather, or character care. It duplicates Season Suitcase\u2019s practical clothing knowledge with another quiz.",
+        "distinctness": "Four fixed illustrated multiple-choice prompts, repeated by level/round. Clothing flies near bunny only after right answer; no dress-up selection, journey or observable comfort consequence."
+      },
+      "closestDuplicates": [
+        "healthy-plate-party",
+        "kindness-cafe",
+        "senses-safari"
+      ]
+    },
+    {
+      "id": "word-rocket",
+      "title": "Word Rocket",
+      "generated": true,
+      "mode": "spell",
+      "sourceDirectory": "examples/word-rocket",
+      "configuredWorker": "bitgames-word-rocket",
+      "configuration": "examples/word-rocket/cloudflare.config.ts",
+      "recordedDeploymentUrl": "https://80a3a2a7-bitgames-word-rocket.ferdousbd.workers.dev/",
+      "remoteExistenceVerified": false,
+      "storeListingVerified": false,
+      "declaredSharedResourceKeywords": [],
+      "deletionAuthorizedForThisExactId": false,
+      "ownerProtected": false,
+      "judgeVerdicts": {
+        "play": "rework",
+        "child": "rework",
+        "distinctness": "rework"
+      },
+      "majorityVerdict": "rework",
+      "agreement": "3/3",
+      "coordinatorRecommendation": "retire_current_generated_game",
+      "salvageConcept": true,
+      "reasons": {
+        "play": "Words visibly load a rocket and an end animation carries the crew; one stronger word adventure could integrate this reward into actual travel.",
+        "child": "Spelled toy words ride the rocket, so completing a word affects a visible carrier. Only six fixed three-letter words underlie repeated five-step sessions; fold literacy into a fuller controllable journey with discoveries, rather than another spelling worksheet.",
+        "distinctness": "Spelled friends form a crew with a substantial launch finale, stronger payoff than the sibling spelling themes. Still the same six-word exercise; combine vocabularies and make words influence missions instead of preserving three apps."
+      },
+      "closestDuplicates": [
+        "animal-alphabet",
+        "picnic-word-basket"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,994 @@
+{
+  "date": "2026-10-08",
+  "status": "chromium_passed_webkit_audio_limitation",
+  "method": "Headless touch-enabled Playwright; local original-only packaged games; 834x1194 and 1194x834; loading, menu and active-play layout, touch targets, overflow, hit testing, start tap, page exceptions and HTTP failures. No child or physical-device assessment.",
+  "previewOrigin": "http://localhost:4217",
+  "engines": {
+    "chromium": {
+      "exitCode": 0,
+      "passedGames": 12,
+      "results": [
+        {
+          "id": "balloon-pop",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "bumper-ducks",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "bunny-hop",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "cake-stack",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "crash-racers",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "dragon-glide",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "fish-pond",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "memory-match",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "paint-splash",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "penguin-bowling",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "rocket-garage",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "star-catcher",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        }
+      ]
+    },
+    "webkit": {
+      "exitCode": 1,
+      "passedGames": 11,
+      "results": [
+        {
+          "id": "balloon-pop",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "bumper-ducks",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "bunny-hop",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "cake-stack",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "dragon-glide",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "fish-pond",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "memory-match",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "paint-splash",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "penguin-bowling",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "rocket-garage",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        },
+        {
+          "id": "star-catcher",
+          "loading": false,
+          "portrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "landscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playPortrait": {
+            "width": 834,
+            "height": 1194,
+            "scrollWidth": 834,
+            "scrollHeight": 1194,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "playLandscape": {
+            "width": 1194,
+            "height": 834,
+            "scrollWidth": 1194,
+            "scrollHeight": 834,
+            "small": [],
+            "blocked": [],
+            "outside": []
+          },
+          "errors": [],
+          "network": []
+        }
+      ],
+      "limitation": {
+        "id": "crash-racers",
+        "error": "InvalidStateError: Failed to start the audio device",
+        "isolatedRetryExitCode": 1,
+        "observed": "Menu and active-play layout checks completed in both orientations; final clean-page-error assertion failed. No sound-output pass claimed."
+      }
+    }
+  },
+  "originalFilesChanged": false,
+  "harnessChanged": false
+}

@@ -1,0 +1,812 @@
+{
+  "updated": "2026-10-07",
+  "covers": 89,
+  "builder": "examples/_studio/blender/build_assets.py",
+  "blender": "5.2.2 LTS",
+  "buildLog": "/tmp/bitgames-queue-blender-header-final.log",
+  "buildExit": 0,
+  "scope": "Individual standalone cover inspection; browser/thumbnail/gesture/release gates pending",
+  "records": [
+    {
+      "id": "firefly-lanterns",
+      "sha256": "ddd75262c6e100ad621569e92b00ca2ad2cb983ca20663193b45c0030fdff30f",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "orchard-baskets",
+      "sha256": "a4e908d2af639a8e710deac566b33072ef004913945e613b8ff7c9348db0d655",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "moon-pebbles",
+      "sha256": "4467bfa3745e17f5db0e7ecaff6008078280435a35d955f434342079ea55e660",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "coral-cleanup",
+      "sha256": "ff9137e855951cf75563ad2a45af26d2c155117fe3fd8b1e05413fce1bd3ea0a",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "rainbow-postoffice",
+      "sha256": "7b5ba43c9b540bb640bef70189a79c8a7b90d0b8922639d97542d1c819660449",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "shape-locksmith",
+      "sha256": "6a0e6047c7870b01febbc07b3b62697f78c9aa117e21920d0ace55621ed144a8",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "footprint-detective",
+      "sha256": "77d0424cc939b6a94bc05a713031461fc49a87a07109afa37d739983c7126e9f",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "shadow-theatre",
+      "sha256": "e893d199823f5ea778bad29d7a29bf8f71bd10ddf254c3e94a25d7da1713aaa7",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "habitat-hotel",
+      "sha256": "db371e10a2891581f98ef84d73b9f8f04597ffc4188aa7e7eb481bab3bed8bbe",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "recycling-robots",
+      "sha256": "7df235e8bcebc4d6f6aa2f366cf9661cd9fa0098da5706fcbe28398d89fc49d6",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "fruit-veggie-ferry",
+      "sha256": "d6c2ec90a0544ee9d89a27dd826808bd6bb347a2b404607ae138c146b7ebb22d",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "season-suitcase",
+      "sha256": "a9da0650db4702fa983c9d2d5ceef7d3e980e6286b8843dd2e65dfe6c2359eba",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "butterfly-patterns",
+      "sha256": "856abd8636f4de8dc5053a1d9f1593fbb3417a37321c0489f9270ff145d74b59",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "bead-bridge",
+      "sha256": "ce35c39b46d4d409000ed6b88fdf0ab8f8e046f83503bd3d44f4566742159db2",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "train-carriage-rhythm",
+      "sha256": "a65aee0a202897bbb27dcb82f1d9fa355464bb072d6cc861447fb1e2aa883b58",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "constellation-code",
+      "sha256": "ba7047d04459309be9760965321ecc4438ad61bc81b90f436f6acea5432f4448",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "sprout-sunflower",
+      "sha256": "e6e34403feed8fb7f88781716f465d92b4959bfb7d4ea73aa5b3771afb3101a1",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "breakfast-story",
+      "sha256": "3883de132f1e01bc33b5736220baa72694226d4b449dc394390319e2c47d5e5b",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "frog-life-lab",
+      "sha256": "83c5a00a9c7dabe30d9656b678342cc9847341daa4a895dd52632eec31fd5cfc",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "butterfly-life-lab",
+      "sha256": "f13a9e22baee78ea3c26331997094eecaa9531170cb0cfc9e4902c1294606ae5",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "dinosaur-size-parade",
+      "sha256": "1a4378bae6b888546c9fe6b827d96fa7c20a697432858f141ad5a6d2ef1f5ba6",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "cloud-number-race",
+      "sha256": "4bd0e3e20aa5efd14a19ba3ea3cb2c4ed94fc88e31c94d137edf3fc438aaa61d",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "ribbon-tailor",
+      "sha256": "a1fecaa84ff86cf080746e2567bf86ad7379cd8dd2e06d465ec253e1ea5bf539",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "deep-sea-divers",
+      "sha256": "bcd3beb2f36b5ade5293e8bea8a1d12e1af7b9ddffac61590c8f7c49c78cabbb",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "picnic-pairs",
+      "sha256": "e844bc56f48c90471ae85960db222fa71ffddf80111bd3c847e1de44b4d71a53",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "planet-pairs",
+      "sha256": "624db1869b77ead83019287aafc8228d43524c73e4d2680ab9f9aac22e618839",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "tool-twins",
+      "sha256": "606058901f8518037cab439cb4de2280d252de97f5ea567bd8f9d44ef5c1fd22",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "letter-buddies",
+      "sha256": "f1e316ef54ae07ec64d303d54ad8d7b15d042e64764398f57456688d44be3e68",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "frog-choir",
+      "sha256": "0dce7370dc2641aa7fbf9aeb58e99f8549a811e315d269015b4f72d4a9e6197e",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "crystal-cave-echo",
+      "sha256": "542237585df7d6a74e517a03f8fc977b7f2cc22100cb1fd8ac7345d2c82633e0",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "robot-dance-code",
+      "sha256": "1cb86c2ce1e3bbc32e7a7a6370eb217ed5fb0cd2009ffae6b9f0ed111f9b63e8",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "sleepy-owl-lullaby",
+      "sha256": "8a210ae1e604c2f4d38cb409451fcc4d364f6b4c53ec64f155b434ed0164f7fd",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "letter-trails",
+      "sha256": "a93618ec4d3897f56856d3d621ad83b6a50543d1f6fe7db9469bd8ff3fefc24e",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "word-rocket",
+      "sha256": "4b80044ab1628e5a46c1e087464072f6277ae974ced85cfea6db009c606178cc",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "animal-alphabet",
+      "sha256": "29dcdbc8451895ab51571d764560f55d6691e338a7b177d8314c0e510e84b023",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "picnic-word-basket",
+      "sha256": "ee53d3e2bdd14932e64b9e6022803b185e29fba2156fdc8792e6d4c9e47eb92c",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "rhyming-river",
+      "sha256": "eac2e3985602355f70180119f8d13c328f0aa048a82ec859c77e36e53a30e526",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "reef-patterns",
+      "sha256": "347e8484e28000103ab854a463a13a27a5b1082eeebe3198ff9715f1586b399e",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "bee-pollen-trail",
+      "sha256": "67728cef87d5f3ed097b242fd08369ffdb9e3212bd015703ab48c0a43b0d0de8",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "turtle-treasure-map",
+      "sha256": "ce69c0b1a4ef25ec459da05a846994ef7a3fe31aaee18bd1ea4ae4980acc6d76",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "rover-rescue",
+      "sha256": "112a07d98c8b8647e739c83ed5f0d826090276e12ffd6e8e46ee3370c3dbb48f",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "penguin-ice-path",
+      "sha256": "c16bca9af27a4799230b4af74883e82c82d7603c7c764054ac842071551c9a04",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "snail-spiral",
+      "sha256": "431caf6fc5b23254d2828bc629d2294a024b6dd9a960904b3b372e68308d2edb",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "kite-flight-school",
+      "sha256": "eed047af7ac97c86af42583786ab9e1e2341b59af3186de304daa377305da85e",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "number-spark-trails",
+      "sha256": "401d25d4da32598db5699714d09b4e05064f9d38de3afba79bb16673a562287e",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "acorn-addition",
+      "sha256": "ed78e3e62a181a77b7d5de7c2347392693cb2217c434a22936b989191fa5e72c",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "submarine-subtraction",
+      "sha256": "bd141812c3af286d5d397d94188b7ca4ff38e9162c2741a77de4640270e65a6d",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "bakery-bundles",
+      "sha256": "272a47ced377c06ef8c88230b5d63c6b989b6b868233cb8b27e19b2930638903",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "star-share",
+      "sha256": "8f376e5731c037bc9ed7d9ca76c78e08e2791f8557af698c2f3da0a2760b1efa",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "bear-balance",
+      "sha256": "c6c0b9ed7e2509a1cd5b487c59da783e9acaf6981828cfd4af5a0299e0c203a1",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "parcel-weights",
+      "sha256": "68c1f209ad08ea14e08924cab0b815680076e822dd6033565bb573ce2477b85c",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "pebble-equations",
+      "sha256": "0db34146ceb7bf291b8413f2177894924f1e27218b315ecfdd5769ead8b6260e",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "colour-cauldron",
+      "sha256": "d8081cb191aed3512f432f0df535fb464dbb848deaebc087d55a5c5195a60910",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "rainbow-smoothies",
+      "sha256": "3c8008b54438efba05121e9635ef7a626a23e44fd3e2fe2f00b30eae14d08a08",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "jellyfish-glow-lab",
+      "sha256": "83a5140740cd222e895fbdff0191593b45c1f0dcc5ee3eaad655e1abfc9e88cc",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "paint-a-planet",
+      "sha256": "b027ddfa76478e8bfd1e560d862955b7b044cf126a11b7c321399c691403f860",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "giraffe-ruler",
+      "sha256": "80c93ba4bec08cbd0899b6d3bd00cefad6a34bc9ce2630dfa20f86a6ca9bd2b4",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "bridge-builder",
+      "sha256": "1ee0b66b8a96eb510e6920a7f864bf0fbff2a2028442653441c6a8c06ead6d44",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "garden-fence",
+      "sha256": "3f8bcbf60091e1fed16fb8c6defbe64cce7213314892d62c917fd6ab7f8b4904",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "comet-tail-measure",
+      "sha256": "009cd2a686c6b04aae67d375d131e4a48c832ba9fbd9a040aa620ce1512b9d21",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "magnet-discovery",
+      "sha256": "2bcbe07b3f858a14262fa9418e4b49c5a94c2fa15bddc1d22af41be379d15fb6",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "float-boat-lab",
+      "sha256": "45e10922776414e3db6c8c82bc6a94bb58e49a113b856b453266d560e9f90063",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "sunlight-sprouts",
+      "sha256": "a3fadfc185350d2796b5c94339bb9885200ba5d8bdd0d873fd5277bdfb396adb",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "pizza-moon",
+      "sha256": "7229601e1af8015714192848cf89fe1654b311ddaa686543701cbd98c9f6ab96",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "watermelon-picnic",
+      "sha256": "8291933cf3631d7b528b9c226c0221aa57fd6ce683c12daf9fa04879bdec6833",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "rainbow-quilt",
+      "sha256": "961c2987c4b7caf9eefdba9ef17e9371e5c7b0ffa4903252542a7ea015f9aead",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "cuckoo-clock-garden",
+      "sha256": "0092acb14f288d2eac34371a63add090715f6927b3620fac9f8281bd8a77c791",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "space-station-schedule",
+      "sha256": "35826d250310c1aa9748a5ba8eb0f89383056d3ff6851dccf90637bc08444cce",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "bunny-bedtime",
+      "sha256": "da7b46e9d2731d048273f8d6f4cd81140190c44255a39f2c9992914a377ff888",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "bakery-alarm",
+      "sha256": "6ed4ce5d7f11cc9f0eed9781d79ce662f2c0f4caac0c9672c0768b45f69f271b",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "butterfly-mirrors",
+      "sha256": "5f84e4e2afcb1a431d7761dab2ac13d4f6dfd655a0735aa7a9d71f644a5c6b43",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "castle-window-symmetry",
+      "sha256": "dbc02821a404f729c1d7cf45299c1c450869e6d169e229d0b83f398d99406943",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "robot-reflections",
+      "sha256": "b5af9242775ae902a38b92952e2294bbe91df1b1ebc3192529d78f6b13f27e47",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "snowflake-studio",
+      "sha256": "eeb4a86a61f57a1e6d5ee9de6428a478a73a1b3455b2c5d75675c86c2463526d",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "gem-turner",
+      "sha256": "6898b8128e7e41005b0a1ba4ad41d896062d14d932764a0f54eba602ddb64157",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "rocket-docking",
+      "sha256": "c0ab2f29ed10ec78c53bf9f80bf26763ec6431fad6d46cb6296796f7cefe37cb",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "tangram-turntable",
+      "sha256": "4e00544cb3e4b1cdffbca5655f4d677446145c962bb55ddbf9c82a6cec8c30a6",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "sound-wave-lab",
+      "sha256": "2526fedd7e1f2fc8713023fb0f64328b52e2860ac472def7283840a762d231db",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "birdsong-tuner",
+      "sha256": "4d51fafcb6ad921568ac7a7a5c027cf98aed311412a358334ba27f46c4af5ce9",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "drum-beat-builder",
+      "sha256": "710abd68a4824cff8cc02dbadefefc96b3edfe8091d12589b455458ba3538d44",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "rain-drop-rhythm",
+      "sha256": "0cbd951552fc5b539457af089c71dde303156d00f6cc11ac92d1226b1e300fe3",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "toy-town-builder",
+      "sha256": "2ba2cd1b3f8aaa5cc0e39ab6569919f81ac121be9eae748e27cb7cc322e4c65b",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "castle-block-blueprints",
+      "sha256": "681f11b1cb10bbe26b221a61a3eced90e13cbbbe3b1dbeae06c887e5b7507a66",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "dino-egg-nest",
+      "sha256": "5c7e184880eb00cb686638bffd9530c7da679980b54a286e8e7531a24f7cea0c",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "ladybird-dot-party",
+      "sha256": "182592aed9e7617e0ccdf41cd9e5c9e1e3b4ddcf4e2eb6b531e2cfa7a0ce5ffd",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "weather-wardrobe",
+      "sha256": "addaa459ec136c5dc79aa099780019390402222d97f3088868cdd682ff4cbae5",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "kindness-cafe",
+      "sha256": "369f99eeeae93c2e6063f0eadec5b09d9dd45ac53ae7a31c4327eae132bcf8d6",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "healthy-plate-party",
+      "sha256": "82c31ef3d1321a766d059426f6be134b5b2c3d8a33d7ff2d2b902101b236b3ef",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    },
+    {
+      "id": "senses-safari",
+      "sha256": "db53e705792f03a9f09cc249e0cde75126a0ef5b39af27c87bac05ba01bbc9c6",
+      "individuallyViewed": true,
+      "headerReadable": true,
+      "centralHeroUncropped": true,
+      "scope": "standalone-final-Blender-cover",
+      "gameplayBrowserReviewedThisBatch": false
+    }
+  ]
+}

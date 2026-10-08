@@ -49,4 +49,4 @@ const server=createServer(async(req,res)=>{
 });
 
 const port=Number(process.env.EXAMPLES_PORT||4173);
-server.listen(port,'127.0.0.1',()=>console.log(`100-game catalogue: http://localhost:${port}`));
+server.listen(port,'127.0.0.1',()=>console.log(`BitGames catalogue: http://localhost:${port}`));

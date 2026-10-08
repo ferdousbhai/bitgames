@@ -1,0 +1,4610 @@
+{
+  "judge": "Independent child-experience source judge",
+  "date": "2026-10-08",
+  "scope": "All 101 current example projects: 12 original and 89 generated",
+  "method": "Inspected catalogue metadata, shared challenge generation, actual runtime family implementations, common progression, and each original main.js input/state structure. Independent assessment; no other judge report or prior polish scores consulted.",
+  "limitations": [
+    "No child, educator or physical iPad playtest.",
+    "No fresh rendered browser playtest: browser IPC was unavailable in this session; these are source-grounded quality and duplication inferences.",
+    "The parent reports liking the first 5–6 games but does not identify them. No assumption about their identities.",
+    "High confidence refers to evident mechanical duplication, not proof that no child could enjoy the game.",
+    "Rework means withdraw/defer this version and preserve the concept only if a substantially better design is justified. Retain candidate is not unconditional release approval."
+  ],
+  "counts": {
+    "retain_candidate": 12,
+    "rework": 18,
+    "remove_candidate": 71
+  },
+  "records": [
+    {
+      "id": "balloon-pop",
+      "title": "Balloon Pop",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Direct popping, changing balloon behaviours, harmless misses and interactive scenery offer immediate agency before any counting mission. Check whether the optional mission/dialog layer now interrupts the original pleasure.",
+      "nearest_duplicates": [
+        "dino-egg-nest"
+      ],
+      "evidence": [
+        {
+          "path": "examples/balloon-pop/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/balloon-pop/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "dino-egg-nest"
+      ]
+    },
+    {
+      "id": "bumper-ducks",
+      "title": "Bumper Ducks",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Paddling, dashing, physical bonks, power-ups and cooperative play produce outcomes from the child’s movements; counting sits alongside the activity instead of replacing it. Local multiplayer usability still needs observation.",
+      "nearest_duplicates": [
+        "crash-racers"
+      ],
+      "evidence": [
+        {
+          "path": "examples/bumper-ducks/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/bumper-ducks/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "crash-racers"
+      ]
+    },
+    {
+      "id": "bunny-hop",
+      "title": "Bunny Hop",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Single-tap and double-hop movement, carrots and changing environments support practice and visible mastery. Optional movement missions can remain subordinate to hopping.",
+      "nearest_duplicates": [
+        "dragon-glide"
+      ],
+      "evidence": [
+        {
+          "path": "examples/bunny-hop/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/bunny-hop/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "dragon-glide"
+      ]
+    },
+    {
+      "id": "cake-stack",
+      "title": "Cake Stack",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Timing a real moving layer, forgiving squishes, customer/flavour unlocks and blowing out candles make an understandable action-to-outcome loop. Recipe work is optional rather than the only play.",
+      "nearest_duplicates": [
+        "bakery-bundles"
+      ],
+      "evidence": [
+        {
+          "path": "examples/cake-stack/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/cake-stack/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "bakery-bundles"
+      ]
+    },
+    {
+      "id": "crash-racers",
+      "title": "Crash Racers",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Continuous steering, permissive crashes, repair, multiplayer and changing locations provide meaningful spatial play. Delivery missions are an additional layer; verify steering is accessible at the lower advertised age.",
+      "nearest_duplicates": [
+        "bumper-ducks"
+      ],
+      "evidence": [
+        {
+          "path": "examples/crash-racers/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/crash-racers/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "bumper-ducks"
+      ]
+    },
+    {
+      "id": "dragon-glide",
+      "title": "Dragon Glide",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Free steering, sparkly fire, rings, boosts and harmless collisions give connected sensory feedback and a developing movement skill. It shares flight with Star Catcher but adds active fire and spatial routes.",
+      "nearest_duplicates": [
+        "star-catcher"
+      ],
+      "evidence": [
+        {
+          "path": "examples/dragon-glide/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/dragon-glide/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "star-catcher"
+      ]
+    },
+    {
+      "id": "fish-pond",
+      "title": "Fish Pond",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Casting, watching the bobber, timing a catch and discovering fish for a persistent book provide anticipation and collection goals. Waiting and timing accessibility need actual child testing, especially age two.",
+      "nearest_duplicates": [
+        "coral-cleanup"
+      ],
+      "evidence": [
+        {
+          "path": "examples/fish-pond/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/fish-pond/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "coral-cleanup"
+      ]
+    },
+    {
+      "id": "star-catcher",
+      "title": "Star Catcher",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Continuous rocket steering, changing planets and multiple pickups support action, mastery and movement-linked feedback. Distinct enough from the static counting boards; overlap with Dragon Glide should be tested rather than ignored.",
+      "nearest_duplicates": [
+        "dragon-glide"
+      ],
+      "evidence": [
+        {
+          "path": "examples/star-catcher/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/star-catcher/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "dragon-glide"
+      ]
+    },
+    {
+      "id": "paint-splash",
+      "title": "Paint Splash",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Children move their rollers and create a shared picture that is saved. Ownership, experimentation and social play provide intrinsic reasons to continue; gallery and colour studio are genuine optional extensions.",
+      "nearest_duplicates": [
+        "colour-cauldron"
+      ],
+      "evidence": [
+        {
+          "path": "examples/paint-splash/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/paint-splash/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "colour-cauldron"
+      ]
+    },
+    {
+      "id": "penguin-bowling",
+      "title": "Penguin Bowling",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "A swipe determines direction, power and curve, and the resulting pin motion closes the causal loop. Bumpers and cheers support retries without requiring a written answer. Prediction controls must stay optional.",
+      "nearest_duplicates": [
+        "gem-turner"
+      ],
+      "evidence": [
+        {
+          "path": "examples/penguin-bowling/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/penguin-bowling/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "gem-turner"
+      ]
+    },
+    {
+      "id": "rocket-garage",
+      "title": "Rocket Garage",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "Part selection and colouring change a child-owned rocket, followed by launch/steering and part unlocks. Design-comparison mode connects experimentation to something the child built.",
+      "nearest_duplicates": [
+        "paint-a-planet"
+      ],
+      "evidence": [
+        {
+          "path": "examples/rocket-garage/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/rocket-garage/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "paint-a-planet"
+      ]
+    },
+    {
+      "id": "memory-match",
+      "title": "Memory Match",
+      "origin": "original",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "rationale": "A bounded familiar game with animal reveals, graduated board sizes and a help pair has a clear independent play loop. It is less open-ended than the other originals, but is the existing canonical memory game; new reskins add no needed breadth.",
+      "nearest_duplicates": [
+        "picnic-pairs"
+      ],
+      "evidence": [
+        {
+          "path": "examples/memory-match/public/js/main.js",
+          "symbols": [
+            "direct input handlers",
+            "state/update loop"
+          ]
+        },
+        {
+          "path": "examples/memory-match/game.json",
+          "symbols": [
+            "howToPlay"
+          ]
+        }
+      ],
+      "child_experience_risk": "Quality remains inferred from source. Existing educational overlays, device performance and the child’s voluntary replay need direct assessment; no assumption this was one of the parent’s first 5–6 favourites.",
+      "closestDuplicates": [
+        "picnic-pairs"
+      ]
+    },
+    {
+      "id": "firefly-lanterns",
+      "title": "Firefly Lanterns",
+      "origin": "generated",
+      "mode": "collect",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "A lantern brightens as fireflies are carried in: good immediate counting feedback. The fireflies are nevertheless dealt as static cards and five exact-count submissions replace free catching or discovery; promising material for one integrated woodland game.",
+      "nearest_duplicates": [
+        "orchard-baskets",
+        "moon-pebbles",
+        "coral-cleanup"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "firefly-lanterns"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'collect'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "collect"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "orchard-baskets",
+        "moon-pebbles",
+        "coral-cleanup"
+      ]
+    },
+    {
+      "id": "orchard-baskets",
+      "title": "Orchard Baskets",
+      "origin": "generated",
+      "mode": "collect",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Selecting a requested count of apples into a basket is the same exact-count exercise as Firefly Lanterns. The picnic is a completion message, not an evolving meal the child creates or serves.",
+      "nearest_duplicates": [
+        "firefly-lanterns",
+        "moon-pebbles",
+        "coral-cleanup"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "orchard-baskets"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'collect'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "collect"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "firefly-lanterns",
+        "moon-pebbles",
+        "coral-cleanup"
+      ]
+    },
+    {
+      "id": "moon-pebbles",
+      "title": "Moon Pebbles",
+      "origin": "generated",
+      "mode": "collect",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "A rocket lifts when the chosen gem count is correct, but moment-to-moment play remains the same static collect-and-Done board. Star Catcher and Rocket Garage already provide stronger rocket agency.",
+      "nearest_duplicates": [
+        "firefly-lanterns",
+        "orchard-baskets",
+        "coral-cleanup"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "moon-pebbles"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'collect'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "collect"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "firefly-lanterns",
+        "orchard-baskets",
+        "coral-cleanup"
+      ]
+    },
+    {
+      "id": "coral-cleanup",
+      "title": "Coral Cleanup",
+      "origin": "generated",
+      "mode": "collect",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Leaving shells while removing bottles gives actions an ecological purpose, and the receiver responds. Rework into an explorable reef with visible habitat recovery rather than another five exact-count cards-and-Done exercise.",
+      "nearest_duplicates": [
+        "firefly-lanterns",
+        "orchard-baskets",
+        "moon-pebbles"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "coral-cleanup"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'collect'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "collect"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "firefly-lanterns",
+        "orchard-baskets",
+        "moon-pebbles"
+      ]
+    },
+    {
+      "id": "rainbow-postoffice",
+      "title": "Rainbow Post Office",
+      "origin": "generated",
+      "mode": "match",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "A parcel colour is requested and a matching choice is delivered. Charming delivery animation cannot supply a delivery route, changing customers or sustained pretend play; consolidate colour play into an existing stronger game.",
+      "nearest_duplicates": [
+        "shape-locksmith",
+        "footprint-detective",
+        "shadow-theatre"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "rainbow-postoffice"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'match'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "match"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "shape-locksmith",
+        "footprint-detective",
+        "shadow-theatre"
+      ]
+    },
+    {
+      "id": "shape-locksmith",
+      "title": "Shape Locksmith",
+      "origin": "generated",
+      "mode": "match",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Selecting a matching key opens a lock, which is connected feedback, but the same four shapes cycle through five answer boards. No room exploration or meaningful castle progression makes this a thin matching minigame.",
+      "nearest_duplicates": [
+        "rainbow-postoffice",
+        "footprint-detective",
+        "shadow-theatre"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "shape-locksmith"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'match'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "match"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "rainbow-postoffice",
+        "footprint-detective",
+        "shadow-theatre"
+      ]
+    },
+    {
+      "id": "footprint-detective",
+      "title": "Footprint Detective",
+      "origin": "generated",
+      "mode": "match",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Interpreting distinct animal tracks is a useful observation hook beyond a pure token reskin. Current play still selects from a four-animal answer bank; retain the concept only for a real follow-tracks investigation with discovery and clues.",
+      "nearest_duplicates": [
+        "rainbow-postoffice",
+        "shape-locksmith",
+        "shadow-theatre"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "footprint-detective"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'match'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "match"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "rainbow-postoffice",
+        "shape-locksmith",
+        "shadow-theatre"
+      ]
+    },
+    {
+      "id": "shadow-theatre",
+      "title": "Shadow Theatre",
+      "origin": "generated",
+      "mode": "match",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The child matches one of four toy silhouettes; there is no placing objects, changing a light or making a shadow performance. The theatre promise exceeds the actual multiple-choice loop.",
+      "nearest_duplicates": [
+        "rainbow-postoffice",
+        "shape-locksmith",
+        "footprint-detective"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "shadow-theatre"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'match'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "match"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "rainbow-postoffice",
+        "shape-locksmith",
+        "footprint-detective"
+      ]
+    },
+    {
+      "id": "habitat-hotel",
+      "title": "Habitat Hotel",
+      "origin": "generated",
+      "mode": "sort",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Six animals go to three predetermined bins. The child does not build habitats or care for an animal, and the hotel metaphor supplies scenery rather than an interactive role.",
+      "nearest_duplicates": [
+        "recycling-robots",
+        "fruit-veggie-ferry",
+        "season-suitcase"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "habitat-hotel"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'sort'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "sort"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "recycling-robots",
+        "fruit-veggie-ferry",
+        "season-suitcase"
+      ]
+    },
+    {
+      "id": "recycling-robots",
+      "title": "Recycling Robots",
+      "origin": "generated",
+      "mode": "sort",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Dragging six fixed recyclables into three categories is a sorting worksheet. Robots do not form a controllable team or processing system; a cleanup game could absorb this learning without a separate near-identical board.",
+      "nearest_duplicates": [
+        "habitat-hotel",
+        "fruit-veggie-ferry",
+        "season-suitcase"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "recycling-robots"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'sort'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "sort"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "habitat-hotel",
+        "fruit-veggie-ferry",
+        "season-suitcase"
+      ]
+    },
+    {
+      "id": "fruit-veggie-ferry",
+      "title": "Fruit & Veggie Ferry",
+      "origin": "generated",
+      "mode": "sort",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Food models move to two fixed category bins. Ferry travel, picnic preparation and passenger choices are absent from the core sorting rule; another noun swap in the sorting family.",
+      "nearest_duplicates": [
+        "habitat-hotel",
+        "recycling-robots",
+        "season-suitcase"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "fruit-veggie-ferry"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'sort'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "sort"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "habitat-hotel",
+        "recycling-robots",
+        "season-suitcase"
+      ]
+    },
+    {
+      "id": "season-suitcase",
+      "title": "Season Suitcase",
+      "origin": "generated",
+      "mode": "sort",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Packing six predetermined warm/cold items has little child ownership or replay once the answers are known. It overlaps Weather Wardrobe’s clothing quiz without becoming a dressing/pretend-play toy.",
+      "nearest_duplicates": [
+        "habitat-hotel",
+        "recycling-robots",
+        "fruit-veggie-ferry"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "season-suitcase"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'sort'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "sort"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "habitat-hotel",
+        "recycling-robots",
+        "fruit-veggie-ferry"
+      ]
+    },
+    {
+      "id": "butterfly-patterns",
+      "title": "Butterfly Patterns",
+      "origin": "generated",
+      "mode": "pattern",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Pick the missing token in a fixed AB/AAB/ABC row. The child cannot design wings or grow a garden, and the same rule underlies Bead Bridge, Train Carriage Rhythm and Reef Patterns.",
+      "nearest_duplicates": [
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "constellation-code",
+        "reef-patterns"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "butterfly-patterns"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'pattern'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "pattern"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "constellation-code",
+        "reef-patterns"
+      ]
+    },
+    {
+      "id": "bead-bridge",
+      "title": "Bead Bridge",
+      "origin": "generated",
+      "mode": "pattern",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The snail crossing is a consequence of one missing-token answer, not a bridge the child designs. Equivalent AB/AAB/ABC generation and three-token choices make this a reskin, not another substantial game.",
+      "nearest_duplicates": [
+        "butterfly-patterns",
+        "train-carriage-rhythm",
+        "constellation-code",
+        "reef-patterns"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "bead-bridge"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'pattern'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "pattern"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "train-carriage-rhythm",
+        "constellation-code",
+        "reef-patterns"
+      ]
+    },
+    {
+      "id": "train-carriage-rhythm",
+      "title": "Train Carriage Rhythm",
+      "origin": "generated",
+      "mode": "pattern",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The completed row slides a little after a missing-token answer. There is no train building, riding, passenger delivery or audible rhythm system; the title disguises the same pattern worksheet.",
+      "nearest_duplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "constellation-code",
+        "reef-patterns"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "train-carriage-rhythm"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'pattern'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "pattern"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "constellation-code",
+        "reef-patterns"
+      ]
+    },
+    {
+      "id": "constellation-code",
+      "title": "Constellation Code",
+      "origin": "generated",
+      "mode": "pattern",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Five-number sequences with one missing number offer narrow academic practice and generic choice tiles. Repairing a star map has no navigation or construction consequence; weak reason to choose this instead of existing space play.",
+      "nearest_duplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "reef-patterns"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "constellation-code"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'pattern'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "pattern"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "reef-patterns"
+      ]
+    },
+    {
+      "id": "sprout-sunflower",
+      "title": "Sprout to Sunflower",
+      "origin": "generated",
+      "mode": "order",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The same four life-cycle pictures are placed in order every round, with facts read out. This is useful instructional material but lacks plant tending, elapsed growth or decisions that make a garden respond.",
+      "nearest_duplicates": [
+        "breakfast-story",
+        "frog-life-lab",
+        "butterfly-life-lab"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "sprout-sunflower"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'order'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "order"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "breakfast-story",
+        "frog-life-lab",
+        "butterfly-life-lab"
+      ]
+    },
+    {
+      "id": "breakfast-story",
+      "title": "Breakfast Story",
+      "origin": "generated",
+      "mode": "order",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Four fixed morning stages must be chosen in a predetermined order. Bear does not have needs to respond to or a routine the child can act out; knowing the sequence exhausts the play.",
+      "nearest_duplicates": [
+        "sprout-sunflower",
+        "frog-life-lab",
+        "butterfly-life-lab"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "breakfast-story"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'order'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "order"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "sprout-sunflower",
+        "frog-life-lab",
+        "butterfly-life-lab"
+      ]
+    },
+    {
+      "id": "frog-life-lab",
+      "title": "Frog Life Lab",
+      "origin": "generated",
+      "mode": "order",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Recognisable frog stages provide useful subject-specific learning, but every level repeats the same four cards. Preserve assets/concept for a pond where the child tends eggs and discovers changing animals; current release remains a sequencing worksheet.",
+      "nearest_duplicates": [
+        "sprout-sunflower",
+        "breakfast-story",
+        "butterfly-life-lab"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "frog-life-lab"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'order'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "order"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "sprout-sunflower",
+        "breakfast-story",
+        "butterfly-life-lab"
+      ]
+    },
+    {
+      "id": "butterfly-life-lab",
+      "title": "Butterfly Life Lab",
+      "origin": "generated",
+      "mode": "order",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "A caterpillar-to-butterfly transformation could support wonder and caring play. Current rules simply repeat one four-card order, with no feeding or habitat interaction; redesign rather than count new art as a full game.",
+      "nearest_duplicates": [
+        "sprout-sunflower",
+        "breakfast-story",
+        "frog-life-lab"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "butterfly-life-lab"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'order'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "order"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "sprout-sunflower",
+        "breakfast-story",
+        "frog-life-lab"
+      ]
+    },
+    {
+      "id": "dinosaur-size-parade",
+      "title": "Dinosaur Size Parade",
+      "origin": "generated",
+      "mode": "compare",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Three or four scaled dinosaur copies invite a biggest/smallest answer. No parade arranging, feeding or movement builds a session, and Compare uses the same alternating target logic elsewhere.",
+      "nearest_duplicates": [
+        "cloud-number-race",
+        "ribbon-tailor",
+        "deep-sea-divers"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "dinosaur-size-parade"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'compare'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "compare"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "cloud-number-race",
+        "ribbon-tailor",
+        "deep-sea-divers"
+      ]
+    },
+    {
+      "id": "cloud-number-race",
+      "title": "Cloud Number Race",
+      "origin": "generated",
+      "mode": "compare",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Selecting the greatest/least printed number is a quiz; there is no race. Numbers vary but the child never steers a cloud or changes an unfolding situation.",
+      "nearest_duplicates": [
+        "dinosaur-size-parade",
+        "ribbon-tailor",
+        "deep-sea-divers"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "cloud-number-race"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'compare'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "compare"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "dinosaur-size-parade",
+        "ribbon-tailor",
+        "deep-sea-divers"
+      ]
+    },
+    {
+      "id": "ribbon-tailor",
+      "title": "Ribbon Tailor",
+      "origin": "generated",
+      "mode": "compare",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Choose the longest or shortest ribbon from a tiny set. The child cannot measure, cut, attach or design a costume; the tailor fantasy is not embodied in play.",
+      "nearest_duplicates": [
+        "dinosaur-size-parade",
+        "cloud-number-race",
+        "deep-sea-divers"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "ribbon-tailor"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'compare'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "compare"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "dinosaur-size-parade",
+        "cloud-number-race",
+        "deep-sea-divers"
+      ]
+    },
+    {
+      "id": "deep-sea-divers",
+      "title": "Deep Sea Divers",
+      "origin": "generated",
+      "mode": "compare",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Select the deepest or nearest-surface fish. The child controls no diver and explores no sea; relative position answers do not constitute the promised diving adventure.",
+      "nearest_duplicates": [
+        "dinosaur-size-parade",
+        "cloud-number-race",
+        "ribbon-tailor"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "deep-sea-divers"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'compare'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "compare"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "dinosaur-size-parade",
+        "cloud-number-race",
+        "ribbon-tailor"
+      ]
+    },
+    {
+      "id": "picnic-pairs",
+      "title": "Picnic Pairs",
+      "origin": "generated",
+      "mode": "memory",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Food-themed memory cards duplicate Memory Match’s core loop with a smaller 4–8 card range. A different food picture bank does not justify another independent release.",
+      "nearest_duplicates": [
+        "memory-match",
+        "planet-pairs",
+        "tool-twins",
+        "letter-buddies"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "picnic-pairs"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'memory'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "memory"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "memory-match",
+        "planet-pairs",
+        "tool-twins",
+        "letter-buddies"
+      ]
+    },
+    {
+      "id": "planet-pairs",
+      "title": "Planet Pairs",
+      "origin": "generated",
+      "mode": "memory",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Matching pairs of planet tokens changes the Memory Match picture bank, not the play. Planet colours/rings add subject appearance but there is no exploration or orbital interaction.",
+      "nearest_duplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "tool-twins",
+        "letter-buddies"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "planet-pairs"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'memory'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "memory"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "tool-twins",
+        "letter-buddies"
+      ]
+    },
+    {
+      "id": "tool-twins",
+      "title": "Tool Twins",
+      "origin": "generated",
+      "mode": "memory",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Matching hidden helpers with tools adds arbitrary association knowledge to an existing memory board. It is neither a workshop nor job role-play, and repeated memorisation contributes little beyond Memory Match.",
+      "nearest_duplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "planet-pairs",
+        "letter-buddies"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "tool-twins"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'memory'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "memory"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "planet-pairs",
+        "letter-buddies"
+      ]
+    },
+    {
+      "id": "letter-buddies",
+      "title": "Letter Buddies",
+      "origin": "generated",
+      "mode": "memory",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Upper/lowercase association is a legitimate curriculum variation but the hidden-pair rule duplicates Memory Match. Treat it as an optional letter deck, not a stand-alone game promising another experience.",
+      "nearest_duplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "planet-pairs",
+        "tool-twins"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "letter-buddies"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'memory'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "memory"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "planet-pairs",
+        "tool-twins"
+      ]
+    },
+    {
+      "id": "frog-choir",
+      "title": "Frog Choir",
+      "origin": "generated",
+      "mode": "echo",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Touching frogs produces tones and there is a genuine 12-note composition mode. Default play is still Simon-like sequence copying through the generic five steps; develop one expressive musical toy rather than release multiple tone reskins.",
+      "nearest_duplicates": [
+        "crystal-cave-echo",
+        "robot-dance-code",
+        "sleepy-owl-lullaby"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "frog-choir"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'echo'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "echo"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "crystal-cave-echo",
+        "robot-dance-code",
+        "sleepy-owl-lullaby"
+      ]
+    },
+    {
+      "id": "crystal-cave-echo",
+      "title": "Crystal Cave Echo",
+      "origin": "generated",
+      "mode": "echo",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The same echo rule and composition controls use gems and slightly different frequencies. Crystal appearance is not a distinct musical system; consolidate with one musical toy.",
+      "nearest_duplicates": [
+        "frog-choir",
+        "robot-dance-code",
+        "sleepy-owl-lullaby"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "crystal-cave-echo"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'echo'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "echo"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "frog-choir",
+        "robot-dance-code",
+        "sleepy-owl-lullaby"
+      ]
+    },
+    {
+      "id": "robot-dance-code",
+      "title": "Robot Dance Code",
+      "origin": "generated",
+      "mode": "echo",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "A robot briefly moves in four directions and returns to rest for each echoed note. This is not an authored dance/program that transforms the world; the same memory sequence is merely recast as coding.",
+      "nearest_duplicates": [
+        "frog-choir",
+        "crystal-cave-echo",
+        "sleepy-owl-lullaby"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "robot-dance-code"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'echo'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "echo"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "frog-choir",
+        "crystal-cave-echo",
+        "sleepy-owl-lullaby"
+      ]
+    },
+    {
+      "id": "sleepy-owl-lullaby",
+      "title": "Sleepy Owl Lullaby",
+      "origin": "generated",
+      "mode": "echo",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The owl bobs as a short tone sequence is copied. A composition toggle exists, but this repeats the choir/cave rule and does not establish a distinct bedtime or caring loop for the youngest audience.",
+      "nearest_duplicates": [
+        "frog-choir",
+        "crystal-cave-echo",
+        "robot-dance-code"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "sleepy-owl-lullaby"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'echo'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "echo"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "frog-choir",
+        "crystal-cave-echo",
+        "robot-dance-code"
+      ]
+    },
+    {
+      "id": "bee-pollen-trail",
+      "title": "Bee Pollen Trail",
+      "origin": "generated",
+      "mode": "path",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Programming arrows to carry pollen has a causal navigation problem and animated execution. Keep the concept for one richer route-planning game with an evolving garden; four versions of the same 3–5 cell grid are unnecessary.",
+      "nearest_duplicates": [
+        "turtle-treasure-map",
+        "rover-rescue",
+        "penguin-ice-path"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "bee-pollen-trail"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'path'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "symbols": [
+            "path"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "turtle-treasure-map",
+        "rover-rescue",
+        "penguin-ice-path"
+      ]
+    },
+    {
+      "id": "turtle-treasure-map",
+      "title": "Turtle Treasure Map",
+      "origin": "generated",
+      "mode": "path",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The turtle/pearl changes assets and prompt while the same generated grid, arrows, obstacle rule and Go execution remain. No map exploration or changing treasure system differentiates it from Bee Pollen Trail.",
+      "nearest_duplicates": [
+        "bee-pollen-trail",
+        "rover-rescue",
+        "penguin-ice-path"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "turtle-treasure-map"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'path'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "symbols": [
+            "path"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "rover-rescue",
+        "penguin-ice-path"
+      ]
+    },
+    {
+      "id": "rover-rescue",
+      "title": "Rover Rescue",
+      "origin": "generated",
+      "mode": "path",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Robot/rocket rewards are the same path generator and command queue as the bee/turtle/penguin versions. Calling it algorithms does not add mechanics; retain one route-planning concept rather than four releases.",
+      "nearest_duplicates": [
+        "bee-pollen-trail",
+        "turtle-treasure-map",
+        "penguin-ice-path"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "rover-rescue"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'path'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "symbols": [
+            "path"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "turtle-treasure-map",
+        "penguin-ice-path"
+      ]
+    },
+    {
+      "id": "penguin-ice-path",
+      "title": "Penguin Ice Path",
+      "origin": "generated",
+      "mode": "path",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Navigating a penguin to fish is another identical command-grid puzzle. Ice does not crack, slide or otherwise behave as ice; the advertised theme has no mechanical role.",
+      "nearest_duplicates": [
+        "bee-pollen-trail",
+        "turtle-treasure-map",
+        "rover-rescue"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "penguin-ice-path"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'path'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "symbols": [
+            "path"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "turtle-treasure-map",
+        "rover-rescue"
+      ]
+    },
+    {
+      "id": "snail-spiral",
+      "title": "Snail Spiral",
+      "origin": "generated",
+      "mode": "trace",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Following a prescribed spiral gives fine-motor practice but almost no choice, discovery or replay beyond three densities. The flower at the endpoint is a reward model, not a garden the child shapes.",
+      "nearest_duplicates": [
+        "kite-flight-school",
+        "letter-trails",
+        "number-spark-trails"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "snail-spiral"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'trace'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "symbols": [
+            "trace"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "kite-flight-school",
+        "letter-trails",
+        "number-spark-trails"
+      ]
+    },
+    {
+      "id": "kite-flight-school",
+      "title": "Kite Flight School",
+      "origin": "generated",
+      "mode": "trace",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The kite follows a prescribed sinusoidal trail rather than responding to free flight, wind or child-made routes. Three wave settings are limited tracing practice, not a flight school adventure.",
+      "nearest_duplicates": [
+        "snail-spiral",
+        "letter-trails",
+        "number-spark-trails"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "kite-flight-school"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'trace'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "symbols": [
+            "trace"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "snail-spiral",
+        "letter-trails",
+        "number-spark-trails"
+      ]
+    },
+    {
+      "id": "letter-trails",
+      "title": "Letter Trails",
+      "origin": "generated",
+      "mode": "trace",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Following stroke directions with a demonstrated firefly is purposeful motor practice and has accessible alternatives. Its 15 prescribed glyphs and five-step shell remain instruction-led; integrate tracing into a child-created picture/story rather than market it as a broad adventure.",
+      "nearest_duplicates": [
+        "snail-spiral",
+        "kite-flight-school",
+        "number-spark-trails"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "letter-trails"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'trace'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "symbols": [
+            "trace"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "snail-spiral",
+        "kite-flight-school",
+        "number-spark-trails"
+      ]
+    },
+    {
+      "id": "number-spark-trails",
+      "title": "Number Spark Trails",
+      "origin": "generated",
+      "mode": "trace",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The same stroke-following system swaps letters for digits. Numeral coverage improves curriculum but does not create a different play loop; optional numeral content inside one creative tracing toy is enough.",
+      "nearest_duplicates": [
+        "snail-spiral",
+        "kite-flight-school",
+        "letter-trails"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "number-spark-trails"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'trace'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "symbols": [
+            "trace"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "snail-spiral",
+        "kite-flight-school",
+        "letter-trails"
+      ]
+    },
+    {
+      "id": "acorn-addition",
+      "title": "Acorn Addition",
+      "origin": "generated",
+      "mode": "arithmetic",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Moving all prescribed acorns before numeric answers unlock makes a concrete demonstration, but child decisions do not change the story. The answer-gated stash exercise is unlikely to sustain a session independently.",
+      "nearest_duplicates": [
+        "submarine-subtraction",
+        "bakery-bundles",
+        "star-share"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "acorn-addition"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'arithmetic'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "arithmetic/bakery"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "submarine-subtraction",
+        "bakery-bundles",
+        "star-share"
+      ]
+    },
+    {
+      "id": "submarine-subtraction",
+      "title": "Submarine Subtraction",
+      "origin": "generated",
+      "mode": "arithmetic",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "A specified number of fish must be moved away and then a numeric answer selected. There is no controllable submarine or changing marine encounter; the physical representation remains a subtraction worksheet.",
+      "nearest_duplicates": [
+        "acorn-addition",
+        "bakery-bundles",
+        "star-share"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "submarine-subtraction"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'arithmetic'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "arithmetic/bakery"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "acorn-addition",
+        "bakery-bundles",
+        "star-share"
+      ]
+    },
+    {
+      "id": "bakery-bundles",
+      "title": "Bakery Bundles",
+      "origin": "generated",
+      "mode": "arithmetic",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Counting equal trays is concrete mathematics, but it lacks Cake Stack’s timing, recipes, customer reaction and creative serving. Keep grouping/sharing inside the stronger bakery play rather than another answer board.",
+      "nearest_duplicates": [
+        "acorn-addition",
+        "submarine-subtraction",
+        "star-share",
+        "cake-stack"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "bakery-bundles"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'arithmetic'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "arithmetic/bakery"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "acorn-addition",
+        "submarine-subtraction",
+        "star-share",
+        "cake-stack"
+      ]
+    },
+    {
+      "id": "star-share",
+      "title": "Star Share",
+      "origin": "generated",
+      "mode": "arithmetic",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Actually distributing biscuits between recipients can make fairness visible. Current equal-share completion merely unlocks a numerical answer; consider a serving/caring game with hungry characters and child-chosen amounts, preferably consolidated with Cake Stack.",
+      "nearest_duplicates": [
+        "acorn-addition",
+        "submarine-subtraction",
+        "bakery-bundles"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "star-share"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'arithmetic'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "arithmetic/bakery"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "acorn-addition",
+        "submarine-subtraction",
+        "bakery-bundles"
+      ]
+    },
+    {
+      "id": "bear-balance",
+      "title": "Bear Balance",
+      "origin": "generated",
+      "mode": "balance",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Repeatedly choose weights until the counter equals a target and press Check. The seesaw is a representation of a missing addend, without physical experimentation or bear behaviour beyond the correct answer.",
+      "nearest_duplicates": [
+        "parcel-weights",
+        "pebble-equations"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "bear-balance"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'balance'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "balance"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "parcel-weights",
+        "pebble-equations"
+      ]
+    },
+    {
+      "id": "parcel-weights",
+      "title": "Parcel Weights",
+      "origin": "generated",
+      "mode": "balance",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Same target/base and 1/2/3 weight choices as Bear Balance, with parcel labels. No parcel-delivery consequence or new balancing mechanic justifies another title.",
+      "nearest_duplicates": [
+        "bear-balance",
+        "pebble-equations"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "parcel-weights"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'balance'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "balance"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "bear-balance",
+        "pebble-equations"
+      ]
+    },
+    {
+      "id": "pebble-equations",
+      "title": "Pebble Equations",
+      "origin": "generated",
+      "mode": "balance",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Same missing-addend balance rule with stones and a pond. Different units do not create independent discovery or sensory behaviour.",
+      "nearest_duplicates": [
+        "bear-balance",
+        "parcel-weights"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "pebble-equations"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'balance'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "balance"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "bear-balance",
+        "parcel-weights"
+      ]
+    },
+    {
+      "id": "colour-cauldron",
+      "title": "Colour Cauldron",
+      "origin": "generated",
+      "mode": "mix",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Pouring and stirring are connected actions with visible mixtures and finger-circle input. Current three target secondary colours gate completion; preserve only if rebuilt as expressive potion play with useful surprising effects, or absorb mixing into Paint Splash.",
+      "nearest_duplicates": [
+        "rainbow-smoothies",
+        "jellyfish-glow-lab",
+        "paint-a-planet",
+        "paint-splash"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "colour-cauldron"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'mix'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "mix"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "rainbow-smoothies",
+        "jellyfish-glow-lab",
+        "paint-a-planet",
+        "paint-splash"
+      ]
+    },
+    {
+      "id": "rainbow-smoothies",
+      "title": "Rainbow Smoothies",
+      "origin": "generated",
+      "mode": "mix",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Same two-primary-paints/three-target-colours rule in a cup. It is not a fruit-preparation or customer-serving game and duplicates both Colour Cauldron and existing Paint Splash colour exploration.",
+      "nearest_duplicates": [
+        "colour-cauldron",
+        "jellyfish-glow-lab",
+        "paint-a-planet",
+        "paint-splash"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "rainbow-smoothies"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'mix'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "mix"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "colour-cauldron",
+        "jellyfish-glow-lab",
+        "paint-a-planet",
+        "paint-splash"
+      ]
+    },
+    {
+      "id": "jellyfish-glow-lab",
+      "title": "Jellyfish Glow Lab",
+      "origin": "generated",
+      "mode": "mix",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Jellyfish changes colour after the identical paint-target rule. No creature care, swimming or light experimentation differentiates the activity from the other three mix titles.",
+      "nearest_duplicates": [
+        "colour-cauldron",
+        "rainbow-smoothies",
+        "paint-a-planet",
+        "paint-splash"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "jellyfish-glow-lab"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'mix'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "mix"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "colour-cauldron",
+        "rainbow-smoothies",
+        "paint-a-planet",
+        "paint-splash"
+      ]
+    },
+    {
+      "id": "paint-a-planet",
+      "title": "Paint a Planet",
+      "origin": "generated",
+      "mode": "mix",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The planet is recoloured after the same exact two-paint mixture. The child cannot create continents, own a persistent planet or launch to it; Rocket Garage and Paint Splash already offer stronger creation.",
+      "nearest_duplicates": [
+        "colour-cauldron",
+        "rainbow-smoothies",
+        "jellyfish-glow-lab",
+        "paint-splash"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "paint-a-planet"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'mix'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "mix"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "colour-cauldron",
+        "rainbow-smoothies",
+        "jellyfish-glow-lab",
+        "paint-splash"
+      ]
+    },
+    {
+      "id": "pizza-moon",
+      "title": "Pizza Moon",
+      "origin": "generated",
+      "mode": "fraction",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Colour a requested numerator of fixed equal slices and press Check. Cake Stack already provides contextual serving/sharing; this separates fractions from the social food-play purpose.",
+      "nearest_duplicates": [
+        "watermelon-picnic",
+        "rainbow-quilt"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "pizza-moon"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'fraction'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "fraction"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "watermelon-picnic",
+        "rainbow-quilt"
+      ]
+    },
+    {
+      "id": "watermelon-picnic",
+      "title": "Watermelon Picnic",
+      "origin": "generated",
+      "mode": "fraction",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The same fraction generator and coloured radial portions replace pizza with watermelon. There is no picnic construction or character feeding; clear near-duplicate.",
+      "nearest_duplicates": [
+        "pizza-moon",
+        "rainbow-quilt"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "watermelon-picnic"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'fraction'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "fraction"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "pizza-moon",
+        "rainbow-quilt"
+      ]
+    },
+    {
+      "id": "rainbow-quilt",
+      "title": "Rainbow Quilt",
+      "origin": "generated",
+      "mode": "fraction",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Rectangular patches change the fraction diagram but the child still selects a requested count and checks it. The child cannot design and keep a quilt; creative sewing is only the title.",
+      "nearest_duplicates": [
+        "pizza-moon",
+        "watermelon-picnic"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "rainbow-quilt"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'fraction'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "fraction"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "pizza-moon",
+        "watermelon-picnic"
+      ]
+    },
+    {
+      "id": "cuckoo-clock-garden",
+      "title": "Cuckoo Clock Garden",
+      "origin": "generated",
+      "mode": "clock",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Setting a requested hour/quarter-hour has useful practice but a bird celebration does not make the garden an evolving place. Four clock apps share one hand-control system.",
+      "nearest_duplicates": [
+        "space-station-schedule",
+        "bunny-bedtime",
+        "bakery-alarm"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "cuckoo-clock-garden"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'clock'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "clock"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "space-station-schedule",
+        "bunny-bedtime",
+        "bakery-alarm"
+      ]
+    },
+    {
+      "id": "space-station-schedule",
+      "title": "Space Station Schedule",
+      "origin": "generated",
+      "mode": "clock",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Same generated target times and hand controls as Cuckoo Clock Garden, with a rocket reward. No scheduling choices or controllable station develops beyond setting a clock.",
+      "nearest_duplicates": [
+        "cuckoo-clock-garden",
+        "bunny-bedtime",
+        "bakery-alarm"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "space-station-schedule"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'clock'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "clock"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "cuckoo-clock-garden",
+        "bunny-bedtime",
+        "bakery-alarm"
+      ]
+    },
+    {
+      "id": "bunny-bedtime",
+      "title": "Bunny Bedtime",
+      "origin": "generated",
+      "mode": "clock",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "A small fixed set of routine times changes clock prompts but not play. Bunny has no needs or pretend-care interactions, so it repeats instructional time-setting rather than a bedtime experience.",
+      "nearest_duplicates": [
+        "cuckoo-clock-garden",
+        "space-station-schedule",
+        "bakery-alarm"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "bunny-bedtime"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'clock'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "clock"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "cuckoo-clock-garden",
+        "space-station-schedule",
+        "bakery-alarm"
+      ]
+    },
+    {
+      "id": "bakery-alarm",
+      "title": "Bakery Alarm",
+      "origin": "generated",
+      "mode": "clock",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Higher levels add elapsed-time reasoning, which is a real curriculum difference. It still presents clock questions without baking consequences or the creative bakery loop already present in Cake Stack.",
+      "nearest_duplicates": [
+        "cuckoo-clock-garden",
+        "space-station-schedule",
+        "bunny-bedtime"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "bakery-alarm"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'clock'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "clock"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "cuckoo-clock-garden",
+        "space-station-schedule",
+        "bunny-bedtime"
+      ]
+    },
+    {
+      "id": "butterfly-mirrors",
+      "title": "Butterfly Mirrors",
+      "origin": "generated",
+      "mode": "mirror",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Copy random squares across a mirror line and Check. Wings are labels for grid cells rather than butterfly designs a child owns, and Castle Window/Robot versions use the same rule.",
+      "nearest_duplicates": [
+        "castle-window-symmetry",
+        "robot-reflections",
+        "snowflake-studio"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "butterfly-mirrors"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'mirror'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "mirror/snowflake"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "castle-window-symmetry",
+        "robot-reflections",
+        "snowflake-studio"
+      ]
+    },
+    {
+      "id": "castle-window-symmetry",
+      "title": "Castle Window Symmetry",
+      "origin": "generated",
+      "mode": "mirror",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Same random 3×3/4×4 reflection matrix in a castle setting. Completing it restores no explorable castle; additional jewel scenery cannot make the gameplay distinct.",
+      "nearest_duplicates": [
+        "butterfly-mirrors",
+        "robot-reflections",
+        "snowflake-studio"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "castle-window-symmetry"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'mirror'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "mirror/snowflake"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "robot-reflections",
+        "snowflake-studio"
+      ]
+    },
+    {
+      "id": "robot-reflections",
+      "title": "Robot Reflections",
+      "origin": "generated",
+      "mode": "mirror",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "A robot panel contains the same reflection matrix and verification as Butterfly Mirrors. No robot behaviour or authored robot design follows, making this a theme reskin.",
+      "nearest_duplicates": [
+        "butterfly-mirrors",
+        "castle-window-symmetry",
+        "snowflake-studio"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "robot-reflections"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'mirror'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "mirror/snowflake"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "castle-window-symmetry",
+        "snowflake-studio"
+      ]
+    },
+    {
+      "id": "snowflake-studio",
+      "title": "Snowflake Studio",
+      "origin": "generated",
+      "mode": "mirror",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Six-arm reflection is an actual geometric variation rather than the exact square-grid reskin. It still copies a prescribed pattern; promising only as a free snowflake designer with saved creations, not as currently packaged symmetry questions.",
+      "nearest_duplicates": [
+        "butterfly-mirrors",
+        "castle-window-symmetry",
+        "robot-reflections"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "snowflake-studio"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'mirror'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "mirror/snowflake"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "castle-window-symmetry",
+        "robot-reflections"
+      ]
+    },
+    {
+      "id": "gem-turner",
+      "title": "Gem Turner",
+      "origin": "generated",
+      "mode": "rotate",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "A key is turned in quarter-turns until an outline matches. Very little solution space, no ongoing discovery, and no effect beyond the generic next-step loop; could be one encounter in a larger game.",
+      "nearest_duplicates": [
+        "rocket-docking",
+        "tangram-turntable"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "gem-turner"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'rotate'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "rotate/tangram"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "rocket-docking",
+        "tangram-turntable"
+      ]
+    },
+    {
+      "id": "rocket-docking",
+      "title": "Rocket Docking",
+      "origin": "generated",
+      "mode": "rotate",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Same four possible orientations and check as Gem Turner, with a docking-key label. There is no steering, momentum, connection-building or station navigation to make docking a game.",
+      "nearest_duplicates": [
+        "gem-turner",
+        "tangram-turntable"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "rocket-docking"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'rotate'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "rotate/tangram"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "gem-turner",
+        "tangram-turntable"
+      ]
+    },
+    {
+      "id": "tangram-turntable",
+      "title": "Tangram Turntable",
+      "origin": "generated",
+      "mode": "rotate",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Seven real polygons can be dragged and rotated, offering tactile spatial reasoning that goes beyond the single-key rotation rule. All rounds target the same square partition; add different silhouettes and creative construction before treating it as a replayable release.",
+      "nearest_duplicates": [
+        "gem-turner",
+        "rocket-docking"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "tangram-turntable"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'rotate'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "symbols": [
+            "rotate/tangram"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "gem-turner",
+        "rocket-docking"
+      ]
+    },
+    {
+      "id": "giraffe-ruler",
+      "title": "Giraffe Ruler",
+      "origin": "generated",
+      "mode": "measure",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Place a generated number of fixed equal units along a target length. A giraffe is a measuring subject, not a character reacting to exploratory play; another exact-count board.",
+      "nearest_duplicates": [
+        "bridge-builder",
+        "garden-fence",
+        "comet-tail-measure"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "giraffe-ruler"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'measure'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "measure"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "bridge-builder",
+        "garden-fence",
+        "comet-tail-measure"
+      ]
+    },
+    {
+      "id": "bridge-builder",
+      "title": "Bridge Builder",
+      "origin": "generated",
+      "mode": "measure",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "A prescribed number of equal planks fills a length. No structural behaviour, route crossing or child-designed bridge distinguishes it from the other measurement versions.",
+      "nearest_duplicates": [
+        "giraffe-ruler",
+        "garden-fence",
+        "comet-tail-measure"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "bridge-builder"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'measure'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "measure"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "giraffe-ruler",
+        "garden-fence",
+        "comet-tail-measure"
+      ]
+    },
+    {
+      "id": "garden-fence",
+      "title": "Garden Fence",
+      "origin": "generated",
+      "mode": "measure",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The same unit-placement measurement uses fence pieces. There is no garden layout choice, planting, animal behaviour or consequence that turns measuring into pretend construction.",
+      "nearest_duplicates": [
+        "giraffe-ruler",
+        "bridge-builder",
+        "comet-tail-measure"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "garden-fence"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'measure'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "measure"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "giraffe-ruler",
+        "bridge-builder",
+        "comet-tail-measure"
+      ]
+    },
+    {
+      "id": "comet-tail-measure",
+      "title": "Comet Tail Measure",
+      "origin": "generated",
+      "mode": "measure",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The same equal-unit count uses star units along a tail. There is no flight or astronomical exploration, and changing subject/units does not add a new game.",
+      "nearest_duplicates": [
+        "giraffe-ruler",
+        "bridge-builder",
+        "garden-fence"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "comet-tail-measure"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'measure'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "symbols": [
+            "measure"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "giraffe-ruler",
+        "bridge-builder",
+        "garden-fence"
+      ]
+    },
+    {
+      "id": "word-rocket",
+      "title": "Word Rocket",
+      "origin": "generated",
+      "mode": "spell",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Spelled toy words ride the rocket, so completing a word affects a visible carrier. Only six fixed three-letter words underlie repeated five-step sessions; fold literacy into a fuller controllable journey with discoveries, rather than another spelling worksheet.",
+      "nearest_duplicates": [
+        "animal-alphabet",
+        "picnic-word-basket"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "word-rocket"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'spell'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "spell"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "animal-alphabet",
+        "picnic-word-basket"
+      ]
+    },
+    {
+      "id": "animal-alphabet",
+      "title": "Animal Alphabet",
+      "origin": "generated",
+      "mode": "spell",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Six three-letter animal names change the picture bank in Word Rocket’s spelling engine. Meeting animals is a potential theme, but there is no animal care or different word-building mechanic; consolidate literacy content.",
+      "nearest_duplicates": [
+        "word-rocket",
+        "picnic-word-basket"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "animal-alphabet"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'spell'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "spell"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "word-rocket",
+        "picnic-word-basket"
+      ]
+    },
+    {
+      "id": "picnic-word-basket",
+      "title": "Picnic Word Basket",
+      "origin": "generated",
+      "mode": "spell",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Six food words fill the same letter-order rule and a basket carrier. Packing pictures after spelling is connected feedback, but not a distinct picnic-making system beyond the existing spelling games.",
+      "nearest_duplicates": [
+        "word-rocket",
+        "animal-alphabet"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "picnic-word-basket"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'spell'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "spell"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "word-rocket",
+        "animal-alphabet"
+      ]
+    },
+    {
+      "id": "rhyming-river",
+      "title": "Rhyming River",
+      "origin": "generated",
+      "mode": "rhyme",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "A frog hops to the chosen rhyming picture and audio reads all choices, reducing reading burden. Six fixed rhyme sets still make a quiz; preserve the word-sound hook only if it becomes a navigable river or richer spoken play.",
+      "nearest_duplicates": [],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "rhyming-river"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'rhyme'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "rhyme"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": []
+    },
+    {
+      "id": "weather-wardrobe",
+      "title": "Weather Wardrobe",
+      "origin": "generated",
+      "mode": "choice",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Four weather questions move a correct garment to a rabbit but offer no free dressing, trying clothing in weather, or character care. It duplicates Season Suitcase’s practical clothing knowledge with another quiz.",
+      "nearest_duplicates": [
+        "kindness-cafe",
+        "healthy-plate-party",
+        "senses-safari"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "weather-wardrobe"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'choice'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/stories.js",
+          "symbols": [
+            "choice"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "kindness-cafe",
+        "healthy-plate-party",
+        "senses-safari"
+      ]
+    },
+    {
+      "id": "kindness-cafe",
+      "title": "Kindness Café",
+      "origin": "generated",
+      "mode": "choice",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Multiple caring answers are respected, but the child still selects written phrases about four fixed social situations. Friends do not sustain a conversation or respond to freely chosen actions; the cafe is a moral-choice quiz rather than pretend play.",
+      "nearest_duplicates": [
+        "weather-wardrobe",
+        "healthy-plate-party",
+        "senses-safari"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "kindness-cafe"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'choice'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/stories.js",
+          "symbols": [
+            "choice"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "weather-wardrobe",
+        "healthy-plate-party",
+        "senses-safari"
+      ]
+    },
+    {
+      "id": "healthy-plate-party",
+      "title": "Healthy Plate Party",
+      "origin": "generated",
+      "mode": "choice",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Four fixed food/routine questions receive a generic praise message and small model placement. Children cannot compose meals or see characters enjoy them; the party premise does not become an activity.",
+      "nearest_duplicates": [
+        "weather-wardrobe",
+        "kindness-cafe",
+        "senses-safari"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "healthy-plate-party"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'choice'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/stories.js",
+          "symbols": [
+            "choice"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "weather-wardrobe",
+        "kindness-cafe",
+        "senses-safari"
+      ]
+    },
+    {
+      "id": "senses-safari",
+      "title": "Senses Safari",
+      "origin": "generated",
+      "mode": "choice",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Explore object mostly bobs a model, and smell/touch/taste are explicitly imagined. Then a body-part answer is chosen. This has neither a safari nor meaningful sensory experimentation.",
+      "nearest_duplicates": [
+        "weather-wardrobe",
+        "kindness-cafe",
+        "healthy-plate-party"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "senses-safari"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'choice'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/stories.js",
+          "symbols": [
+            "choice"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "weather-wardrobe",
+        "kindness-cafe",
+        "healthy-plate-party"
+      ]
+    },
+    {
+      "id": "magnet-discovery",
+      "title": "Magnet Discovery",
+      "origin": "generated",
+      "mode": "experiment",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "A prediction and visible test form a genuine inquiry loop with a magnet and materially named objects. Six hardcoded outcomes quickly exhaust it; allow children to select objects, move the magnet and compare combinations in one actual exploratory lab.",
+      "nearest_duplicates": [
+        "float-boat-lab",
+        "sunlight-sprouts"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "magnet-discovery"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'experiment'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "experiment"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "float-boat-lab",
+        "sunlight-sprouts"
+      ]
+    },
+    {
+      "id": "float-boat-lab",
+      "title": "Float Boat Lab",
+      "origin": "generated",
+      "mode": "experiment",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "A visible water test can support curiosity and checking a prediction. Six preset boolean outcomes provide little sustained experimentation; shape/material changes and child-built boats could make the title’s promise real.",
+      "nearest_duplicates": [
+        "magnet-discovery",
+        "sunlight-sprouts"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "float-boat-lab"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'experiment'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "experiment"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "magnet-discovery",
+        "sunlight-sprouts"
+      ]
+    },
+    {
+      "id": "sunlight-sprouts",
+      "title": "Sunlight Sprouts",
+      "origin": "generated",
+      "mode": "experiment",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Choosing yes/no for six supplied objects triggers a plant-growth demonstration. It does not model tending over time or changing combinations of supplies; less engaging than an integrated garden-care concept.",
+      "nearest_duplicates": [
+        "magnet-discovery",
+        "float-boat-lab"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "sunlight-sprouts"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'experiment'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "symbols": [
+            "experiment"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "magnet-discovery",
+        "float-boat-lab"
+      ]
+    },
+    {
+      "id": "sound-wave-lab",
+      "title": "Sound Wave Lab",
+      "origin": "generated",
+      "mode": "pitch",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Listen to every tone before high/low answer buttons unlock; compose mode genuinely exists but repeats the same small note palette as other musical titles. Wave drawings alone do not justify a separate lab.",
+      "nearest_duplicates": [
+        "birdsong-tuner"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "sound-wave-lab"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'pitch'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "pitch"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "birdsong-tuner"
+      ]
+    },
+    {
+      "id": "birdsong-tuner",
+      "title": "Birdsong Tuner",
+      "origin": "generated",
+      "mode": "pitch",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The same high/low exercise and composition controls swap crystals for birds. Sine tones do not amount to a bird-voice discovery system; consolidate musical play.",
+      "nearest_duplicates": [
+        "sound-wave-lab"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "birdsong-tuner"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'pitch'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "pitch"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "sound-wave-lab"
+      ]
+    },
+    {
+      "id": "drum-beat-builder",
+      "title": "Drum Beat Builder",
+      "origin": "generated",
+      "mode": "rhythm",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Beat/rest toggles, playback and composition mode are real authoring tools beyond a static quiz. The default copied pattern and small 4–6 step grid limit expression; develop one accessible musical playground instead of separate near-identical rhythm/echo/pitch releases.",
+      "nearest_duplicates": [
+        "rain-drop-rhythm"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "drum-beat-builder"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'rhythm'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "rhythm"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "rain-drop-rhythm"
+      ]
+    },
+    {
+      "id": "rain-drop-rhythm",
+      "title": "Rain Drop Rhythm",
+      "origin": "generated",
+      "mode": "rhythm",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Identical beat/rest sequence copying and composition use a rain-themed model. Rain has no different sound-generation or weather-control mechanism; redundant with Drum Beat Builder.",
+      "nearest_duplicates": [
+        "drum-beat-builder"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "rain-drop-rhythm"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'rhythm'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "rhythm"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "drum-beat-builder"
+      ]
+    },
+    {
+      "id": "toy-town-builder",
+      "title": "Toy Town Builder",
+      "origin": "generated",
+      "mode": "build",
+      "verdict": "rework",
+      "confidence": "medium",
+      "rationale": "Free-building toggle and undo allow actual child-authored tower heights. It remains 3–4 predetermined pads with four floors and no saving, characters or changing town use; rebuild as a creative town toy with a purpose rather than blueprint copying.",
+      "nearest_duplicates": [
+        "castle-block-blueprints"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "toy-town-builder"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'build'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "build"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "castle-block-blueprints"
+      ]
+    },
+    {
+      "id": "castle-block-blueprints",
+      "title": "Castle Block Blueprints",
+      "origin": "generated",
+      "mode": "build",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Same pads, floor counts, roof construction and free-building toggle as Toy Town Builder. Castle colour/shape treatment does not provide castle-specific construction or play.",
+      "nearest_duplicates": [
+        "toy-town-builder"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "castle-block-blueprints"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'build'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "build"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "toy-town-builder"
+      ]
+    },
+    {
+      "id": "dino-egg-nest",
+      "title": "Dino Egg Nest",
+      "origin": "generated",
+      "mode": "tenframe",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Filling a requested number of ten spaces is a counting representation with eggs. No hatching or dinosaur care gives the slots a play consequence; overlaps collect/count activities.",
+      "nearest_duplicates": [
+        "ladybird-dot-party"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "dino-egg-nest"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'tenframe'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "tenframe"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "ladybird-dot-party"
+      ]
+    },
+    {
+      "id": "ladybird-dot-party",
+      "title": "Ladybird Dot Party",
+      "origin": "generated",
+      "mode": "tenframe",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "The same ten-frame placement/check uses ladybird spots. The party remains a label, not social or creative play, and it adds no meaningful loop beyond Dino Egg Nest.",
+      "nearest_duplicates": [
+        "dino-egg-nest"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "ladybird-dot-party"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'tenframe'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "symbols": [
+            "tenframe"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "dino-egg-nest"
+      ]
+    },
+    {
+      "id": "reef-patterns",
+      "title": "Reef Patterns",
+      "origin": "generated",
+      "mode": "pattern",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "rationale": "Newly added fish/shell/turtle tokens use exactly the AB/AAB/ABC missing-token rule of Butterfly Patterns, Bead Bridge and Train Carriage Rhythm. This is precisely the catalogue expansion by reskin the new direction should stop.",
+      "nearest_duplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "constellation-code"
+      ],
+      "evidence": [
+        {
+          "path": "examples/_studio/catalogue.mjs",
+          "symbols": [
+            "reef-patterns"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "symbols": [
+            "challenge() case 'pattern'"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "symbols": [
+            "pattern"
+          ]
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "symbols": [
+            "success",
+            "startRound",
+            "finish"
+          ]
+        }
+      ],
+      "child_experience_risk": "Source inference, not observed child boredom. Default five-step completion loop and adult-authored targets constrain agency; thematic art and correct-answer effects do not establish voluntary replay.",
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "constellation-code"
+      ]
+    }
+  ]
+}

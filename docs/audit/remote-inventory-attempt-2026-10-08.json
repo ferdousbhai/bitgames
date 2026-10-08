@@ -1,0 +1,874 @@
+{
+  "date": "2026-10-08",
+  "scope": "Read-only remote inventory and authorized authentication attempt. No resource deletion, store mutation, installation, or original game changes.",
+  "installed_cli": {
+    "cf_version": "1.0.0-beta.12",
+    "cf_binary": "node_modules/.pnpm/cf@1.0.0-beta.12_@types+node@26.6.3/node_modules/cf/bin/cf",
+    "wrangler_version": "4.147.0",
+    "direct_cli_available": true,
+    "installation_needed": false
+  },
+  "authentication": {
+    "cf_authenticated": false,
+    "cf_whoami": {
+      "authenticated": false,
+      "error": "Not logged in"
+    },
+    "wrangler_result": "You are not authenticated. Please run wrangler login.",
+    "environment_api_token_present": false,
+    "account_id_verified": null,
+    "oauth_attempt": {
+      "command": "XDG_CONFIG_HOME=/tmp/bitgames-cf-readonly-auth node_modules/.pnpm/cf@1.0.0-beta.12_@types+node@26.6.3/node_modules/cf/bin/cf auth login --device --no-browser",
+      "exit_code": 1,
+      "output": "Starting OAuth login flow; Attempting to login via OAuth Device Authorization Grant; Error: fetch failed",
+      "browser_link_or_device_code_issued": false,
+      "credentials_created": false
+    }
+  },
+  "network_probe": {
+    "url": "https://api.cloudflare.com/client/v4/user",
+    "method": "GET",
+    "authenticated": false,
+    "exit_code": 1,
+    "error": "fetch failed",
+    "cause": "getaddrinfo EAI_AGAIN api.cloudflare.com",
+    "interpretation": "Cloudflare API DNS resolution is unavailable in this session; no HTTP response reached."
+  },
+  "commands": [
+    {
+      "command": "node_modules/.pnpm/cf@1.0.0-beta.12_@types+node@26.6.3/node_modules/cf/bin/cf auth whoami",
+      "exit_code": 0,
+      "meaning": "CLI reported unauthenticated, despite exit zero."
+    },
+    {
+      "command": "node_modules/.pnpm/cf@1.0.0-beta.12_@types+node@26.6.3/node_modules/cf/bin/cf workers scripts search --per-page 100",
+      "exit_code": 1,
+      "output": "No authentication token found. Set CLOUDFLARE_API_TOKEN or run cf auth login."
+    },
+    {
+      "command": "WRANGLER_LOG_PATH=/tmp/bitgames-readonly-wrangler.log WRANGLER_SEND_METRICS=false node examples/firefly-lanterns/node_modules/wrangler/bin/wrangler.js whoami",
+      "exit_code": 0,
+      "output": "You are not authenticated. Please run wrangler login.",
+      "note": "Wrangler log path moved to /tmp after initial default log path was read-only. No account credential files modified."
+    }
+  ],
+  "inventory_result": {
+    "configured_generated_workers": 89,
+    "recorded_deployed_generated_workers": 14,
+    "remote_existence_verified": 0,
+    "bindings_verified": 0,
+    "account_id_verified": false,
+    "remote_inventory_obtained": false
+  },
+  "workers": [
+    {
+      "id": "acorn-addition",
+      "configured_worker": "bitgames-acorn-addition",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "animal-alphabet",
+      "configured_worker": "bitgames-animal-alphabet",
+      "recorded_deployment_url": "https://34b6e66f-bitgames-animal-alphabet.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "bakery-alarm",
+      "configured_worker": "bitgames-bakery-alarm",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "bakery-bundles",
+      "configured_worker": "bitgames-bakery-bundles",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "bead-bridge",
+      "configured_worker": "bitgames-bead-bridge",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "bear-balance",
+      "configured_worker": "bitgames-bear-balance",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "bee-pollen-trail",
+      "configured_worker": "bitgames-bee-pollen-trail",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "birdsong-tuner",
+      "configured_worker": "bitgames-birdsong-tuner",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "breakfast-story",
+      "configured_worker": "bitgames-breakfast-story",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "bridge-builder",
+      "configured_worker": "bitgames-bridge-builder",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "bunny-bedtime",
+      "configured_worker": "bitgames-bunny-bedtime",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "butterfly-life-lab",
+      "configured_worker": "bitgames-butterfly-life-lab",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "butterfly-mirrors",
+      "configured_worker": "bitgames-butterfly-mirrors",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "butterfly-patterns",
+      "configured_worker": "bitgames-butterfly-patterns",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "castle-block-blueprints",
+      "configured_worker": "bitgames-castle-block-blueprints",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "castle-window-symmetry",
+      "configured_worker": "bitgames-castle-window-symmetry",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "cloud-number-race",
+      "configured_worker": "bitgames-cloud-number-race",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "colour-cauldron",
+      "configured_worker": "bitgames-colour-cauldron",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "comet-tail-measure",
+      "configured_worker": "bitgames-comet-tail-measure",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "constellation-code",
+      "configured_worker": "bitgames-constellation-code",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "coral-cleanup",
+      "configured_worker": "bitgames-coral-cleanup",
+      "recorded_deployment_url": "https://d8fd4cfa-bitgames-coral-cleanup.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "crystal-cave-echo",
+      "configured_worker": "bitgames-crystal-cave-echo",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "cuckoo-clock-garden",
+      "configured_worker": "bitgames-cuckoo-clock-garden",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "deep-sea-divers",
+      "configured_worker": "bitgames-deep-sea-divers",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "dino-egg-nest",
+      "configured_worker": "bitgames-dino-egg-nest",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "dinosaur-size-parade",
+      "configured_worker": "bitgames-dinosaur-size-parade",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "drum-beat-builder",
+      "configured_worker": "bitgames-drum-beat-builder",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "firefly-lanterns",
+      "configured_worker": "bitgames-firefly-lanterns",
+      "recorded_deployment_url": "https://aabec2a1-bitgames-firefly-lanterns.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "float-boat-lab",
+      "configured_worker": "bitgames-float-boat-lab",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "footprint-detective",
+      "configured_worker": "bitgames-footprint-detective",
+      "recorded_deployment_url": "https://adeb9e6b-bitgames-footprint-detective.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "frog-choir",
+      "configured_worker": "bitgames-frog-choir",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "frog-life-lab",
+      "configured_worker": "bitgames-frog-life-lab",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "fruit-veggie-ferry",
+      "configured_worker": "bitgames-fruit-veggie-ferry",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "garden-fence",
+      "configured_worker": "bitgames-garden-fence",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "gem-turner",
+      "configured_worker": "bitgames-gem-turner",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "giraffe-ruler",
+      "configured_worker": "bitgames-giraffe-ruler",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "habitat-hotel",
+      "configured_worker": "bitgames-habitat-hotel",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "healthy-plate-party",
+      "configured_worker": "bitgames-healthy-plate-party",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "jellyfish-glow-lab",
+      "configured_worker": "bitgames-jellyfish-glow-lab",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "kindness-cafe",
+      "configured_worker": "bitgames-kindness-cafe",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "kite-flight-school",
+      "configured_worker": "bitgames-kite-flight-school",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "ladybird-dot-party",
+      "configured_worker": "bitgames-ladybird-dot-party",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "letter-buddies",
+      "configured_worker": "bitgames-letter-buddies",
+      "recorded_deployment_url": "https://471e06b3-bitgames-letter-buddies.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "letter-trails",
+      "configured_worker": "bitgames-letter-trails",
+      "recorded_deployment_url": "https://35797065-bitgames-letter-trails.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "magnet-discovery",
+      "configured_worker": "bitgames-magnet-discovery",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "moon-pebbles",
+      "configured_worker": "bitgames-moon-pebbles",
+      "recorded_deployment_url": "https://32ffea8f-bitgames-moon-pebbles.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "number-spark-trails",
+      "configured_worker": "bitgames-number-spark-trails",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "orchard-baskets",
+      "configured_worker": "bitgames-orchard-baskets",
+      "recorded_deployment_url": "https://f7235391-bitgames-orchard-baskets.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "paint-a-planet",
+      "configured_worker": "bitgames-paint-a-planet",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "parcel-weights",
+      "configured_worker": "bitgames-parcel-weights",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "pebble-equations",
+      "configured_worker": "bitgames-pebble-equations",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "penguin-ice-path",
+      "configured_worker": "bitgames-penguin-ice-path",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "picnic-pairs",
+      "configured_worker": "bitgames-picnic-pairs",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "picnic-word-basket",
+      "configured_worker": "bitgames-picnic-word-basket",
+      "recorded_deployment_url": "https://699243a5-bitgames-picnic-word-basket.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "pizza-moon",
+      "configured_worker": "bitgames-pizza-moon",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "planet-pairs",
+      "configured_worker": "bitgames-planet-pairs",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "rain-drop-rhythm",
+      "configured_worker": "bitgames-rain-drop-rhythm",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "rainbow-postoffice",
+      "configured_worker": "bitgames-rainbow-postoffice",
+      "recorded_deployment_url": "https://20b97f92-bitgames-rainbow-postoffice.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "rainbow-quilt",
+      "configured_worker": "bitgames-rainbow-quilt",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "rainbow-smoothies",
+      "configured_worker": "bitgames-rainbow-smoothies",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "recycling-robots",
+      "configured_worker": "bitgames-recycling-robots",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "reef-patterns",
+      "configured_worker": "bitgames-reef-patterns",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "rhyming-river",
+      "configured_worker": "bitgames-rhyming-river",
+      "recorded_deployment_url": "https://b0b11c86-bitgames-rhyming-river.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "ribbon-tailor",
+      "configured_worker": "bitgames-ribbon-tailor",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "robot-dance-code",
+      "configured_worker": "bitgames-robot-dance-code",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "robot-reflections",
+      "configured_worker": "bitgames-robot-reflections",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "rocket-docking",
+      "configured_worker": "bitgames-rocket-docking",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "rover-rescue",
+      "configured_worker": "bitgames-rover-rescue",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "season-suitcase",
+      "configured_worker": "bitgames-season-suitcase",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "senses-safari",
+      "configured_worker": "bitgames-senses-safari",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "shadow-theatre",
+      "configured_worker": "bitgames-shadow-theatre",
+      "recorded_deployment_url": "https://3416403c-bitgames-shadow-theatre.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "shape-locksmith",
+      "configured_worker": "bitgames-shape-locksmith",
+      "recorded_deployment_url": "https://550ead12-bitgames-shape-locksmith.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "sleepy-owl-lullaby",
+      "configured_worker": "bitgames-sleepy-owl-lullaby",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "snail-spiral",
+      "configured_worker": "bitgames-snail-spiral",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "snowflake-studio",
+      "configured_worker": "bitgames-snowflake-studio",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "sound-wave-lab",
+      "configured_worker": "bitgames-sound-wave-lab",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "space-station-schedule",
+      "configured_worker": "bitgames-space-station-schedule",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "sprout-sunflower",
+      "configured_worker": "bitgames-sprout-sunflower",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "star-share",
+      "configured_worker": "bitgames-star-share",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "submarine-subtraction",
+      "configured_worker": "bitgames-submarine-subtraction",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "sunlight-sprouts",
+      "configured_worker": "bitgames-sunlight-sprouts",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "tangram-turntable",
+      "configured_worker": "bitgames-tangram-turntable",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "tool-twins",
+      "configured_worker": "bitgames-tool-twins",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "toy-town-builder",
+      "configured_worker": "bitgames-toy-town-builder",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "train-carriage-rhythm",
+      "configured_worker": "bitgames-train-carriage-rhythm",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "turtle-treasure-map",
+      "configured_worker": "bitgames-turtle-treasure-map",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "watermelon-picnic",
+      "configured_worker": "bitgames-watermelon-picnic",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "weather-wardrobe",
+      "configured_worker": "bitgames-weather-wardrobe",
+      "recorded_deployment_url": null,
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    },
+    {
+      "id": "word-rocket",
+      "configured_worker": "bitgames-word-rocket",
+      "recorded_deployment_url": "https://80a3a2a7-bitgames-word-rocket.ferdousbd.workers.dev/",
+      "remote_exists": null,
+      "bindings": null,
+      "verification_status": "blocked: unauthenticated and Cloudflare API DNS unavailable",
+      "local_declared_shared_resource_keywords": []
+    }
+  ],
+  "protected_scope": [
+    "12 original games",
+    "BitGames store and shared resources",
+    "SplashTank external repository and resources"
+  ],
+  "next_action": "Run installed cf auth login in a network-enabled writable host terminal; OAuth requires owner completion. Re-run authenticated exact-name worker/binding inventory before coordinator deletion. Local URLs/configuration do not prove remote existence or resource ownership.",
+  "owner_terminal_login_command": "examples/balloon-pop/node_modules/.bin/cf auth login",
+  "owner_terminal_identity_command": "examples/balloon-pop/node_modules/.bin/cf auth whoami"
+}

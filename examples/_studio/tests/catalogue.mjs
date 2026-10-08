@@ -11,19 +11,19 @@ const cardCount = () => page.locator('#games a').count()
 await runChecks(session, async (pass) => {
   await page.goto(origin)
   await page.waitForSelector('#games a')
-  assert.equal(await cardCount(), 100)
+  assert.equal(await cardCount(), games.length)
 
-  await page.locator('#search').fill('firefly')
-  const matchesFirefly = (g) => `${g.title} ${g.tagline} ${g.learning || ''}`.toLowerCase().includes('firefly')
-  assert.equal(await cardCount(), games.filter(matchesFirefly).length)
+  await page.locator('#search').fill('rocket')
+  const matchesSearch = (g) => `${g.title} ${g.tagline} ${g.learning || ''}`.toLowerCase().includes('rocket')
+  assert.equal(await cardCount(), games.filter(matchesSearch).length)
   await page.locator('#search').fill('')
 
   await page.locator('#age').selectOption('2')
   assert.equal(await cardCount(), games.filter((g) => !g.ages || (g.ages[0] <= 2 && g.ages[1] >= 2)).length)
   await page.locator('#age').selectOption('')
 
-  await page.locator('#skill').selectOption('Reflection symmetry')
-  assert.equal(await cardCount(), 1)
+  await page.locator('#skill').selectOption(games[0].learning)
+  assert.equal(await cardCount(), games.filter(g => g.learning === games[0].learning).length)
   await page.locator('#skill').selectOption('')
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
 

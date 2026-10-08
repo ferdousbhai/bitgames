@@ -1,0 +1,830 @@
+{
+  "date": "2026-10-08",
+  "status": "APPROVED_WIPE_EXECUTED_VERIFIED",
+  "selection": "Retire all 89 current generated games; preserve original12 and external Splash Tank",
+  "requiresExactScopeConfirmation": false,
+  "remoteInventoryVerified": true,
+  "games": [
+    {
+      "id": "acorn-addition",
+      "title": "Acorn Addition",
+      "sourceDirectory": "examples/acorn-addition",
+      "worker": "bitgames-acorn-addition",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "animal-alphabet",
+      "title": "Animal Alphabet",
+      "sourceDirectory": "examples/animal-alphabet",
+      "worker": "bitgames-animal-alphabet",
+      "recordedDeploymentUrl": "https://34b6e66f-bitgames-animal-alphabet.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "bakery-alarm",
+      "title": "Bakery Alarm",
+      "sourceDirectory": "examples/bakery-alarm",
+      "worker": "bitgames-bakery-alarm",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "bakery-bundles",
+      "title": "Bakery Bundles",
+      "sourceDirectory": "examples/bakery-bundles",
+      "worker": "bitgames-bakery-bundles",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "bead-bridge",
+      "title": "Bead Bridge",
+      "sourceDirectory": "examples/bead-bridge",
+      "worker": "bitgames-bead-bridge",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "bear-balance",
+      "title": "Bear Balance",
+      "sourceDirectory": "examples/bear-balance",
+      "worker": "bitgames-bear-balance",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "bee-pollen-trail",
+      "title": "Bee Pollen Trail",
+      "sourceDirectory": "examples/bee-pollen-trail",
+      "worker": "bitgames-bee-pollen-trail",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "birdsong-tuner",
+      "title": "Birdsong Tuner",
+      "sourceDirectory": "examples/birdsong-tuner",
+      "worker": "bitgames-birdsong-tuner",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "breakfast-story",
+      "title": "Breakfast Story",
+      "sourceDirectory": "examples/breakfast-story",
+      "worker": "bitgames-breakfast-story",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "bridge-builder",
+      "title": "Bridge Builder",
+      "sourceDirectory": "examples/bridge-builder",
+      "worker": "bitgames-bridge-builder",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "bunny-bedtime",
+      "title": "Bunny Bedtime",
+      "sourceDirectory": "examples/bunny-bedtime",
+      "worker": "bitgames-bunny-bedtime",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "butterfly-life-lab",
+      "title": "Butterfly Life Lab",
+      "sourceDirectory": "examples/butterfly-life-lab",
+      "worker": "bitgames-butterfly-life-lab",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "butterfly-mirrors",
+      "title": "Butterfly Mirrors",
+      "sourceDirectory": "examples/butterfly-mirrors",
+      "worker": "bitgames-butterfly-mirrors",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "butterfly-patterns",
+      "title": "Butterfly Patterns",
+      "sourceDirectory": "examples/butterfly-patterns",
+      "worker": "bitgames-butterfly-patterns",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "castle-block-blueprints",
+      "title": "Castle Block Blueprints",
+      "sourceDirectory": "examples/castle-block-blueprints",
+      "worker": "bitgames-castle-block-blueprints",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "castle-window-symmetry",
+      "title": "Castle Window Symmetry",
+      "sourceDirectory": "examples/castle-window-symmetry",
+      "worker": "bitgames-castle-window-symmetry",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "cloud-number-race",
+      "title": "Cloud Number Race",
+      "sourceDirectory": "examples/cloud-number-race",
+      "worker": "bitgames-cloud-number-race",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "colour-cauldron",
+      "title": "Colour Cauldron",
+      "sourceDirectory": "examples/colour-cauldron",
+      "worker": "bitgames-colour-cauldron",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "comet-tail-measure",
+      "title": "Comet Tail Measure",
+      "sourceDirectory": "examples/comet-tail-measure",
+      "worker": "bitgames-comet-tail-measure",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "constellation-code",
+      "title": "Constellation Code",
+      "sourceDirectory": "examples/constellation-code",
+      "worker": "bitgames-constellation-code",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "coral-cleanup",
+      "title": "Coral Cleanup",
+      "sourceDirectory": "examples/coral-cleanup",
+      "worker": "bitgames-coral-cleanup",
+      "recordedDeploymentUrl": "https://d8fd4cfa-bitgames-coral-cleanup.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "crystal-cave-echo",
+      "title": "Crystal Cave Echo",
+      "sourceDirectory": "examples/crystal-cave-echo",
+      "worker": "bitgames-crystal-cave-echo",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "cuckoo-clock-garden",
+      "title": "Cuckoo Clock Garden",
+      "sourceDirectory": "examples/cuckoo-clock-garden",
+      "worker": "bitgames-cuckoo-clock-garden",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "deep-sea-divers",
+      "title": "Deep Sea Divers",
+      "sourceDirectory": "examples/deep-sea-divers",
+      "worker": "bitgames-deep-sea-divers",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "dino-egg-nest",
+      "title": "Dino Egg Nest",
+      "sourceDirectory": "examples/dino-egg-nest",
+      "worker": "bitgames-dino-egg-nest",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "dinosaur-size-parade",
+      "title": "Dinosaur Size Parade",
+      "sourceDirectory": "examples/dinosaur-size-parade",
+      "worker": "bitgames-dinosaur-size-parade",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "drum-beat-builder",
+      "title": "Drum Beat Builder",
+      "sourceDirectory": "examples/drum-beat-builder",
+      "worker": "bitgames-drum-beat-builder",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "firefly-lanterns",
+      "title": "Firefly Lanterns",
+      "sourceDirectory": "examples/firefly-lanterns",
+      "worker": "bitgames-firefly-lanterns",
+      "recordedDeploymentUrl": "https://aabec2a1-bitgames-firefly-lanterns.ferdousbd.workers.dev/",
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "float-boat-lab",
+      "title": "Float Boat Lab",
+      "sourceDirectory": "examples/float-boat-lab",
+      "worker": "bitgames-float-boat-lab",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "footprint-detective",
+      "title": "Footprint Detective",
+      "sourceDirectory": "examples/footprint-detective",
+      "worker": "bitgames-footprint-detective",
+      "recordedDeploymentUrl": "https://adeb9e6b-bitgames-footprint-detective.ferdousbd.workers.dev/",
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "frog-choir",
+      "title": "Frog Choir",
+      "sourceDirectory": "examples/frog-choir",
+      "worker": "bitgames-frog-choir",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "frog-life-lab",
+      "title": "Frog Life Lab",
+      "sourceDirectory": "examples/frog-life-lab",
+      "worker": "bitgames-frog-life-lab",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "fruit-veggie-ferry",
+      "title": "Fruit & Veggie Ferry",
+      "sourceDirectory": "examples/fruit-veggie-ferry",
+      "worker": "bitgames-fruit-veggie-ferry",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "garden-fence",
+      "title": "Garden Fence",
+      "sourceDirectory": "examples/garden-fence",
+      "worker": "bitgames-garden-fence",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "gem-turner",
+      "title": "Gem Turner",
+      "sourceDirectory": "examples/gem-turner",
+      "worker": "bitgames-gem-turner",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "giraffe-ruler",
+      "title": "Giraffe Ruler",
+      "sourceDirectory": "examples/giraffe-ruler",
+      "worker": "bitgames-giraffe-ruler",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "habitat-hotel",
+      "title": "Habitat Hotel",
+      "sourceDirectory": "examples/habitat-hotel",
+      "worker": "bitgames-habitat-hotel",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "healthy-plate-party",
+      "title": "Healthy Plate Party",
+      "sourceDirectory": "examples/healthy-plate-party",
+      "worker": "bitgames-healthy-plate-party",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "jellyfish-glow-lab",
+      "title": "Jellyfish Glow Lab",
+      "sourceDirectory": "examples/jellyfish-glow-lab",
+      "worker": "bitgames-jellyfish-glow-lab",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "kindness-cafe",
+      "title": "Kindness Caf\u00e9",
+      "sourceDirectory": "examples/kindness-cafe",
+      "worker": "bitgames-kindness-cafe",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "kite-flight-school",
+      "title": "Kite Flight School",
+      "sourceDirectory": "examples/kite-flight-school",
+      "worker": "bitgames-kite-flight-school",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "ladybird-dot-party",
+      "title": "Ladybird Dot Party",
+      "sourceDirectory": "examples/ladybird-dot-party",
+      "worker": "bitgames-ladybird-dot-party",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "letter-buddies",
+      "title": "Letter Buddies",
+      "sourceDirectory": "examples/letter-buddies",
+      "worker": "bitgames-letter-buddies",
+      "recordedDeploymentUrl": "https://471e06b3-bitgames-letter-buddies.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "letter-trails",
+      "title": "Letter Trails",
+      "sourceDirectory": "examples/letter-trails",
+      "worker": "bitgames-letter-trails",
+      "recordedDeploymentUrl": "https://35797065-bitgames-letter-trails.ferdousbd.workers.dev/",
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "magnet-discovery",
+      "title": "Magnet Discovery",
+      "sourceDirectory": "examples/magnet-discovery",
+      "worker": "bitgames-magnet-discovery",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "moon-pebbles",
+      "title": "Moon Pebbles",
+      "sourceDirectory": "examples/moon-pebbles",
+      "worker": "bitgames-moon-pebbles",
+      "recordedDeploymentUrl": "https://32ffea8f-bitgames-moon-pebbles.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "number-spark-trails",
+      "title": "Number Spark Trails",
+      "sourceDirectory": "examples/number-spark-trails",
+      "worker": "bitgames-number-spark-trails",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "orchard-baskets",
+      "title": "Orchard Baskets",
+      "sourceDirectory": "examples/orchard-baskets",
+      "worker": "bitgames-orchard-baskets",
+      "recordedDeploymentUrl": "https://f7235391-bitgames-orchard-baskets.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "paint-a-planet",
+      "title": "Paint a Planet",
+      "sourceDirectory": "examples/paint-a-planet",
+      "worker": "bitgames-paint-a-planet",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "parcel-weights",
+      "title": "Parcel Weights",
+      "sourceDirectory": "examples/parcel-weights",
+      "worker": "bitgames-parcel-weights",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "pebble-equations",
+      "title": "Pebble Equations",
+      "sourceDirectory": "examples/pebble-equations",
+      "worker": "bitgames-pebble-equations",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "penguin-ice-path",
+      "title": "Penguin Ice Path",
+      "sourceDirectory": "examples/penguin-ice-path",
+      "worker": "bitgames-penguin-ice-path",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "picnic-pairs",
+      "title": "Picnic Pairs",
+      "sourceDirectory": "examples/picnic-pairs",
+      "worker": "bitgames-picnic-pairs",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "picnic-word-basket",
+      "title": "Picnic Word Basket",
+      "sourceDirectory": "examples/picnic-word-basket",
+      "worker": "bitgames-picnic-word-basket",
+      "recordedDeploymentUrl": "https://699243a5-bitgames-picnic-word-basket.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "pizza-moon",
+      "title": "Pizza Moon",
+      "sourceDirectory": "examples/pizza-moon",
+      "worker": "bitgames-pizza-moon",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "planet-pairs",
+      "title": "Planet Pairs",
+      "sourceDirectory": "examples/planet-pairs",
+      "worker": "bitgames-planet-pairs",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "rain-drop-rhythm",
+      "title": "Rain Drop Rhythm",
+      "sourceDirectory": "examples/rain-drop-rhythm",
+      "worker": "bitgames-rain-drop-rhythm",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "rainbow-postoffice",
+      "title": "Rainbow Post Office",
+      "sourceDirectory": "examples/rainbow-postoffice",
+      "worker": "bitgames-rainbow-postoffice",
+      "recordedDeploymentUrl": "https://20b97f92-bitgames-rainbow-postoffice.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "rainbow-quilt",
+      "title": "Rainbow Quilt",
+      "sourceDirectory": "examples/rainbow-quilt",
+      "worker": "bitgames-rainbow-quilt",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "rainbow-smoothies",
+      "title": "Rainbow Smoothies",
+      "sourceDirectory": "examples/rainbow-smoothies",
+      "worker": "bitgames-rainbow-smoothies",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "recycling-robots",
+      "title": "Recycling Robots",
+      "sourceDirectory": "examples/recycling-robots",
+      "worker": "bitgames-recycling-robots",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "reef-patterns",
+      "title": "Reef Patterns",
+      "sourceDirectory": "examples/reef-patterns",
+      "worker": "bitgames-reef-patterns",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "rhyming-river",
+      "title": "Rhyming River",
+      "sourceDirectory": "examples/rhyming-river",
+      "worker": "bitgames-rhyming-river",
+      "recordedDeploymentUrl": "https://b0b11c86-bitgames-rhyming-river.ferdousbd.workers.dev/",
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "ribbon-tailor",
+      "title": "Ribbon Tailor",
+      "sourceDirectory": "examples/ribbon-tailor",
+      "worker": "bitgames-ribbon-tailor",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "robot-dance-code",
+      "title": "Robot Dance Code",
+      "sourceDirectory": "examples/robot-dance-code",
+      "worker": "bitgames-robot-dance-code",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "robot-reflections",
+      "title": "Robot Reflections",
+      "sourceDirectory": "examples/robot-reflections",
+      "worker": "bitgames-robot-reflections",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "rocket-docking",
+      "title": "Rocket Docking",
+      "sourceDirectory": "examples/rocket-docking",
+      "worker": "bitgames-rocket-docking",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "rover-rescue",
+      "title": "Rover Rescue",
+      "sourceDirectory": "examples/rover-rescue",
+      "worker": "bitgames-rover-rescue",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "season-suitcase",
+      "title": "Season Suitcase",
+      "sourceDirectory": "examples/season-suitcase",
+      "worker": "bitgames-season-suitcase",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "senses-safari",
+      "title": "Senses Safari",
+      "sourceDirectory": "examples/senses-safari",
+      "worker": "bitgames-senses-safari",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "shadow-theatre",
+      "title": "Shadow Theatre",
+      "sourceDirectory": "examples/shadow-theatre",
+      "worker": "bitgames-shadow-theatre",
+      "recordedDeploymentUrl": "https://3416403c-bitgames-shadow-theatre.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "shape-locksmith",
+      "title": "Shape Locksmith",
+      "sourceDirectory": "examples/shape-locksmith",
+      "worker": "bitgames-shape-locksmith",
+      "recordedDeploymentUrl": "https://550ead12-bitgames-shape-locksmith.ferdousbd.workers.dev/",
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "sleepy-owl-lullaby",
+      "title": "Sleepy Owl Lullaby",
+      "sourceDirectory": "examples/sleepy-owl-lullaby",
+      "worker": "bitgames-sleepy-owl-lullaby",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "snail-spiral",
+      "title": "Snail Spiral",
+      "sourceDirectory": "examples/snail-spiral",
+      "worker": "bitgames-snail-spiral",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "snowflake-studio",
+      "title": "Snowflake Studio",
+      "sourceDirectory": "examples/snowflake-studio",
+      "worker": "bitgames-snowflake-studio",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "sound-wave-lab",
+      "title": "Sound Wave Lab",
+      "sourceDirectory": "examples/sound-wave-lab",
+      "worker": "bitgames-sound-wave-lab",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "space-station-schedule",
+      "title": "Space Station Schedule",
+      "sourceDirectory": "examples/space-station-schedule",
+      "worker": "bitgames-space-station-schedule",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "sprout-sunflower",
+      "title": "Sprout to Sunflower",
+      "sourceDirectory": "examples/sprout-sunflower",
+      "worker": "bitgames-sprout-sunflower",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "star-share",
+      "title": "Star Share",
+      "sourceDirectory": "examples/star-share",
+      "worker": "bitgames-star-share",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "submarine-subtraction",
+      "title": "Submarine Subtraction",
+      "sourceDirectory": "examples/submarine-subtraction",
+      "worker": "bitgames-submarine-subtraction",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "sunlight-sprouts",
+      "title": "Sunlight Sprouts",
+      "sourceDirectory": "examples/sunlight-sprouts",
+      "worker": "bitgames-sunlight-sprouts",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "tangram-turntable",
+      "title": "Tangram Turntable",
+      "sourceDirectory": "examples/tangram-turntable",
+      "worker": "bitgames-tangram-turntable",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "tool-twins",
+      "title": "Tool Twins",
+      "sourceDirectory": "examples/tool-twins",
+      "worker": "bitgames-tool-twins",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "toy-town-builder",
+      "title": "Toy Town Builder",
+      "sourceDirectory": "examples/toy-town-builder",
+      "worker": "bitgames-toy-town-builder",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    },
+    {
+      "id": "train-carriage-rhythm",
+      "title": "Train Carriage Rhythm",
+      "sourceDirectory": "examples/train-carriage-rhythm",
+      "worker": "bitgames-train-carriage-rhythm",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "turtle-treasure-map",
+      "title": "Turtle Treasure Map",
+      "sourceDirectory": "examples/turtle-treasure-map",
+      "worker": "bitgames-turtle-treasure-map",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "watermelon-picnic",
+      "title": "Watermelon Picnic",
+      "sourceDirectory": "examples/watermelon-picnic",
+      "worker": "bitgames-watermelon-picnic",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "weather-wardrobe",
+      "title": "Weather Wardrobe",
+      "sourceDirectory": "examples/weather-wardrobe",
+      "worker": "bitgames-weather-wardrobe",
+      "recordedDeploymentUrl": null,
+      "majorityVerdict": "remove_candidate",
+      "salvageConceptOnly": false
+    },
+    {
+      "id": "word-rocket",
+      "title": "Word Rocket",
+      "sourceDirectory": "examples/word-rocket",
+      "worker": "bitgames-word-rocket",
+      "recordedDeploymentUrl": "https://80a3a2a7-bitgames-word-rocket.ferdousbd.workers.dev/",
+      "majorityVerdict": "rework",
+      "salvageConceptOnly": true
+    }
+  ],
+  "protectedGameIds": [
+    "balloon-pop",
+    "bumper-ducks",
+    "bunny-hop",
+    "cake-stack",
+    "crash-racers",
+    "dragon-glide",
+    "fish-pond",
+    "memory-match",
+    "paint-splash",
+    "penguin-bowling",
+    "rocket-garage",
+    "star-catcher"
+  ],
+  "protectedExternal": [
+    "Splash Tank (separate repository)"
+  ],
+  "ownerApproval": "Yes do it \u2014 2026-10-08",
+  "localDirectoriesRemoved": 89,
+  "remoteResourcesDeletedVerified": 0
+}

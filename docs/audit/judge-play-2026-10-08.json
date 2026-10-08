@@ -1,0 +1,3268 @@
+{
+  "judge": "judge_play",
+  "date": "2026-10-08",
+  "lens": "Gameplay agency, intrinsic feedback, surprise, mastery and voluntary replay",
+  "method": "Independent read-only executable-source audit of every examples/*/game.json project; shared runtime and generators inspected for generated projects; original game main modules inspected. No browser session, child session or physical iPad assessment.",
+  "scope": {
+    "projects": 101,
+    "generated": 89,
+    "originals": 12
+  },
+  "counts": {
+    "rework": 25,
+    "remove_candidate": 64,
+    "retain_candidate": 12
+  },
+  "records": [
+    {
+      "id": "acorn-addition",
+      "title": "Acorn Addition",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "arithmetic",
+          "finding": "Move concrete counters and select the numeric answer; this is a useful manipulative but not yet a self-motivating game loop."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case arithmetic",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Concrete joining can feed a woodland character; current numeric answer selection interrupts the pretend-play opportunity.",
+      "closestDuplicates": [
+        "submarine-subtraction",
+        "bakery-bundles",
+        "star-share"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "animal-alphabet",
+      "title": "Animal Alphabet",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "spell",
+          "finding": "Tap the expected letters in order; voice and toy boarding add feedback, but the underlying challenge is a repeated spelling worksheet."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case spell",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Animal pictures/spelling largely duplicate Word Rocket without a materially different progression system.",
+      "closestDuplicates": [
+        "word-rocket",
+        "picnic-word-basket"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "bakery-alarm",
+      "title": "Bakery Alarm",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "clock",
+          "finding": "Set hour/minute hands to the stated time and check; no living schedule reacts to the clock."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case clock",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Quarter-hour prompts remain the same clock task; no baking timer consequences.",
+      "closestDuplicates": [
+        "cuckoo-clock-garden",
+        "space-station-schedule",
+        "bunny-bedtime"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "bakery-bundles",
+      "title": "Bakery Bundles",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "arithmetic",
+          "finding": "Move concrete counters and select the numeric answer; this is a useful manipulative but not yet a self-motivating game loop."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case arithmetic",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Equal groups are represented, but there is no bakery customer/order/equipment loop.",
+      "closestDuplicates": [
+        "acorn-addition",
+        "submarine-subtraction",
+        "star-share"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "balloon-pop",
+      "title": "Balloon Pop",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/balloon-pop/public/js/main.js",
+          "function": "pop / spawnTick / levelUp",
+          "finding": "Fast direct popping, evolving balloon kinds and chain effects provide immediate cause/effect and changing affordances."
+        }
+      ],
+      "rationale": "Fast direct popping, evolving balloon kinds and chain effects provide immediate cause/effect and changing affordances.",
+      "closestDuplicates": [],
+      "risks": [
+        "Sustained challenge and overstimulation still need observed child review.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "bead-bridge",
+      "title": "Bead Bridge",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "pattern",
+          "finding": "Fill exactly one gap from preset choices; the themed bridge/train/reef does not produce a distinct play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case pattern",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A snail crossing a completed bridge is a small causal reward worth exploring within one pattern construction game.",
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "train-carriage-rhythm",
+        "constellation-code",
+        "reef-patterns"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "bear-balance",
+      "title": "Bear Balance",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "balance",
+          "finding": "Add preset weights until the beam balances; physical-looking feedback supports reasoning but does not create emergent physics play."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case balance",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Moving beam gives immediate meaningful feedback; one balance playground might support experimentation.",
+      "closestDuplicates": [
+        "parcel-weights",
+        "pebble-equations"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "bee-pollen-trail",
+      "title": "Bee Pollen Trail",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "function": "path",
+          "finding": "Queue arrow presses on a 3\u20135-square grid, press Go, watch fixed-step walking; planning is real but world interactions are minimal."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case path",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Pollination is narrated on success rather than developing an interactive flowering ecosystem.",
+      "closestDuplicates": [
+        "turtle-treasure-map",
+        "rover-rescue",
+        "penguin-ice-path"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "birdsong-tuner",
+      "title": "Birdsong Tuner",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "pitch",
+          "finding": "Hear two or three fixed tones and identify the highest/lowest; a 12-note composer is useful but duplicates other music modules."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case pitch",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The tones are synthesized fixed notes, not a distinctive birdsong discovery system.",
+      "closestDuplicates": [
+        "sound-wave-lab"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "breakfast-story",
+      "title": "Breakfast Story",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "order",
+          "finding": "Tap the prescribed four stages in order; the same small authored timeline repeats rather than running a simulation."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case order",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A fixed morning timeline offers neither cooking nor pretend breakfast play.",
+      "closestDuplicates": [
+        "sprout-sunflower",
+        "frog-life-lab",
+        "butterfly-life-lab"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "bridge-builder",
+      "title": "Bridge Builder",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "measure",
+          "finding": "Add equal unit blocks until they match the target length; the named bridge/fence/comet is not a functional construction."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case measure",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A measured strip is not a bridge with structural choices or creatures crossing it.",
+      "closestDuplicates": [
+        "giraffe-ruler",
+        "garden-fence",
+        "comet-tail-measure"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "bumper-ducks",
+      "title": "Bumper Ducks",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/bumper-ducks/public/js/main.js",
+          "function": "startRound / step / giveAwards",
+          "finding": "Steering, collisions, pickups and multiplayer/bots produce emergent play and social moments beyond question answering."
+        }
+      ],
+      "rationale": "Steering, collisions, pickups and multiplayer/bots produce emergent play and social moments beyond question answering.",
+      "closestDuplicates": [],
+      "risks": [
+        "Touch steering, bot fairness and multiplayer setup friction need hands-on confirmation.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "bunny-bedtime",
+      "title": "Bunny Bedtime",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "clock",
+          "finding": "Set hour/minute hands to the stated time and check; no living schedule reacts to the clock."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case clock",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Five fixed routines give context but do not produce a living bunny care loop.",
+      "closestDuplicates": [
+        "cuckoo-clock-garden",
+        "space-station-schedule",
+        "bakery-alarm"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "bunny-hop",
+      "title": "Bunny Hop",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/bunny-hop/public/js/main.js",
+          "function": "hop / handleEvents / frame",
+          "finding": "Timing hops through a course, biome changes and pokeable scenery offer motor mastery and discovery."
+        }
+      ],
+      "rationale": "Timing hops through a course, biome changes and pokeable scenery offer motor mastery and discovery.",
+      "closestDuplicates": [
+        "dragon-glide"
+      ],
+      "risks": [
+        "Runner repetition and frustrating timing may reduce engagement for younger children.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "butterfly-life-lab",
+      "title": "Butterfly Life Lab",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "order",
+          "finding": "Tap the prescribed four stages in order; the same small authored timeline repeats rather than running a simulation."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case order",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Same four-stage ordering as Frog Life Lab, changing only lifecycle facts and toys.",
+      "closestDuplicates": [
+        "sprout-sunflower",
+        "breakfast-story",
+        "frog-life-lab"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "butterfly-mirrors",
+      "title": "Butterfly Mirrors",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "mirror",
+          "finding": "Toggle a reflected grid to reproduce a fixed pattern; most variants only replace decorative subjects."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case mirror",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Reflection has clear visual feedback and free design; worth merging into one symmetry art toy.",
+      "closestDuplicates": [
+        "castle-window-symmetry",
+        "robot-reflections",
+        "snowflake-studio"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "butterfly-patterns",
+      "title": "Butterfly Patterns",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "pattern",
+          "finding": "Fill exactly one gap from preset choices; the themed bridge/train/reef does not produce a distinct play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case pattern",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Token substitutions reproduce Bead Bridge\u2019s repeating-sequence logic without its crossing payoff.",
+      "closestDuplicates": [
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "constellation-code",
+        "reef-patterns"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "cake-stack",
+      "title": "Cake Stack",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/cake-stack/public/js/main.js",
+          "function": "drop / land / decorateSide / blowCandles",
+          "finding": "Timing a falling layer changes the physical cake; decoration and candle blowing extend a coherent playful loop."
+        }
+      ],
+      "rationale": "Timing a falling layer changes the physical cake; decoration and candle blowing extend a coherent playful loop.",
+      "closestDuplicates": [],
+      "risks": [
+        "Narrowing layers and failure pacing need child observation; recipe activity should stay optional.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "castle-block-blueprints",
+      "title": "Castle Block Blueprints",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "build",
+          "finding": "Tap three or four fixed pads to add up to four floors; free mode exists, but no arbitrary placement, physical stacking, inhabitants or saved town."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case build",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Castle-coloured towers reuse Toy Town\u2019s exact pads and height matching.",
+      "closestDuplicates": [
+        "toy-town-builder"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "castle-window-symmetry",
+      "title": "Castle Window Symmetry",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "mirror",
+          "finding": "Toggle a reflected grid to reproduce a fixed pattern; most variants only replace decorative subjects."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case mirror",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Grid reflection substitutes windows for wing cells; no castle construction or lighting story.",
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "robot-reflections",
+        "snowflake-studio"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "cloud-number-race",
+      "title": "Cloud Number Race",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "compare",
+          "finding": "One highest/lowest/longest/shortest choice per round is a comparison quiz with little agency."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case compare",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Choosing the larger printed number does not control a race.",
+      "closestDuplicates": [
+        "dinosaur-size-parade",
+        "ribbon-tailor",
+        "deep-sea-divers"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "colour-cauldron",
+      "title": "Colour Cauldron",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "mix/pour/stirPaint",
+          "finding": "Choose two preset primary colours, stir, match the requested secondary colour; all four titles share the same three-result mixing engine."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case mix",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "One tactile stirring/mixing toy might survive if freed from requested-colour checking; do not retain four copies.",
+      "closestDuplicates": [
+        "rainbow-smoothies",
+        "jellyfish-glow-lab",
+        "paint-a-planet"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "comet-tail-measure",
+      "title": "Comet Tail Measure",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "measure",
+          "finding": "Add equal unit blocks until they match the target length; the named bridge/fence/comet is not a functional construction."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case measure",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Another horizontal unit-length task with a comet label.",
+      "closestDuplicates": [
+        "giraffe-ruler",
+        "bridge-builder",
+        "garden-fence"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "constellation-code",
+      "title": "Constellation Code",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "pattern",
+          "finding": "Fill exactly one gap from preset choices; the themed bridge/train/reef does not produce a distinct play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case pattern",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Numeric sequences are educationally different from picture patterns but remain a missing-number quiz.",
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "reef-patterns"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "coral-cleanup",
+      "title": "Coral Cleanup",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "collect",
+          "finding": "Tap or carry a requested count into a receiver, then Done; collection is discrete rather than a living world to explore."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case collect",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A rubbish distractor changes classification slightly, but there is no persistent reef restoration or ecological world response.",
+      "closestDuplicates": [
+        "firefly-lanterns",
+        "orchard-baskets",
+        "moon-pebbles"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "crash-racers",
+      "title": "Crash Racers",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/crash-racers/public/js/main.js",
+          "function": "stunts / onLanding / openBox / recover",
+          "finding": "Driving, jumps, flips, collision damage, pickups and multiplayer create varied player-caused outcomes and recoverable experimentation."
+        }
+      ],
+      "rationale": "Driving, jumps, flips, collision damage, pickups and multiplayer create varied player-caused outcomes and recoverable experimentation.",
+      "closestDuplicates": [],
+      "risks": [
+        "Complex controls/performance and aggression of competition require actual family play validation.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "crystal-cave-echo",
+      "title": "Crystal Cave Echo",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "echo/play",
+          "finding": "Copy a short sequence of pad presses; composition offers agency but the main game remains Simon-style repetition."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case echo",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Crystal voices substitute for frog voices in the same sequence/composition system.",
+      "closestDuplicates": [
+        "frog-choir",
+        "robot-dance-code",
+        "sleepy-owl-lullaby"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "cuckoo-clock-garden",
+      "title": "Cuckoo Clock Garden",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "clock",
+          "finding": "Set hour/minute hands to the stated time and check; no living schedule reacts to the clock."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case clock",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A setting-the-hands worksheet offers no reacting garden schedule or clockwork surprises.",
+      "closestDuplicates": [
+        "space-station-schedule",
+        "bunny-bedtime",
+        "bakery-alarm"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "deep-sea-divers",
+      "title": "Deep Sea Divers",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "compare",
+          "finding": "One highest/lowest/longest/shortest choice per round is a comparison quiz with little agency."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case compare",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Depth labels/positions offer vocabulary, not underwater movement or discovery.",
+      "closestDuplicates": [
+        "dinosaur-size-parade",
+        "cloud-number-race",
+        "ribbon-tailor"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "dino-egg-nest",
+      "title": "Dino Egg Nest",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "tenframe",
+          "finding": "Toggle ten fixed spaces to reach a displayed number; the dinosaur hatch is a payoff, but the task remains counting to a target."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case tenframe",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Egg hatching gives concrete surprise to an early counting task; worthwhile only integrated into creature care/exploration.",
+      "closestDuplicates": [
+        "ladybird-dot-party"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "dinosaur-size-parade",
+      "title": "Dinosaur Size Parade",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "compare",
+          "finding": "One highest/lowest/longest/shortest choice per round is a comparison quiz with little agency."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case compare",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The parade does not become child-directed sorting, arranging or a dinosaur world.",
+      "closestDuplicates": [
+        "cloud-number-race",
+        "ribbon-tailor",
+        "deep-sea-divers"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "dragon-glide",
+      "title": "Dragon Glide",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/dragon-glide/public/js/main.js",
+          "function": "fire / handle / arriveAtNest / updatePlay",
+          "finding": "A controllable dragon, encounters, powers and return-to-nest journey offer action, progression and a world identity."
+        }
+      ],
+      "rationale": "A controllable dragon, encounters, powers and return-to-nest journey offer action, progression and a world identity.",
+      "closestDuplicates": [],
+      "risks": [
+        "May overlap runner/collect action at a high level; verify that worlds provide meaningful variety.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "drum-beat-builder",
+      "title": "Drum Beat Builder",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "rhythm",
+          "finding": "Toggle four to six beat/rest steps to copy a demonstrated loop; free composition provides more agency than the default quiz."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case rhythm",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A beat/rest sequencer and free composition can support self-directed music; develop one music playground rather than separate rain/echo/pitch titles.",
+      "closestDuplicates": [
+        "rain-drop-rhythm"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "firefly-lanterns",
+      "title": "Firefly Lanterns",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "collect",
+          "finding": "Tap or carry a requested count into a receiver, then Done; collection is discrete rather than a living world to explore."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case collect",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Lantern fill/glow and carrying could make one gentle preschool toy; protect that sensory identity and test voluntary return.",
+      "closestDuplicates": [
+        "orchard-baskets",
+        "moon-pebbles",
+        "coral-cleanup"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "fish-pond",
+      "title": "Fish Pond",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/fish-pond/public/js/main.js",
+          "function": "castTo / nibbleStep / reel / startShow",
+          "finding": "Casting, anticipation, catching creatures and collecting field-guide discoveries produce a paced discovery loop."
+        }
+      ],
+      "rationale": "Casting, anticipation, catching creatures and collecting field-guide discoveries produce a paced discovery loop.",
+      "closestDuplicates": [],
+      "risks": [
+        "Waiting and repeated catch animations may drag; judge on observed voluntary replay.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "float-boat-lab",
+      "title": "Float Boat Lab",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "experiment",
+          "finding": "Predict Yes/No then play a predetermined 1.3-second demonstration; outcomes are not responsive material simulations."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case experiment",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Waterline observations have value, but shapes/materials cannot be combined or changed; no boat building.",
+      "closestDuplicates": [
+        "magnet-discovery",
+        "sunlight-sprouts"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "footprint-detective",
+      "title": "Footprint Detective",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "match",
+          "finding": "Choose the one matching tile; a short object animation is the payoff, then the five-question loop repeats."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case match",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Tracks offer a distinct inference cue, but there is no tracking expedition, search or animal discovery world.",
+      "closestDuplicates": [
+        "rainbow-postoffice",
+        "shape-locksmith",
+        "shadow-theatre"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "frog-choir",
+      "title": "Frog Choir",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "echo/play",
+          "finding": "Copy a short sequence of pad presses; composition offers agency but the main game remains Simon-style repetition."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case echo",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Pads and free song composition could become one playful musical pond rather than four echo listings.",
+      "closestDuplicates": [
+        "crystal-cave-echo",
+        "robot-dance-code",
+        "sleepy-owl-lullaby"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "frog-life-lab",
+      "title": "Frog Life Lab",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "order",
+          "finding": "Tap the prescribed four stages in order; the same small authored timeline repeats rather than running a simulation."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case order",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Metamorphosis offers a meaningful subject for an actual caring/discovery game, but the current ordering is insufficient.",
+      "closestDuplicates": [
+        "sprout-sunflower",
+        "breakfast-story",
+        "butterfly-life-lab"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "fruit-veggie-ferry",
+      "title": "Fruit & Veggie Ferry",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "sort/deliver",
+          "finding": "Select a fixed object and correct bin; wrong placements are rejected rather than creating an expressive or consequential world."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case sort",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Ferry theme does not add navigation, cargo choices or transport consequences.",
+      "closestDuplicates": [
+        "habitat-hotel",
+        "recycling-robots",
+        "season-suitcase"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "garden-fence",
+      "title": "Garden Fence",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "measure",
+          "finding": "Add equal unit blocks until they match the target length; the named bridge/fence/comet is not a functional construction."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case measure",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The child does not design an enclosure or protect a growing garden.",
+      "closestDuplicates": [
+        "giraffe-ruler",
+        "bridge-builder",
+        "comet-tail-measure"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "gem-turner",
+      "title": "Gem Turner",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "rotate",
+          "finding": "Rotate a fixed asymmetric key by quarter turns to fit its outline; a narrowly bounded spatial exercise."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case rotate",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Quarter-turn key fitting is too narrow for a dedicated game.",
+      "closestDuplicates": [
+        "rocket-docking",
+        "tangram-turntable"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "giraffe-ruler",
+      "title": "Giraffe Ruler",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "measure",
+          "finding": "Add equal unit blocks until they match the target length; the named bridge/fence/comet is not a functional construction."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case measure",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Stacking units is useful but does not affect a living giraffe or game world.",
+      "closestDuplicates": [
+        "bridge-builder",
+        "garden-fence",
+        "comet-tail-measure"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "habitat-hotel",
+      "title": "Habitat Hotel",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "sort/deliver",
+          "finding": "Select a fixed object and correct bin; wrong placements are rejected rather than creating an expressive or consequential world."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case sort",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Potential for habitat pretend play, but animals currently only travel to bins.",
+      "closestDuplicates": [
+        "recycling-robots",
+        "fruit-veggie-ferry",
+        "season-suitcase"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "healthy-plate-party",
+      "title": "Healthy Plate Party",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/stories.js",
+          "function": "choice",
+          "finding": "Select a predefined answer to a small authored scenario; reactions do not develop into a branching story or pretend-play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case choice",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Selecting pictured food choices is not preparing or sharing a child-authored meal.",
+      "closestDuplicates": [
+        "weather-wardrobe",
+        "kindness-cafe",
+        "senses-safari"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "jellyfish-glow-lab",
+      "title": "Jellyfish Glow Lab",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "mix/pour/stirPaint",
+          "finding": "Choose two preset primary colours, stir, match the requested secondary colour; all four titles share the same three-result mixing engine."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case mix",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Jellyfish glow/bob after a target match; no controllable bioluminescent sea or creature interaction.",
+      "closestDuplicates": [
+        "colour-cauldron",
+        "rainbow-smoothies",
+        "paint-a-planet"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "kindness-cafe",
+      "title": "Kindness Caf\u00e9",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/stories.js",
+          "function": "choice",
+          "finding": "Select a predefined answer to a small authored scenario; reactions do not develop into a branching story or pretend-play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case choice",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Several acceptable answers avoid simplistic morality, but it remains a scenario quiz rather than interactive cooperation or cafe role play.",
+      "closestDuplicates": [
+        "weather-wardrobe",
+        "healthy-plate-party",
+        "senses-safari"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "kite-flight-school",
+      "title": "Kite Flight School",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "function": "trace/advance",
+          "finding": "Follow a pre-authored sequence of glowing dots; correctness is enforced path compliance, with no authored drawing outcome or free exploration."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case trace",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A sine-wave trail does not let wind, kite control or authored flight paths emerge.",
+      "closestDuplicates": [
+        "snail-spiral",
+        "letter-trails",
+        "number-spark-trails"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "ladybird-dot-party",
+      "title": "Ladybird Dot Party",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "tenframe",
+          "finding": "Toggle ten fixed spaces to reach a displayed number; the dinosaur hatch is a payoff, but the task remains counting to a target."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case tenframe",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Fixed ten-frame spots repeat Dino Egg Nest without its hatching transformation.",
+      "closestDuplicates": [
+        "dino-egg-nest"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "letter-buddies",
+      "title": "Letter Buddies",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "memory",
+          "finding": "Flip cards and match two to four pairs; most novelty comes from replacing pictures in an existing memory mechanic."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case memory",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Upper/lowercase pairing is a worthwhile activity within one memory game, not a separate engaging game.",
+      "closestDuplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "planet-pairs",
+        "tool-twins"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "letter-trails",
+      "title": "Letter Trails",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "function": "trace/advance",
+          "finding": "Follow a pre-authored sequence of glowing dots; correctness is enforced path compliance, with no authored drawing outcome or free exploration."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case trace",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The tracing pedagogy and multi-stroke support are substantial; preserve only as an optional tool in a richer language toy.",
+      "closestDuplicates": [
+        "snail-spiral",
+        "kite-flight-school",
+        "number-spark-trails"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "magnet-discovery",
+      "title": "Magnet Discovery",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "experiment",
+          "finding": "Predict Yes/No then play a predetermined 1.3-second demonstration; outcomes are not responsive material simulations."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case experiment",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Visible attraction is promising cause/effect, but object properties/outcomes are fixed and the child cannot move a magnet through a playground.",
+      "closestDuplicates": [
+        "float-boat-lab",
+        "sunlight-sprouts"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "memory-match",
+      "title": "Memory Match",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/memory-match/public/js/main.js",
+          "function": "tapCard / onMatch / dance / winLevel",
+          "finding": "An established card game with animated animal rewards, difficulty levels and free toy pokes has clearer replay than separate themed clones."
+        }
+      ],
+      "rationale": "An established card game with animated animal rewards, difficulty levels and free toy pokes has clearer replay than separate themed clones.",
+      "closestDuplicates": [
+        "picnic-pairs",
+        "planet-pairs",
+        "tool-twins",
+        "letter-buddies"
+      ],
+      "risks": [
+        "This is still memory matching; retain one canonical version only pending child preference.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "moon-pebbles",
+      "title": "Moon Pebbles",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "collect",
+          "finding": "Tap or carry a requested count into a receiver, then Done; collection is discrete rather than a living world to explore."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case collect",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Rocket payoff changes the celebration, not the collect-count-Done decisions.",
+      "closestDuplicates": [
+        "firefly-lanterns",
+        "orchard-baskets",
+        "coral-cleanup"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "number-spark-trails",
+      "title": "Number Spark Trails",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "function": "trace/advance",
+          "finding": "Follow a pre-authored sequence of glowing dots; correctness is enforced path compliance, with no authored drawing outcome or free exploration."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case trace",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Digit selection differs, but the compliance-to-glowing-dots loop duplicates Letter Trails.",
+      "closestDuplicates": [
+        "snail-spiral",
+        "kite-flight-school",
+        "letter-trails"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "orchard-baskets",
+      "title": "Orchard Baskets",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "collect",
+          "finding": "Tap or carry a requested count into a receiver, then Done; collection is discrete rather than a living world to explore."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case collect",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The picnic theme mainly changes collection models and receiver; avoid a second count-and-fill store listing.",
+      "closestDuplicates": [
+        "firefly-lanterns",
+        "moon-pebbles",
+        "coral-cleanup"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "paint-a-planet",
+      "title": "Paint a Planet",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "mix/pour/stirPaint",
+          "finding": "Choose two preset primary colours, stir, match the requested secondary colour; all four titles share the same three-result mixing engine."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case mix",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Planet colour changes, but the child cannot actually paint a planet surface or compose a world.",
+      "closestDuplicates": [
+        "colour-cauldron",
+        "rainbow-smoothies",
+        "jellyfish-glow-lab"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "paint-splash",
+      "title": "Paint Splash",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/paint-splash/public/js/main.js",
+          "function": "startPainting / updatePainters / keepFinishedPicture",
+          "finding": "Movement creates visible painted territory and saved pictures; player expression and multiplayer interactions can produce unique sessions."
+        }
+      ],
+      "rationale": "Movement creates visible painted territory and saved pictures; player expression and multiplayer interactions can produce unique sessions.",
+      "closestDuplicates": [],
+      "risks": [
+        "Competitive territory painting and independent art modes need clarity; colour education should not interrupt agency.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "parcel-weights",
+      "title": "Parcel Weights",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "balance",
+          "finding": "Add preset weights until the beam balances; physical-looking feedback supports reasoning but does not create emergent physics play."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case balance",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Base-plus-missing-weight arithmetic uses the same beam and add/undo loop as Bear Balance.",
+      "closestDuplicates": [
+        "bear-balance",
+        "pebble-equations"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "pebble-equations",
+      "title": "Pebble Equations",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "balance",
+          "finding": "Add preset weights until the beam balances; physical-looking feedback supports reasoning but does not create emergent physics play."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case balance",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Number decomposition is a curriculum variation of the same balance toy.",
+      "closestDuplicates": [
+        "bear-balance",
+        "parcel-weights"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "penguin-bowling",
+      "title": "Penguin Bowling",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/penguin-bowling/public/js/main.js",
+          "function": "swipeToThrow / throwPenguin / finishRoll",
+          "finding": "Swipe angle/power/hook affect visible pin collisions; predictive practice and optional bumpers support skill growth."
+        }
+      ],
+      "rationale": "Swipe angle/power/hook affect visible pin collisions; predictive practice and optional bumpers support skill growth.",
+      "closestDuplicates": [],
+      "risks": [
+        "Physical touch feel, pin credibility and slow turn pacing remain unverified.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "penguin-ice-path",
+      "title": "Penguin Ice Path",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "function": "path",
+          "finding": "Queue arrow presses on a 3\u20135-square grid, press Go, watch fixed-step walking; planning is real but world interactions are minimal."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case path",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Ice does not alter movement or introduce sliding; the penguin follows the same arrow queue.",
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "turtle-treasure-map",
+        "rover-rescue"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "picnic-pairs",
+      "title": "Picnic Pairs",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "memory",
+          "finding": "Flip cards and match two to four pairs; most novelty comes from replacing pictures in an existing memory mechanic."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case memory",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Duplicates the more developed original Memory Match with food cards.",
+      "closestDuplicates": [
+        "memory-match",
+        "planet-pairs",
+        "tool-twins",
+        "letter-buddies"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "picnic-word-basket",
+      "title": "Picnic Word Basket",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "spell",
+          "finding": "Tap the expected letters in order; voice and toy boarding add feedback, but the underlying challenge is a repeated spelling worksheet."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case spell",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Basket boarding is an alternate spelling reward, not a new game.",
+      "closestDuplicates": [
+        "word-rocket",
+        "animal-alphabet"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "pizza-moon",
+      "title": "Pizza Moon",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "fraction",
+          "finding": "Toggle equal parts to the requested numerator and check; food theming does not turn the fraction exercise into cooking or play."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case fraction",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Choosing the requested wedges does not create a pizza, serve characters or test combinations.",
+      "closestDuplicates": [
+        "watermelon-picnic",
+        "rainbow-quilt"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "planet-pairs",
+      "title": "Planet Pairs",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "memory",
+          "finding": "Flip cards and match two to four pairs; most novelty comes from replacing pictures in an existing memory mechanic."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case memory",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Planet pictures add no new matching rules or exploration.",
+      "closestDuplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "tool-twins",
+        "letter-buddies"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "rain-drop-rhythm",
+      "title": "Rain Drop Rhythm",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "rhythm",
+          "finding": "Toggle four to six beat/rest steps to copy a demonstrated loop; free composition provides more agency than the default quiz."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case rhythm",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Rain sounds/theme replace the drum in the same sequencer.",
+      "closestDuplicates": [
+        "drum-beat-builder"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "rainbow-postoffice",
+      "title": "Rainbow Post Office",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "match",
+          "finding": "Choose the one matching tile; a short object animation is the payoff, then the five-question loop repeats."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case match",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Parcel-to-door colour matching gives a satisfying delivery animation, but no postal route, open sorting or ongoing neighbourhood play.",
+      "closestDuplicates": [
+        "shape-locksmith",
+        "footprint-detective",
+        "shadow-theatre"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "rainbow-quilt",
+      "title": "Rainbow Quilt",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "fraction",
+          "finding": "Toggle equal parts to the requested numerator and check; food theming does not turn the fraction exercise into cooking or play."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case fraction",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Squares distinguish a collection fraction from wedges, but quilt design is not child authored.",
+      "closestDuplicates": [
+        "pizza-moon",
+        "watermelon-picnic"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "rainbow-smoothies",
+      "title": "Rainbow Smoothies",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "mix/pour/stirPaint",
+          "finding": "Choose two preset primary colours, stir, match the requested secondary colour; all four titles share the same three-result mixing engine."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case mix",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Vessel/drink theming changes none of the three paint-mix outcomes; no recipe experimentation.",
+      "closestDuplicates": [
+        "colour-cauldron",
+        "jellyfish-glow-lab",
+        "paint-a-planet"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "recycling-robots",
+      "title": "Recycling Robots",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "sort/deliver",
+          "finding": "Select a fixed object and correct bin; wrong placements are rejected rather than creating an expressive or consequential world."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case sort",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The material sorting can belong inside one richer cleanup/robot game rather than a standalone worksheet.",
+      "closestDuplicates": [
+        "habitat-hotel",
+        "fruit-veggie-ferry",
+        "season-suitcase"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "reef-patterns",
+      "title": "Reef Patterns",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "pattern",
+          "finding": "Fill exactly one gap from preset choices; the themed bridge/train/reef does not produce a distinct play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case pattern",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The 101st project is another repeating-picture pattern skin; no reef exploration or new interaction justifies it.",
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "train-carriage-rhythm",
+        "constellation-code"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "rhyming-river",
+      "title": "Rhyming River",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "rhyme",
+          "finding": "Choose the word with the same ending from lily pads; frog hopping gives a concrete payoff but one answer ends the interaction."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case rhyme",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Frog hopping between picture lily pads is coherent feedback; needs traversable journeys or playful combinations beyond one correct answer.",
+      "closestDuplicates": [],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "ribbon-tailor",
+      "title": "Ribbon Tailor",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "compare",
+          "finding": "One highest/lowest/longest/shortest choice per round is a comparison quiz with little agency."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case compare",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Selecting a length does not cut, dress or design anything.",
+      "closestDuplicates": [
+        "dinosaur-size-parade",
+        "cloud-number-race",
+        "deep-sea-divers"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "robot-dance-code",
+      "title": "Robot Dance Code",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "echo/play",
+          "finding": "Copy a short sequence of pad presses; composition offers agency but the main game remains Simon-style repetition."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case echo",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A robot responds with directional movements; preserve as a candidate only if programming gets persistent, child-authored effects.",
+      "closestDuplicates": [
+        "frog-choir",
+        "crystal-cave-echo",
+        "sleepy-owl-lullaby"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "robot-reflections",
+      "title": "Robot Reflections",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "mirror",
+          "finding": "Toggle a reflected grid to reproduce a fixed pattern; most variants only replace decorative subjects."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case mirror",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Robot lights are another reflected grid decoration.",
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "castle-window-symmetry",
+        "snowflake-studio"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "rocket-docking",
+      "title": "Rocket Docking",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "rotate",
+          "finding": "Rotate a fixed asymmetric key by quarter turns to fit its outline; a narrowly bounded spatial exercise."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case rotate",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Docking key rotates; the rocket does not have navigable docking physics.",
+      "closestDuplicates": [
+        "gem-turner",
+        "tangram-turntable"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "rocket-garage",
+      "title": "Rocket Garage",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/rocket-garage/public/js/main.js",
+          "function": "choose / surprise / launch / updateFlight / startParty",
+          "finding": "Custom parts and paint, launch, steering and destination discovery connect creation with action and persistent unlocking."
+        }
+      ],
+      "rationale": "Custom parts and paint, launch, steering and destination discovery connect creation with action and persistent unlocking.",
+      "closestDuplicates": [],
+      "risks": [
+        "Part choices partly cosmetic; difficulty, unlock grind and flight responsiveness need child play.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "rover-rescue",
+      "title": "Rover Rescue",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "function": "path",
+          "finding": "Queue arrow presses on a 3\u20135-square grid, press Go, watch fixed-step walking; planning is real but world interactions are minimal."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case path",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Robot walking to a rocket is another skin of Turtle Treasure Map\u2019s grid navigation.",
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "turtle-treasure-map",
+        "penguin-ice-path"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "season-suitcase",
+      "title": "Season Suitcase",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "sort/deliver",
+          "finding": "Select a fixed object and correct bin; wrong placements are rejected rather than creating an expressive or consequential world."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case sort",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Preset item-to-season classification overlaps Weather Wardrobe without travel or changing weather.",
+      "closestDuplicates": [
+        "habitat-hotel",
+        "recycling-robots",
+        "fruit-veggie-ferry"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "senses-safari",
+      "title": "Senses Safari",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/stories.js",
+          "function": "choice",
+          "finding": "Select a predefined answer to a small authored scenario; reactions do not develop into a branching story or pretend-play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case choice",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Selecting a sense and reading an exploration note cannot substitute for sensory interaction.",
+      "closestDuplicates": [
+        "weather-wardrobe",
+        "kindness-cafe",
+        "healthy-plate-party"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "shadow-theatre",
+      "title": "Shadow Theatre",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "match",
+          "finding": "Choose the one matching tile; a short object animation is the payoff, then the five-question loop repeats."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case match",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Silhouette matching does not permit moving lights or puppets; its title promises a richer theatre toy.",
+      "closestDuplicates": [
+        "rainbow-postoffice",
+        "shape-locksmith",
+        "footprint-detective"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "shape-locksmith",
+      "title": "Shape Locksmith",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "match",
+          "finding": "Choose the one matching tile; a short object animation is the payoff, then the five-question loop repeats."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case match",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "A physical-looking key entering a matching lock is a promising cause/effect toy; expand actual manipulation rather than more questions.",
+      "closestDuplicates": [
+        "rainbow-postoffice",
+        "footprint-detective",
+        "shadow-theatre"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "sleepy-owl-lullaby",
+      "title": "Sleepy Owl Lullaby",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "echo/play",
+          "finding": "Copy a short sequence of pad presses; composition offers agency but the main game remains Simon-style repetition."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case echo",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "An owl bobs while sine tones repeat; lullaby theme does not change the core sequence mechanic.",
+      "closestDuplicates": [
+        "frog-choir",
+        "crystal-cave-echo",
+        "robot-dance-code"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "snail-spiral",
+      "title": "Snail Spiral",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "function": "trace/advance",
+          "finding": "Follow a pre-authored sequence of glowing dots; correctness is enforced path compliance, with no authored drawing outcome or free exploration."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case trace",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Three spiral densities offer motor practice, not changing goals or an exploratory snail toy.",
+      "closestDuplicates": [
+        "kite-flight-school",
+        "letter-trails",
+        "number-spark-trails"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "snowflake-studio",
+      "title": "Snowflake Studio",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "snowflake",
+          "finding": "Reflect and repeat a selected motif across six arms; free-design mode creates a generative visual artifact."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case mirror",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Sixfold repeated motifs and free design create a genuinely different generative art affordance; needs exporting, richer materials and play validation.",
+      "closestDuplicates": [
+        "butterfly-mirrors",
+        "castle-window-symmetry",
+        "robot-reflections"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "sound-wave-lab",
+      "title": "Sound Wave Lab",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "pitch",
+          "finding": "Hear two or three fixed tones and identify the highest/lowest; a 12-note composer is useful but duplicates other music modules."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case pitch",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Two or three fixed tones plus simple composer overlap Frog Choir and Rhythm Builder.",
+      "closestDuplicates": [
+        "birdsong-tuner"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "space-station-schedule",
+      "title": "Space Station Schedule",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "clock",
+          "finding": "Set hour/minute hands to the stated time and check; no living schedule reacts to the clock."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case clock",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Space scenery does not cause launches, shift changes or orbital events at chosen times.",
+      "closestDuplicates": [
+        "cuckoo-clock-garden",
+        "bunny-bedtime",
+        "bakery-alarm"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "sprout-sunflower",
+      "title": "Sprout to Sunflower",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "order",
+          "finding": "Tap the prescribed four stages in order; the same small authored timeline repeats rather than running a simulation."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case order",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Four prescribed plant stages do not let children grow or care for a plant.",
+      "closestDuplicates": [
+        "breakfast-story",
+        "frog-life-lab",
+        "butterfly-life-lab"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "star-catcher",
+      "title": "Star Catcher",
+      "verdict": "retain_candidate",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/star-catcher/public/js/main.js",
+          "function": "spawnWave / catchItem / bumpRock / arrive",
+          "finding": "Continuous steering, waves, beneficial/harmful pickups and travel goals provide immediate feedback and motor mastery."
+        }
+      ],
+      "rationale": "Continuous steering, waves, beneficial/harmful pickups and travel goals provide immediate feedback and motor mastery.",
+      "closestDuplicates": [
+        "rocket-garage",
+        "dragon-glide"
+      ],
+      "risks": [
+        "Overlap with Rocket Garage\u2019s flight and Dragon Glide should be evaluated by actual child preference, not separately assumed unique.",
+        "Retain candidate means prioritize child playtesting, not a verified fun verdict. The user\u2019s first 5\u20136 favorites have not been identified."
+      ],
+      "recommendation": "Keep available as a child-playtest candidate; avoid unrequested removal until favorite games are identified."
+    },
+    {
+      "id": "star-share",
+      "title": "Star Share",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "arithmetic",
+          "finding": "Move concrete counters and select the numeric answer; this is a useful manipulative but not yet a self-motivating game loop."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case arithmetic",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Actually distributing objects among groups provides agency and a fair-sharing story to develop.",
+      "closestDuplicates": [
+        "acorn-addition",
+        "submarine-subtraction",
+        "bakery-bundles"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "submarine-subtraction",
+      "title": "Submarine Subtraction",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/quantities.js",
+          "function": "arithmetic",
+          "finding": "Move concrete counters and select the numeric answer; this is a useful manipulative but not yet a self-motivating game loop."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case arithmetic",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Counters disappearing do not make a navigable submarine or rescue mission.",
+      "closestDuplicates": [
+        "acorn-addition",
+        "bakery-bundles",
+        "star-share"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "sunlight-sprouts",
+      "title": "Sunlight Sprouts",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/experiences.js",
+          "function": "experiment",
+          "finding": "Predict Yes/No then play a predetermined 1.3-second demonstration; outcomes are not responsive material simulations."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case experiment",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Yes/No supply choice grows a preset plant after a short animation; no persistent care or meaningful multivariable experiment.",
+      "closestDuplicates": [
+        "magnet-discovery",
+        "float-boat-lab"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "tangram-turntable",
+      "title": "Tangram Turntable",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "tangram",
+          "finding": "Select, drag and quarter-turn seven tangram pieces to fit a square, with geometric fit checks."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case rotate",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Seven-piece drag/rotate composition provides spatial agency and enough combinatorial potential to rework into a full puzzle toy.",
+      "closestDuplicates": [
+        "gem-turner",
+        "rocket-docking"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "tool-twins",
+      "title": "Tool Twins",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "memory",
+          "finding": "Flip cards and match two to four pairs; most novelty comes from replacing pictures in an existing memory mechanic."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case memory",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Semantic helper/object pairs add a learning distinction but not a new play loop.",
+      "closestDuplicates": [
+        "memory-match",
+        "picnic-pairs",
+        "planet-pairs",
+        "letter-buddies"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "toy-town-builder",
+      "title": "Toy Town Builder",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "build",
+          "finding": "Tap three or four fixed pads to add up to four floors; free mode exists, but no arbitrary placement, physical stacking, inhabitants or saved town."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case build",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Free height editing is a start, but four fixed towers with four levels is far below a construction toy\u2019s implied agency.",
+      "closestDuplicates": [
+        "castle-block-blueprints"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "train-carriage-rhythm",
+      "title": "Train Carriage Rhythm",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/discovery.js",
+          "function": "pattern",
+          "finding": "Fill exactly one gap from preset choices; the themed bridge/train/reef does not produce a distinct play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case pattern",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The train shifts sideways after the answer; children do not build or drive a train.",
+      "closestDuplicates": [
+        "butterfly-patterns",
+        "bead-bridge",
+        "constellation-code",
+        "reef-patterns"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "turtle-treasure-map",
+      "title": "Turtle Treasure Map",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/activities.js",
+          "function": "path",
+          "finding": "Queue arrow presses on a 3\u20135-square grid, press Go, watch fixed-step walking; planning is real but world interactions are minimal."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case path",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Route planning gives multiple valid solutions and a useful foundation for one real exploration game.",
+      "closestDuplicates": [
+        "bee-pollen-trail",
+        "rover-rescue",
+        "penguin-ice-path"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    },
+    {
+      "id": "watermelon-picnic",
+      "title": "Watermelon Picnic",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/spatial.js",
+          "function": "fraction",
+          "finding": "Toggle equal parts to the requested numerator and check; food theming does not turn the fraction exercise into cooking or play."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case fraction",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "The wedge geometry and numerator check duplicate Pizza Moon.",
+      "closestDuplicates": [
+        "pizza-moon",
+        "rainbow-quilt"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "weather-wardrobe",
+      "title": "Weather Wardrobe",
+      "verdict": "remove_candidate",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/stories.js",
+          "function": "choice",
+          "finding": "Select a predefined answer to a small authored scenario; reactions do not develop into a branching story or pretend-play system."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case choice",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Clothes change after a preset answer, but children cannot freely dress a character and observe comfort/weather consequences.",
+      "closestDuplicates": [
+        "kindness-cafe",
+        "healthy-plate-party",
+        "senses-safari"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Remove from active catalogue/release scope; retain archival source only if useful for a later merged redesign."
+    },
+    {
+      "id": "word-rocket",
+      "title": "Word Rocket",
+      "verdict": "rework",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "examples/_studio/runtime/playlab.js",
+          "function": "spell",
+          "finding": "Tap the expected letters in order; voice and toy boarding add feedback, but the underlying challenge is a repeated spelling worksheet."
+        },
+        {
+          "path": "examples/_studio/runtime/engine.js",
+          "function": "success/startRound/finish",
+          "finding": "All generated titles route through five fixed steps and shared success feedback; no per-title persistent world state is created here."
+        },
+        {
+          "path": "examples/_studio/runtime/challenges.js",
+          "function": "challenge case spell",
+          "finding": "Shared challenge generator defines the curriculum task; catalogue title changes do not imply a distinct mechanic."
+        }
+      ],
+      "rationale": "Words visibly load a rocket and an end animation carries the crew; one stronger word adventure could integrate this reward into actual travel.",
+      "closestDuplicates": [
+        "animal-alphabet",
+        "picnic-word-basket"
+      ],
+      "risks": [
+        "Engagement inferred from executable source, not observed child play.",
+        "Do not use passing tests or attractive assets as evidence of voluntary replay."
+      ],
+      "recommendation": "Preserve the interaction idea for a substantial merged redesign; withhold current release."
+    }
+  ]
+}

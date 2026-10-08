@@ -9,7 +9,7 @@
     "lab": "pnpm --filter @bitgames/lab dev",
     "examples:build": "node examples/_studio/build.mjs",
     "examples:serve": "node examples/_studio/serve.mjs",
-    "examples:assets": "blender --background --python-exit-code 1 --python examples/_studio/blender/build_assets.py",
+    "examples:assets": "node examples/_studio/assets.mjs",
     "examples:check": "node examples/_studio/build.mjs && node --test examples/_studio/tests/curriculum.test.mjs",
     "examples:playtest": "node examples/_studio/tests/browser.mjs"
   },

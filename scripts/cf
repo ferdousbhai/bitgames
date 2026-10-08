@@ -1,0 +1,4 @@
+#!/bin/sh
+# Use the workspace-pinned Cloudflare CLI without pnpm's external engine-store lock.
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec "$repo_dir/examples/balloon-pop/node_modules/cf/bin/cf" "$@"
