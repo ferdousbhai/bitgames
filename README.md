@@ -6,13 +6,12 @@ A web game store built on BitChat's technology. Games are made with Blender and 
 
 - `apps/store`: the game store (TanStack Start and TanStack DB on Cloudflare Workers, with D1 for the catalog and a Durable Object for multiplayer rooms). Creators host the original game files; the store plays only hash-verified files through its playback gateway and pins each reviewed shipment
 - `packages/game-sdk`: the multiplayer SDK games load from `/vendor/bitgames/multiplayer-1.js`
-- `examples/<game>`: our own games, one per folder, each a standalone creator project deployed to its own Worker: the original twelve (Crash Racers, Bunny Hop, Balloon Pop, Star Catcher, Memory Match, Cake Stack, Penguin Bowling, Bumper Ducks, Fish Pond, Dragon Glide, Paint Splash, Rocket Garage) plus 88 learning adventures for ages 2–8 (see [the catalogue](examples/CATALOGUE.md))
+- `examples/<game>`: twelve curated original games, each a standalone creator project deployed to its own Worker (see [the catalogue](examples/CATALOGUE.md))
 - `packages/protocol`: TypeScript port of BitChat's binary packet format, padding, compression and fragmentation
 - `packages/webrtc`: peer-to-peer transport for those packets over WebRTC data channels
 - `apps/signal`: small WebSocket server that introduces peers to each other (game traffic never passes through it)
 - `apps/lab`: browser page that measures latency, loss and throughput between devices
 - `reference/bitchat-ios`: the public-domain BitChat source we port from (see its PROVENANCE.md)
-- `.mcp.json`: runs the [Blender MCP server](https://github.com/ahujasid/blender-mcp) for this project (install its Blender add-on from that repo)
 
 ## Running the store
 
@@ -26,7 +25,7 @@ pnpm db:migrate   # create the local tables
 pnpm seed         # list the deployed games in ../../examples
 ```
 
-The store is live at https://bitgames.store. Every push to `master` on GitHub deploys it automatically: Cloudflare Workers Builds runs `pnpm run deploy` in `apps/store` (it vendors three.js and the multiplayer SDK, then `cf deploy`). Secrets set on the Worker are kept across deploys. Database migrations are not run automatically; apply them with `pnpm db:migrate:remote`.
+The store is live at https://bitgames.store. Work on `main`. Run `pnpm run deploy` in `apps/store` to deploy (it vendors three.js and the multiplayer SDK, then `cf deploy`). Secrets set on the Worker are kept across deploys. Database migrations are not run automatically; apply them with `pnpm db:migrate:remote`.
 
 To deploy by hand, log in once with `pnpm exec cf auth login`, then:
 
@@ -51,7 +50,7 @@ Games load three.js and the multiplayer SDK from the production store's `/vendor
 ## Making games with a local coding agent
 
 1. A grown-up opens `/make`, passes the human check, and gets a creator key and separate recovery code. Save both. The page provides Claude Code, Codex and generic Streamable HTTP MCP configuration.
-2. Optionally connect [Blender MCP](https://github.com/ahujasid/blender-mcp) for 3D models.
+2. Install Blender 5.2 for 3D assets. Agents use Blender CLI with reproducible Python builders, starting with existing assets or trusted libraries when suitable.
 3. Log in to the creator's Cloudflare account once with `npx cf auth login`.
 4. Ask the agent to read `get_context`, register the game with `save_game`, then read `get_context` with gameId and includeStarter=true for starter files. The agent writes files, builds, tests in its browser and deploys using its own filesystem and shell tools.
 5. `publish_game` with the version URL returns a stable playUrl for sandbox/multiplayer testing and sharing. A reviewer decides whether to list it in the store.
@@ -115,22 +114,20 @@ The reviewer MCP endpoint and its `.mcp.json` entry have been removed; reconnect
 
 The MCP endpoint is `/mcp` (streamable HTTP, stateless, `Authorization: Bearer bg_...`). Its code is in `apps/store/src/server/mcp.ts`.
 
-## The 100-game examples catalogue
+## The curated examples catalogue
 
-The 88 learning adventures cover 26 activities, from firefly counting and colour mixing to symmetry, sound memory, route planning and fractions, each with three difficulty settings and iPad touch layouts. Run `pnpm examples:serve` and open http://localhost:4173 to browse all 100 games by age or skill.
+The twelve original games remain after the generated batch was retired. Run `pnpm examples:serve` and open http://localhost:4173 to browse them by age or skill. Future additions should earn their place through engaging family play; there is no catalogue size target.
 
-- `pnpm examples:assets` rebuilds the models and covers with Blender CLI; then `pnpm examples:build` packages the standalone games
-- `pnpm examples:check` builds and validates the curriculum and shipments
+- `pnpm examples:assets <game-id>` rebuilds only the selected original's assets with Blender CLI; `pnpm examples:build` packages the originals.
+- `pnpm examples:check` builds and validates the preserved games and tooling.
 
-[The studio guide](examples/_studio/README.md) covers editing the games, browser checks and iPad design.
-
-[The polish handoff](docs/POLISH_HANDOFF.md) records the current release queue and the next pass for agents continuing the 100+ games effort.
+[The studio guide](examples/_studio/README.md) covers editing, browser checks and asset rebuilds. [The handoff](docs/POLISH_HANDOFF.md) records the completed retirement and current quality bar.
 
 ## Crash Racers
 
 Race or smash up to 4 cars around Ubud, Helsinki or Montreal, on separate devices in the same home (BitGames' family lobby, WebRTC between devices) or alone against bots.
 
-- Rebuild the Blender models: `cd examples/crash-racers/blender && blender --background --python cars.py && blender --background --python props.py`
+- Rebuild the Blender models: `pnpm examples:assets crash-racers`
 - Deploy an example and record its new version in `game.json`: `node examples/publish.mjs crash-racers`, then `pnpm --dir apps/store seed:remote` to list that version
 - Debug hooks: open `/try/<token>?debug` (or the version URL with `index.html?debug&city=montreal&mode=smash`) and use `window.__crash`
 

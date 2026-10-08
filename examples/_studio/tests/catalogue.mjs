@@ -32,5 +32,5 @@ await runChecks(session, async (pass) => {
     assert.equal(response.status(), 200, game.id)
     assert.ok((await response.body()).length > 1000, game.id)
   }
-  pass('100 catalogue cards, search/age/skill filters, tablet bounds, and 100 covers.')
+  pass(`${games.length} catalogue cards, search/age/skill filters, tablet bounds, and covers.`)
 })

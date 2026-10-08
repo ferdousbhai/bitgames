@@ -9,10 +9,16 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { originalIds } from './_studio/catalogue.mjs'
 
 const examples = fileURLToPath(new URL('.', import.meta.url))
 
-for (const id of process.argv.slice(2)) {
+const ids = process.argv.slice(2)
+if (!ids.length || ids.some(id => !originalIds.includes(id))) {
+  throw new Error('Pass one or more curated original game IDs; no games were deployed.')
+}
+
+for (const id of new Set(ids)) {
   const dir = join(examples, id)
   const output = execFileSync('pnpm', ['run', 'deploy'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] })
   const version = /Current Version ID: ([0-9a-f-]{36})/.exec(output)?.[1]

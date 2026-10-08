@@ -4,6 +4,7 @@ import {copyFileSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {basename,join} from 'node:path';
 import {createHash} from 'node:crypto';
+import {originalIds} from './catalogue.mjs';
 
 const studio=fileURLToPath(new URL('.',import.meta.url));
 const examples=join(studio,'..');
@@ -21,8 +22,6 @@ const helpers={
   'star-catcher':adventure,
   'paint-splash':['js/gallery.js','gallery.css',...studioDialog,'js/colour-studio.js','js/colour-model.js'],
   'penguin-bowling':['js/prediction.js','prediction.css'],
-  'rocket-garage':[],
-  'memory-match':[],
 };
 
 const unhashed=new Set(['bitgames.json','_headers','_redirects']);
@@ -37,7 +36,7 @@ function listFiles(dir,prefix=''){
 }
 
 /** Write public/bitgames.json: the SHA-256 of every shipped file, sorted by path. */
-export function writeShipmentManifest(publicDir){
+function writeShipmentManifest(publicDir){
   const files={};
   for(const file of listFiles(publicDir).sort()){
     files[file]=createHash('sha256').update(readFileSync(join(publicDir,file))).digest('hex');
@@ -45,7 +44,8 @@ export function writeShipmentManifest(publicDir){
   writeFileSync(join(publicDir,'bitgames.json'),JSON.stringify({files},null,2)+'\n');
 }
 
-for(const [id,files] of Object.entries(helpers)){
+for(const id of originalIds){
+  const files=helpers[id] || [];
   for(const file of files)copyFileSync(join(studio,'originals',basename(file)),join(examples,id,'public',file));
 }
-for(const id of Object.keys(helpers))writeShipmentManifest(join(examples,id,'public'));
+for(const id of originalIds)writeShipmentManifest(join(examples,id,'public'));

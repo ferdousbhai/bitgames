@@ -4,14 +4,39 @@ import assert from 'node:assert/strict';
 import { originalIds } from '../catalogue.mjs';
 import { origin, originalStartButton, rotate, startBrowser, tapCentre, untilPasses } from './harness.mjs';
 const args = process.argv.slice(2);
-const option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
-const browserName = option('--browser', 'webkit');
-const portraitSize = args.includes('--mini') ? {width:768,height:1024} : {width:834,height:1194};
+const options = {};
+for (let i = 0; i < args.length; i++) {
+  const name = args[i];
+  assert.ok(['--browser', '--ids', '--run', '--offset', '--limit', '--mini'].includes(name), `Unknown option: ${name}`);
+  assert.ok(!(name in options), `Duplicate option: ${name}`);
+  if (name === '--mini') options[name] = true;
+  else {
+    const value = args[++i];
+    assert.ok(value && !value.startsWith('--'), `Missing value: ${name}`);
+    options[name] = value;
+  }
+}
+const browserName = options['--browser'] || 'chromium';
+assert.ok(['chromium', 'webkit'].includes(browserName), 'Choose chromium or webkit.');
+const run = options['--run'] || 'smoke';
+assert.match(run, /^[a-zA-Z0-9_-]+$/, 'Run name must be a filename-safe label.');
+function integerOption(name, fallback, minimum) {
+  const raw = options[name] ?? String(fallback);
+  assert.match(raw, /^\d+$/, `${name} must be an integer`);
+  const value = Number(raw);
+  assert.ok(Number.isSafeInteger(value) && value >= minimum, `${name} must be at least ${minimum}`);
+  return value;
+}
+const offset = integerOption('--offset', 0, 0);
+const limit = integerOption('--limit', originalIds.length, 1);
+const portraitSize = options['--mini'] ? {width:768,height:1024} : {width:834,height:1194};
 const landscapeSize = {width:portraitSize.height,height:portraitSize.width};
-const selectedIds = option('--ids', '').split(',').filter(Boolean);
-if (selectedIds.some(id => !originalIds.includes(id))) throw new Error('Only curated original games can be tested.');
-const designs = (selectedIds.length ? selectedIds : originalIds).map(id => JSON.parse(readFileSync(new URL(`../../${id}/game.json`, import.meta.url))));
-const session = await startBrowser({engine:browserName,out:`${browserName}-originals-${option('--run','smoke')}`,context:{viewport:portraitSize,deviceScaleFactor:1}});
+const selectedIds = options['--ids']?.split(',') || originalIds;
+assert.ok(selectedIds.every(id => originalIds.includes(id)), 'Only curated original games can be tested.');
+const games = [...new Set(selectedIds)].slice(offset, offset + limit)
+  .map(id => JSON.parse(readFileSync(new URL(`../../${id}/game.json`, import.meta.url))));
+assert.ok(games.length, 'The selected range contains no games.');
+const session = await startBrowser({engine:browserName,out:`${browserName}-originals-${run}`,context:{viewport:portraitSize,deviceScaleFactor:1}});
 const {browser,page,out} = session;
 let network = [];
 page.on('response',r=>{if(r.status()>=400)network.push(`${r.status()} ${r.url()}`)});
@@ -87,14 +112,17 @@ async function checkOriginal(g) {
 }
 
 
+let currentId;
 try {
-  for (const g of designs.slice(Number(option('--offset',0)), Number(option('--offset',0))+Number(option('--limit',1000)))) {
+  for (const g of games) {
+    currentId = g.id;
     session.errors.length=0;network=[];
     await page.goto(`${origin}/${g.id}/?debug`, {waitUntil:'domcontentloaded'});
     await checkOriginal(g);
     writeFileSync(`${out}/report.json`,JSON.stringify(report,null,2));
   }
 } catch (error) {
+  report.push({id:currentId, failure:error.message, errors:[...session.errors], network:[...network]});
   console.error(error);process.exitCode=1;
   await page.screenshot({path:`${out}/failure.png`}).catch(()=>{});
 } finally {

@@ -20,6 +20,16 @@ See [remote execution evidence](audit/remote-retirement-2026-10-08.json) and [pl
 
 ## Maintained tooling and future quality bar
 
-Read [the studio guide](../examples/_studio/README.md). `node examples/_studio/build.mjs` packages only the originals; `node examples/_studio/tests/curriculum.test.mjs` runs the seven preserved-game gates. Use Blender 5.2 CLI and each original's reproducible builder, never hand-edit GLBs. Rebuild only affected games with eight rendering threads.
+Read [the studio guide](../examples/_studio/README.md). `node examples/_studio/build.mjs` packages only the originals; `pnpm examples:check` runs the seven preserved-game gates plus four tooling regression checks. Use Blender 5.2 CLI and each original's reproducible builder, never hand-edit GLBs. Rebuild only affected games with eight rendering threads.
 
 A future game must earn its place through compelling direct action, meaningful choices, discovery/creation and voluntary return in real family play. Education belongs inside the play. Build one strong prototype at a time; do not resume the 100+ goal, release reskins, or infer fun from green tests, assets or AI agreement. Historical pass/audit documents remain evidence of prior work, not instructions to recreate or republish retired games.
+
+## Post-retirement cleanup
+
+The follow-up scan removed retired-game test helpers and the obsolete empty catalogue export, corrected stale README counts/deployment guidance, and made packaging use the canonical original IDs. Publishing validates the entire selected batch before deployment. Browser CLI inputs now reject unsafe report labels and empty ranges, and failures are included in JSON evidence. Rerunning the completed retirement script preserves its original before/after report without contacting Cloudflare.
+
+The asset wrapper now handles Crash Racers' actual `cars.py`/`props.py` and the auxiliary texture builders. Paint Splash's bottle/cup builder lives at `examples/paint-splash/blender/colour_kit.py`; its deleted-library dependency is gone. A Blender 5.2.2 CLI rebuild into `/tmp` retained the shipped triangle geometry and palette, omitted unused UVs, and loaded successfully in the actual mixing/painting workshop. Shipped game files were not replaced. Catalogue filtering/covers and an original startup/play smoke check passed in Chromium. The earlier WebKit audio-device limitation remains recorded above.
+
+The final scan also removed the obsolete repository Blender MCP configuration and updated creator onboarding/agent guidance to Blender 5.2 CLI, reusable assets and reproducible builders.
+
+Validation after the final cleanup: all 78 tests and workspace typechecks pass; 143 JavaScript files pass syntax and relative-import checks (helper templates checked at their shipment destination), and Blender builders parse. A fresh scan found no further actionable cleanup in the reviewed code/tooling. The 321 original snapshot files still match.

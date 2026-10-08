@@ -68,12 +68,9 @@ function GrownUps() {
     <section className="mt-10 rounded-[28px] border-4 border-dashed border-ink-soft/30 bg-white/70 p-6 text-ink">
       <h2 className="text-2xl font-bold">👩‍💻 For grown-ups: connect an AI agent</h2>
       <p className="mt-2 text-lg text-ink-soft">
-        BitGames has an MCP server. Connect Claude Code, Codex, or another local coding agent and it can build three.js games, and
-        bring in 3D models from Blender if you also connect the{' '}
-        <a className="underline" href="https://github.com/ahujasid/blender-mcp" target="_blank" rel="noreferrer">
-          Blender MCP server
-        </a>
-        . Your agent builds and tests locally, then deploys to your Cloudflare account using Cloudflare's{' '}
+        BitGames has an MCP server. Connect Claude Code, Codex, or another local coding agent and it can build three.js games.
+        Install Blender 5.2 to let your agent build and adapt 3D assets through its command line.
+        Your agent builds and tests locally, then deploys to your Cloudflare account using Cloudflare's{' '}
         <code>cf</code> command. As soon as the agent ships a game, you get a link to play it and share it with your
         family. An adult reviewer then decides whether to list it in the store, so other families can find it too.
       </p>

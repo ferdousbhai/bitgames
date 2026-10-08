@@ -1,9 +1,17 @@
 // The owner approved these exact 89 retirements; no prefix-based deletion.
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 const root = new URL('../', import.meta.url);
+assert.ok(process.argv.slice(2).every(arg => arg === '--execute'), 'Usage: node scripts/retire-generated-games.mjs [--execute]');
+const reportFile = new URL('docs/audit/remote-retirement-2026-10-08.json', root);
+// Preserve the completed before/after evidence on accidental reruns, before reading credentials.
+const previous = existsSync(reportFile) ? JSON.parse(readFileSync(reportFile)) : null;
+if (previous?.mode === 'completed' && previous.verified) {
+  console.log('Retirement already completed and verified; original execution evidence preserved.');
+  process.exit(0);
+}
 const manifest = JSON.parse(readFileSync(new URL('docs/audit/proposed-wipe-2026-10-08.json', root)));
 assert.equal(manifest.localDirectoriesRemoved, 89);
 assert.equal(manifest.requiresExactScopeConfirmation, false);
@@ -14,8 +22,7 @@ assert.equal(new Set(ids).size, 89);
 assert.equal(new Set(names).size, 89);
 assert.ok(names.every((name, i) => name === `bitgames-${ids[i]}`));
 assert.ok(manifest.protectedGameIds.every(id => !ids.includes(id)));
-const credentials = JSON.parse(readFileSync(join(homedir(), '.config/cloudflare/config/default.json')));
-const token = process.env.CLOUDFLARE_API_TOKEN || credentials.oauth_token;
+const token = process.env.CLOUDFLARE_API_TOKEN || JSON.parse(readFileSync(join(homedir(), '.config/cloudflare/config/default.json'))).oauth_token;
 assert.ok(token, 'Cloudflare authentication required');
 async function api(path, method = 'GET', body) {
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
@@ -66,7 +73,6 @@ for (const name of names.filter(name => beforeWorkers.includes(name))) {
   assert.ok(bindings.every(b => b.type === 'assets'), `${name} has non-asset bindings: inspect exclusive ownership before deletion`);
   workerSettings.push({ name, bindings });
 }
-const reportFile = new URL('docs/audit/remote-retirement-2026-10-08.json', root);
 const report = { date: new Date().toISOString(), accountId, databaseId, mode: 'inspected',
   approvedIds: ids, beforeWorkers, selectedWorkers: workerSettings, selectedGames,
   selectedVersions: beforeVersions.filter(v => ids.includes(v.game_id)),

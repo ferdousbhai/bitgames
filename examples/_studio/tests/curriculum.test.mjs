@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { games } from '../catalogue.mjs'
+import { originalIds } from '../catalogue.mjs'
 import { mixToyPaint } from '../originals/colour-model.js'
 import { compareBuilds } from '../../rocket-garage/public/js/workshop.js'
 import { DEFAULT_ROCKET } from '../../rocket-garage/public/js/parts.js'
@@ -24,7 +24,7 @@ test('the approved wipe preserves every original project and excludes all retire
   assert.equal(new Set(retiredIds).size, retiredIds.length)
   assert.ok(retiredIds.every((id) => !protectedIds.includes(id)))
   assert.deepEqual(exampleIds, protectedIds)
-  assert.deepEqual(games, [], 'Retired generated adventures must not be regenerated')
+  assert.deepEqual([...originalIds].sort(), protectedIds, 'Build inputs must match the protected originals')
   for (const id of retiredIds) assert.ok(!existsSync(join(root, id)), `${id}: retired source directory remains`)
 })
 

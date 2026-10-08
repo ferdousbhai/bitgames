@@ -20,7 +20,7 @@ EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/original-quali
 
 Other maintained checks are `tests/catalogue.mjs` and `tests/workshop-fallback.mjs`. Source/shipment tests do not prove child enjoyment or physical-device performance.
 
-Agents must use Blender 5.2 CLI. Edit each original's reproducible `examples/<game-id>/blender/models.py`, then rebuild only the requested game:
+Agents must use Blender 5.2 CLI. Edit the reproducible builders under `examples/<game-id>/blender/`, then rebuild only the requested game. Crash Racers uses `cars.py` and `props.py`; the wrapper also runs each game's texture/workshop builders:
 
 ```sh
 node examples/_studio/assets.mjs balloon-pop
@@ -36,4 +36,4 @@ The workspace-pinned Cloudflare CLI is available without pnpm's external engine-
 ./scripts/cf auth whoami
 ```
 
-Saved OAuth login is now visible; remote retirement remains pending working session network access and remote account verification. Use the approved exact wipe manifest; do not delete the store, shared multiplayer resources, originals or unrelated projects. A local wipe does not remove already deployed Workers or store records.
+Cloudflare authentication and the approved retirement are verified. All 89 target Worker names are absent; fourteen deployed Workers, fourteen store games and 220 versions were removed. See the handoff for evidence. Preserve the store, shared multiplayer resources, originals and unrelated projects.

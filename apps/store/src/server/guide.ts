@@ -85,7 +85,11 @@ Pressing Play on BitGames fills the whole screen (true fullscreen where the brow
 - Show touch controls whenever there's a touchscreen (\`@media (any-pointer: coarse)\`), even if a mouse or keyboard is also connected. For held buttons (steer, gas), use touch events with \`preventDefault()\` (\`{ passive: false }\`): on an iPad, every browser is WebKit, and it cancels a held touch for its press-and-hold menu otherwise.
 
 ## Making 3D models in Blender
-If the Blender MCP server is connected, model things there, then export them as glTF binary into the game's \`public/models/\` folder:
+Use Blender 5.2 CLI with reproducible Python builders under the game's \`blender/\` folder. Run \`blender --background --threads 8 --python-exit-code 1 --python blender/models.py\`; do not use the GUI or Blender MCP. Export glTF binary into \`public/models/\` and rebuild from source rather than editing shipped GLBs.
+
+Reuse a suitable existing asset first, then check trusted libraries such as Poly Haven; adapt or build custom models when that costs less or better fits the game. Record imported assets' source URL, licence, checksum and adaptation steps, and ship optimized files locally. Keep simple counters, grids and outlines in runtime geometry.
+
+For a model that needs a builder:
 1. Build or import the model. Keep it low-poly (under about 20k triangles per model), and use simple materials with a Principled BSDF and base colour or image textures.
 2. Apply transforms and put the model's origin where it should stand.
 3. Export only the model to a .glb file:

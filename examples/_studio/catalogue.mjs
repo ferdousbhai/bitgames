@@ -13,4 +13,3 @@ export const originalIds = Object.freeze([
   "rocket-garage",
   "star-catcher"
 ]);
-export const games = [];
