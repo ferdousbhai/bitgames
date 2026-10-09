@@ -1,3 +1,4 @@
+import { listWords } from './speech.js'
 // Sharing the finished birthday cake equally between the friends at the party.
 // It follows the recipe studio's equal-share rule (js/recipe-studio.js, "Share the cake"):
 // the cake is cut into two slices for every friend, and the share is fair when every
@@ -86,7 +87,6 @@ export function createPartyShare({ root, speak, sound, onDone }) {
   card.append(head, row, say)
   root.append(card)
 
-  const count = (i) => plates[i]
   const fewest = () => Math.min(...plates)
 
   function render() {
@@ -106,11 +106,11 @@ export function createPartyShare({ root, speak, sound, onDone }) {
   function give(i) {
     if (finished || i < 0 || i >= guests.length) return false
     const g = guests[i]
-    if (count(i) > fewest()) {
+    if (plates[i] > fewest()) {
       // Never a buzzer: name who is still waiting so the child can share it out evenly.
-      const waiting = guests.filter((_, k) => plates[k] === fewest()).map((w) => w.name)
-      const text = `${g.name} has ${count(i)}. ${waiting.join(' and ')} ${waiting.length > 1 ? 'are' : 'is'} still waiting!`
-      say.textContent = `${g.emoji} ${'🍰'.repeat(count(i))} … ${guests.filter((_, k) => plates[k] === fewest()).map((w) => w.emoji).join(' ')} ⏳`
+      const waiting = guests.filter((_, k) => plates[k] === fewest())
+      const text = `${g.name} has ${plates[i]}. ${listWords.format(waiting.map((w) => w.name))} ${waiting.length > 1 ? 'are' : 'is'} still waiting!`
+      say.textContent = `${g.emoji} ${'🍰'.repeat(plates[i])} … ${waiting.map((w) => w.emoji).join(' ')} ⏳`
       speak(text)
       sound?.click()
       buttons[i].classList.remove('nudge')
@@ -123,16 +123,14 @@ export function createPartyShare({ root, speak, sound, onDone }) {
     given++
     sound?.pop(0, plates[i] * 2)
     say.textContent = `${g.emoji} ${'🍰'.repeat(plates[i])}`
+    finished = given === slices
     render()
-    if (given === slices) {
-      finished = true
-      render()
+    if (finished) {
+      // give() only ever fills the emptiest plates, so a finished share is always fair
       const each = slices / guests.length
-      const fair = plates.every((p) => p === each)
-      const text = `${guests.length} friends, ${each} slices each!`
       say.textContent = `${guests.map((w) => w.emoji).join('')} ${'🍰'.repeat(each)} ✓`
       sound?.perfect(4)
-      speak(fair ? `${text} Everyone has the same.` : text)
+      speak(`${guests.length} friends, ${each} slices each! Everyone has the same.`)
       row.classList.add('fair')
       setTimeout(() => onDone?.({ guests, each, slices }), 2400)
     } else {

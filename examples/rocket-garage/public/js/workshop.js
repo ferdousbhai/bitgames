@@ -1,4 +1,5 @@
 import { DESTS, PARTS, reach, wobble } from './parts.js'
+import { listWords } from './speech.js'
 
 const STORAGE_KEY = 'rocket-garage:reference:v1'
 const QUESTION = 'Which rocket will fly farther?'
@@ -33,7 +34,7 @@ const MANY = ' You changed more than one part, so it is hard to tell which one d
  */
 export function ruling({ changed }) {
   const wobbly = changed.filter((slot) => WOBBLY.has(slot))
-  const words = (slots) => slots.map((s) => SLOT_WORDS[s]).join(' and ')
+  const words = (slots) => listWords.format(slots.map((s) => SLOT_WORDS[s]))
   return {
     kind: changed.length === 0 ? 'none' : changed.includes('booster') ? 'distance' : wobbly.length ? 'wobble' : 'fun',
     many: changed.length > 1 ? MANY : '',
