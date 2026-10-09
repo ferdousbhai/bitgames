@@ -1,4 +1,4 @@
-import { createPrediction } from './prediction.js'
+import { createPrediction, pins as pinWord } from './prediction.js'
 import { createVoice } from './speech.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
@@ -67,7 +67,7 @@ const card = new ScoreCard()
 let penguinTemplate = null
 
 /** Spoken words for pre-readers, quiet when the game is muted. Words queue; taps interrupt. */
-const voice = createVoice({ isMuted: () => audio.muted, rate: 0.9, pitch: 1.1 })
+const voice = createVoice({ muted: audio.muted, rate: 0.9, pitch: 1.1 })
 const counter = new Counter(scene, { say: voice.say })
 
 // --- Settings -------------------------------------------------------------------------
@@ -386,7 +386,6 @@ function nextRoll() {
 }
 
 const SIDE_WORDS = { left: 'on the left', middle: 'in the middle', right: 'on the right' }
-const pinWord = (n) => `${n} ${n === 1 ? 'pin' : 'pins'}`
 
 /** Spare time: look at the pins left and say where they are. */
 function askWhere() {
@@ -654,7 +653,7 @@ $('home').addEventListener('click', (e) => {
 const soundBtn = $('sound')
 function setSound(on) {
   audio.setMuted(!on)
-  if (!on) voice.hush()
+  voice.setMuted(!on)
   soundBtn.textContent = on ? '🔊' : '🔇'
   store.set('sound', on ? '1' : '0')
 }

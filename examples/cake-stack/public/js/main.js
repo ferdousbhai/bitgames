@@ -52,7 +52,7 @@ const effects = new Effects(scene, camera)
 const cakeKit = new CakeKit()
 const animals = new AnimalKit()
 // Spoken words for pre-readers: one voice for the whole game, respecting its mute.
-const voice = createVoice({ isMuted: () => sound.muted, rate: 0.85, pitch: 1 })
+const voice = createVoice({ muted: sound.muted, rate: 0.85, pitch: 1 })
 const recipeStudio = createRecipeStudio({ cakeKit, openButton: $('recipe-open'), sound, voice })
 
 // --- Game state -----------------------------------------------------------------------------
@@ -1211,7 +1211,7 @@ $('done').addEventListener('click', (e) => {
 const soundBtn = $('sound')
 function setSound(on) {
   sound.setMuted(!on)
-  if (!on) voice.hush()
+  voice.setMuted(!on)
   soundBtn.textContent = on ? '🔊' : '🔇'
   try {
     localStorage.setItem('cake-stack-sound', on ? '1' : '0')

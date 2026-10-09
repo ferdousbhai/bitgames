@@ -840,7 +840,7 @@ function hintStep() {
 // --- Title & garage -------------------------------------------------------------------
 
 /** Speaks short phrases for children who are not reading yet (only when sound is on). */
-const voice = createVoice({ isMuted: () => audio.muted, rate: 0.95, pitch: 1.15 })
+const voice = createVoice({ muted: audio.muted, rate: 0.95, pitch: 1.15 })
 
 /** A picture of a whole rocket, for comparing builds side by side. */
 let thumbRocket = null
@@ -1905,7 +1905,7 @@ function toggleSound() {
   audio.unlock()
   audio.setMuted(!audio.muted)
   store.set('rocket-garage-muted', audio.muted)
-  if (audio.muted) voice.hush()
+  voice.setMuted(audio.muted)
   renderSound()
 }
 $('sound').addEventListener('click', toggleSound)

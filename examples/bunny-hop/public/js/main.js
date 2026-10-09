@@ -128,17 +128,21 @@ function renderMissionProgress(goal, option, count) {
   const caption = document.createElement('span')
   caption.className = 'mission-caption'
   caption.textContent = option.sequence
-    ? count === 2 ? 'Hop, then tap to flip!' : count === 3 ? 'Pattern complete!' : '👆 Hop · hop · flip'
-    : `👆 Tap to hop · ${count} / 4`
+    ? count === option.target - 1 ? 'Hop, then tap to flip!' : count === option.target ? 'Pattern complete!' : '👆 Hop · hop · flip'
+    : `👆 Tap to hop · ${count} / ${option.target}`
   goal.append(caption, stepRow(option.steps, count))
 }
 
+/** A mission's steps, listed once: drawn on its button and in its progress tiles. */
+const missionSteps = (steps) => ({ steps, pictures: stepRow(steps) })
+
 // One voice for the game and its missions: words wait their turn, so a mission never swallows a count.
-const voice = createVoice({ isMuted: () => sound.muted, rate: 0.82, pitch: 1 })
+const voice = createVoice({ muted: sound.muted, rate: 0.82, pitch: 1 })
 
 const adventure = createAdventure({
   id: 'bunny-hop',
-  anchor: $('play'),
+  // The mission choice and the 🐢 pace share one row on the menu.
+  place: (button) => $('menu-options').prepend(button),
   hud: $('hud'),
   voice,
   celebrate: () => {
@@ -149,15 +153,13 @@ const adventure = createAdventure({
   },
   renderProgress: renderMissionProgress,
   options: [
-    { emoji: '🐰', label: 'Free hopping', caption: 'Free hop', pictures: stepRow(['🐰']) },
-    { emoji: '🔢', label: 'Gentle hop counting', caption: 'Count 4 hops', steps: ['↑', '↑', '↑', '↑'], pictures: stepRow(['↑', '↑', '↑', '↑']), pace: 0.6, goal: 'Make four hops', target: 4, reward: 'Four! You made four hops!' },
+    { label: 'Free hopping', caption: 'Free hop', pictures: stepRow(['🐰']) },
+    { label: 'Gentle hop counting', caption: 'Count 4 hops', ...missionSteps(['↑', '↑', '↑', '↑']), pace: 0.6, goal: 'Make four hops', target: 4, reward: 'Four! You made four hops!' },
     // A plain hop where the flip belongs is turned away with a reminder to tap again in the air.
-    { emoji: '🎶', label: 'Hop, hop, flip pattern', caption: 'Hop, hop, flip', steps: ['↑', '↑', '↻'], pictures: stepRow(['↑', '↑', '↻']), pace: 0.6, goal: 'Hop twice, then hop and tap again in the air to flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => n < 2 ? kind === 'hop' || kind === 'double' : kind === 'double', hint: () => 'Tap again in the air to flip!', reward: 'You made the hop, hop, flip pattern!' },
+    { label: 'Hop, hop, flip pattern', caption: 'Hop, hop, flip', ...missionSteps(['↑', '↑', '↻']), pace: 0.6, goal: 'Hop twice, then hop and tap again in the air to flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => n < 2 ? kind === 'hop' || kind === 'double' : kind === 'double', hint: () => 'Tap again in the air to flip!', reward: 'You made the hop, hop, flip pattern!' },
   ],
 })
 
-// The mission choice and the 🐢 pace share one row on the menu.
-$('menu-options').prepend($('adventure-choice'))
 function renderPace() {
   $('pace').setAttribute('aria-pressed', String(game.gentle))
   $('pace').classList.toggle('gentle', game.gentle)
@@ -535,8 +537,8 @@ $('home').onclick = () => {
 }
 function toggleMute() {
   sound.unlock()
-  voice.hush()
   sound.setMuted(!sound.muted)
+  voice.setMuted(sound.muted)
   $('mute').textContent = sound.muted ? '🔇' : '🔊'
 }
 $('mute').onclick = toggleMute

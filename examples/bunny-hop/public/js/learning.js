@@ -230,9 +230,11 @@ export function renderPantry(el, rows, total) {
   el.append(shelf, sum)
 }
 
+const AND = new Intl.ListFormat('en-GB', { type: 'conjunction' })
+
 /** What Pip says at home: the rows added up (each named when there are only a few). */
 export function pantryWords(rows, total) {
   if (!rows.length) return ''
   if (rows.length === 1) return `${carrotWords(total)} in the pantry!`
-  return `${rows.slice(0, -1).join(', ')} and ${rows.at(-1)} make ${carrotWords(total)} in the pantry!`
+  return `${AND.format(rows.map(String))} make ${carrotWords(total)} in the pantry!`
 }

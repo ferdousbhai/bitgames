@@ -116,3 +116,10 @@ Each level is now one calm, spoken and pictured request instead of "pop everythi
 - The mission choice is drawn through the adventure's `renderChoice` (no repaint after `begin()`); `renderSky` builds its rows of five with one `rowsOfFive` helper.
 - Verified: chromium and webkit boot + play, and a stubbed-speech play of a counting sky and a mission (words in order, no errors).
 - Iteration 2: missions carry their own `pictures`, `caption`, `balloons` (progress and reward pictures) and `sky: true`; the `missionPictures` side table, the label `replace` chain and the custom choice builder are gone (the shared button draws them; `.mission-next` became `#title .adventure-next`). The `say` alias is gone. The tree-leaf pool is `leafBits` with 66 pieces (was a 700-piece `confetti` pool). Home and the sound button now hush the voice themselves. The progress strip stays custom: its drawn colour balloons and caption above the slots are more than `icon` draws.
+
+## Simplify pass, third pass (2026-10-09)
+
+- The voice starts with `muted: audio.muted`; `setSound` calls `voice.setMuted`, which hushes on mute (the toggle no longer hushes when unmuting). The local `#hud .adventure-goal[hidden]` rule is gone; `adventure.css` owns it.
+- Options list each picture array once through `balloonRow(balloons, filled)` and no longer carry the unused `emoji`.
+- The Red hunt matches with `COLOURED_KINDS` (now exported from `sky.js`) and `colourName(b.color) === 'red'`, so a red heart (`#ff4d6d`) now counts, as a child would expect (deliberate change). `RED` is `SKY_COLOURS.red`.
+- Verified: `browser.mjs --run simp3` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check (mute hushes and silences, unmute speaks again, choice/goal show and hide, no console errors).

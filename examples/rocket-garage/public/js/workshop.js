@@ -20,6 +20,8 @@ export function compareBuilds(a, b) {
 export const BOOSTER_WORDS = { none: 'no boosters', small: 'small boosters', big: 'big boosters', mega: 'mega boosters', rainbow: 'rainbow boosters' }
 export const SLOT_WORDS = { nose: 'nose', cabin: 'window', pilot: 'pilot', tank: 'tank', sticker: 'sticker', fins: 'fins', booster: 'boosters' }
 export const WOBBLY = new Set(['nose', 'tank', 'fins'])
+/** Slots whose names are plural words: "the fins change", "the boosters are". */
+export const PLURAL_SLOTS = new Set(['fins', 'booster'])
 /** "the Moon", but "Mars". */
 export const placeName = (i) => (DESTS[i].id === 'mars' ? '' : 'the ') + DESTS[i].name
 
@@ -29,14 +31,14 @@ const MANY = ' You changed more than one part, so it is hard to tell which one d
  * The one rule behind both explanations: boosters change the distance; nose, tank and fins only
  * the wobble; everything else is just for fun. `explain` and `explainFlight` put it into words.
  */
-function ruling({ changed }) {
+export function ruling({ changed }) {
   const wobbly = changed.filter((slot) => WOBBLY.has(slot))
   const words = (slots) => slots.map((s) => SLOT_WORDS[s]).join(' and ')
   return {
     kind: changed.length === 0 ? 'none' : changed.includes('booster') ? 'distance' : wobbly.length ? 'wobble' : 'fun',
     many: changed.length > 1 ? MANY : '',
     wobbly: words(wobbly),
-    wobblyPlural: wobbly.length > 1 || wobbly[0] === 'fins',
+    wobblyPlural: wobbly.length > 1 || PLURAL_SLOTS.has(wobbly[0]),
     parts: words(changed),
     plural: changed.length > 1,
   }
@@ -80,6 +82,9 @@ export function explainFlight(before, now, result = compareBuilds(before, now)) 
   }
   return `The ${r.parts} ${r.plural ? 'are' : 'is'} just for fun. Same distance!`
 }
+
+/** "You changed the fins." or "You changed 3 parts." */
+export const changedWords = (changed) => (changed.length === 1 ? `You changed the ${SLOT_WORDS[changed[0]]}.` : `You changed ${changed.length} parts.`)
 
 export const isBuild = (value) => value && Object.keys(PARTS).every((slot) => PARTS[slot].some((p) => p.id === value[slot]))
 
@@ -307,7 +312,7 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
       feedback('Change one part, then come back.', say ? 'This is rocket A. Go to the garage, change one part, then come back!' : '')
       point(garageButton)
     } else {
-      feedback(QUESTION, say ? (changed.length === 1 ? `You changed the ${SLOT_WORDS[changed[0]]}. ${QUESTION}` : `You changed ${changed.length} parts. ${QUESTION}`) : '')
+      feedback(QUESTION, say ? `${changedWords(changed)} ${QUESTION}` : '')
       point(predictionRow)
     }
     onChange()

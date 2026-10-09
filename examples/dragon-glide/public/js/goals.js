@@ -10,6 +10,9 @@ import * as THREE from 'three'
  * The same outlines draw the 3D treasures, the HUD and the nest/end-card pictures.
  */
 
+/** "A, B and C" for spoken lists. */
+const listWords = new Intl.ListFormat('en-GB', { type: 'conjunction' })
+
 export const TREASURES = {
   pink: { shape: 'heart', color: '#ff6fae', one: 'pink heart', many: 'pink hearts', word: 'pink' },
   blue: { shape: 'heart', color: '#3fb4ff', one: 'blue heart', many: 'blue hearts', word: 'blue' },
@@ -149,10 +152,10 @@ export function learnedSentence(entry) {
   // same shape, different colours: "4 pink and 3 blue hearts"
   if (shapes.size === 1 && rows.length > 1 && rows.every(([k, n]) => TREASURES[k].word && n > 1)) {
     const parts = rows.map(([k, n]) => `${n} ${TREASURES[k].word}`)
-    return `You sorted ${parts.slice(0, -1).join(', ')} and ${parts.at(-1)} ${TREASURES[rows[0][0]].many.split(' ').pop()}!`
+    return `You sorted ${listWords.format(parts)} ${TREASURES[rows[0][0]].many.split(' ').pop()}!`
   }
   const parts = rows.map(([k, n]) => countOf(k, n))
-  return `You sorted ${parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]}!`
+  return `You sorted ${listWords.format(parts)}!`
 }
 
 /** The world's goal said aloud as it starts. */

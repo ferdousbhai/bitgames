@@ -110,7 +110,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   border: 2px solid #fff; border-radius: 19px;
   background: #fff9e6f5; box-shadow: 0 4px 0 #5b3fa055;
 }
-#hud .adventure-goal[hidden] { display: none; }
 .mission-caption { font-size: 13px; font-weight: 900; line-height: 1.15; white-space: nowrap; }
 .mission-slots .mission-picture { width: 31px; height: 31px; }
 .mission-reward {

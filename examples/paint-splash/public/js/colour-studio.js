@@ -57,7 +57,8 @@ export function describeMix(drops) {
   return { ...result, base, more, say }
 }
 
-export function createColourStudio({ openButton, onOpen, onClose, speak = () => {}, sound = () => {} }) {
+export function createColourStudio({ openButton, onOpen, onClose, voice, sound = () => {} }) {
+  const speak = voice.sayNow // each tap's answer replaces the last one
   const drops = [0, 0, 0]
   const history = [] // paint index of each drop, for Undo
   const picture = Array(SQUARES).fill(BLANK)
@@ -83,6 +84,7 @@ export function createColourStudio({ openButton, onOpen, onClose, speak = () => 
       nudgeLater()
     },
     onClose: () => {
+      voice.hush()
       clearTimeout(hintTimer)
       onClose?.()
     },

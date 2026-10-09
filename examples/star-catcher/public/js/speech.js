@@ -2,7 +2,7 @@
 // say() queues by default; sayNow() (or { interrupt: true }) clears what is waiting first.
 // onend runs when the words finish (or a fallback timer, for browsers that never fire end),
 // but not for words cut short by hush().
-export function createVoice({ isMuted = () => false, rate = 0.85, pitch = 1.05 } = {}) {
+export function createVoice({ muted = false, rate = 0.85, pitch = 1.05 } = {}) {
   const canSpeak = 'speechSynthesis' in window
   let pending = 0
   let waiters = []
@@ -24,7 +24,7 @@ export function createVoice({ isMuted = () => false, rate = 0.85, pitch = 1.05 }
 
   function say(text, { interrupt = false, onend } = {}) {
     if (interrupt) hush()
-    if (!text || isMuted() || !canSpeak) {
+    if (!text || muted || !canSpeak) {
       onend?.()
       return
     }
@@ -59,6 +59,11 @@ export function createVoice({ isMuted = () => false, rate = 0.85, pitch = 1.05 }
     /** Tap feedback: says this now, dropping anything still waiting. */
     sayNow: (text, options) => say(text, { ...options, interrupt: true }),
     hush,
+    /** The game's sound switch: muting also stops words already playing. */
+    setMuted(on) {
+      muted = on
+      if (on) hush()
+    },
     get speaking() { return pending > 0 },
     /** Resolves once everything queued has been said (or hushed). */
     idle: () => (pending > 0 ? new Promise((resolve) => waiters.push(resolve)) : Promise.resolve()),

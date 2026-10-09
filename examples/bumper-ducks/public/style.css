@@ -101,7 +101,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 /* The counting mission: bubbles that fill in, bottom left (clear of the dash button and the store's room code). */
 #hud .adventure-goal { left: calc(12px + env(safe-area-inset-left)); transform: none; max-width: calc(100vw - 24px - var(--dash)); display: flex; align-items: center; gap: 2px; padding: 4px 14px 4px 8px; border-radius: 999px; background: rgba(255,255,255,0.88);
   border: 3px solid #fff; box-shadow: 0 4px 0 rgba(40,60,140,.3); color: #24306e; font: 900 20px/1 ui-rounded, system-ui, sans-serif; bottom: calc(16px + env(safe-area-inset-bottom)); }
-#hud .adventure-goal[hidden] { display: none; }
 #hud .adventure-goal b { margin-left: 6px; white-space: nowrap; }
 #hud .adventure-steps { font-size: 30px; }
 #menu .adventure-choice { font-size: 18px; border: 3px solid #fff; }

@@ -5,7 +5,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
 import { Balloons, COLORS, KINDS, PALETTE } from './balloons.js'
 import { Effects } from './effects.js'
-import { SKY_COLOURS, dotLayout, makeRequest } from './sky.js'
+import { COLOURED_KINDS, SKY_COLOURS, colourName, dotLayout, makeRequest } from './sky.js'
 import { createVoice } from './speech.js'
 import { World, halfSize as viewSize } from './world.js'
 
@@ -31,7 +31,7 @@ scene.add(sun)
 
 const audio = new Audio()
 // One voice for the game: counts queue after each other instead of cutting each other off.
-const voice = createVoice({ isMuted: () => audio.muted, rate: 0.82, pitch: 1 })
+const voice = createVoice({ muted: audio.muted, rate: 0.82, pitch: 1 })
 const world = new World(scene, camera)
 const balloons = new Balloons(scene)
 const effects = new Effects(scene, camera)
@@ -77,7 +77,7 @@ const game = {
 }
 
 // Optional learning missions. Hunts also make their balloons more common (see spawn).
-const RED = '#ff595e'
+const RED = SKY_COLOURS.red
 const COOL_COLORS = ['#8ac926', '#2ec4b6', '#4d96ff', '#9b5de5']
 
 /** A small picture: an emoji, or a drawn balloon when `type` is a colour name. */
@@ -98,6 +98,9 @@ function pictureRow(types, filled = types.length) {
   types.forEach((type, i) => row.append(picture(type, i < filled)))
   return row
 }
+
+/** An option's balloons, listed once: drawn on its button and in its progress slots. */
+const balloonRow = (balloons, filled) => ({ balloons, pictures: pictureRow(balloons, filled) })
 
 function renderMissionProgress(goal, option, count) {
   if (!option.goal) return
@@ -142,12 +145,12 @@ const adventure = createAdventure({
   options: [
     // The calm default: every level is one spoken, pictured counting request (js/sky.js).
     // Its picture is a row of slots, two filled and one waiting.
-    { emoji: '🔢', label: 'Counting sky', sky: true, balloons: ['blue', 'blue', 'blue'], pictures: pictureRow(['blue', 'blue', 'blue'], 2) },
-    { emoji: '🐢', label: 'Count three balloons', caption: 'Count', balloons: ['🎈', '🎈', '🎈'], pictures: pictureRow(['🎈', '🎈', '🎈']), pace: 0.6, goal: 'Pop three balloons', target: 3, reward: 'Three! You counted three balloons!' },
-    { emoji: '❤️', label: 'Heart shape hunt', caption: 'Hearts', balloons: ['💖', '💖', '💖'], pictures: pictureRow(['💖', '💖', '💖']), pace: 0.6, goal: 'Pop three heart balloons', target: 3, huntKind: 'heart', accept: (b) => b.kindName === 'heart', reward: 'Three! You found three hearts!' },
-    { emoji: '🎨', label: 'Red colour hunt', caption: 'Red', balloons: ['red', 'red', 'red'], pictures: pictureRow(['red', 'red', 'red']), pace: 0.6, goal: 'Pop three red balloons', target: 3, huntColor: RED, accept: (b) => ['round', 'smile', 'heart', 'mini'].includes(b.kindName) && b.color === RED, reward: 'Three! You found three red balloons!' },
+    { label: 'Counting sky', sky: true, ...balloonRow(['blue', 'blue', 'blue'], 2) },
+    { label: 'Count three balloons', caption: 'Count', ...balloonRow(['🎈', '🎈', '🎈']), pace: 0.6, goal: 'Pop three balloons', target: 3, reward: 'Three! You counted three balloons!' },
+    { label: 'Heart shape hunt', caption: 'Hearts', ...balloonRow(['💖', '💖', '💖']), pace: 0.6, goal: 'Pop three heart balloons', target: 3, huntKind: 'heart', accept: (b) => b.kindName === 'heart', reward: 'Three! You found three hearts!' },
+    { label: 'Red colour hunt', caption: 'Red', ...balloonRow(['red', 'red', 'red']), pace: 0.6, goal: 'Pop three red balloons', target: 3, huntColor: RED, accept: (b) => COLOURED_KINDS.includes(b.kindName) && colourName(b.color) === 'red', reward: 'Three! You found three red balloons!' },
     // For the youngest: the Phase 1 sky where every balloon pops and fills the level bar.
-    { emoji: '🎈', label: 'Free popping', balloons: ['🎈'], pictures: pictureRow(['🎈']) },
+    { label: 'Free popping', ...balloonRow(['🎈']) },
   ],
 })
 
@@ -545,6 +548,7 @@ $('home').addEventListener('click', (e) => {
 const soundBtn = $('sound')
 function setSound(on) {
   audio.setMuted(!on)
+  voice.setMuted(!on)
   soundBtn.textContent = on ? '🔊' : '🔇'
   try {
     localStorage.setItem('balloon-pop-sound', on ? '1' : '0')
@@ -555,7 +559,6 @@ try {
 } catch {}
 soundBtn.addEventListener('click', (e) => {
   e.stopPropagation()
-  voice.hush()
   audio.unlock()
   setSound(audio.muted)
   audio.click()

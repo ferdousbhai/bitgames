@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { BIOME_LENGTH, BIOMES, JOURNEY, OBSTACLES, START_X, biomeIndexAt } from './biomes.js'
 import { copy } from './models.js'
+import { canvasTexture } from './world.js'
 import { keepWhere, pick, rand, randInt } from './util.js'
 
 const CARROT_Y = 0.6
@@ -59,23 +60,20 @@ const UNITS = 3 // a rhythm plays its pattern three times; the third time may st
 let askMaterial
 function askMarker() {
   if (!askMaterial) {
-    const c = document.createElement('canvas')
-    c.width = c.height = 128
-    const g = c.getContext('2d')
-    g.fillStyle = 'rgba(255,255,255,0.92)'
-    g.strokeStyle = '#ffcf1a'
-    g.lineWidth = 10
-    g.beginPath()
-    g.arc(64, 64, 52, 0, Math.PI * 2)
-    g.fill()
-    g.stroke()
-    g.fillStyle = '#7a4fc2'
-    g.font = '900 78px ui-rounded, system-ui, sans-serif'
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    g.fillText('?', 64, 70)
-    const map = new THREE.CanvasTexture(c)
-    map.colorSpace = THREE.SRGBColorSpace
+    const map = canvasTexture(128, 128, (g) => {
+      g.fillStyle = 'rgba(255,255,255,0.92)'
+      g.strokeStyle = '#ffcf1a'
+      g.lineWidth = 10
+      g.beginPath()
+      g.arc(64, 64, 52, 0, Math.PI * 2)
+      g.fill()
+      g.stroke()
+      g.fillStyle = '#7a4fc2'
+      g.font = '900 78px ui-rounded, system-ui, sans-serif'
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText('?', 64, 70)
+    })
     askMaterial = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, fog: false })
   }
   const s = new THREE.Sprite(askMaterial)

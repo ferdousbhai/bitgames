@@ -193,3 +193,9 @@ Source: the audit's Phase 2 row ("Real constellations lit star by star and named
   - Taps use `voice.sayNow`. Muting calls `voice.hush()`.
   - Removed the leftover `animation-delay` on the `.logo span` colour rules.
   - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. In a scripted 5-star mission, the mission counted 1–4 and then said the reward. After that the sky counted aloud, as before. Mute cancels speech. No page errors; headless WebKit logs one "Failed to start the audio device" console error from its audio device.
+- Third pass:
+  - The finished mission card uses one timer that adds `.resolved`; the CSS opacity transition fades it. The second timer and the `hidden` write are gone. The card has `pointer-events: none`, so the faded card can't block taps, and Home or a new trip clears `.resolved`.
+  - The progress caption and gem row read `option.target`. The custom progress sets its own `aria-label`.
+  - Removed the unused `emoji` on the two options that set `pictures`, and the `#adventure-goal[hidden]` rule (now in `adventure.css`).
+  - The voice starts with the saved mute setting, and the sound switch calls `voice.setMuted`.
+  - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. With speech stubbed: the goal is hidden on the title and in free flight, shows in play, fades to opacity 0 (not hidden) after completion and is gone at Home; the mission button hides in play and returns at Home. Starting while muted is silent, unmuted start says the goal, mute cancels speech. No console errors.

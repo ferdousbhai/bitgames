@@ -14,7 +14,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 #adventure-choice .adventure-pictures { white-space: nowrap; }
 #adventure-choice .adventure-next { font-size: 20px; line-height: 1; }
 #adventure-goal { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 188px; top: calc(102px + env(safe-area-inset-top)); bottom: auto; }
-#adventure-goal[hidden] { display: none; }
 #adventure-goal svg { display: block; width: 150px; height: 38px; }
 .gem-steps { display: flex; gap: 10px; font-size: 25px; line-height: 1.25; }
 .gem-steps span { opacity: .3; filter: grayscale(1); }

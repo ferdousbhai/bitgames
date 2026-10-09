@@ -44,7 +44,7 @@ function faceSprite(emoji) {
 }
 
 /**
- * sound (optional) is the game's synth: pop, perfect, cheer, click, good, wobble, muted.
+ * sound (optional) is the game's synth: pop, perfect, cheer, click, good, wobble.
  * Feedback is also spoken, so a child who cannot read yet still hears what happened.
  */
 export function createRecipeStudio({ cakeKit, openButton, sound = null, voice }) {

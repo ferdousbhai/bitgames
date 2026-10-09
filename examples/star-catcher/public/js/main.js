@@ -112,10 +112,10 @@ function drawConstellation(el, count) {
   el.append(svg)
 }
 
-function drawGemProgress(el, count) {
+function drawGemProgress(el, count, target) {
   const gems = document.createElement('span')
   gems.className = 'gem-steps'
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < target; i++) {
     const gem = document.createElement('span')
     gem.textContent = '💎'
     gem.className = i < count ? 'done' : i === count ? 'next' : ''
@@ -127,15 +127,16 @@ function drawGemProgress(el, count) {
 function renderMissionProgress(el, option, count) {
   if (!option.goal) return
   el.replaceChildren()
+  el.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
   const caption = document.createElement('span')
-  caption.textContent = option.constellation ? `⭐ Catch stars · ${count} / 5` : `💎 Catch gems · ${count} / 3`
+  caption.textContent = `${option.constellation ? '⭐ Catch stars' : '💎 Catch gems'} · ${count} / ${option.target}`
   el.append(caption)
   if (option.constellation) drawConstellation(el, count)
-  else drawGemProgress(el, count)
+  else drawGemProgress(el, count, option.target)
 }
 
 /** Speaks to pre-readers (respecting mute). Words wait their turn; taps and counts interrupt. */
-const voice = createVoice({ isMuted: () => audio.muted, rate: 0.82, pitch: 1 })
+const voice = createVoice({ muted: audio.muted, rate: 0.82, pitch: 1 })
 
 let missionTimers = []
 function clearMissionTimers() {
@@ -150,16 +151,16 @@ const adventure = createAdventure({
   voice,
   celebrate: (text) => {
     banner('⭐ Mission complete!', text)
-    // The finished card stays a moment so the child sees it full, then gently clears away
+    // The finished card stays a moment so the child sees it full, then fades out (CSS opacity;
+    // the card never takes taps, so the faded card can't block anything)
     clearMissionTimers()
     missionTimers.push(setTimeout(() => $('adventure-goal')?.classList.add('resolved'), 3500))
-    missionTimers.push(setTimeout(() => ($('adventure-goal').hidden = true), 4300))
   },
   renderProgress: renderMissionProgress,
   options: [
     { emoji: '🚀', label: 'Free space flight', caption: 'Free flight' },
-    { emoji: '🐢', label: 'Gentle star counting', pictures: '⭐ ⭐ ⭐ ⭐ ⭐', caption: 'Count 5 stars', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => ['star', 'pink', 'rainbow'].includes(it.kind), reward: 'Five stars for a new constellation!' },
-    { emoji: '💎', label: 'Three-gem mission', pictures: '💎 💎 💎', caption: 'Catch 3 gems', gems: true, pace: 0.65, goal: 'Catch 3 gems', target: 3, accept: (it) => it.kind === 'gem', reward: 'Three gems on your space journey!' },
+    { label: 'Gentle star counting', pictures: '⭐ ⭐ ⭐ ⭐ ⭐', caption: 'Count 5 stars', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => ['star', 'pink', 'rainbow'].includes(it.kind), reward: 'Five stars for a new constellation!' },
+    { label: 'Three-gem mission', pictures: '💎 💎 💎', caption: 'Catch 3 gems', gems: true, pace: 0.65, goal: 'Catch 3 gems', target: 3, accept: (it) => it.kind === 'gem', reward: 'Three gems on your space journey!' },
   ],
 })
 
@@ -574,7 +575,7 @@ function toggleSound() {
   audio.unlock()
   audio.setMuted(!audio.muted)
   store.set('star-catcher-muted', audio.muted)
-  if (audio.muted) voice.hush()
+  voice.setMuted(audio.muted)
   renderSound()
 }
 

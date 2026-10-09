@@ -230,7 +230,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   display: flex; align-items: center; gap: 6px; padding: 4px 14px 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, .92);
   color: #1f5f99; font: 900 18px/1.2 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; box-shadow: 0 4px 0 rgba(31, 95, 153, .3);
 }
-#hud .adventure-goal[hidden] { display: none; }
 #hud .adventure-goal.adventure-done { background: linear-gradient(#fff8d6, #ffe58a); color: #8a5a00; }
 #hud .adventure-steps { font-size: 24px; }
 @media (max-height: 420px) { #hud .adventure-goal { top: calc(68px + env(safe-area-inset-top)); font-size: 15px; } #hud .adventure-steps { font-size: 20px; } }

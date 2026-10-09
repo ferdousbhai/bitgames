@@ -119,7 +119,7 @@ const game = {
 if (new URLSearchParams(location.search).has('debug')) window.game = game
 
 // One voice for the game: words said with `queue` wait their turn, others replace what is being said.
-const voice = createVoice({ isMuted: () => sound.muted, rate: 0.85, pitch: 1 })
+const voice = createVoice({ muted: sound.muted, rate: 0.85, pitch: 1 })
 
 // Optional learning missions: a slower flight, or counting rings (four in every world).
 const adventure = createAdventure({
@@ -127,7 +127,6 @@ const adventure = createAdventure({
   anchor: $('play'),
   hud: $('hud'),
   voice,
-  renderChoice: (button, option) => document.body.classList.toggle('mission', !!option.goal),
   // The reward is spoken; the screen shows the four rings and a party, no reading needed
   celebrate: () => {
     countParty()
@@ -148,12 +147,14 @@ function say(text, queue = false) {
   voice.say(text, { interrupt: !queue })
 }
 
+const numberWord = (n) => ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] ?? String(n)
+
 /** Says the world's goal (and the counting mission's) as each world starts, for children who can't read yet. */
 function sayGoal() {
   if (game.state !== 'play') return
   const w = WORLDS[game.world]
   const parts = [`${w.name}!`, game.goal ? goalSentence(game.goal.goal) : '']
-  if (adventure.option.goal) parts.push("And let's count four rings!")
+  if (adventure.option.goal) parts.push(`And let's count ${numberWord(adventure.option.target)} rings!`)
   say(parts.filter(Boolean).join(' '), true)
 }
 
@@ -580,7 +581,7 @@ function renderToggles() {
 function toggleSound() {
   sound.unlock()
   sound.setMuted(!sound.muted)
-  if (sound.muted) voice.hush()
+  voice.setMuted(sound.muted)
   renderToggles()
 }
 

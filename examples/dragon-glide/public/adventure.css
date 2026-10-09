@@ -1,6 +1,9 @@
 .adventure-choice {
   pointer-events: auto;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin: 8px auto;
   min-height: 48px;
   min-width: 48px;
@@ -14,6 +17,7 @@
   touch-action: manipulation;
   cursor: pointer;
 }
+.adventure-choice[hidden] { display: none !important; }
 .adventure-choice:focus-visible { outline: 3px solid #6575b0; outline-offset: 3px; }
 
 .adventure-goal {
@@ -31,10 +35,9 @@
   pointer-events: none;
   z-index: 6;
 }
-.adventure-goal[hidden] { display: none; }
+.adventure-goal[hidden] { display: none !important; } /* games give the goal their own display */
 
 /* The choice button: pictures, a caption, and ↻ for "tap for another" */
-.adventure-choice { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .adventure-pictures { font-size: 1.25em; line-height: 1; }
 .adventure-next { opacity: .55; font-size: .9em; }
 

@@ -185,7 +185,6 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
   background: rgba(0, 0, 0, 0.28); border: 3px solid rgba(255, 255, 255, 0.85); color: #fff;
   font: 900 22px/1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
-#hud .adventure-goal[hidden] { display: none; }
 #hud .adventure-goal.adventure-done { background: linear-gradient(#fff3a0, #ffcf1a); color: #6b3d00; text-shadow: none; }
 /* the done star gets a dark outline so it stands out on the gold chip */
 #hud .adventure-goal.adventure-done b { font-size: 1.2em; filter: drop-shadow(1px 0 0 #b35400) drop-shadow(-1px 0 0 #b35400) drop-shadow(0 1px 0 #b35400) drop-shadow(0 -1px 0 #b35400); }
@@ -196,7 +195,7 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 .adventure-step.adventure-got i { border-color: #fff; background: radial-gradient(circle, transparent 42%, rgba(255, 207, 26, 0.9) 45%); box-shadow: 0 0 8px #fff3a0; }
 .adventure-done .adventure-step.adventure-got i { border-color: #ff9f1c; background: none; box-shadow: none; }
 /* the hints go up a little so they never sit on the rings */
-body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
+body:has(#adventure-goal:not([hidden])) .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
 /* the counting party: big and golden */
 .banner.mission { text-shadow: 0 5px 0 #ff9f1c, 0 10px 26px rgba(0,0,0,0.3); letter-spacing: 4px; }
 /* four gold rings pop in one at a time, each with its number underneath */
@@ -219,7 +218,7 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   #hud .adventure-goal { font-size: 18px; gap: 6px; padding: 4px 12px 4px 8px; }
   #hud .adventure-steps { gap: 4px; }
   .adventure-step i { width: 22px; height: 22px; border-width: 4px; }
-  body.mission .tip { bottom: calc(118px + env(safe-area-inset-bottom)); }
+  body:has(#adventure-goal:not([hidden])) .tip { bottom: calc(118px + env(safe-area-inset-bottom)); }
 }
 /* Upright phones: the place name waits below the sound buttons and above Ember */
 @media (max-width: 520px) and (orientation: portrait) {
@@ -256,7 +255,7 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   #hud .adventure-steps { gap: 3px; }
   .adventure-step i { width: 20px; height: 20px; border-width: 4px; }
   /* hints sit low, between the rings and 🔥, so they never cover Ember */
-  .tip, body.mission .tip { bottom: calc(10px + env(safe-area-inset-bottom)); left: calc(50% + 30px); font-size: 20px; padding: 5px 16px; }
+  .tip, body:has(#adventure-goal:not([hidden])) .tip { bottom: calc(10px + env(safe-area-inset-bottom)); left: calc(50% + 30px); font-size: 20px; padding: 5px 16px; }
   .banner.mission { font-size: clamp(30px, 6vw, 40px); top: calc(62px + env(safe-area-inset-top)); }
   /* the 🌈 timer waits while 'Rainbow zoom!' shows, so the two never bump on short screens */
   #hud.bannering .power { opacity: 0; }

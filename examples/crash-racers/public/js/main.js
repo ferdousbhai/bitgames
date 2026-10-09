@@ -199,32 +199,30 @@ function renderDeliveryProgress(goal, option, count) {
 }
 
 // One voice for the game. Directions queue; feedback on what the child just did replaces older words.
-const voice = createVoice({ isMuted: () => audio.muted, rate: 0.82, pitch: 1 })
+const voice = createVoice({ muted: audio.muted, rate: 0.82, pitch: 1 })
 
 const adventure = createAdventure({
   id: 'crash-racers',
-  anchor: document.querySelector('[data-mode="race"]'),
+  // The racing mission chip belongs to Race: it sits after the mode buttons and only shows for Race.
+  place: (button) => document.querySelector('.modes').append(button),
   hud: $('hud'),
   voice,
   celebrate: (text) => banner(text),
   renderProgress: renderDeliveryProgress,
   options: [
     { emoji: '🏎️', label: 'Free driving' },
-    { emoji: '🎁', label: 'Follow the delivery map', pictures: '🎁', caption: '1 → 2 → 3 → 4', goal: 'Deliver to stops 1 → 2 → 3 → 4', target: 4, reward: 'Four deliveries in map order!' },
+    { label: 'Follow the delivery map', pictures: '🎁', caption: '1 → 2 → 3 → 4', goal: 'Deliver to stops 1 → 2 → 3 → 4', target: 4, reward: 'Four deliveries in map order!' },
   ],
 })
-// The racing mission chip belongs to Race: it sits after the mode buttons and only shows for Race.
-document.querySelector('.modes').append($('adventure-choice'))
 function renderModeChoice() {
   adventure.enable(game.mode === 'race')
-  $('adventure-choice').classList.toggle('hidden', game.mode !== 'race')
   document.querySelector('.laps').classList.toggle('hidden', game.mode !== 'race')
 }
 renderModeChoice()
 const delivery = createDelivery(scene, () => {
   adventure.event()
   // Said after the mission's count, in the voice's queue
-  if (delivery.next < 4 && game.raceOn && deliveryOn()) voice.say(`Now drive to stop ${delivery.next + 1}!`)
+  if (deliveryOn() && game.raceOn && delivery.next < adventure.option.target) voice.say(`Now drive to stop ${delivery.next + 1}!`)
 }, (next) => {
   if (game.raceOn && deliveryOn()) voice.sayNow(`Find stop ${next} on the map!`)
 })
@@ -535,14 +533,17 @@ function renderSound() {
 function setMuted(muted) {
   audio.unlock()
   audio.setMuted(muted)
-  if (muted) voice.hush()
+  voice.setMuted(muted)
   try {
     localStorage.setItem('crash-racers-sound', muted ? '0' : '1')
   } catch {}
   renderSound()
 }
 try {
-  if (localStorage.getItem('crash-racers-sound') === '0') audio.setMuted(true)
+  if (localStorage.getItem('crash-racers-sound') === '0') {
+    audio.setMuted(true)
+    voice.setMuted(true)
+  }
 } catch {}
 
 function setWaitingText(text) {

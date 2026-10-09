@@ -3,13 +3,15 @@
 // tip over in the dialog, and the line under the HUD shows 💭 guess · 💥 fell.
 // getLayout (optional) returns rows of pins, back row first, as true (standing) /
 // false (fallen), so the dialog shows the same pins the child can see on the lane.
+/** "1 pin", "3 pins" (kept on one line). */
+export const pins = (n) => `${n}\u00a0${n === 1 ? 'pin' : 'pins'}`
+
 export function createPrediction({ button, hud, getStanding, getLayout, onOpen, sound, voice }) {
   let guess = null
   let value = 0
   let max = 10
   let layout = null
   // A no-break space keeps "10 pins" together when the result line wraps.
-  const pins = (n) => `${n}\u00a0${n === 1 ? 'pin' : 'pins'}`
 
   const dialog = document.createElement('dialog')
   dialog.id = 'pin-prediction'

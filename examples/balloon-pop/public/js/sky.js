@@ -16,7 +16,7 @@ const NAME_OF = {
 }
 export const colourName = (hex) => NAME_OF[hex] ?? null
 
-const COLOURED_KINDS = ['round', 'smile', 'heart', 'mini']
+export const COLOURED_KINDS = ['round', 'smile', 'heart', 'mini']
 const SHAPES = {
   heart: { picture: '💖', one: 'heart', many: 'hearts' },
   bunny: { picture: '🐰', one: 'bunny', many: 'bunnies' },

@@ -122,3 +122,7 @@ Other tests:
   - Tapping a side uses `voice.sayNow`. Muting and going Home call `voice.hush()`.
   - Removed the leftover `animation-delay` on the `.logo span` colour rules.
   - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. A scripted roll with recorded speech kept the order (guess, "9 fell.", count, number bond, "Where are they?", side answer). Mute and Home each cancel speech. No console errors.
+- Third pass:
+  - The voice starts with `muted: audio.muted`, and the sound switch (also used when loading the saved setting) calls `voice.setMuted`.
+  - The spoken pin count uses `pins(n)` from `prediction.js` (imported as `pinWord`, since `pins` is the rack); the local copy is gone.
+  - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. With speech stubbed, mute cancels speech, the prediction stays silent while muted and speaks again after unmuting. No console errors.

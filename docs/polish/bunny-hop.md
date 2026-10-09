@@ -153,3 +153,11 @@ Scratchpad: `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/183efacb-6
 - The obstacle pictures are drawn when the browser is idle after the menu appears, and their second WebGL context is released with `forceContextLoss()`. If a cue is needed first, it shows the emoji fallback.
 - Verified: chromium and webkit boot + play, and stubbed-speech trips with both missions (words in order, pictures drawn, no errors).
 - Iteration 2: the hop-instead-of-flip special case is `option.hint` plus the `'rejected'` return (which still shows "👆 Tap again!"). Missions carry `caption`, `steps` and `pictures` (a `stepRow` of tiles); the `missionSteps` side table and the choice builder are gone (`.mission-next` became `#menu .adventure-next`). The progress tiles stay custom: their done/next states and changing caption are more than `icon` draws. Muting now hushes the voice (Home already did).
+
+## Simplify pass, third pass (2026-10-09)
+
+- The voice starts with `muted: sound.muted` (the saved setting); the mute toggle calls `voice.setMuted`. The local `#hud .adventure-goal[hidden]` rule is gone.
+- The mission choice is placed with `place: (b) => $('menu-options').prepend(b)` instead of being moved after creation. Missions list their steps once through `missionSteps(steps)`; the unused `emoji` fields are gone.
+- The progress caption reads `option.target` (`/ target`, `target - 1` for "Hop, then tap to flip!") instead of hard-coded 4, 2 and 3.
+- `pantryWords` joins rows with a module `Intl.ListFormat('en-GB')` (same words). The "?" marker uses `canvasTexture`, now exported from `world.js` (it adds repeat wrapping and anisotropy, which do not change the sprite).
+- Verified: `browser.mjs --run simp3` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check (mute hushes and silences, unmute speaks again, choice/goal show and hide, no console errors).

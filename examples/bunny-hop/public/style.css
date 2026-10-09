@@ -122,7 +122,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   padding: 6px 12px 8px; border: 2px solid #fff; border-radius: 18px;
   background: #fffaf0ee; box-shadow: 0 4px 0 #45605866;
 }
-#hud .adventure-goal[hidden] { display: none; }
 .mission-caption { font-size: 14px; font-weight: 900; line-height: 1.2; white-space: nowrap; }
 #hud .mission-step { width: 31px; height: 31px; }
 @media (orientation: landscape) and (max-height: 380px) {

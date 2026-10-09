@@ -52,7 +52,7 @@ scene.add(camera)
 
 const audio = new Audio()
 // Says each creature's name and fact out loud, so nobody needs to read
-const voice = createVoice({ isMuted: () => audio.muted, rate: 0.95, pitch: 1.25 })
+const voice = createVoice({ muted: audio.muted, rate: 0.95, pitch: 1.25 })
 const world = new World(scene, camera, renderer)
 const creatures = new Creatures(scene)
 const effects = new Effects(scene, camera)
@@ -1024,7 +1024,7 @@ $('home').addEventListener('click', (e) => {
 const soundBtn = $('sound')
 function setSound(on) {
   audio.setMuted(!on)
-  if (!on) voice.hush()
+  voice.setMuted(!on)
   soundBtn.textContent = on ? '🔊' : '🔇'
   store.set('fish-pond-sound', on)
 }

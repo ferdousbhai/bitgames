@@ -62,7 +62,7 @@ const labels = $('labels')
 const effects = new Effects(scene, camera, labels)
 const audio = new Audio()
 // One voice for the game: words wait their turn instead of cutting each other off.
-const voice = createVoice({ isMuted: () => audio.muted, rate: 0.85, pitch: 1 })
+const voice = createVoice({ muted: audio.muted, rate: 0.85, pitch: 1 })
 
 /** Frame the whole pond: steeper from above on an upright screen, lower and wider when sideways. */
 const camTarget = new THREE.Vector3()
@@ -199,8 +199,7 @@ function goalWords(g) {
 /** Says the goal once the round starts, for children who can't read it yet. */
 function sayGoal() {
   if (game.sim?.calm) return voice.say(goalWords(game.sim.goal))
-  const goal = adventure.option.goal
-  if (!goal) return
+  if (!adventure.option.goal) return
   voice.say(`Let's count ${adventure.option.target} bubbles together!`)
 }
 
@@ -682,7 +681,7 @@ function hostStartRound() {
     count.set(e.duck, e.tint + 1)
   }
   const setup = {
-    t: 'setup', arena: game.arena, seed, entries, host: game.room.selfId, mission: MISSIONS.indexOf(adventure.option),
+    t: 'setup', arena: game.arena, seed, entries, host: game.room.selfId, mission: adventure.selected,
     mode: game.mode, goal: game.mode === 'calm' ? GOALS[game.goalIndex] : null,
   }
   game.ready = new Set()
@@ -1578,13 +1577,13 @@ addEventListener('pointerdown', () => audio.unlock(), { capture: true })
 const soundBtn = $('sound')
 function setSound(on) {
   audio.setMuted(!on)
+  voice.setMuted(!on)
   soundBtn.textContent = on ? '🔊' : '🔇'
   save('sound', on ? '1' : '0')
 }
 if (load('sound') === '0') setSound(false)
 soundBtn.addEventListener('click', (e) => {
   e.stopPropagation()
-  voice.hush()
   audio.unlock()
   setSound(audio.muted)
   audio.click()

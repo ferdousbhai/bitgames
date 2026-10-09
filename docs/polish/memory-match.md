@@ -114,3 +114,4 @@ Quality cleanup only; play is unchanged.
 - Removed dead `effects.cannon()`, `audio.star()` and the always-zero `Card.wiggle`/`Card.bob`.
 - Checked: `browser.mjs --run simp` Chromium and WebKit 0 errors; a scripted Twins and Sounds round records the expected spoken order with no console errors.
 - Iteration 2: removed the orphaned `.logo span` `animation-delay`s and the unused `@keyframes bob`.
+- Third pass: the voice is created with `muted: progress.muted` and the 🔊 toggle calls `voice.setMuted` (Talk's `clear()` still empties the queue and hushes). The "A, B and C" join is a module `Intl.ListFormat('en-GB')`; the spoken win lines are unchanged. Checked: `browser.mjs --run simp3` Chromium and WebKit 0 errors, `original-quality.mjs` pass, and a speech-stubbed run (peek names spoken, mute hushes, muted and saved-mute silent, unmute speaks, no console errors) in both engines.

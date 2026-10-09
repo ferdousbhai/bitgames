@@ -17,7 +17,7 @@ const LAYERS = [
   { key: 'back', z: [-15, -25], gap: [3.5, 7], shadow: false },
 ]
 
-function canvasTexture(w, h, draw) {
+export function canvasTexture(w, h, draw) {
   const c = document.createElement('canvas')
   c.width = w
   c.height = h

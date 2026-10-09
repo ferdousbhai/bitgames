@@ -212,3 +212,9 @@ Before this follow-up, the efficient autopilot finished 3 tens in 44 s with a 50
 - Removed the dead `@keyframes pulse`.
 - Verified: chromium and webkit boot + play, and stubbed-speech solo rounds in both modes (calm: goal, 1, 2, 3, reward).
 - Iteration 2: the `missionVoice` view and `missionReward` stash are replaced by an `announce` that stays quiet during Pond helpers play, and `event()`'s `'done'` return hands the reward to `jarDrop`. The `say` alias is gone. Progress is the shared row (`icon: '🫧'`); the `.goal-bubble` CSS became `#hud .adventure-steps` sizes. Home and the sound button now hush the voice themselves.
+
+## Simplify pass, third pass (2026-10-09)
+
+- The voice starts with `muted: audio.muted`; `setSound` calls `voice.setMuted` (also on the saved setting at load). The local `#hud .adventure-goal[hidden]` rule is gone.
+- The setup message sends `adventure.selected`; `sayGoal` checks `adventure.option.goal` directly.
+- Verified: `browser.mjs --run simp3` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check in Bumper race (mute hushes and silences, unmute speaks again, choice/goal show and hide, no console errors).

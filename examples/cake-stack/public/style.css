@@ -173,7 +173,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   background: rgba(255, 253, 245, .94); color: #8a3a62; font: 900 16px/1.2 ui-rounded, system-ui, sans-serif; box-shadow: 0 4px 0 rgba(176, 74, 122, .25);
   white-space: nowrap; display: flex; align-items: center; gap: 6px;
 }
-#hud .adventure-goal[hidden], #hud.partying .adventure-goal { display: none; }
+#hud.partying .adventure-goal { display: none; }
 @media (max-width: 560px), (max-height: 420px) { .adventure-goal-words { display: none; } }
 #hud .adventure-steps { font-size: 20px; }
 @media (max-height: 420px) and (min-aspect-ratio: 1/1) {

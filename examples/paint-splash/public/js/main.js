@@ -10,7 +10,7 @@ import { Bot } from './bot.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
 import { ITEM_KINDS, Items } from './items.js'
-import { HALF_D, HALF_W, MIXED, MIXES, PRIMARIES, PaintMap, RAINBOW, SEAT_COLORS, SEAT_PAINT, mixWords } from './paint.js'
+import { HALF_D, HALF_W, MIXED, MIXES, PRIMARIES, PaintMap, RAINBOW, SEAT_COLORS, SEAT_PAINT, LIST, mixWords } from './paint.js'
 import { ANIMALS, ANIMAL_IDS, COLLIDE_AHEAD, COLLIDE_R, MAX_SPEED, Painter, newStats } from './painter.js'
 import { clamp, damp, easeInOut, store } from './util.js'
 import { createVoice } from './speech.js'
@@ -190,19 +190,15 @@ const gallery = createGallery({
   hideInPicture: () => [effects.drops.mesh, effects.sparks.mesh, effects.confetti.mesh, meMarker],
 })
 /** Spoken words for children who can't read yet (quiet when the sound is off or there is no voice). */
-const voice = createVoice({ isMuted: () => !settings.sound, rate: 0.95, pitch: 1.15 })
+const voice = createVoice({ muted: !settings.sound, rate: 0.95, pitch: 1.15 })
 const colourStudio = createColourStudio({
   openButton: $('colour-open'),
   onOpen: () => {
     audio.unlock()
     releaseControls()
   },
-  onClose: () => {
-    voice.hush()
-    releaseControls()
-  },
-  // Every spoken line answers a tap or a new moment, so it replaces whatever was still being said
-  speak: voice.sayNow,
+  onClose: releaseControls,
+  voice,
   sound: (kind, i) => audio.studio(kind, i),
 })
 
@@ -370,7 +366,7 @@ function buildMenu() {
     settings.sound = !settings.sound
     store.set('paint-splash-sound', settings.sound)
     audio.setMuted(!settings.sound)
-    if (!settings.sound) voice.hush()
+    voice.setMuted(!settings.sound)
     updateToggles()
   }
   $('voice').onclick = () => say()
@@ -949,9 +945,8 @@ const foundOf = (final) => (Array.isArray(final?.found) ? final.found.filter((m)
 
 function resultWords(found) {
   if (!found.length) return 'What a picture! Next time, roll a new colour over wet paint to mix.'
-  return `We made ${listWords(found.map((m) => MIXES[m].word))}! ` + found.map(mixWords).join(' ')
+  return `We made ${LIST.format(found.map((m) => MIXES[m].word))}! ` + found.map(mixWords).join(' ')
 }
-const listWords = (w) => (w.length > 1 ? `${w.slice(0, -1).join(', ')} and ${w.at(-1)}` : w[0])
 
 /** Where the playground is on screen (CSS pixels), a little wider than 4:3 like the gallery frames. */
 function pictureRect() {

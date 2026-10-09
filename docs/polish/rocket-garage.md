@@ -145,3 +145,8 @@ The 🧪 workshop's fair test now happens on every launch after a part change. T
   - Muting and Home call `voice.hush()`.
   - Removed the leftover `animation-delay` on the `.logo span` colour rules.
   - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. A scripted workshop test (save A, change the tank, guess A, test, say again) lit both lanes and cards on the tie. Speech stayed in order, and mute and Home each cancel speech. No console errors.
+- Third pass:
+  - `workshop.js` exports `changedWords(changed)`, used by the workshop question and the launch question.
+  - `workshop.js` exports `ruling` and `PLURAL_SLOTS`. `noteFrom` takes the note kind from `ruling` (keeping "same" when a wobbly part didn't change the wobble), and the notebook's `plural` reads `PLURAL_SLOTS`. A check over 1,620 single and double part changes gave the same notes and explanations as before.
+  - The voice starts with the saved mute setting, and the sound switch calls `voice.setMuted`.
+  - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. With speech stubbed, the workshop says "You changed the tank. Which rocket will fly farther?", mute cancels speech, muted taps stay silent and unmuting speaks again. No console errors.

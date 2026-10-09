@@ -45,7 +45,7 @@ const WORDS = {
 const WITH_BABIES = NAMES.filter((name) => WORDS[name].baby)
 const cap = (word) => word[0].toUpperCase() + word.slice(1)
 /** "a", "a and b", "a, b and c" */
-const list = (words) => (words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`)
+const LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 
 /**
  * What a pair is. twins: two of the same animal (the default). sound: an animal and a card that
@@ -147,7 +147,8 @@ const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 120)
 const fitCam = camera.clone()
 const sound = new Sound()
 sound.setMuted(progress.muted)
-const talk = new Talk(sound, createVoice({ isMuted: () => sound.muted, rate: 0.85, pitch: 1.1 }))
+const voice = createVoice({ muted: progress.muted, rate: 0.85, pitch: 1.1 })
+const talk = new Talk(sound, voice)
 const effects = new Effects(scene)
 
 const assets = { animals: {}, card: null, setting: {}, felt: null }
@@ -1194,9 +1195,9 @@ function winLevel() {
   })
   // After the last hello, name everything that was found.
   const recap = {
-    twins: `${cap(list(found))}. You found all the twins!`,
-    sound: `${cap(list(found))}. You know all their sounds!`,
-    baby: `${cap(list(found.map((name) => WORDS[name].baby)))}. You found every baby!`,
+    twins: `${cap(LIST.format(found))}. You found all the twins!`,
+    sound: `${cap(LIST.format(found))}. You know all their sounds!`,
+    baby: `${cap(LIST.format(found.map((name) => WORDS[name].baby)))}. You found every baby!`,
   }[game.mode]
   wait(0.6 + found.length * WIN_CALL_GAP + 0.5).then(() => talk.say(recap))
 
@@ -1412,6 +1413,7 @@ for (const el of document.querySelectorAll('[data-mode]')) {
 $('mute').addEventListener('click', () => {
   progress.muted = !progress.muted
   sound.setMuted(progress.muted)
+  voice.setMuted(progress.muted)
   if (progress.muted) stopPeekSpeech()
   updateMute()
   save()

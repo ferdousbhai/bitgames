@@ -1,5 +1,5 @@
 import { DESTS, PARTS } from './parts.js'
-import { SLOT_WORDS, WOBBLY, buildRace, compareBuilds, el, explainFlight, isBuild, keyGuard, placeName } from './workshop.js'
+import { PLURAL_SLOTS, SLOT_WORDS, buildRace, changedWords, compareBuilds, el, explainFlight, isBuild, keyGuard, placeName, ruling } from './workshop.js'
 
 /**
  * The fair test inside every launch: after a part change the robot asks "farther, the same, or
@@ -45,15 +45,16 @@ export function verdict(test) {
 /** Order of the pages: the one that changes distance first, then the wobbly ones, then the fun ones. */
 const PAGES = ['booster', 'fins', 'tank', 'nose', 'cabin', 'pilot', 'sticker']
 const RANK = { same: 1, fun: 1, wobble: 2, distance: 2 }
-const plural = (slot) => slot === 'fins' || slot === 'booster'
+const plural = (slot) => PLURAL_SLOTS.has(slot)
 
 /** What a fair test (exactly one part changed) found out, or null. */
 export function noteFrom(test) {
   const { changed } = test.result
   if (changed.length !== 1) return null
   const slot = changed[0]
-  const kind = slot === 'booster' ? 'distance' : WOBBLY.has(slot) ? (test.result.a.wobble !== test.result.b.wobble ? 'wobble' : 'same') : 'fun'
-  return { slot, kind, id: test.now[slot] }
+  const { kind } = ruling(test.result)
+  const wobbled = test.result.a.wobble !== test.result.b.wobble
+  return { slot, kind: kind === 'wobble' && !wobbled ? 'same' : kind, id: test.now[slot] }
 }
 
 export function noteSentence(slot, kind) {
@@ -192,8 +193,7 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
         b.onclick = () => choose(g.id)
         return b
       }))
-      const what = test.result.changed.length === 1 ? `You changed the ${SLOT_WORDS[test.result.changed[0]]}.` : `You changed ${test.result.changed.length} parts.`
-      said = `${what} Last time, it reached ${placeName(test.result.a.reach)}. Will it go farther, the same, or less far?`
+      said = `${changedWords(test.result.changed)} Last time, it reached ${placeName(test.result.a.reach)}. Will it go farther, the same, or less far?`
       dialog.showModal()
       dialog.focus()
       voice.sayNow(said)
