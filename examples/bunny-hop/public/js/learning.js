@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { BIOMES, OBSTACLE_NAMES } from './biomes.js'
 import { copy } from './models.js'
+import { listWords } from './speech.js'
 
 /**
  * Learning inside the hop: counted carrot rows shown as a little tray of carrots, obstacle
@@ -230,11 +231,10 @@ export function renderPantry(el, rows, total) {
   el.append(shelf, sum)
 }
 
-const AND = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 
 /** What Pip says at home: the rows added up (each named when there are only a few). */
 export function pantryWords(rows, total) {
   if (!rows.length) return ''
   if (rows.length === 1) return `${carrotWords(total)} in the pantry!`
-  return `${AND.format(rows.map(String))} make ${carrotWords(total)} in the pantry!`
+  return `${listWords.format(rows.map(String))} make ${carrotWords(total)} in the pantry!`
 }

@@ -105,7 +105,6 @@ const balloonRow = (balloons, filled) => ({ balloons, pictures: pictureRow(ballo
 function renderMissionProgress(goal, option, count) {
   if (!option.goal) return
   goal.textContent = ''
-  goal.setAttribute('aria-label', `${option.goal}. ${count} of ${option.target}.`)
   const caption = document.createElement('span')
   caption.className = 'mission-caption'
   caption.textContent = `${option.goal} · ${count} / ${option.target}`

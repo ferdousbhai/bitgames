@@ -2,6 +2,9 @@
 // say() queues by default; sayNow() (or { interrupt: true }) clears what is waiting first.
 // onend runs when the words finish (or a fallback timer, for browsers that never fire end),
 // but not for words cut short by hush().
+/** "red, yellow and blue": one list style for everything the games say. */
+export const listWords = new Intl.ListFormat('en-GB', { type: 'conjunction' })
+
 export function createVoice({ muted = false, rate = 0.85, pitch = 1.05 } = {}) {
   const canSpeak = 'speechSynthesis' in window
   let pending = 0

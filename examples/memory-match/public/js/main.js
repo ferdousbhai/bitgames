@@ -4,7 +4,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { Sound, VOICE_LENGTH } from './audio.js'
 import { Talk } from './talk.js'
-import { createVoice } from './speech.js'
+import { createVoice, listWords } from './speech.js'
 import { Effects } from './effects.js'
 import { tween, wait, clearTweens, updateTweens, ease } from './tween.js'
 
@@ -45,7 +45,6 @@ const WORDS = {
 const WITH_BABIES = NAMES.filter((name) => WORDS[name].baby)
 const cap = (word) => word[0].toUpperCase() + word.slice(1)
 /** "a", "a and b", "a, b and c" */
-const LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 
 /**
  * What a pair is. twins: two of the same animal (the default). sound: an animal and a card that
@@ -1195,9 +1194,9 @@ function winLevel() {
   })
   // After the last hello, name everything that was found.
   const recap = {
-    twins: `${cap(LIST.format(found))}. You found all the twins!`,
-    sound: `${cap(LIST.format(found))}. You know all their sounds!`,
-    baby: `${cap(LIST.format(found.map((name) => WORDS[name].baby)))}. You found every baby!`,
+    twins: `${cap(listWords.format(found))}. You found all the twins!`,
+    sound: `${cap(listWords.format(found))}. You know all their sounds!`,
+    baby: `${cap(listWords.format(found.map((name) => WORDS[name].baby)))}. You found every baby!`,
   }[game.mode]
   wait(0.6 + found.length * WIN_CALL_GAP + 0.5).then(() => talk.say(recap))
 

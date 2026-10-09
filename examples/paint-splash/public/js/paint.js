@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { describeMix } from './colour-studio.js'
 import { rng } from './util.js'
+import { listWords } from './speech.js'
 
 const hexRgb = (c) => [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16))
 
@@ -42,10 +43,9 @@ export const MIXES = Array.from({ length: 8 }, (_, mask) => {
 /** The colours made by mixing (two or three paints), in the order a child usually finds them. */
 export const MIXED = [RED | YELLOW, YELLOW | BLUE, RED | BLUE, RED | YELLOW | BLUE]
 /** "a", "a and b", "a, b and c" */
-export const LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 /** "Red and yellow made orange!" */
 export function mixWords(mask) {
-  const list = LIST.format(bitsOf(mask).map((bit) => WORDS[PRIMARIES.indexOf(bit)]))
+  const list = listWords.format(bitsOf(mask).map((bit) => WORDS[PRIMARIES.indexOf(bit)]))
   return `${list[0].toUpperCase()}${list.slice(1)} made ${MIXES[mask].word}!`
 }
 /** Each seat starts with one paint (a child can change pots while painting). */

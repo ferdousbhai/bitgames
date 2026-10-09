@@ -4,7 +4,7 @@
 // The game's voice (speech.js) is required so mission words queue with the game's own words.
 // announce(text, kind) decides what is said ('choice' | 'count' | 'reward' | 'hint'); it defaults
 // to saying everything. renderChoice decorates the default button; renderProgress replaces the
-// default picture row. place(button) puts the button somewhere other than just before anchor.
+// default picture row (the goal's aria-label is already set). place(button) puts the button somewhere other than just before anchor.
 export function createAdventure({ id, anchor, place = (button) => anchor.before(button), hud, options, voice, celebrate, renderProgress, renderChoice, goalWords = false, announce = (text, kind) => voice.say(text, { interrupt: kind === 'choice' }) }) {
   const storageKey = `${id}:adventure`
   let selected = 0
@@ -48,7 +48,6 @@ export function createAdventure({ id, anchor, place = (button) => anchor.before(
 
   /** One picture per step, lit as the child gets it, then the count (or a star when done). */
   function drawProgress(option) {
-    goal.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
     if (!option.icon) {
       goal.textContent = `${done ? '★ ' : ''}${option.goal} · ${count} / ${option.target}`
       return
@@ -72,6 +71,7 @@ export function createAdventure({ id, anchor, place = (button) => anchor.before(
     goal.hidden = !option.goal || !enabled
     goal.classList.toggle('adventure-done', done)
     if (!option.goal) return
+    goal.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
     if (renderProgress) renderProgress(goal, option, count)
     else drawProgress(option)
   }
@@ -95,7 +95,6 @@ export function createAdventure({ id, anchor, place = (button) => anchor.before(
   return {
     enable(value) {
       enabled = value
-      button.disabled = !value
       button.hidden = !value
       update()
     },

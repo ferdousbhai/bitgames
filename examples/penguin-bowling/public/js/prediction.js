@@ -11,8 +11,6 @@ export function createPrediction({ button, hud, getStanding, getLayout, onOpen, 
   let value = 0
   let max = 10
   let layout = null
-  // A no-break space keeps "10 pins" together when the result line wraps.
-
   const dialog = document.createElement('dialog')
   dialog.id = 'pin-prediction'
   dialog.innerHTML = `<h2><span aria-hidden="true">💭</span> Count, then predict</h2>

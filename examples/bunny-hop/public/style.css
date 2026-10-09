@@ -109,7 +109,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tap-hint.gone { animation: none; }
 
 /* Picture steps replace the free-play tap hint during a learning mission. */
-#menu .adventure-choice { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 7px 10px; font-size: 14px; }
+#menu .adventure-choice { gap: 7px; min-height: 48px; padding: 7px 10px; font-size: 14px; }
 .mission-steps { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
 .mission-step { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 2px solid #fff; border-radius: 9px; background: #fff8; color: #536c87; font-size: 23px; line-height: 1; opacity: .45; }
 .mission-step.done { background: #8ac926; color: #fff; opacity: 1; }

@@ -1,5 +1,5 @@
 import { createAdventure } from './adventure.js'
-import { createVoice } from './speech.js'
+import { createVoice, listWords } from './speech.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -125,9 +125,7 @@ function drawGemProgress(el, count, target) {
 }
 
 function renderMissionProgress(el, option, count) {
-  if (!option.goal) return
   el.replaceChildren()
-  el.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
   const caption = document.createElement('span')
   caption.textContent = `${option.constellation ? '⭐ Catch stars' : '💎 Catch gems'} · ${count} / ${option.target}`
   el.append(caption)
@@ -479,7 +477,7 @@ function showFinale() {
   sky.showFinale(cells)
   audio.fanfare()
   const names = made.map((d) => d.def.spoken)
-  voice.say(`Welcome home! You lit ${lit} stars and made ${made.length} constellations: ${names.slice(0, -1).join(', ')} and ${names.at(-1)}. Tap one to hear about it.`)
+  voice.say(`Welcome home! You lit ${lit} stars and made ${made.length} constellations: ${listWords.format(names)}. Tap one to hear about it.`)
 }
 
 // --- HUD ----------------------------------------------------------------------------

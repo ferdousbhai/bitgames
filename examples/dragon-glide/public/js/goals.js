@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { listWords } from './speech.js'
 
 /**
  * Each world's gentle purpose (see worlds.js `goal`), and the pictures that show it:
@@ -11,7 +12,6 @@ import * as THREE from 'three'
  */
 
 /** "A, B and C" for spoken lists. */
-const listWords = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 
 export const TREASURES = {
   pink: { shape: 'heart', color: '#ff6fae', one: 'pink heart', many: 'pink hearts', word: 'pink' },

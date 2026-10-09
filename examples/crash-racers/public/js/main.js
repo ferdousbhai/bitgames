@@ -184,7 +184,7 @@ const game = {
 function renderDeliveryProgress(goal, option, count) {
   if (!option.goal) return
   goal.replaceChildren()
-  goal.setAttribute('aria-label', `${option.goal}. ${count} of 4 stops delivered.`)
+  goal.setAttribute('aria-label', `${option.goal}. ${count} of ${option.target} stops delivered.`)
   const caption = document.createElement('span')
   caption.textContent = count < 4 ? `🎁 Stop ${count + 1} · ${count} / 4` : '🎁 All 4 stops! · 4 / 4'
   const steps = document.createElement('span')

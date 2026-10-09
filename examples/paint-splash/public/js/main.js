@@ -10,10 +10,10 @@ import { Bot } from './bot.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
 import { ITEM_KINDS, Items } from './items.js'
-import { HALF_D, HALF_W, MIXED, MIXES, PRIMARIES, PaintMap, RAINBOW, SEAT_COLORS, SEAT_PAINT, LIST, mixWords } from './paint.js'
+import { HALF_D, HALF_W, MIXED, MIXES, PRIMARIES, PaintMap, RAINBOW, SEAT_COLORS, SEAT_PAINT, mixWords } from './paint.js'
 import { ANIMALS, ANIMAL_IDS, COLLIDE_AHEAD, COLLIDE_R, MAX_SPEED, Painter, newStats } from './painter.js'
 import { clamp, damp, easeInOut, store } from './util.js'
-import { createVoice } from './speech.js'
+import { createVoice, listWords } from './speech.js'
 
 const params = new URLSearchParams(location.search)
 const DEBUG = params.has('debug')
@@ -945,7 +945,7 @@ const foundOf = (final) => (Array.isArray(final?.found) ? final.found.filter((m)
 
 function resultWords(found) {
   if (!found.length) return 'What a picture! Next time, roll a new colour over wet paint to mix.'
-  return `We made ${LIST.format(found.map((m) => MIXES[m].word))}! ` + found.map(mixWords).join(' ')
+  return `We made ${listWords.format(found.map((m) => MIXES[m].word))}! ` + found.map(mixWords).join(' ')
 }
 
 /** Where the playground is on screen (CSS pixels), a little wider than 4:3 like the gallery frames. */
