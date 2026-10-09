@@ -8,7 +8,7 @@ export const origin = process.env.EXAMPLES_ORIGIN || 'http://localhost:4173'
 /** `--webkit` on the command line switches a check from Chromium to WebKit. */
 export const engineFromArgs = () => (process.argv.includes('--webkit') ? 'webkit' : 'chromium')
 
-const angle = process.env.EXAMPLES_CHROMIUM_ANGLE || 'vulkan'
+const angle = process.env.EXAMPLES_CHROMIUM_ANGLE || 'gl'
 const chromiumArgs = ['--no-sandbox', `--use-angle=${angle}`, '--enable-gpu', '--ignore-gpu-blocklist']
 if (angle === 'swiftshader') chromiumArgs.push('--enable-unsafe-swiftshader')
 

@@ -18,6 +18,8 @@ EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --
 EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/original-quality.mjs
 ```
 
+Chromium defaults to `EXAMPLES_CHROMIUM_ANGLE=gl` (the real GPU). Vulkan fell back to SwiftShader at 2–5 fps on the owner's machine, which slows game time and breaks timing checks. Use `swiftshader` only where no GPU is available.
+
 Other maintained checks are `tests/catalogue.mjs` and `tests/workshop-fallback.mjs`. Source/shipment tests do not prove child enjoyment or physical-device performance.
 
 Agents must use Blender 5.2 CLI. Edit the reproducible builders under `examples/<game-id>/blender/`, then rebuild only the requested game. Crash Racers uses `cars.py` and `props.py`; the wrapper also runs each game's texture/workshop builders:
