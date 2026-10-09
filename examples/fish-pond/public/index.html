@@ -31,10 +31,11 @@
     <div class="logo"><span>F</span><span>I</span><span>S</span><span>H</span> <span>P</span><span>O</span><span>N</span><span>D</span></div>
     <p class="tag">Go fishing with Bear! 🐻🎣</p>
     <div class="places">
-      <button class="place lake" data-place="lake" aria-label="Sunny Lake"><span class="pe">☀️</span><span class="pf">🐠</span></button>
+      <button class="place lake" data-place="lake" aria-label="Sunny Lake"><span class="pe">☀️</span><span class="pf">🐢</span></button>
       <button class="place river" data-place="river" aria-label="Sunset River"><span class="pe">🌅</span><span class="pf">🐟</span></button>
       <button class="place night" data-place="night" aria-label="Starry Night"><span class="pe">🌙</span><span class="pf">✨</span></button>
       <button class="place ice" data-place="ice" aria-label="Icy Sea"><span class="pe">❄️</span><span class="pf">🐧</span></button>
+      <button class="place reef" data-place="reef" aria-label="Coral Reef"><span class="pe">🐠</span><span class="pf">🐙</span></button>
     </div>
     <div class="title-row">
       <button id="title-book" class="book-big" aria-label="Fish book">📖 <b id="title-count">0/15</b></button>
@@ -58,7 +59,10 @@
   <div id="card-new" class="new hidden">NEW!</div>
   <div id="card-stars" class="cstars"></div>
   <div id="card-name" class="cname"></div>
+  <div id="card-look" class="clook hidden"></div>
 </div>
+
+<button id="look" class="look hidden" aria-label="Look closer"><span class="look-glass" aria-hidden="true">🔍</span></button>
 
 <div id="bang" class="bang hidden"><span>!</span></div>
 <div id="hint" class="hint-finger hidden">👆</div>

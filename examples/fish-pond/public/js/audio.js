@@ -8,6 +8,7 @@ const TUNES = {
   river: { melody: [4, 2, 1, 2, 4, 5, 4, 2, 0, 1, 2, 4, 2, 1, 0, -1], bass: [0, -3, -2, -1, 0, -3, -1, -1], beat: 0.27, base: 493.88, wave: 'triangle' },
   night: { melody: [0, -1, 0, 2, 1, 0, -1, -3, -2, -1, 0, 1, 2, 1, 0, -1], bass: [0, 0, -3, -3, -2, -2, -1, -1], beat: 0.34, base: 440, wave: 'sine' },
   ice: { melody: [7, 5, 4, 5, 7, 9, 7, 5, 4, 2, 4, 5, 4, 2, 0, 2], bass: [0, -2, -3, -1, 0, -2, -1, -1], beat: 0.26, base: 587.33, wave: 'sine' },
+  reef: { melody: [2, 4, 5, 4, 2, 1, 2, 4, 7, 5, 4, 2, 1, 0, 1, 2], bass: [0, -2, -3, -2, 0, -3, -1, -1], beat: 0.3, base: 523.25, wave: 'triangle' },
 }
 
 export class Audio {
@@ -234,6 +235,10 @@ export class Audio {
     if (p === 'night') {
       for (let i = 0; i < 3; i++) this.tone({ freq: 3400, type: 'sine', gain: 0.018, decay: 0.05, delay: i * 0.1, out: this.ambBus })
       this.ambientIn = 2.5 + Math.random() * 3
+    } else if (p === 'reef') {
+      // A slow wave washing on the far beach
+      this.burst({ freq: 500, q: 0.5, gain: 0.07, decay: 2.6, attack: 1.2, out: this.ambBus, sweep: 250 })
+      this.ambientIn = 4 + Math.random() * 4
     } else if (p === 'ice') {
       this.burst({ freq: 700, q: 0.6, gain: 0.08, decay: 2.2, attack: 0.9, out: this.ambBus, sweep: 400 })
       this.ambientIn = 3 + Math.random() * 4
@@ -262,17 +267,21 @@ export class Audio {
   }
 
   /** Says the creature's name out loud, so nobody needs to read. */
-  say(text) {
-    if (this.muted) return
+  say(text, { queue = false, onend = null } = {}) {
+    if (this.muted) return false
     try {
       const s = speechSynthesis
-      s.cancel()
+      if (!queue) s.cancel()
       const u = new SpeechSynthesisUtterance(text)
       u.rate = 0.95
       u.pitch = 1.25
       u.volume = 0.9
+      if (onend) u.onend = u.onerror = onend
       s.speak(u)
-    } catch {}
+      return true
+    } catch {
+      return false
+    }
   }
 
   hush() {

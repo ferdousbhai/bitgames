@@ -10,6 +10,7 @@ Run headless from this folder (no Blender window needed):
 
     blender --background --python models.py
     blender --background --python models.py -- --preview /tmp/out   # also renders preview PNGs
+    blender --background --python models.py -- --out /tmp/glb        # exploratory build, shipped files untouched
 
 Coordinates: Blender Z is up and -Y faces the camera (three.js +Z after the
 Y-up glTF export).
@@ -45,15 +46,20 @@ world.glb top-level nodes (shore_* nodes live in their own shore_*.glb):
   shore_lake       hills, pines, a cabin with a dock (also used at night)
   shore_river      reeds, a willow, a stone bridge and a barn for the sunset river
   shore_ice        snowy hills, snowy pines, an igloo, a snowman and penguins
+  shore_reef       a warm sea: palms, a beach hut and a lighthouse on the shore, and a coral
+                   garden on the sea floor (y = FLOOR_Y) with three anemones
+    reef_anemone_0..2  anemone pivots on the floor (the game sways them gently)
   sun, moon        smiling sky friends (face -Y)
   cloud_0..cloud_2 puffy clouds
 Materials (looked up by name in the game):
   lantern_glow     boat lantern (lit at night)
   window_glow      cabin and barn windows (lit at night)
 """
+import json
 import math
 import os
 import random
+import struct
 import sys
 
 import bmesh
@@ -62,8 +68,9 @@ from mathutils import Matrix, Vector, Quaternion
 from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.path.join(HERE, "..", "public", "models")
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+# --out DIR writes the GLBs somewhere else (exploratory builds); the default is the shipped folder.
+OUT_DIR = argv[argv.index("--out") + 1] if "--out" in argv else os.path.join(HERE, "..", "public", "models")
 PREVIEW = argv[argv.index("--preview") + 1] if "--preview" in argv else None
 TAU = math.tau
 
@@ -1383,6 +1390,163 @@ def build_shore_ice(sm, m):
     return rt
 
 
+# --- Coral reef (warm sea) ----------------------------------------------------------
+# The reef reuses the shore kit (hill, cabin, rocks) and adds palms, a lighthouse and a
+# coral garden on the sea floor. The floor sits at REEF_FLOOR, the same depth as FLOOR_Y
+# in public/js/world.js, because the game places this shore at the origin.
+
+REEF_FLOOR = -2.4
+# Where the anemones sit (Blender x, y). public/js/world.js PLACES.reef.anemones lists the
+# same spots as three.js (x, z = -y) so the clownfish can stay close to home.
+REEF_ANEMONES = ((-4.6, -1.2), (4.2, 0.6), (-0.6, -6.4))
+
+
+def reef_mats():
+    return {
+        "trunk": material("palm_trunk", "#c9955c", roughness=0.85),
+        "frond": material("palm_frond", "#43b85c", roughness=0.8),
+        "nut": material("palm_nut", "#7a4a2a", roughness=0.7),
+        "island": material("reef_island", "#6fcf7f", roughness=0.9),
+        "far": material("reef_far", "#9fdcc0", roughness=0.9),
+        "roof": material("hut_roof", "#e8b45a", roughness=0.85),
+        "white": material("lighthouse_white", "#fff8ee", roughness=0.7),
+        "red": material("lighthouse_red", "#ff6b6b", roughness=0.7),
+        "pink": material("coral_pink", "#ff8f8f", roughness=0.7),
+        "orange": material("coral_orange", "#ffab5c", roughness=0.7),
+        "purple": material("coral_purple", "#b98cff", roughness=0.7),
+        "yellow": material("coral_yellow", "#ffd866", roughness=0.75),
+        "teal": material("coral_teal", "#5fd3c6", roughness=0.7),
+        "teal_dark": material("coral_teal_dark", "#2f8f87", roughness=0.8),
+        "rock": material("reef_rock", "#d8b9a3", roughness=0.9),
+        "anemone_base": material("anemone_base", "#8a5cd0", roughness=0.6),
+        "anemone": material("anemone_tentacle", "#ff8fc8", roughness=0.5),
+    }
+
+
+def palm(rt, name, x, y, z, s, lean, rm, rnd):
+    """A leaning palm: a tapered trunk, six drooping fronds and three coconuts."""
+    a = rnd.uniform(0, TAU)
+    pts = [(x + math.cos(a) * lean * (u / 5) ** 2 * s, y + math.sin(a) * lean * (u / 5) ** 2 * s, z + 4.0 * s * u / 5) for u in range(6)]
+    tube(f"{name}_trunk", pts, 0.2 * s, rm["trunk"], rt, sides=6, radii=[(0.24 - 0.02 * k) * s for k in range(6)])
+    top = Vector(pts[-1])
+    leaf = [(0, 0.06), (0.7, 0.24), (1.6, 0.18), (2.1, 0), (1.6, -0.18), (0.7, -0.24), (0, -0.06)]
+    leaf = [(px * s, pz * s) for px, pz in leaf]
+    for k in range(6):
+        slab(f"{name}_frond{k}", leaf, 0.02 * s, 0.07 * s, rm["frond"], rt, center=(0.9 * s, 0),
+             xf=T(top, rx=math.pi / 2, ry=rnd.uniform(0.35, 0.65), rz=a + TAU * k / 6 + rnd.uniform(-0.2, 0.2)))
+    for k in range(3):
+        b = TAU * k / 3
+        sphere(f"{name}_nut{k}", 0.16 * s, top + Vector((0.18 * s * math.cos(b), 0.18 * s * math.sin(b), -0.22 * s)), rm["nut"], rt,
+               segs=6, rings=4)
+
+
+def lighthouse(rt, name, x, y, z, s, rm, sm):
+    rings = [(0.9, 0.0), (0.82, 1.0), (0.74, 2.0), (0.66, 3.0), (0.6, 4.0)]
+    prof = [(r * s, z + h * s) for r, h in rings]
+    lathe(f"{name}_tower", prof, [rm["white"], rm["red"]], rt, segments=12, loc=(x, y, 0), mats_by_ring=lambda i: i % 2, smooth=False)
+    cylinder(f"{name}_deck", 0.85 * s, 0.85 * s, 0.15 * s, (x, y, z + 4.07 * s), rm["red"], rt, segs=12)
+    cylinder(f"{name}_lamp", 0.42 * s, 0.42 * s, 0.6 * s, (x, y, z + 4.45 * s), sm["glow"], rt, segs=10)
+    cylinder(f"{name}_cap", 0.62 * s, 0.0, 0.6 * s, (x, y, z + 5.05 * s), rm["red"], rt, segs=10, smooth=False)
+
+
+def branch_coral(rt, name, x, y, s, mat, rnd):
+    """Antler-like branches fanning up from one foot."""
+    base = Vector((x, y, REEF_FLOOR))
+    for k in range(5):
+        a = TAU * k / 5 + rnd.uniform(-0.3, 0.3)
+        out = rnd.uniform(0.25, 0.45) * s
+        h = rnd.uniform(0.6, 1.0) * s
+        mid = base + Vector((math.cos(a) * out * 0.4, math.sin(a) * out * 0.4, h * 0.5))
+        tip = base + Vector((math.cos(a) * out, math.sin(a) * out, h))
+        tube(f"{name}_{k}", [base, mid, tip], 0.07 * s, mat, rt, sides=4, radii=[0.1 * s, 0.075 * s, 0.05 * s])
+
+
+def brain_coral(rt, name, x, y, s, mat, rnd, lift=0.0):
+    ico(name, 0.5 * s, (x, y, REEF_FLOOR + lift + 0.12 * s), mat, rt, scale=(1, 1, 0.62), sub=2, jitter=0.08, rnd=rnd, smooth=True)
+
+
+def fan_coral(rt, name, x, y, s, mat, rnd):
+    pts = [(0.06, 0), (0.5, 0.35), (0.62, 0.8), (0.4, 1.15), (0, 1.25), (-0.4, 1.15), (-0.62, 0.8), (-0.5, 0.35), (-0.06, 0)]
+    pts = [(px * s, pz * s) for px, pz in pts]
+    slab(name, pts, 0.015 * s, 0.03 * s, mat, rt, center=(0, 0.6 * s), xf=T((x, y, REEF_FLOOR), rz=rnd.uniform(-0.5, 0.5)))
+
+
+def tube_sponge(rt, name, x, y, s, mat, dark, rnd):
+    for k in range(3):
+        a = TAU * k / 3 + rnd.uniform(-0.3, 0.3)
+        h = rnd.uniform(0.5, 0.95) * s
+        px, py = x + math.cos(a) * 0.2 * s, y + math.sin(a) * 0.2 * s
+        cylinder(f"{name}_{k}", 0.13 * s, 0.16 * s, h, (px, py, REEF_FLOOR + h / 2), mat, rt, segs=8)
+        cylinder(f"{name}_hole{k}", 0.11 * s, 0.11 * s, 0.02, (px, py, REEF_FLOOR + h + 0.005), dark, rt, segs=8)
+
+
+def anemone(rt, name, x, y, s, rm, rnd):
+    """A soft anemone the clownfish call home: a short foot and a crown of stubby tentacles.
+    Its meshes hang off an empty named `name`, so the game can find it and sway it."""
+    piv = pivot(name, rt, (x, y, REEF_FLOOR))
+    cylinder(f"{name}_foot", 0.32 * s, 0.4 * s, 0.35 * s, (x, y, REEF_FLOOR + 0.17 * s), rm["anemone_base"], piv, segs=10)
+    top = REEF_FLOOR + 0.35 * s
+    for ring, (r, n, ln) in enumerate(((0.3, 12, 0.5), (0.16, 7, 0.42))):
+        for k in range(n):
+            a = TAU * (k + ring * 0.5) / n
+            out = Vector((math.cos(a), math.sin(a), 0))
+            p0 = Vector((x, y, top)) + out * r * s
+            p1 = p0 + out * 0.1 * s + Vector((0, 0, ln * 0.55 * s))
+            p2 = p0 + out * (0.22 + rnd.uniform(0, 0.08)) * s + Vector((0, 0, ln * s))
+            tube(f"{name}_t{ring}_{k}", [p0, p1, p2], 0.05 * s, rm["anemone"], piv, sides=4, radii=[0.055 * s, 0.045 * s, 0.025 * s])
+
+
+def build_shore_reef(sm):
+    rt = root("shore_reef")
+    rnd = random.Random(7)
+    rm = reef_mats()
+    # Far islands on the horizon, then a green island behind a sandy beach
+    for i, (x, rx, h) in enumerate(((-36, 14, 6), (-12, 10, 4.5), (16, 13, 5.5), (40, 12, 4))):
+        hill(f"reef_far{i}", x, SHORE_Y + 30, rx, 7, h, rm["far"], rt, segs=12)
+    for i, (x, rx, h) in enumerate(((-24, 12, 4.2), (-4, 11, 5.2), (18, 12, 4.4))):
+        hill(f"reef_island{i}", x, SHORE_Y + 12, rx, 7, h, rm["island"], rt)
+    for i, x in enumerate(range(-48, 49, 12)):
+        hill(f"reef_beach{i}", x, SHORE_Y + 4.5, 8.5, 5.5, rnd.uniform(0.7, 1.2), sm["sand"], rt)
+    # Sandy spits curving toward the camera, each with a palm or two
+    for s in (-1, 1):
+        for i, y in enumerate(range(-6, 27, 9)):
+            hill(f"reef_side{s}_{i}", s * (27 + rnd.uniform(-1, 1)), y, 6, 6, rnd.uniform(0.8, 1.4), sm["sand"], rt)
+            if i % 2 == 0:
+                palm(rt, f"reef_side_palm{s}{i}", s * 25.5, y, 0.7, rnd.uniform(0.9, 1.2), 1.4, rm, rnd)
+    for i in range(9):
+        x = -30 + i * 7.4 + rnd.uniform(-1.2, 1.2)
+        if abs(x - 8) < 3.5 or abs(x + 20) < 3:
+            continue
+        palm(rt, f"reef_palm{i}", x, SHORE_Y + rnd.uniform(3.5, 7), 0.8, rnd.uniform(0.9, 1.3), rnd.uniform(0.8, 1.8), rm, rnd)
+    cabin(rt, "reef_hut", 8, SHORE_Y + 5, 0.9, 1.15, sm["wall"], rm["roof"], sm["glow"], sm["door"])
+    lighthouse(rt, "reef_lighthouse", -20, SHORE_Y + 5.5, 1.0, 1.0, rm, sm)
+    for k in range(9):
+        x = -28 + k * 7 + rnd.uniform(-1, 1)
+        ico(f"reef_rock{k}", rnd.uniform(0.4, 0.8), (x, SHORE_Y + rnd.uniform(0.3, 1.2), 0.1), sm["rock"], rt, scale=(1.3, 1, 0.7),
+            jitter=0.15, rnd=rnd)
+    # The coral garden: low coral heads on the sea floor, kept clear of the anemones. Each head is a
+    # rocky mound with a brain coral, branching corals, a sea fan and tube sponges around it.
+    # Most heads sit on the near side of the boat (Blender -y), where the camera looks through the water.
+    heads = ((-8.0, -4.0), (7.5, -4.5), (-3.5, -10.0), (3.5, -9.5), (-10.5, -10.0), (10.0, -11.0), (1.5, -2.5),
+             (-9.0, 3.5), (9.0, 5.0), (-2.0, 10.5))
+    branch_cols = ("pink", "orange", "purple")
+    for h, (hx, hy) in enumerate(heads):
+        s = 1.0 + 0.2 * ((h * 7) % 3) / 2
+        ico(f"reef_mound{h}", 0.75 * s, (hx, hy, REEF_FLOOR), rm["rock"], rt, scale=(1.4, 1.1, 0.4), sub=1, jitter=0.15, rnd=rnd)
+        brain_coral(rt, f"reef_brain{h}", hx + 0.15 * s, hy + 0.1 * s, s * 0.9, rm["yellow" if h % 2 else "orange"], rnd, lift=0.2 * s)
+        for k in range(3):
+            a = TAU * k / 3 + rnd.uniform(-0.4, 0.4)
+            branch_coral(rt, f"reef_branch{h}_{k}", hx + math.cos(a) * 1.0 * s, hy + math.sin(a) * 0.8 * s, s * 0.95,
+                         rm[branch_cols[(h + k) % 3]], rnd)
+        if h % 2 == 0:
+            fan_coral(rt, f"reef_fan{h}", hx - 0.9 * s, hy + 0.7 * s, s, rm["purple" if h % 4 else "pink"], rnd)
+        else:
+            tube_sponge(rt, f"reef_tube{h}", hx + 0.9 * s, hy + 0.6 * s, s, rm["teal"], rm["teal_dark"], rnd)
+    for i, (x, y) in enumerate(REEF_ANEMONES):
+        anemone(rt, f"reef_anemone_{i}", x, y, 1.15, rm, rnd)
+    return rt
+
+
 def build_sun(m):
     rt = root("sun")
     face_c = material("sun_face", "#ffd84d", roughness=0.5, emission="#ffcc33", strength=0.6)
@@ -1443,11 +1607,51 @@ def build_world():
     roots = [build_bear(m), build_boat(m), build_bucket(m), build_bobber(m), *build_lilypads(), build_weed(), build_lakebed(),
              build_sun(m), build_moon(m)]
     roots += [build_cloud(i, rnd) for i in range(3)]
-    shores = [build_shore_lake(sm), build_shore_river(sm), build_shore_ice(sm, m)]
+    shores = [build_shore_lake(sm), build_shore_river(sm), build_shore_ice(sm, m), build_shore_reef(sm)]
     return roots, shores
 
 
 # --- Export & preview -------------------------------------------------------------
+
+def read_glb(path):
+    with open(path, "rb") as f:
+        b = f.read()
+    n = struct.unpack("<I", b[12:16])[0]
+    return json.loads(b[20:20 + n]), b[20 + n + 8:]
+
+
+def same_glb(a_path, b_path, tol=1e-3):
+    """True when two GLBs hold the same scene: identical JSON, float data equal within `tol`,
+    and the same triangles in every index list (in any order)."""
+    a, ab = read_glb(a_path)
+    b, bb = read_glb(b_path)
+    if a != b:
+        return False
+    for acc in a["accessors"]:
+        view = a["bufferViews"][acc["bufferView"]]
+        start = view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+        kind = {5126: "f", 5125: "I", 5123: "H", 5121: "B"}[acc["componentType"]]
+        count = acc["count"] * {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[acc["type"]]
+        fmt = f"<{count}{kind}"
+        end = start + struct.calcsize(fmt)
+        va, vb = struct.unpack(fmt, ab[start:end]), struct.unpack(fmt, bb[start:end])
+        if kind == "f":
+            if any(abs(x - y) > tol for x, y in zip(va, vb)):
+                return False
+        elif acc["type"] == "SCALAR" and view.get("target") == 34963:
+            def tris(v):
+                out = []
+                for i in range(0, len(v) - 2, 3):
+                    t = v[i:i + 3]
+                    k = t.index(min(t))
+                    out.append(t[k:] + t[:k])
+                return sorted(out)
+            if tris(va) != tris(vb):
+                return False
+        elif va != vb:
+            return False
+    return True
+
 
 def export(path, roots):
     for rt in roots:
@@ -1458,10 +1662,18 @@ def export(path, roots):
         for c in rt.children_recursive:
             c.select_set(True)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=True, export_yup=True,
+    fresh = path[:-4] + ".new.glb"
+    bpy.ops.export_scene.gltf(filepath=fresh, export_format="GLB", use_selection=True, export_apply=True, export_yup=True,
                               export_texcoords=False)
     faces = sum(len(o.data.polygons) for rt in roots for o in rt.children_recursive if o.type == "MESH")
-    print(f"exported {path} ({os.path.getsize(path)} bytes, {faces} faces)")
+    # Blender's exporter is not byte-for-byte repeatable (triangle order, last-digit normals), so an
+    # unchanged model keeps its shipped bytes and only a real change rewrites the file.
+    if os.path.exists(path) and same_glb(path, fresh):
+        os.remove(fresh)
+        print(f"unchanged {path} ({os.path.getsize(path)} bytes, {faces} faces)")
+    else:
+        os.replace(fresh, path)
+        print(f"exported {path} ({os.path.getsize(path)} bytes, {faces} faces)")
     for rt in roots:
         fv = [(len(o.data.polygons), len(o.data.vertices)) for o in rt.children_recursive if o.type == "MESH"]
         print("  STAT", rt.name, sum(a for a, b in fv), sum(b for a, b in fv))
@@ -1542,11 +1754,13 @@ def main():
             for o in [rt, *rt.children_recursive]:
                 o.hide_render = not show
         render(os.path.join(PREVIEW, "shore_lake.png"), (0, -15, 5.5), (0, 0, 1.5), lens=20)
-        for name in ("shore_river", "shore_ice"):
+        for name in ("shore_river", "shore_ice", "shore_reef"):
             for rt in world:
                 for o in [rt, *rt.children_recursive]:
                     o.hide_render = rt.name != name
             render(os.path.join(PREVIEW, f"{name}.png"), (0, -15, 5.5), (0, 0, 1.5), lens=20)
+        # The reef's coral garden from roughly where the game camera looks down at the water
+        render(os.path.join(PREVIEW, "reef_floor.png"), (0, -15.5, 6.2), (0, 3, -2.0), lens=24, bg="#7fe0e0")
 
 
 main()

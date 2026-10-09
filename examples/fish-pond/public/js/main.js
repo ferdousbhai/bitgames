@@ -10,6 +10,7 @@ import { AMBIENT, BY_ID, CREATURES, Creatures, SWIM_SCALE, roll } from './creatu
 import { Effects, softDot } from './effects.js'
 import { HOLES, PLACES, RIG, World } from './world.js'
 import { Book } from './book.js'
+import { lookFor } from './look.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -61,6 +62,7 @@ const game = {
   phase: 'idle', // idle | cast | wait | bite | catch | show | toBook
   book: store.get('fish-pond-book', {}),
   luck: store.get('fish-pond-luck', 0),
+  looks: Number(store.get('fish-pond-looks', 0)) || 0, // features looked at closely (the finger helps until the first)
   casts: 0,
   phaseT: 0,
   misses: 0,
@@ -563,7 +565,8 @@ function startShow() {
   game.luck = pick.stars === 3 ? 0 : game.luck + 1
   store.set('fish-pond-luck', game.luck)
   const isNew = before === 0
-  fish.show = { c, pick, t: 0, isNew, puffed: false, all: isNew && caughtKinds() === CREATURES.length }
+  const look = lookFor(pick.id, game.book[pick.id])
+  fish.show = { c, pick, t: 0, isNew, puffed: false, all: isNew && caughtKinds() === CREATURES.length, look, lookAt: look ? creatures.featurePoint(pick.id, look.at) : null }
   setPhase('show')
   bob.state = 'hang'
   // Card under the creature: stars, name and a NEW sticker
@@ -573,6 +576,12 @@ function startShow() {
   $('card').className = `card-catch show stars${pick.stars}`
   audio.fanfare(pick.stars)
   audio.say(SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${pick.name.toLowerCase()}!`)
+  // Look closer: one feature to notice, asked right after the name (it is optional)
+  $('card-look').classList.toggle('hidden', !look)
+  if (look) {
+    $('card-look').textContent = `🔍 ${look.part}?`
+    audio.say(`Look closer! See its ${look.part}?`, { queue: true })
+  }
   softMoment()
   stageLight.intensity = 6
   updateHud()
@@ -624,8 +633,80 @@ function updateShow(dt, t) {
   // A still, soft glow behind the catch (no spinning rays)
   glow.material.opacity = a * 0.4
   glow.material.color.set(s.pick.stars >= 3 ? '#ffe680' : '#fffbe6')
-  if (s.t > 4.6) finishShow()
+  updateLook(s)
+  // Untouched, the catch flies to the book after a calm pause. After a look, it waits for the fact.
+  if (s.looked) {
+    const heard = s.factDone ? s.t - s.factDone > 1.2 && s.t - s.looked > s.factFor * 0.6 : s.t - s.looked > s.factFor
+    if (heard || s.t - s.looked > 14) finishShow()
+  } else if (s.t > (s.look ? LOOK_WAIT : 4.6)) finishShow()
 }
+
+// --- Look closer -----------------------------------------------------------------------
+
+/** Seconds a catch waits on the stage for a look before flying to the book. */
+const LOOK_WAIT = 7.5
+/** When the glow appears: once the name has been said. */
+const LOOK_FROM = 1.3
+const lookBtn = $('look')
+const lookPos = new THREE.Vector3()
+const lookScreen = { x: 0, y: 0, on: false }
+
+/** Keep the glow on the creature's feature as it wiggles on the stage. */
+function updateLook(s) {
+  lookScreen.on = false
+  if (!s.look || s.looked || s.t < LOOK_FROM) return
+  s.c.group.updateWorldMatrix(true, false)
+  lookPos.copy(s.lookAt)
+  s.c.group.localToWorld(lookPos)
+  lookPos.project(camera)
+  lookScreen.x = ((lookPos.x + 1) / 2) * innerWidth
+  lookScreen.y = ((1 - lookPos.y) / 2) * innerHeight
+  lookScreen.on = true
+  lookBtn.style.transform = `translate(${lookScreen.x}px, ${lookScreen.y}px)`
+  if (lookBtn.classList.contains('hidden')) {
+    lookBtn.className = 'look'
+    lookBtn.setAttribute('aria-label', `Look closer: ${s.look.part}`)
+    void lookBtn.offsetWidth
+    lookBtn.classList.add('on')
+  }
+}
+
+/** The child tapped the glowing feature: say its one true fact, then carry on. */
+function lookCloser() {
+  const s = fish.show
+  if (game.phase !== 'show' || !s?.look || s.looked || s.t < LOOK_FROM) return
+  s.looked = s.t
+  s.factDone = 0
+  const fact = s.look.fact
+  // A muted game shows the words only, so allow reading time instead of waiting for the voice
+  s.factFor = 1.5 + fact.split(' ').length * 0.42
+  const spoken = audio.say(fact, { onend: () => fish.show === s && (s.factDone = s.t) })
+  if (!spoken) s.factDone = 0
+  $('card-look').textContent = fact
+  lookBtn.classList.remove('on')
+  lookBtn.classList.add('seen')
+  audio.nibble()
+  game.looks++
+  store.set('fish-pond-looks', game.looks)
+  hint(false)
+}
+
+function hideLook() {
+  lookBtn.className = 'look hidden'
+  lookScreen.on = false
+  $('card-look').classList.add('hidden')
+}
+
+lookBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  audio.unlock()
+  lookCloser()
+})
+lookBtn.addEventListener('click', (e) => {
+  e.stopPropagation()
+  lookCloser()
+})
 
 /** The creature flies into the book. */
 function finishShow() {
@@ -633,6 +714,7 @@ function finishShow() {
   if (!s || game.phase !== 'show') return
   setPhase('toBook')
   $('card').className = 'card-catch'
+  hideLook()
   const r = $('book-btn').getBoundingClientRect()
   const p = new THREE.Vector3(((r.left + r.width / 2) / innerWidth) * 2 - 1, -((r.top + r.height / 2) / innerHeight) * 2 + 1, 0.5).unproject(camera)
   const dir = p.sub(camera.position).normalize()
@@ -687,7 +769,19 @@ function refillAmbient() {
     const i = s.spawned ? -1 : missing.indexOf(s.id)
     if (i >= 0) missing.splice(i, 1)
   }
-  for (const id of missing) creatures.spawnSwimmer(id, creatures.randomSpot()).pos.y = -2
+  for (const id of missing) spawnAmbient(id).pos.y = -2
+}
+
+/** One of the place's swimmers. On the reef, clownfish keep close to an anemone home. */
+function spawnAmbient(id) {
+  const homes = PLACES[game.place].anemones
+  if (id !== 'clownfish' || !homes) return creatures.spawnSwimmer(id, creatures.randomSpot())
+  const taken = creatures.swimmers.filter((s) => s.home).length
+  const [x, z] = homes[taken % homes.length]
+  const home = new THREE.Vector3(x, 0, z)
+  const s = creatures.spawnSwimmer(id, home.clone().add(new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1))), { home, depth: -1.2 })
+  s.speed *= 0.6
+  return s
 }
 
 function setupPlace(name) {
@@ -696,7 +790,7 @@ function setupPlace(name) {
   world.setPlace(name)
   audio.setPlace(name)
   creatures.clear()
-  for (const id of AMBIENT[name]) creatures.spawnSwimmer(id, creatures.randomSpot())
+  for (const id of AMBIENT[name]) spawnAmbient(id)
   loadShore(PLACES[name].shore)
   // Jellyfish glow brighter in the dark
   creatures.templates.jellyfish?.traverse((o) => {
@@ -865,6 +959,11 @@ function updateHint() {
   // First cast, or a little one who has stopped: point at the water again
   // (after the place's name card has gone, so the finger never covers its words)
   const placeCardUp = introIsPlace && $('intro').classList.contains('show')
+  if (game.phase === 'show' && lookScreen.on && game.looks === 0 && fish.show.t > LOOK_FROM + 2) {
+    hintEl.classList.remove('hidden')
+    hintEl.style.transform = `translate(${lookScreen.x}px, ${lookScreen.y + 30}px)`
+    return
+  }
   if (game.phase === 'idle' && !placeCardUp && (game.casts === 0 || game.idleT > 30)) target = tmp.set(1.6, 0, 2.2)
   else if (game.phase === 'bite' && (totalCaught() < 2 || game.misses > 0)) target = tmp.copy(bob.pos).setY(0)
   if (!target) return hintEl.classList.add('hidden')
@@ -883,6 +982,7 @@ function toTitle() {
   if (fish.catch && game.phase === 'catch') fish.catch.c.group.removeFromParent()
   letGo(false)
   hideBang()
+  hideLook()
   $('card').className = 'card-catch'
   glow.material.opacity = 0
   stageLight.intensity = 0
@@ -995,6 +1095,8 @@ function tapAt(x, y) {
   const ph = game.phase
   if (ph === 'bite') return reel()
   if (ph === 'show') {
+    // A tap close to the glow counts as looking closer; anywhere else carries on
+    if (lookScreen.on && Math.hypot(x - lookScreen.x, y - lookScreen.y) < 90) return lookCloser()
     if (fish.show.t > 0.7) finishShow()
     return
   }
@@ -1053,11 +1155,14 @@ addEventListener('keydown', (e) => {
   }
   if (game.state !== 'play') return
   if (k === 'b') return openBook()
+  if (k === 'l') return lookCloser()
   if (k === ' ' || k === 'enter') {
     e.preventDefault()
     if (e.repeat) return
     const ph = game.phase
     if (ph === 'bite') return reel()
+    // Enter looks closer when there is something to look at; Space carries on
+    if (ph === 'show' && k === 'enter' && fish.show.look && !fish.show.looked) return lookCloser()
     if (ph === 'show') return fish.show.t > 0.5 && finishShow()
     if (ph === 'idle' || (ph === 'wait' && keysUsed && keyAim.distanceTo(castSpot) > 1)) {
       if (!keysUsed) keyAim.copy(castTarget(new THREE.Vector3(rand(-3, 3), 0, rand(0, 4))))

@@ -47,6 +47,18 @@ export const PLACES = {
     hemi: ['#f2f8ff', '#c1d3ec', 1.2], key: ['#ffffff', 1.7], keyPos: [-5, 9, 8],
     sun: { kind: 'sun', pos: [-0.5, 0.55], scale: 1.6 }, clouds: '#f2f6ff', extra: 'snow', pads: 0, ice: true,
   },
+  // A warm, shallow sea: clear turquoise water over sand and coral (blender/models.py build_shore_reef)
+  reef: {
+    emoji: '🐠', name: 'Coral Reef', shore: 'shore_reef',
+    sky: { top: '#3fb3ee', horizon: '#d6fbff', glow: '#fff6cf', stars: 0 },
+    fog: '#d2f5fb', fogNear: 30, fogFar: 95,
+    water: { shallow: '#4fe0d4', deep: '#1f9fc4', sky: '#c4f3ff', sun: '#fffbe8', sparkle: 0.8, near: 0.2 },
+    floor: { sand: '#f3e2b3', deep: '#73cbbf', caustic: 0.55 },
+    hemi: ['#ecfdff', '#f0dcae', 1.15], key: ['#fff2dc', 2.0], keyPos: [-6, 10, 8],
+    sun: { kind: 'sun', pos: [-0.55, 0.62], scale: 2.0 }, clouds: '#ffffff', extra: 'birds', pads: 0, sea: true,
+    // Anemones on the sea floor (three.js x, z): the same spots as REEF_ANEMONES in the builder
+    anemones: [[-4.6, 1.2], [4.2, -0.6], [-0.6, 6.4]],
+  },
 }
 
 /** Ice-fishing holes: tapping anywhere casts into the nearest one. */
@@ -428,6 +440,11 @@ export class World {
     s.visible = false
     this.scene.add(s)
     this.shores[name] = s
+    // Anemones sway softly on the reef floor
+    this.anemones ??= []
+    s.traverse((o) => {
+      if (/^reef_anemone_\d+$/.test(o.name)) this.anemones.push({ o, phase: this.anemones.length * 1.7 })
+    })
     s.visible = this.P?.shore === name
   }
 
@@ -474,7 +491,7 @@ export class World {
     if (this.bucket) this.bucket.visible = !!P.ice
     if (this.bear) this.bear.position.y = P.ice ? 0.46 : 0.22
     if (this.hats) {
-      this.hats.sun && (this.hats.sun.visible = name === 'lake' || name === 'river')
+      this.hats.sun && (this.hats.sun.visible = name === 'lake' || name === 'river' || name === 'reef')
       this.hats.snow && (this.hats.snow.visible = name === 'ice')
       this.hats.scarf && (this.hats.scarf.visible = name === 'ice')
     }
@@ -591,6 +608,11 @@ export class World {
         p.position.x += P.current * dt
         if (p.position.x > 16) p.position.x = -16
       }
+    }
+    for (const a of this.anemones ?? []) {
+      if (!a.o.parent?.visible) continue
+      a.o.rotation.x = Math.sin(t * 0.7 + a.phase) * 0.06
+      a.o.rotation.z = Math.sin(t * 0.55 + a.phase) * 0.06
     }
     for (const w of this.weeds) {
       if (!w.visible) continue

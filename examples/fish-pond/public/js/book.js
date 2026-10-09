@@ -127,7 +127,7 @@ export class Book {
           const where = Object.keys(c.places)
           this.note.textContent = `❓ Not found yet! Look here: ${where.map((p) => PLACES[p].emoji).join(' ')}`
           this.audio.bubbles()
-          this.audio.say(where.length === 4 ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`)
+          this.audio.say(where.length === Object.keys(PLACES).length ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`)
         }
       })
       grid.appendChild(tile)

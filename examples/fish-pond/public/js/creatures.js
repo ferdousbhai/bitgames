@@ -11,26 +11,30 @@ import * as THREE from 'three'
  *   deep     hidden in the deep: only a trail of bubbles comes
  *   whale    a big shadow glides in from far away
  *
- * Habitats (calm pass 2026-10-09): lake, river and night are fresh water, so sea animals
- * live only in the icy sea (whale, narwhal, octopus, pufferfish; crabs live in both).
- * Clownfish and the glow jellyfish have no true home here until a warm sea place exists:
- * the clownfish is a rare lake visitor and both field notes say where the real ones live.
+ * Habitats (Phase 2, 2026-10-09): every real animal is caught only where it really lives.
+ *   lake, river, night  fresh water: goldfish, trout, turtle
+ *   ice (Icy Sea)       cold sea: whale, narwhal, snow crabs, jellyfish
+ *   reef (Coral Reef)   warm sea: clownfish, pufferfish, octopus, crabs, jellyfish
+ * Jellyfish live in every ocean, from warm reefs to icy seas, and many make their own light,
+ * so the glow jellyfish lives in both seas (not in the fresh night pond).
+ * Blue Fish, Golden Fish, the toy duck, the boot and the treasure are pretend or rubbish, so
+ * they can turn up anywhere (their field notes say so). Every creature has at least one place.
  */
 export const CREATURES = [
   { id: 'goldfish', name: 'Goldfish', stars: 1, size: 0.9, how: 'swim', places: { lake: 10, river: 5, night: 5 } },
   { id: 'bluefish', name: 'Blue Fish', stars: 1, size: 0.95, how: 'swim', places: { lake: 8, river: 5, night: 6, ice: 9 } },
-  { id: 'clownfish', name: 'Clownfish', stars: 1, size: 0.85, how: 'swim', places: { lake: 3 } },
-  { id: 'trout', name: 'Rainbow Trout', stars: 1, size: 1.1, how: 'swim', places: { river: 10, lake: 1.5 } },
-  { id: 'duck', name: 'Rubber Duck', stars: 1, size: 0.75, how: 'surface', places: { lake: 2.5, river: 3, night: 2, ice: 1.5 } },
-  { id: 'boot', name: 'Old Boot', stars: 1, size: 0.8, how: 'deep', places: { lake: 2.5, river: 3, night: 2.5, ice: 2 } },
-  { id: 'pufferfish', name: 'Pufferfish', stars: 2, size: 0.85, how: 'swim', places: { river: 2, ice: 4 } },
-  { id: 'crab', name: 'Crab', stars: 2, size: 0.85, how: 'swim', places: { lake: 2, river: 4, ice: 3 } },
-  { id: 'turtle', name: 'Turtle', stars: 2, size: 1.0, how: 'swim', places: { lake: 3, river: 3.5, night: 2 } },
-  { id: 'octopus', name: 'Octopus', stars: 2, size: 0.9, how: 'swim', places: { ice: 4 } },
-  { id: 'jellyfish', name: 'Glow Jellyfish', stars: 2, size: 0.9, how: 'swim', places: { night: 9 } },
+  { id: 'clownfish', name: 'Clownfish', stars: 1, size: 0.85, how: 'swim', places: { reef: 10 } },
+  { id: 'trout', name: 'Rainbow Trout', stars: 1, size: 1.1, how: 'swim', places: { river: 10, lake: 1.5, night: 3 } },
+  { id: 'duck', name: 'Rubber Duck', stars: 1, size: 0.75, how: 'surface', places: { lake: 2.5, river: 3, night: 2, ice: 1.5, reef: 1.5 } },
+  { id: 'boot', name: 'Old Boot', stars: 1, size: 0.8, how: 'deep', places: { lake: 2.5, river: 3, night: 2.5, ice: 2, reef: 2 } },
+  { id: 'pufferfish', name: 'Pufferfish', stars: 2, size: 0.85, how: 'swim', places: { reef: 5 } },
+  { id: 'crab', name: 'Crab', stars: 2, size: 0.85, how: 'swim', places: { reef: 4, ice: 3 } },
+  { id: 'turtle', name: 'Turtle', stars: 2, size: 1.0, how: 'swim', places: { lake: 3, river: 3.5, night: 3 } },
+  { id: 'octopus', name: 'Octopus', stars: 2, size: 0.9, how: 'swim', places: { reef: 4 } },
+  { id: 'jellyfish', name: 'Glow Jellyfish', stars: 2, size: 0.9, how: 'swim', places: { reef: 4, ice: 3 } },
   { id: 'narwhal', name: 'Baby Narwhal', stars: 2, size: 1.2, how: 'swim', places: { ice: 7 } },
-  { id: 'goldenfish', name: 'Golden Fish', stars: 3, size: 0.95, how: 'swim', places: { lake: 0.8, river: 0.8, night: 0.8, ice: 0.8 } },
-  { id: 'chest', name: 'Treasure Chest', stars: 3, size: 0.8, how: 'deep', places: { lake: 0.8, river: 0.8, night: 0.9, ice: 0.8 } },
+  { id: 'goldenfish', name: 'Golden Fish', stars: 3, size: 0.95, how: 'swim', places: { lake: 0.8, river: 0.8, night: 0.8, ice: 0.8, reef: 0.8 } },
+  { id: 'chest', name: 'Treasure Chest', stars: 3, size: 0.8, how: 'deep', places: { lake: 0.8, river: 0.8, night: 0.9, ice: 0.8, reef: 0.9 } },
   { id: 'whale', name: 'Friendly Whale', stars: 3, size: 2.4, how: 'whale', places: { ice: 1.2 } },
 ]
 export const BY_ID = Object.fromEntries(CREATURES.map((c) => [c.id, c]))
@@ -38,9 +42,10 @@ export const BY_ID = Object.fromEntries(CREATURES.map((c) => [c.id, c]))
 /** The common fish that swim about in each place while you wait. */
 export const AMBIENT = {
   lake: ['goldfish', 'bluefish', 'trout', 'goldfish', 'turtle'],
-  river: ['trout', 'goldfish', 'trout', 'bluefish', 'crab'],
-  night: ['jellyfish', 'bluefish', 'jellyfish', 'goldfish', 'turtle'],
-  ice: ['bluefish', 'narwhal', 'octopus', 'bluefish', 'pufferfish'],
+  river: ['trout', 'goldfish', 'trout', 'bluefish', 'turtle'],
+  night: ['goldfish', 'bluefish', 'trout', 'goldfish', 'turtle'],
+  ice: ['bluefish', 'narwhal', 'jellyfish', 'bluefish', 'crab'],
+  reef: ['clownfish', 'pufferfish', 'clownfish', 'octopus', 'jellyfish'],
 }
 
 const MAX_LUCK = 8
@@ -70,6 +75,7 @@ export class Creatures {
     this.scene = scene
     this.templates = {}
     this.units = {}
+    this.centers = {}
     this.swimmers = []
     this.bounds = { x: () => 6, zMin: -3, zMax: 7.5, avoid: new THREE.Vector3(0, 0, -5), avoidR: 3.4 }
   }
@@ -90,10 +96,21 @@ export class Creatures {
       wrap.add(node)
       this.templates[c.id] = wrap
       this.units[c.id] = 1 / Math.max(size.x, size.y, size.z)
+      this.centers[c.id] = center
       node.traverse((o) => {
         if (o.isMesh) o.material.envMapIntensity = 0.6
       })
     }
+  }
+
+  /**
+   * A point on the model, given in builder (Blender) coordinates [x, y, z], as a point in the
+   * group returned by make(). Blender x stays x, z becomes up and -y faces the camera.
+   */
+  featurePoint(id, at, out = new THREE.Vector3()) {
+    out.set(at[0], at[2], -at[1])
+    if (this.centers[id]) out.sub(this.centers[id])
+    return out
   }
 
   /** A fresh creature group, scaled so `size` is its length. */
@@ -126,6 +143,7 @@ export class Creatures {
       depth: opts.depth ?? SWIM_Y - Math.random() * 0.35,
       retarget: 0,
       age: 0,
+      home: opts.home ?? null, // a clownfish stays close to its anemone
     }
     s.pos.y = opts.y ?? s.depth
     this.pickTarget(s)
@@ -157,7 +175,11 @@ export class Creatures {
   }
 
   pickTarget(s) {
-    this.randomSpot(s.target)
+    if (s.home) {
+      const a = Math.random() * Math.PI * 2
+      const r = 0.5 + Math.random() * 1.1
+      s.target.set(s.home.x + Math.cos(a) * r, 0, s.home.z + Math.sin(a) * r)
+    } else this.randomSpot(s.target)
     s.retarget = 4 + Math.random() * 5
   }
 
