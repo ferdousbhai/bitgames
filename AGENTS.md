@@ -2,7 +2,9 @@
 
 Work on `main`, the canonical branch. All work previously on `master` is included in `main`.
 
-For the ongoing kids' game polish and release work, read [docs/POLISH_HANDOFF.md](docs/POLISH_HANDOFF.md) before editing examples. It records the current game, what has shipped, the remaining queue, and the release procedure. Keep that document current when handing the work to another agent.
+The catalogue is the twelve original games in `examples/`. The goal is to make each of them excellent, not to add more games. Read [docs/POLISH_HANDOFF.md](docs/POLISH_HANDOFF.md) before editing examples, and keep it current when handing off. `docs/archive/` and `docs/audit/` are history only. Never recreate or republish retired games.
+
+Games should be calm and gentle and build sustained focus, with learning inside the play. Avoid attention hooks such as flashing, reward spam, frantic timers and noisy feedback.
 
 ## Blender assets
 
@@ -20,4 +22,4 @@ Rebuild only affected games and keep CPU rendering bounded (the builder uses eig
 
 ## Parallel polish
 
-When the owner requests parallel work, assign agents distinct games and explicit source-file ownership. Shared catalogue edits, generated-output builds, commits, publishing, and store seeding need one coordinator. Workers report game-specific evidence and request coordinated rebuilds; they must not overwrite another worker's changes. Record passes and remaining work under `docs/polish/` and keep the handoff current.
+When the owner requests parallel work, give each agent one original game and explicit ownership of its files. One coordinator handles shared code (`examples/_studio/`), catalogue edits, builds, commits, publishing and store seeding. Workers report game-specific evidence and must not overwrite another worker's changes. Record each game's pass in `docs/polish/<game-id>.md`, one living file per game.

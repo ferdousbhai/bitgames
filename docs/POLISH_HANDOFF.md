@@ -1,6 +1,26 @@
 # BitGames handoff
 
-Updated 2026-10-08. Work on `main`; all work previously on `master` is included. The previous quantity-driven generated-game release queue is superseded and must not resume.
+Updated 2026-10-09. Work on `main`.
+
+## Current direction (2026-10-09)
+
+The owner wants all twelve originals brought to 10/10 rather than any new games. The standard:
+
+- **Gentle and relaxing.** Calm pacing, soft palettes and sound, no flashing, reward spam, countdown pressure or noisy celebration. Think the opposite of attention-maximising kids' media.
+- **Builds sustained focus.** Play that rewards careful looking, planning, patience and finishing, so a child can stay with one activity for a long time.
+- **Real educational value.** Learning sits inside the core action, not in quizzes bolted onto it.
+- **Engaging through depth, not hooks.** Meaningful choices, discovery and creation that hold up on a return visit.
+
+Work one game at a time and record each pass in `docs/polish/<game-id>.md`. The scorecard and three-phase plan are in [docs/polish/AUDIT_2026-10-09.md](polish/AUDIT_2026-10-09.md). Polish notes for the retired games are archived in `docs/archive/retired-polish-2026-10-07/`. Blender 5.2 runs on the owner's machine. The CLI is preferred because jobs can run in parallel; the Blender MCP server works but runs jobs one at a time.
+
+## Loose ends closed 2026-10-09
+
+- Crash Racers' Web Audio `resume()` and `suspend()` calls now catch rejections, as the other originals already did. The WebKit `Failed to start the audio device` error no longer fails the clean-console check: WebKit and Chromium both pass with 0 errors. This intentionally changes one file (`crash-racers/public/js/audio.js`) in the 321-file original snapshot.
+- GitHub's default branch is `main`. The remote `master` branch, fully contained in `main` at 7106b6f, was deleted.
+
+## History: generated-game retirement (2026-10-08)
+
+The previous quantity-driven generated-game release queue is superseded and must not resume.
 
 ## Owner direction and completed wipe
 
@@ -8,7 +28,7 @@ The owner reported that the later generated games were boring, low quality and t
 
 The owner approved the exact proposed 89-game wipe with **“Yes do it.”** All 89 generated project directories are now removed, along with their runtime, generator designs/builders, obsolete tests and workspace lockfile importers. The build is original-only, so it cannot recreate the retired games. The local catalogue contains **12 originals**. Splash Tank is untouched.
 
-All **321 snapshotted original files** remain byte-for-byte unchanged after rebuilding. Seven direct Node preservation/shipment/learning checks pass, including exact surviving IDs, retired-path absence, manifest integrity and catalogue membership. Chromium passed all 12 originals in both orientations; WebKit passed 11, with Crash Racers reaching play/layout but failing the clean-console gate on an audio-device error. See `docs/audit/original-browser-preservation-2026-10-08.md`.
+All **321 snapshotted original files** remain byte-for-byte unchanged after rebuilding. Seven direct Node preservation/shipment/learning checks pass, including exact surviving IDs, retired-path absence, manifest integrity and catalogue membership. Chromium passed all 12 originals in both orientations; WebKit passed 11, with Crash Racers reaching play/layout but failing the clean-console gate on an audio-device error (fixed 2026-10-09, see above). See `docs/audit/original-browser-preservation-2026-10-08.md`.
 
 Evidence: [quality audit](audit/QUALITY_AUDIT_2026-10-08.md), [approved exact IDs and Workers](audit/proposed-wipe-2026-10-08.json), [execution status](audit/wipe-execution-2026-10-08.json), [original-file snapshot](audit/originals-before-wipe-2026-10-08.json).
 
@@ -28,7 +48,7 @@ A future game must earn its place through compelling direct action, meaningful c
 
 The follow-up scan removed retired-game test helpers and the obsolete empty catalogue export, corrected stale README counts/deployment guidance, and made packaging use the canonical original IDs. Publishing validates the entire selected batch before deployment. Browser CLI inputs now reject unsafe report labels and empty ranges, and failures are included in JSON evidence. Rerunning the completed retirement script preserves its original before/after report without contacting Cloudflare.
 
-The asset wrapper now handles Crash Racers' actual `cars.py`/`props.py` and the auxiliary texture builders. Paint Splash's bottle/cup builder lives at `examples/paint-splash/blender/colour_kit.py`; its deleted-library dependency is gone. A Blender 5.2.2 CLI rebuild into `/tmp` retained the shipped triangle geometry and palette, omitted unused UVs, and loaded successfully in the actual mixing/painting workshop. Shipped game files were not replaced. Catalogue filtering/covers and an original startup/play smoke check passed in Chromium. The earlier WebKit audio-device limitation remains recorded above.
+The asset wrapper now handles Crash Racers' actual `cars.py`/`props.py` and the auxiliary texture builders. Paint Splash's bottle/cup builder lives at `examples/paint-splash/blender/colour_kit.py`; its deleted-library dependency is gone. A Blender 5.2.2 CLI rebuild into `/tmp` retained the shipped triangle geometry and palette, omitted unused UVs, and loaded successfully in the actual mixing/painting workshop. Shipped game files were not replaced. Catalogue filtering/covers and an original startup/play smoke check passed in Chromium. 
 
 The final scan also removed the obsolete repository Blender MCP configuration and updated creator onboarding/agent guidance to Blender 5.2 CLI, reusable assets and reproducible builders.
 

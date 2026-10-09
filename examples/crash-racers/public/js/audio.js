@@ -8,7 +8,10 @@ export class Audio {
 
   /** Browsers only allow audio after a tap or key press. */
   unlock() {
-    if (this.ctx) return document.hidden ? undefined : this.ctx.resume()
+    if (this.ctx) {
+      if (!document.hidden && this.ctx.state !== 'running') this.ctx.resume().catch(() => {})
+      return
+    }
     try {
       this.ctx = new AudioContext()
     } catch {
@@ -26,8 +29,8 @@ export class Audio {
   /** Hidden tab or app in the background: stop making sound (and using the CPU for it). */
   setHidden(hidden) {
     if (!this.ctx) return
-    if (hidden) this.ctx.suspend()
-    else this.ctx.resume()
+    if (hidden) this.ctx.suspend().catch(() => {})
+    else this.ctx.resume().catch(() => {})
   }
 
   get ready() {
