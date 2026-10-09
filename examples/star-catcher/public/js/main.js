@@ -771,8 +771,9 @@ addEventListener('resize', resize)
 
 // --- Main loop ----------------------------------------------------------------------
 
-const EXHAUST_COLORS = ['#ffd23f', '#ff9f43', '#ff6b6b', '#fff3a0'].map((c) => new THREE.Color(c))
-const exhaust = { vx: 0, vy: 0, spread: 0.6, life: 0.45, size: 0, endSize: 0.1, color: EXHAUST_COLORS[0], drag: 1.5 }
+// Muted warm tones: the particles glow additively, so darker colours give a softer trail
+const EXHAUST_COLORS = ['#a8862a', '#a5672c', '#8f4f4f', '#a89f6a'].map((c) => new THREE.Color(c))
+const exhaust = { vx: 0, vy: 0, spread: 0.35, life: 0.55, size: 0, endSize: 0.05, color: EXHAUST_COLORS[0], drag: 1.5 }
 const sparkle = { vy: 0.6, spread: 0.5, life: 0.7, size: 0.4, endSize: 0, color: '#ffffff', drag: 1 }
 const trail = { vy: -2, spread: 0.4, life: 0.6, size: 0.35, color: new THREE.Color('#ffffff'), drag: 1 }
 
@@ -821,7 +822,7 @@ function updateRocket(dt) {
   // A soft, slow breathing flame: no fast flicker
   const f = 1 + climb + Math.sin(game.time * 4) * 0.04
   r.flame.scale.set(1 + Math.sin(game.time * 3) * 0.02, f, 1 + Math.sin(game.time * 3) * 0.02)
-  r.glow.material.opacity = 0.6 + 0.05 * Math.sin(game.time * 2.5) + climb * 0.2
+  r.glow.material.opacity = 0.4 + 0.03 * Math.sin(game.time * 2.5) + climb * 0.1
   r.glow.scale.setScalar(2.4 + climb * 1.2)
 
   // Kitty pilot: a happy bounce when catching things
@@ -832,16 +833,17 @@ function updateRocket(dt) {
   // Exhaust trail (every frame, so it reuses one options object and pre-parsed colours)
   r.nozzle.getWorldPosition(r.nozzleWorld)
   const n = r.nozzleWorld
-  const puffs = 2 + (climb > 0 ? 1 : 0)
+  // A thin, slow trail: about 18 puffs a second in flight (it was about 120), 5 at rest at home
+  const puffs = Math.random() < dt * (game.state === 'finale' ? 5 : 18) ? 1 : 0
   for (let i = 0; i < puffs; i++) {
-    const x = n.x + rand(-0.12, 0.12)
-    exhaust.vx = rand(-0.5, 0.5) - r.vel.x * 0.15
-    exhaust.vy = -game.cruise * 0.9 - 2
-    exhaust.size = rand(0.45, 0.7)
+    const x = n.x + rand(-0.08, 0.08)
+    exhaust.vx = rand(-0.3, 0.3) - r.vel.x * 0.1
+    exhaust.vy = -game.cruise * 0.4 - 1
+    exhaust.size = rand(0.35, 0.5)
     exhaust.color = EXHAUST_COLORS[(Math.random() * EXHAUST_COLORS.length) | 0]
     particles.emit(x, n.y - 0.35, n.z - 0.1, exhaust)
   }
-  if (Math.abs(r.vel.x) > 4 && Math.random() < 0.5) {
+  if (Math.abs(r.vel.x) > 4 && Math.random() < 0.2) {
     particles.emit(p.x + rand(-0.4, 0.4), p.y + rand(-0.5, 0.5), 0.2, trail)
   }
 
@@ -995,7 +997,9 @@ function frame() {
   }
   const playing = game.state === 'play'
   const L = leg(game.stops)
-  game.cruise = damp(game.cruise, playing ? 3 + L.speed : 2.5, 1, dt)
+  // At home the sky stands still, so the child's constellations are the only thing to look at
+  const finale = game.state === 'finale'
+  game.cruise = damp(game.cruise, playing ? 3 + L.speed : finale ? 0 : 2.5, finale ? 2 : 1, dt)
 
   if (playing) {
     game.phaseTime += dt
@@ -1024,7 +1028,7 @@ function frame() {
   updateRocket(dt)
   updateItems(dt)
   updateUfo(dt)
-  world.update(dt, game.cruise, playing ? legProgress() : 0.15, view)
+  world.update(finale ? dt * 0.2 : dt, game.cruise, playing ? legProgress() : 0.15, view)
   particles.update(dt)
   rings.update(dt)
   audio.updateEngine(playing, Math.hypot(rocket.vel.x, rocket.vel.y))

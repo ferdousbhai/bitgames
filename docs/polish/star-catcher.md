@@ -157,9 +157,14 @@ Source: the audit's Phase 2 row ("Real constellations lit star by star and named
   - `m-constellation-arrive.png`, `p-leg1-arrive.png`, `pl-leg3-arrive.png`
   - `ph-leg4-panel.png`
 
+- **Calmer background (follow-up):**
+  - The exhaust trail drops from about 120 puffs a second to about 18 in flight and 5 at home. The puffs are smaller, slower and in muted colours, and the nozzle glow and swerve sparkles are fainter. The change is in `js/main.js` `updateRocket`.
+  - At home, the sky scroll eases to a stop, the background clock runs at 20% speed, and drifting planets stand still, so the constellations are the only focus. This is in `frame()`.
+  - Chromium and WebKit browser checks pass again with 0 errors, and a full trip in Chromium at 834×1194 still reaches home with 0 errors (`calm-leg2-lit3.png`, `calm-finale.png`).
+
 ## Left for later
 
 - Family play: is a 30-star trip the right length? Each leg is now short (4–7 catches).
-- Phase 3 art: constellation pieces (Blender) could replace the glow sprites. The exhaust trail is still dense.
+- Phase 3 art: constellation pieces (Blender) could replace the glow sprites.
 - Rainbow and pink stars only add variety now. Consider whether they should light a coloured star.
 - Short-landscape phones: the mission card sits bottom-left, as before.
