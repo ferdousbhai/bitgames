@@ -1,4 +1,4 @@
-import { R, DUCK_R, ROUND_TIME, PARTY_TIME, ARENAS, POWERS, POWER_IDS, ITEMS, angleDiff } from './config.js'
+import { R, DUCK_R, ROUND_TIME, PARTY_TIME, ARENAS, POWERS, POWER_IDS, ITEMS, BUBBLE_COLOURS, goalTarget, angleDiff } from './config.js'
 
 /**
  * The bumper-boat world, with no drawing in it: ducks are circles on the
@@ -22,7 +22,12 @@ const HIT_MEMORY = 2.5 // seconds a bonk counts toward a splash bonus
 export const newStats = () => ({ bubbles: 0, stars: 0, gifts: 0, bonks: 0, splashes: 0, dashes: 0, flights: 0 })
 
 export class Sim {
-  constructor({ arena, entries }) {
+  constructor({ arena, entries, mode = 'lively', goal = null }) {
+    // Pond helpers ('calm'): no clock; the round ends when the shared jar holds the goal.
+    this.calm = mode === 'calm' && !!goal
+    this.goal = this.calm ? goal : null
+    this.target = this.calm ? goalTarget(goal) : 0
+    this.jar = [] // colour of each bubble the team has put in the jar, in order
     this.arenaId = arena
     this.arena = ARENAS[arena]
     this.time = 0
@@ -54,7 +59,12 @@ export class Sim {
   }
 
   get party() {
-    return this.time >= ROUND_TIME - PARTY_TIME
+    return !this.calm && this.time >= ROUND_TIME - PARTY_TIME
+  }
+
+  /** Does this bubble go in the team's jar? Colour goals take only their colour. */
+  counts(it) {
+    return this.calm && it.k === 'bubble' && (this.goal.kind === 'tens' || it.c === this.goal.c)
   }
 
   radius(d) {
@@ -99,7 +109,7 @@ export class Sim {
     this.pickups()
     this.spawning(dt)
     if (this.arena.rain) this.rain(dt)
-    if (!this.over && this.time >= ROUND_TIME) {
+    if (!this.over && (this.calm ? this.jar.length >= this.target : this.time >= ROUND_TIME)) {
       this.over = true
       this.emit({ k: 'end' })
     }
@@ -340,7 +350,8 @@ export class Sim {
       d.vx = 0
       d.vz = 0
       const by = d.lastHit && this.time - d.lastHitT < HIT_MEMORY ? this.byId.get(d.lastHit) : null
-      if (by && by !== d) {
+      // In Pond helpers a splash-out is just fun: nobody scores from it and the team loses nothing.
+      if (by && by !== d && !this.calm) {
         by.stats.splashes++
         by.score += 2
       }
@@ -360,12 +371,22 @@ export class Sim {
   pickups() {
     for (const it of this.items.values()) {
       for (const d of this.ducks) {
-        if (d.fly) continue
+        if (d.fly || (d.leave && this.counts(it))) continue
         const reach = this.radius(d) + ITEMS[it.k].radius
         if ((d.x - it.x) ** 2 + (d.z - it.z) ** 2 > reach * reach) continue
         this.items.delete(it.id)
         const e = { k: 'got', item: it.id, kind: it.k, id: d.id, x: it.x, z: it.z }
-        if (it.k === 'bubble') {
+        if (this.calm && it.k === 'bubble') {
+          // Into the shared jar (or, when it is not the goal's colour, a harmless pop).
+          e.c = it.c
+          if (this.counts(it) && this.jar.length < this.target) {
+            this.jar.push(it.c)
+            d.score += 1
+            d.stats.bubbles++
+            e.ok = 1
+            e.n = this.jar.length
+          }
+        } else if (it.k === 'bubble') {
           d.score += 1
           d.stats.bubbles++
         } else if (it.k === 'star') {
@@ -394,17 +415,18 @@ export class Sim {
     if (!this.started) {
       // A handful of bubbles waiting on the water when the round starts.
       this.started = true
-      for (let i = 0; i < 7; i++) this.addItem('bubble')
+      for (let i = 0; i < (this.calm ? 4 : 7); i++) this.addItem('bubble')
     }
     const t = this.timers
     for (const k of Object.keys(t)) t[k] -= dt
     const party = this.party
     if (t.bubble <= 0) {
       // The last seconds bring a gentle bubble shower (calm pass: was every 0.18 s, up to 22).
-      t.bubble = party ? 0.35 : 0.55
-      if (this.count('bubble') < (party ? 16 : 11)) this.addItem('bubble')
+      // Pond helpers: an unhurried trickle, so each bubble in the jar can be seen and counted.
+      t.bubble = this.calm ? 3 : party ? 0.35 : 0.55
+      if (this.count('bubble') < (this.calm ? 5 : party ? 16 : 11)) this.addItem('bubble')
     }
-    if (t.star <= 0) {
+    if (t.star <= 0 && !this.calm) {
       t.star = party ? 3 : 6 + Math.random() * 3
       if (this.count('star') < 2) this.addItem('star')
     }
@@ -431,9 +453,23 @@ export class Sim {
     }
     if (at) ({ x, z } = at)
     const it = { id: this.nextItem++, k, x: +x.toFixed(2), z: +z.toFixed(2) }
+    if (this.calm && k === 'bubble') it.c = this.bubbleColour()
     this.items.set(it.id, it)
-    this.emit({ k: 'item', item: it.id, kind: k, x: it.x, z: it.z })
+    const e = { k: 'item', item: it.id, kind: k, x: it.x, z: it.z }
+    if (it.c != null) e.c = it.c
+    this.emit(e)
     return it
+  }
+
+  /** Colour goals keep a few of their colour on the water; otherwise colours are evenly mixed. */
+  bubbleColour() {
+    const n = BUBBLE_COLOURS.length
+    const g = this.goal
+    if (g.kind !== 'colour') return Math.floor(Math.random() * n)
+    let mine = 0
+    for (const it of this.items.values()) if (it.k === 'bubble' && it.c === g.c) mine++
+    if (mine < 2 || Math.random() < 0.35) return g.c
+    return (g.c + 1 + Math.floor(Math.random() * (n - 1))) % n
   }
 
   /** Puddle: big raindrops plop down and push nearby boats away. */
@@ -524,11 +560,16 @@ export class Sim {
     const d = this.byId.get(e.id)
     switch (e.k) {
       case 'item':
-        this.items.set(e.item, { id: e.item, k: e.kind, x: e.x, z: e.z })
+        this.items.set(e.item, { id: e.item, k: e.kind, x: e.x, z: e.z, ...(Number.isInteger(e.c) ? { c: e.c } : {}) })
         this.nextItem = Math.max(this.nextItem, e.item + 1)
         break
       case 'got':
         this.items.delete(e.item)
+        // The jar follows the authority's count; a missed event is filled in by the next item sync.
+        if (this.calm && e.ok && Number.isInteger(e.n) && e.n > this.jar.length && e.n <= this.target) {
+          while (this.jar.length < e.n - 1) this.jar.push(-1)
+          this.jar.push(Number.isInteger(e.c) ? e.c : -1)
+        }
         if (d && e.p) {
           d.power = e.p
           d.powerT = POWERS[e.p]?.time ?? 0
@@ -553,7 +594,16 @@ export class Sim {
 
   /** The item list, so a device that missed something catches up. */
   itemList() {
-    return [...this.items.values()].map((it) => [it.id, it.k, it.x, it.z])
+    return [...this.items.values()].map((it) => (it.c != null ? [it.id, it.k, it.x, it.z, it.c] : [it.id, it.k, it.x, it.z]))
+  }
+
+  /** Takes the authority's jar (colours in order), so every device shows the same frames. */
+  syncJar(list) {
+    if (!this.calm || !Array.isArray(list) || list.length > this.target) return false
+    if (list.length < this.jar.length) return false
+    const before = this.jar.join()
+    this.jar = list.map((c) => (Number.isInteger(c) && c >= 0 && c < BUBBLE_COLOURS.length ? c : -1))
+    return this.jar.join() !== before
   }
 
   syncItems(list) {
@@ -562,11 +612,12 @@ export class Sim {
     const added = []
     for (const row of list) {
       if (!Array.isArray(row)) continue
-      const [id, k, x, z] = row
+      const [id, k, x, z, c] = row
       if (!ITEMS[k]) continue
       keep.add(id)
       if (!this.items.has(id)) {
         const it = { id, k, x, z }
+        if (Number.isInteger(c)) it.c = c
         this.items.set(id, it)
         added.push(it)
       }

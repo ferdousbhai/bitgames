@@ -85,9 +85,10 @@ export function makeWater(radius) {
 }
 
 /** A soap bubble: see-through in the middle, rainbow round the edge, with a shine. */
-export function makeBubbleMaterial() {
+/** A soap bubble; with `tint`, a gently coloured one (Pond helpers sorts bubbles by colour). */
+export function makeBubbleMaterial(tint = null) {
   return new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 } },
+    uniforms: { time: { value: 0 }, tint: { value: new THREE.Color(tint ?? '#ffffff') }, tintAmount: { value: tint ? 0.8 : 0 } },
     transparent: true,
     depthWrite: false,
     vertexShader: /* glsl */ `
@@ -101,6 +102,8 @@ export function makeBubbleMaterial() {
       }`,
     fragmentShader: /* glsl */ `
       uniform float time;
+      uniform vec3 tint;
+      uniform float tintAmount;
       varying vec3 vN;
       varying vec3 vV;
       void main() {
@@ -108,7 +111,8 @@ export function makeBubbleMaterial() {
         float f = 1.0 - abs(dot(n, normalize(vV)));
         vec3 rainbow = 0.55 + 0.45 * cos(6.2831 * (f * 1.4 + vec3(0.0, 0.33, 0.67)) + time * 1.5);
         vec3 c = mix(vec3(1.0), rainbow, 0.75);
-        float a = 0.22 + pow(f, 1.5) * 0.75;
+        c = mix(c, tint, tintAmount);
+        float a = 0.22 + tintAmount * 0.4 + pow(f, 1.5) * 0.75;
         float shine = smoothstep(0.86, 0.95, dot(n, normalize(vec3(-0.45, 0.6, 0.66))));
         float shine2 = smoothstep(0.93, 0.97, dot(n, normalize(vec3(0.5, -0.4, 0.77))));
         c = mix(c, vec3(1.0), max(shine, shine2 * 0.6));

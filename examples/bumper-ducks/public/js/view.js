@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { R, DUCKS } from './config.js'
+import { R, DUCKS, BUBBLE_COLOURS } from './config.js'
 import { FLY_TIME } from './sim.js'
 import { canvasTexture } from './effects.js'
 import { makeBubbleMaterial } from './water.js'
@@ -98,6 +98,12 @@ function sleepTag() {
 }
 
 const bubbleMaterial = makeBubbleMaterial()
+// Pond helpers' coloured bubbles: a tinted shell around a soft coloured bead, easy to tell apart.
+const colourBubbles = BUBBLE_COLOURS.map(({ hex }) => ({
+  shell: makeBubbleMaterial(hex),
+  bead: new THREE.MeshStandardMaterial({ color: hex, roughness: 0.35, emissive: hex, emissiveIntensity: 0.4 }),
+}))
+const beadGeometry = new THREE.SphereGeometry(0.36, 16, 12)
 const bubbleGeometry = new THREE.SphereGeometry(0.55, 20, 14)
 const shieldGeometry = new THREE.SphereGeometry(1, 24, 16)
 
@@ -245,7 +251,12 @@ export class ItemView {
     this.item = item
     this.root = new THREE.Group()
     this.root.position.set(item.x, 0, item.z)
-    if (item.k === 'bubble') {
+    if (item.k === 'bubble' && colourBubbles[item.c]) {
+      const look = colourBubbles[item.c]
+      this.body = new THREE.Mesh(bubbleGeometry, look.shell)
+      this.body.add(new THREE.Mesh(beadGeometry, look.bead))
+      this.base = 0.7
+    } else if (item.k === 'bubble') {
       this.body = new THREE.Mesh(bubbleGeometry, bubbleMaterial)
       this.base = 0.7
     } else if (item.k === 'star') {

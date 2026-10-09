@@ -260,9 +260,121 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 @media (max-width: 420px) and (orientation: portrait) { .goal-bubble { font-size: 19px; } #hud .adventure-goal { font-size: 15px; gap: 0; } #hud .adventure-goal b { margin-left: 3px; } }
 
+/* --- Phase 2: Pond helpers (calm default) and Bumper race (lively) ------------------------------ */
+:root { --cell: 26px; }
+/* Two pictured ways to play. Pond helpers shows its goal as little ten-frames or coloured bubbles. */
+.modes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: safe center; }
+.mode {
+  width: min(40vw, 230px); min-height: 92px; padding: 8px 8px 10px; border-radius: 24px; border: 5px solid rgba(255,255,255,0.65);
+  box-shadow: 0 7px 0 rgba(0,0,0,0.22); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  color: #24306e; transition: transform .12s;
+}
+.mode.calm { background: linear-gradient(#bff3e6, #7fd3c4); }
+.mode.lively { background: linear-gradient(#ffd0b0, #ff9a6b); }
+.mode.selected { border-color: #ffd23f; transform: scale(1.05); box-shadow: 0 0 0 6px rgba(255,210,63,0.6), 0 7px 0 rgba(0,0,0,0.22); }
+.mode .pic { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; min-height: 30px; align-items: center; }
+.mode .pic.big { font-size: 34px; line-height: 1; }
+.mode .name { font-size: 20px; font-weight: 900; }
+.mini-frame { display: inline-grid; grid-template-columns: repeat(5, 9px); gap: 2px; padding: 3px; border: 2px solid #fff; border-radius: 6px; background: rgba(36,48,110,0.2); }
+.mini-frame i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(36,48,110,0.35); }
+
+/* The shared jar replaces the clock and the score pills in Pond helpers. */
+#jar { display: none; }
+body.calm-round #jar { display: flex; }
+body.calm-round #timer, body.calm-round #scores { display: none; }
+.jar { align-items: center; gap: 8px; padding: 6px 10px; border-radius: 18px; background: rgba(20,40,110,0.5); }
+.jar-goal:empty, .jar-tens:empty { display: none; }
+.jar-frame {
+  display: grid; grid-template-columns: repeat(5, var(--cell)); gap: 4px; padding: 4px; border-radius: 10px;
+  background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.8);
+}
+.cell { width: var(--cell); height: var(--cell); border-radius: 50%; border: 2px dashed var(--ring, #fff); opacity: .85; background: var(--c); }
+.cell.full { border: 2px solid #fff; opacity: 1; background: radial-gradient(circle at 35% 30%, #fff 0 16%, var(--c) 42%); }
+.cell.spare { opacity: .16; border-style: dotted; border-color: #fff; }
+.jar-tens { display: flex; gap: 4px; }
+.ten {
+  display: grid; grid-template-rows: repeat(10, 1fr); gap: 1px; width: 15px; height: calc(var(--cell) * 2 + 12px); padding: 2px;
+  border-radius: 8px; border: 2px dashed rgba(255,255,255,0.7);
+}
+.ten.full { border: 2px solid #fff; background: rgba(255,255,255,0.22); }
+.ten.arriving { visibility: hidden; }
+.ten i { border-radius: 50%; background: var(--c); }
+.swatch { display: block; width: calc(var(--cell) * 1.7); height: calc(var(--cell) * 1.7); border-radius: 50%; border: 3px solid #fff;
+  background: radial-gradient(circle at 35% 30%, #fff 0 14%, var(--c) 42%); }
+.jar-fly { position: fixed; left: 0; top: 0; width: var(--cell); height: var(--cell); margin: calc(var(--cell) / -2) 0 0 calc(var(--cell) / -2);
+  border-radius: 50%; border: 2px solid #fff; background: radial-gradient(circle at 35% 30%, #fff 0 16%, var(--c) 42%); z-index: 30; pointer-events: none; }
+.jar-ghost { position: fixed; z-index: 29; pointer-events: none; margin: 0; box-sizing: border-box; }
+
+/* The team's ending: groups of ten (or the sorted bubbles) counted up, then every duck's kind note. */
+.team { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(560px, 94vw); }
+.team-jar { display: flex; gap: 16px; justify-content: center; align-items: flex-end; }
+.team-ten { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.team-ten .ten { width: 24px; height: 128px; gap: 2px; padding: 3px; opacity: .35; transition: opacity .5s, transform .5s; }
+.team-ten b { font-size: 26px; visibility: hidden; text-shadow: 0 3px 0 rgba(0,0,0,.2); }
+.team-ten.lit .ten { opacity: 1; transform: translateY(-4px); }
+.team-ten.lit b { visibility: visible; }
+.team-jar.colour .jar-frame { --cell: 38px; }
+.team .cell.full { opacity: .3; transition: opacity .4s; }
+.team .cell.full.lit { opacity: 1; }
+.team-total { font-size: 34px; font-weight: 900; min-height: 1.2em; text-shadow: 0 3px 0 rgba(0,0,0,.2); }
+.pond { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 10px; border-radius: 28px; border: 4px solid rgba(255,255,255,0.6);
+  background: linear-gradient(170deg, var(--pond), var(--deep)); }
+.helper { display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 18px; background: rgba(20,40,110,0.32); font-size: 20px; font-weight: 800; text-align: left; }
+.helper.me { background: #fff1a8; color: #5b3a00; }
+.helper img { width: 50px; height: 50px; }
+.helper .tag { font-size: 24px; }
+.helper .note { flex: 1; }
+.helper .helps { white-space: nowrap; font-size: 22px; font-weight: 900; }
+
+@media (max-width: 560px) {
+  :root { --cell: 22px; }
+  .mode { min-height: 80px; } .mode .name { font-size: 17px; }
+  .helper { font-size: 16px; padding: 3px 8px; } .helper img { width: 40px; height: 40px; }
+  .team-ten .ten { height: 100px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  :root { --cell: 20px; }
+  .jar { padding: 4px 8px; gap: 6px; }
+  /* The ways to play join GO and the counting choice in the right-hand column. */
+  #menu .modes { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(146px + env(safe-area-inset-bottom)); width: 150px;
+    flex-direction: column; flex-wrap: nowrap; gap: 6px; z-index: 3; }
+  #menu .mode { width: 150px; min-height: 0; padding: 4px; border-width: 4px; gap: 2px; border-radius: 18px; }
+  #menu .mode.selected { transform: none; }
+  #menu .mode { min-height: 46px; }
+  /* The duck row shrinks to fit beside the right-hand column instead of running underneath it. */
+  #menu .duck-row { gap: 8px; }
+  #menu .duck-pick { width: min(76px, calc((100vw - 236px) / 6 - 8px)); height: min(76px, calc((100vw - 236px) / 6 - 8px)); }
+  #menu .duck-pick img { width: 92%; height: 92%; }
+  .mode .name { font-size: 15px; } .mode .pic.big { font-size: 24px; } .mode .pic { min-height: 22px; }
+  .team { flex-direction: row; flex-wrap: wrap; justify-content: center; width: min(760px, 96vw); gap: 6px 14px; }
+  .team-ten .ten { height: 84px; width: 20px; } .team-ten b { font-size: 18px; }
+  .team-jar.colour .jar-frame { --cell: 26px; }
+  .team-total { font-size: 24px; order: 3; width: 100%; }
+  .pond { width: auto; flex: 1 1 300px; padding: 6px; gap: 3px; border-radius: 20px; }
+  .helper { font-size: 14px; padding: 1px 8px; } .helper img { width: 30px; height: 30px; } .helper .tag { font-size: 18px; } .helper .helps { font-size: 16px; }
+}
+/* Upright phones up to 700px tall: the pictures say it, so the headings make way for the ways to play. */
+@media (max-width: 420px) and (max-height: 700px) and (orientation: portrait) {
+  #menu h2 { display: none; }
+  .mode { min-height: 70px; padding: 4px 6px 6px; gap: 3px; } .mode .pic.big { font-size: 28px; }
+}
+@media (max-width: 420px) and (max-height: 600px) and (orientation: portrait) {
+  #menu .mode .name { display: none; }
+  #menu .mode { min-height: 52px; }
+  .duck-pick { width: 68px; height: 68px; border-radius: 18px; } .duck-pick img { width: 62px; height: 62px; }
+  .arena { padding: 2px 4px 4px; } .arena .emoji { font-size: 38px; }
+  #menu { gap: 6px; }
+}
+@media (max-height: 330px) and (orientation: landscape) {
+  #menu .logo.small { font-size: 28px; margin-left: 100px; }
+  /* The pictures say it: the words make way so the column clears the store's corner button. */
+  #menu .mode .name { display: none; }
+}
+
 /* Calm pass: honour reduced motion for the animations that remain. */
 @media (prefers-reduced-motion: reduce) {
   .spinner, .hint-finger .finger, .score.bump, .goal-bubble.new, .dash.ready, .countdown.tick, .place { animation: none; }
+  .team-ten .ten, .team .cell.full, .mode { transition: none; }
   .float { animation: float-fade 1.1s linear forwards; }
   @keyframes float-fade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
   .banner, .banner.show { transform: none; transition: opacity .4s; }

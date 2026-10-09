@@ -71,6 +71,36 @@ export const ITEMS = {
   gift: { points: 0, radius: 0.6 },
 }
 
+/**
+ * Pond helpers (the calm default): every duck fills one shared ten-frame together, with no clock.
+ * Bubbles carry gentle colours so sorting can be the goal. Bumper race is the lively timed round.
+ */
+export const MODES = ['calm', 'lively']
+export const validMode = (m) => MODES.includes(m)
+export const BUBBLE_COLOURS = [
+  { name: 'blue', hex: '#5aa9ff' },
+  { name: 'green', hex: '#5fcf6a' },
+  { name: 'pink', hex: '#ff8fc8' },
+  { name: 'yellow', hex: '#ffd23f' },
+]
+/** The goals take turns, from one ten to three tens, with colour sorting in between. */
+export const GOALS = [
+  { kind: 'tens', n: 1 },
+  { kind: 'colour', c: 1, n: 5 },
+  { kind: 'tens', n: 2 },
+  { kind: 'colour', c: 2, n: 7 },
+  { kind: 'tens', n: 3 },
+  { kind: 'colour', c: 0, n: 10 },
+]
+/** How many bubbles a goal needs in the jar. */
+export const goalTarget = (g) => (g.kind === 'tens' ? g.n * 10 : g.n)
+/** A goal from the network: checked against the known list. */
+export function validGoal(g) {
+  return GOALS.find((k) => g && k.kind === g.kind && k.n === g.n && (k.kind === 'tens' || k.c === g.c)) ?? null
+}
+/** Ducks have names, so the team results can say who helped. */
+export const duckName = (id) => (validDuck(id) ? id[0].toUpperCase() + id.slice(1) : 'Ducky')
+
 export const PLAYER_EMOJI = ['🐶', '🐱', '🐰', '🦊', '🐼', '🐯', '🐨', '🐵']
 
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
