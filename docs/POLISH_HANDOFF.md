@@ -13,7 +13,20 @@ The owner wants all twelve originals brought to 10/10 rather than any new games.
 
 Work one game at a time and record each pass in `docs/polish/<game-id>.md`. The scorecard and three-phase plan are in [docs/polish/AUDIT_2026-10-09.md](polish/AUDIT_2026-10-09.md). Polish notes for the retired games are archived in `docs/archive/retired-polish-2026-10-07/`. Blender 5.2 runs on the owner's machine. The CLI is preferred because jobs can run in parallel; the Blender MCP server works but runs jobs one at a time.
 
-## Phase 2 complete (2026-10-09, not yet deployed)
+## Released 2026-10-09
+
+All twelve originals were published with `node examples/publish.mjs`, and their version URLs are recorded in each `game.json` (commit 42330ec). They were listed through `pnpm --dir apps/store seed:remote`. Every version URL returned 200. The live store shows the new how-to-play text and plays the new files (e.g. `speech.js`, Star Catcher's `sky.js`) through its verified `/game-assets/` gateway.
+
+Before release, the work went through eleven `/simplify` iterations, until a fresh four-angle scan (reuse, simplification, efficiency, altitude) came back clean. Those iterations produced:
+- **`speech.js`:** a shared queued voice that owns mute and provides `listWords`.
+- **A richer `adventure.js`:** the default choice button and progress row, `announce`, `hint`, `place` and `select`.
+- **One exit path per screen** in every game, stopping speech and cancelling timers.
+
+Still to verify live: two-device multiplayer in Paint Splash, Bumper Ducks and Crash Racers, which only works from bitgames.store.
+
+Known small gap: if a child leaves Fish Pond mid-show of their 15th kind, the 15/15 trophy card is not shown, although the book records the catch.
+
+## Phase 2 complete (2026-10-09)
 
 Every original now has its learning inside the core action, with calm untimed play as the default and lively modes kept as menu choices:
 
@@ -32,7 +45,7 @@ Every original now has its learning inside the core action, with calm untimed pl
 | Rocket Garage | Predict-then-test fair test on every launch with a ghost rocket and a findings notebook |
 | Star Catcher | Real constellations built star by star, named with a fact, ending in a night sky |
 
-Each game's `docs/polish/<game-id>.md` has the design, file:line changes, evidence and remaining ideas. Release still needs family play, then publishing each game's Worker and refreshing the store listings. The Fish Pond builder keeps shipped GLBs unchanged when a fresh export has the same geometry; other builders may want the same guard.
+Each game's `docs/polish/<game-id>.md` has the design, file:line changes, evidence and remaining ideas. Released 2026-10-09 (see below). Family play is the next real test. The Fish Pond builder keeps shipped GLBs unchanged when a fresh export has the same geometry; other builders may want the same guard.
 
 ## Phase 2 design decisions (2026-10-09)
 
@@ -49,7 +62,7 @@ The owner delegated the open Phase 2 questions ("use your judgement"). These def
 | Crash Racers | Brief slow motion on big jumps stays | It's a stunt moment, not crash spectacle |
 | Fish Pond | Clownfish is an interim rare lake visitor with a corrective note, until a sea/reef place is built (Phase 2/3) | Removing it would break the 15-creature book |
 
-## Phase 1 calm pass complete (2026-10-09, not yet deployed)
+## Phase 1 calm pass complete (2026-10-09)
 
 All twelve originals had the Phase 1 calm pass described in the audit:
 - strobes, infinite pulses, confetti storms, combo and score pressure, best scores and star grades removed
