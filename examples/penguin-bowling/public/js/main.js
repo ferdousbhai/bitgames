@@ -140,7 +140,7 @@ penguin.onHit = (e) => {
   const v = Math.abs(e.contact.getImpactVelocityAlongNormal())
   if (!game.touchedPins) {
     game.touchedPins = true
-    effects.shake = Math.min(0.6, v * 0.05)
+    effects.shake = Math.min(0.3, v * 0.03) // a small physical bump only
   }
   if (v > 1) audio.bonk(v / 10)
   pins.wake()
@@ -275,37 +275,22 @@ function finishRoll() {
   updateHud()
   updateRack(standingSet())
 
-  const deck = new THREE.Vector3(0, 1.2, LANE.headPin - 0.8)
-  if (r.strike) {
-    banner('STRIKE!', { kind: 'strike', stars: 3, plus: knocked })
+  // Every roll gets the same calm reply: what happened, in pictures and one number.
+  // Strikes and spares are named (they change the score), with one soft glow and chord, played once.
+  const deck = new THREE.Vector3(0, 1.6, LANE.headPin - 0.8)
+  if (r.strike || r.spare) {
+    banner(r.strike ? 'Strike!' : 'Spare!', { kind: r.strike ? 'strike' : 'spare' })
     audio.fanfare()
     audio.cheer(true)
     crowd.start(true)
-    game.dance = true
-    effects.shower(new THREE.Vector3(0, 3.5, LANE.headPin - 0.8), 2.5, 140)
-    for (let i = 0; i < 7; i++) {
-      setTimeout(() => {
-        if (game.state !== 'result') return
-        const from = new THREE.Vector3((Math.random() - 0.5) * 7, 0.5, LANE.headPin - 3 - Math.random() * 2)
-        effects.firework(from, 4 + Math.random() * 2.5, () => audio.bang())
-        audio.launch()
-      }, 200 + i * 380)
-    }
-  } else if (r.spare) {
-    banner('SPARE!', { kind: 'spare', stars: 2, plus: knocked })
-    audio.fanfare()
-    audio.cheer(true)
-    crowd.start(true)
-    effects.toss(deck, 120)
+    game.dance = r.strike
+    effects.glow(deck, r.strike ? 16 : 12)
   } else {
-    const words = ['Wheee!', 'Nice!', 'Good!', 'Great!', 'Super!', 'Wow!', 'Amazing!', 'Fantastic!', 'So close!', 'So close!']
-    banner(knocked === 0 ? 'Wheee! 🐧' : words[knocked], { stars: Math.min(3, Math.ceil(knocked / 3)), plus: knocked })
+    banner(knocked === 0 ? 'Wheee! 🐧' : `💥 ${knocked}`, { plus: 0 })
     audio.jingle(knocked)
-    audio.cheer(knocked >= 5)
-    crowd.start(knocked >= 5)
-    if (knocked) effects.toss(deck, 12 + knocked * 5)
-    // No pins down: a little sparkle above the deck, never a cloud over the pins left to count
-    else effects.sparkleAt(new THREE.Vector3(0, 2.2, LANE.headPin - 0.8), '#fff3b0', 12, 2)
+    crowd.start(false)
+    // A few pale sparkles above the deck, never a cloud over the pins left to count
+    if (knocked) effects.glow(deck, 6)
   }
 }
 
@@ -358,9 +343,11 @@ function walk(dt) {
 }
 
 function toAim() {
+  effects.clearCelebration()
   prediction.aim()
   game.state = 'aim'
   game.idle = 0
+  game.hinted = false
   game.walkTo = null
   penguin.ready(game.x)
   effects.puff(penguin.group.position.clone().setY(0.2), 6, 0.5)
@@ -380,20 +367,18 @@ function gameOver() {
   }
   game.lastScore = total
   $('final').textContent = total
-  const stars = total >= 100 ? 3 : total >= 50 ? 2 : 1
-  $('stars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? '' : 'dim'}">⭐</span>`).join('')
-  $('new-best').classList.toggle('hidden', !newBest)
+  // What the child did, not a grade: how many strikes and spares they rolled
+  const marks = card.frames.flatMap((_, i) => card.marks(i))
+  const strikes = marks.filter((m) => m === 'X').length
+  const spares = marks.filter((m) => m === '/').length
+  $('stars').innerHTML = `<span>🎳 ${card.frames.flat().reduce((a, n) => a + n, 0)}</span>` +
+    (strikes ? ` <span class="mark x">X ${strikes}</span>` : '') + (spares ? ` <span class="mark s">/ ${spares}</span>` : '')
+  $('stars').setAttribute('aria-label', `${strikes} strikes and ${spares} spares`)
   show('results')
   audio.fanfare()
-  audio.cheer(true)
   crowd.start(true)
-  for (let i = 0; i < 6; i++) {
-    setTimeout(() => {
-      // Left and right of the results card, so the card never hides them
-      const from = new THREE.Vector3((i % 2 ? -1 : 1) * (2.6 + Math.random() * 2), 0.5, LANE.headPin - 2)
-      effects.firework(from, 4 + Math.random() * 3, () => audio.bang())
-    }, 300 + i * 450)
-  }
+  effects.clearCelebration()
+  effects.glow(new THREE.Vector3(0, 1.6, LANE.headPin - 1.2), 14)
 }
 
 // --- HUD ------------------------------------------------------------------------------
@@ -492,6 +477,7 @@ function setTheme(name) {
   scenery.setTheme(name)
   lane.setNight(THEMES[name].night)
   pins.build(THEMES[name].pins)
+  document.body.classList.toggle('pins-fish', THEMES[name].pins === 'fish')
   pins.list.forEach((p) => (p.drop = 0))
   audio.setTune(name)
 }
@@ -508,8 +494,7 @@ function toTitle() {
   prediction.reset()
   game.state = 'title'
   game.dance = false
-  $('best').textContent = game.best
-  $('last').textContent = game.lastScore !== null ? `Last time: ${game.lastScore}` : ''
+  $('last').textContent = game.lastScore !== null ? `🎳 ${game.lastScore}` : ''
   lane.hideAim()
   pins.reset()
   pins.list.forEach((p) => (p.drop = 0))
@@ -850,11 +835,11 @@ function frame(fixedDt) {
     if ((game.timer > 1.1 && !pins.moving()) || game.timer > 3.4) finishRoll()
   } else if (game.state === 'aim' && !drag.on) {
     walk(dt)
-    // Gentle nudge for little ones who have stopped: show the swipe hand and wave.
+    // One quiet hint for a child who has paused for a long while: the swipe hand, once, no sound
     game.idle += dt
-    if (game.idle > 6) {
+    if (game.idle > 30 && !game.hinted) {
+      game.hinted = true
       $('hint').classList.remove('hidden')
-      if ((game.idle - 6) % 4 < dt && penguin.poke()) audio.squeak(0.9)
     }
   } else if (game.state === 'result') {
     const wait = game.dance ? 3.4 : 2.0

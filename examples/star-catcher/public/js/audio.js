@@ -82,16 +82,16 @@ export class Audio {
     osc.stop(t + dur + 0.05)
   }
 
-  /** Catching climbs the scale while you keep catching quickly. */
-  catch(combo, kind) {
+  /** A soft note chosen by where the catch happened (0 = left … 5 = right); it never climbs with streaks. */
+  catch(step, kind) {
     if (!this.ctx) return
-    const n = SCALE[Math.min(combo, SCALE.length - 1)]
+    const n = SCALE[Math.min(step, SCALE.length - 1)]
     if (kind === 'gem') {
       this.tone(n, { dur: 0.5, vol: 0.14 })
       this.tone(n * 2.76, { dur: 0.3, vol: 0.05, when: 0.01 })
       this.tone(n * 1.5, { dur: 0.4, vol: 0.1, when: 0.08 })
     } else if (kind === 'rainbow') {
-      ;[0, 2, 4, 5, 7].forEach((k, i) => this.tone(SCALE[Math.min(k + 2, SCALE.length - 1)], { when: i * 0.06, dur: 0.4, vol: 0.12, type: 'triangle' }))
+      ;[0, 2, 4].forEach((k, i) => this.tone(SCALE[k + 1], { when: i * 0.1, dur: 0.45, vol: 0.08, type: 'triangle' }))
     } else {
       this.tone(n, { dur: 0.32, vol: 0.16 })
       this.tone(n * 2, { dur: 0.18, vol: 0.05, type: 'triangle', echo: false })
@@ -100,8 +100,7 @@ export class Audio {
 
   powerUp() {
     if (!this.ctx) return
-    this.tone(330, { dur: 0.45, vol: 0.12, type: 'triangle', slide: 3 })
-    ;[523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, { when: 0.12 + i * 0.07, dur: 0.3, vol: 0.1 }))
+    ;[523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, { when: i * 0.1, dur: 0.4, vol: 0.07 }))
   }
 
   powerDown() {
@@ -124,7 +123,7 @@ export class Audio {
     lfoGain.gain.value = 30
     lfo.connect(lfoGain).connect(osc.frequency)
     g.gain.setValueAtTime(0.0001, t)
-    g.gain.exponentialRampToValueAtTime(0.22, t + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.14, t + 0.02)
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6)
     osc.connect(g).connect(this.sfx)
     osc.start(t)
@@ -137,9 +136,8 @@ export class Audio {
   fanfare() {
     if (!this.ctx) return
     const notes = [523.25, 659.25, 783.99, 1046.5]
-    notes.forEach((f, i) => this.tone(f, { when: i * 0.12, dur: 0.5, vol: 0.12, type: 'triangle' }))
+    notes.forEach((f, i) => this.tone(f, { when: i * 0.16, dur: 0.6, vol: 0.08, type: 'sine' }))
     ;[523.25, 659.25, 783.99].forEach((f) => this.tone(f, { when: 0.5, dur: 1.1, vol: 0.07, type: 'triangle' }))
-    this.tone(2093, { when: 0.5, dur: 0.6, vol: 0.04 })
   }
 
   whoosh(dur = 1.2) {
@@ -218,7 +216,7 @@ export class Audio {
   updateEngine(on, speed) {
     if (!this.engine) return
     const t = this.ctx.currentTime
-    this.engine.g.gain.setTargetAtTime(on ? 0.05 + Math.min(speed, 12) * 0.006 : 0, t, 0.15)
+    this.engine.g.gain.setTargetAtTime(on ? 0.03 + Math.min(speed, 12) * 0.003 : 0, t, 0.15)
     this.engine.f.frequency.setTargetAtTime(200 + Math.min(speed, 12) * 40, t, 0.15)
   }
 

@@ -9,6 +9,7 @@ import { STOPS, World } from './world.js'
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
 const { clamp, damp } = THREE.MathUtils
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // --- Saved bits (private windows may refuse storage, so everything is guarded) ------
 
@@ -64,15 +65,13 @@ const glowTex = makeGlowTexture(false)
 // `k` is the visible height compared with a roomy screen: falling speeds scale with it, so a
 // zoomed-in sideways phone gives little hands just as long to reach each star
 const FULL_H = Math.tan((50 * Math.PI) / 360) * 16
-const view = { w: 10, h: 7.5, k: 1, xMin: -9, xMax: 9, yMin: -6, yMax: 1 }
+// hudY: the lowest edge of the top HUD in world units; falling things appear below it, never through it
+const view = { w: 10, h: 7.5, k: 1, xMin: -9, xMax: 9, yMin: -6, yMax: 1, hudY: 5 }
 const game = {
   state: 'loading', // loading | title | play
   score: 0,
-  best: store.get('star-catcher-best', 0),
   stops: 0, // planets reached
   legPoints: 0,
-  combo: 0,
-  comboTimer: 0,
   spawnTimer: 1,
   magnet: 0,
   double: 0,
@@ -137,12 +136,24 @@ function speakMission(text) {
   speechSynthesis.speak(words)
 }
 
+let missionTimers = []
+function clearMissionTimers() {
+  missionTimers.forEach(clearTimeout)
+  missionTimers = []
+  $('adventure-goal')?.classList.remove('resolved')
+}
 const adventure = createAdventure({
   id: 'star-catcher',
   anchor: $('go'),
   hud: $('hud'),
   isMuted: () => audio.muted,
-  celebrate: (text) => banner('⭐ Mission complete!', text),
+  celebrate: (text) => {
+    banner('⭐ Mission complete!', text)
+    // The finished card stays a moment so the child sees it full, then gently clears away
+    clearMissionTimers()
+    missionTimers.push(setTimeout(() => $('adventure-goal')?.classList.add('resolved'), 3500))
+    missionTimers.push(setTimeout(() => ($('adventure-goal').hidden = true), 4300))
+  },
   renderProgress: renderMissionProgress,
   options: [
     { emoji: '🚀', label: 'Free space flight' },
@@ -182,13 +193,14 @@ function leg(i) {
   const d = Math.min(i, 6)
   return {
     need: 12 + 5 * Math.min(i, 5),
-    speed: 2.3 + d * 0.33,
-    interval: Math.max(0.55, 1.05 - d * 0.08),
+    // A constant gentle pace: later planets add variety, never speed
+    speed: 2.3,
+    interval: 1.0,
     gem: i >= 1 || adventure.option.label === 'Three-gem mission' ? 0.14 : 0,
     pink: i >= 2 ? 0.14 : 0,
     rainbow: i >= 3 ? 0.05 : 0,
     power: i >= 2 ? 0.05 : 0,
-    rock: i >= 3 ? 0.07 + Math.min(i - 3, 3) * 0.02 : 0,
+    rock: i >= 3 ? 0.06 : 0,
     wave: i >= 1 ? 0.1 : 0.04,
     ufo: i >= 1,
   }
@@ -204,7 +216,6 @@ const KINDS = {
   rock: { model: 'rock', points: 0, scale: 0.8, r: 0.6, glow: null, colors: ['#c9b6ff', '#ffffff'] },
 }
 
-let rainbowMat = null // its colour cycles every frame in updateItems
 
 // --- Assets -------------------------------------------------------------------------
 
@@ -218,8 +229,11 @@ async function load() {
   pinkMat.color.set('#ff7eb9')
   pinkMat.emissive.set('#ff2e88')
   pinkMat.emissiveIntensity = 0.35
-  rainbowMat = body.material.clone()
-  rainbowMat.emissiveIntensity = 0.5
+  // A steady pearly lilac: special without cycling colours
+  const rainbowMat = body.material.clone()
+  rainbowMat.color.set('#c9b6ff')
+  rainbowMat.emissive.set('#8f6bff')
+  rainbowMat.emissiveIntensity = 0.35
 
   for (const [kind, k] of Object.entries(KINDS)) {
     const g = new THREE.Group()
@@ -230,7 +244,7 @@ async function load() {
     m.name = 'model'
     g.add(m)
     if (k.glow) {
-      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: k.glow, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }))
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: k.glow, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }))
       halo.scale.setScalar(3.4)
       halo.position.z = -0.6
       halo.name = 'halo'
@@ -380,15 +394,11 @@ function catchItem(it) {
     if (it.kind === 'magnet') game.magnet = 9
     else game.double = 9
     audio.powerUp()
-    particles.burst(pos, it.k.colors, 30, 7, 0.9)
-    rings.spawn(pos, it.k.glow, 3.5, 0.6)
+    particles.burst(pos, it.k.colors, 10, 3, 0.8)
     renderPowers()
     // The cheer pops out beside its timer bar, not over Kitty: it shows what the bar means
     const pill = $('powers').children[it.kind === 'magnet' ? 0 : game.magnet > 0 ? 1 : 0]
     if (pill) {
-      pill.classList.remove('bump')
-      void pill.offsetWidth
-      pill.classList.add('bump')
       const r = pill.getBoundingClientRect()
       popups.showAt(r.right + 8, r.top + r.height / 2, it.kind === 'magnet' ? '🧲 Magnet!' : '💖 Double stars!')
     }
@@ -399,12 +409,10 @@ function catchItem(it) {
   const points = it.k.points * (game.double > 0 ? 2 : 1)
   game.score += points
   game.legPoints += points
-  game.combo = game.comboTimer > 0 ? game.combo + 1 : 0
-  game.comboTimer = 1.6
-  audio.catch(game.combo, it.kind === 'gem' ? 'gem' : it.kind === 'rainbow' ? 'rainbow' : 'star')
-  particles.burst(pos, it.k.colors, it.kind === 'rainbow' ? 36 : 20, it.kind === 'star' ? 5.5 : 7, it.kind === 'star' ? 0.65 : 0.85)
-  rings.spawn(pos, it.k.glow, it.kind === 'star' ? 2.2 : 3.2)
-  popups.show(pos, `+${points}`, points >= 3)
+  // The note follows where the star was caught (left is low, right is high), so it never climbs into a frenzy
+  const across = clamp((pos.x - view.xMin) / Math.max(view.xMax - view.xMin, 1), 0, 1)
+  audio.catch(Math.round(across * 5), it.kind === 'gem' ? 'gem' : it.kind === 'rainbow' ? 'rainbow' : 'star')
+  particles.burst(pos, it.k.colors, it.kind === 'star' ? 6 : 10, 2.5, 0.6)
   game.joy = 0.35
   updateScore()
   if (game.legPoints >= leg(game.stops).need) arrive()
@@ -418,11 +426,10 @@ function bumpRock(it) {
   it.vy = 2.5
   it.spin = dir * -4
   game.dizzy = 1.2
-  game.combo = 0
   rocket.vel.x -= dir * 6
   audio.boing()
-  popups.show(it.obj.position, 'Boing! 💫')
-  for (let k = 0; k < 10; k++) {
+  popups.show(it.obj.position, '💫')
+  for (let k = 0; k < 6; k++) {
     const a = (k / 10) * Math.PI * 2
     particles.emit(rocketCenter.x + Math.cos(a) * 0.9, rocketCenter.y + 1.2, 0.5, { vx: Math.cos(a) * 1.5, vy: Math.sin(a) * 1.5, spread: 0.3, life: 1, size: 0.5, color: '#fff3a0', drag: 1 })
   }
@@ -432,17 +439,18 @@ function arrive() {
   const stop = STOPS[game.stops % STOPS.length]
   game.stops++
   game.legPoints = 0
-  game.roll = 1
+  game.roll = reducedMotion ? 0 : 1
   const lap = Math.floor(game.stops / STOPS.length)
   const next = STOPS[game.stops % STOPS.length]
   const done = game.stops % STOPS.length === 0
   banner(done ? `🎉 You visited every planet!` : `${stop.emoji} Hello, ${stop.name}!`, done ? `Let's fly again! Trip ${lap + 1}` : `Next stop: ${next.emoji} ${next.name}`)
   audio.fanfare()
   world.setStop(game.stops)
-  // Confetti from the top of the screen
-  const colors = ['#ff6b6b', '#ffd23f', '#8ef0c8', '#7cc6fe', '#c9b6ff', '#ff8fc7']
-  for (let i = 0; i < 70; i++) {
-    particles.emit(rand(view.xMin, view.xMax), view.h + rand(0, 1), 1, { vx: rand(-1, 1), vy: rand(-2, -5), spread: 1, life: 2.2, size: rand(0.4, 0.7), endSize: 0.2, color: colors[i % colors.length], grav: -1.5, drag: 0.5 })
+  // One soft moment: a few slow, pale sparkles drift up around Kitty
+  const p = rocket.root.position
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2
+    particles.emit(p.x + Math.cos(a) * 1.2, p.y + 0.4 + Math.sin(a) * 1.2, 0.3, { vx: Math.cos(a) * 0.4, vy: 0.6 + Math.sin(a) * 0.3, spread: 0.2, life: 2.2, size: 0.45, endSize: 0, color: '#fff3c4', drag: 0.6 })
   }
   renderJourney()
 }
@@ -467,14 +475,6 @@ function banner(text, small) {
 function updateScore() {
   const el = $('score')
   el.textContent = `⭐ ${game.score}`
-  el.classList.remove('bump')
-  void el.offsetWidth
-  el.classList.add('bump')
-  if (game.score > game.best) {
-    game.best = game.score
-    store.set('star-catcher-best', game.best)
-  }
-  $('best').textContent = `🏆 ${game.best}`
 }
 
 function renderJourney() {
@@ -577,6 +577,7 @@ addEventListener('pointercancel', () => (pointerDown = false))
 addEventListener('keydown', (e) => {
   audio.unlock()
   if (e.key === 'm' || e.key === 'M') return toggleSound()
+  if (e.key === 'Escape') return goHome()
   if (game.state === 'title' && (e.key === 'Enter' || e.key === ' ')) return start()
   keys.add(e.key)
   game.idle = 0
@@ -599,6 +600,7 @@ $('sound').addEventListener('pointerdown', (e) => {
 
 function start() {
   if (game.state !== 'title') return
+  clearMissionTimers()
   adventure.begin()
   audio.unlock()
   audio.click()
@@ -613,8 +615,37 @@ function start() {
   if (adventure.option.goal) speakMission(adventure.option.goal)
   renderJourney()
   updateScore()
+  resize() // the HUD is on screen now, so the band that things fade in below can be measured
 }
 $('go').addEventListener('click', start)
+
+/** Back to the title, where the child can choose another mission or just fly again. */
+function goHome() {
+  if (game.state !== 'play') return
+  audio.click()
+  clearMissionTimers()
+  if ('speechSynthesis' in window) speechSynthesis.cancel()
+  game.state = 'title'
+  for (let i = items.length - 1; i >= 0; i--) recycle(i)
+  Object.assign(game, { score: 0, stops: 0, legPoints: 0, magnet: 0, double: 0, dizzy: 0, roll: 0, idle: 0 })
+  nudgeShown = false
+  nudgeUsed = false
+  nudgeEl.classList.remove('show')
+  ufo.active = false
+  ufo.obj.visible = false
+  ufo.timerLeft = 12
+  renderPowers()
+  world.setStop(0)
+  keys.clear()
+  pointerDown = false
+  $('banner').classList.remove('show')
+  $('hud').classList.add('hidden')
+  renderMissionChoice()
+  const screen = $('start')
+  screen.classList.remove('hidden')
+  requestAnimationFrame(() => screen.classList.remove('fade'))
+}
+$('home').addEventListener('click', goHome)
 
 // --- Layout -------------------------------------------------------------------------
 
@@ -639,6 +670,13 @@ function resize() {
   view.xMax = view.w - inset('paddingRight') - 0.8
   view.yMin = -view.h + inset('paddingBottom') + 1.5
   view.yMax = Math.min(view.h * 0.2, view.h - 3)
+  // Falling things fade in below the score, journey and mission card, not through them
+  const hudBottom = Math.max(...['journey', 'score', 'adventure-goal'].map((id) => {
+    const el = $(id)
+    const r = el && !el.hidden ? el.getBoundingClientRect() : null
+    return r && r.top < h / 2 ? r.bottom : 0 // a card moved to the bottom on short screens does not count
+  })) + 12
+  view.hudY = view.h - Math.min(hudBottom, h * 0.3) * px
   const hpx = h * renderer.getPixelRatio()
   particles.setScale(hpx, camera.fov)
   world?.setScale(hpx, camera.fov)
@@ -681,7 +719,8 @@ function updateRocket(dt) {
   const lean = clamp(-r.vel.x * 0.045, -0.5, 0.5)
   r.root.rotation.z = damp(r.root.rotation.z, lean, 8, dt)
   let spin = clamp(-r.vel.x * 0.06, -0.8, 0.8)
-  if (game.dizzy > 0) spin += (1 - game.dizzy / 1.2) * Math.PI * 4
+  // Dizzy is a slow wobble, not a fast spin
+  if (game.dizzy > 0 && !reducedMotion) spin += Math.sin((1 - game.dizzy / 1.2) * Math.PI * 2) * 0.6
   if (game.roll > 0) {
     game.roll = Math.max(0, game.roll - dt * 0.9)
     spin += (1 - game.roll) ** 2 * Math.PI * 2
@@ -691,14 +730,15 @@ function updateRocket(dt) {
 
   // Flame flickers and grows when climbing
   const climb = clamp(r.vel.y * 0.08, -0.3, 0.6)
-  const f = 1 + climb + Math.sin(game.time * 31) * 0.08 + Math.sin(game.time * 17) * 0.06
-  r.flame.scale.set(1 + Math.sin(game.time * 23) * 0.05, f, 1 + Math.sin(game.time * 23) * 0.05)
-  r.glow.material.opacity = 0.55 + 0.25 * Math.sin(game.time * 27) + climb * 0.3
+  // A soft, slow breathing flame: no fast flicker
+  const f = 1 + climb + Math.sin(game.time * 4) * 0.04
+  r.flame.scale.set(1 + Math.sin(game.time * 3) * 0.02, f, 1 + Math.sin(game.time * 3) * 0.02)
+  r.glow.material.opacity = 0.6 + 0.05 * Math.sin(game.time * 2.5) + climb * 0.2
   r.glow.scale.setScalar(2.4 + climb * 1.2)
 
   // Kitty pilot: a happy bounce when catching things
   game.joy = Math.max(0, game.joy - dt)
-  r.pilot.rotation.z = Math.sin(game.time * 2) * 0.12 + Math.sin(game.joy * 30) * game.joy * 0.6
+  r.pilot.rotation.z = Math.sin(game.time * 2) * 0.12 + Math.sin(game.joy * 12) * game.joy * 0.3
   r.pilot.position.z = r.pilotZ + game.joy * 0.15
 
   // Exhaust trail (every frame, so it reuses one options object and pre-parsed colours)
@@ -720,24 +760,19 @@ function updateRocket(dt) {
   // Power-up visuals
   r.badge.visible = game.magnet > 0
   if (r.badge.visible) {
-    r.badge.position.y = 2.25 + Math.sin(game.time * 5) * 0.1
-    r.badge.rotation.z = Math.sin(game.time * 3) * 0.25
+    r.badge.position.y = 2.25 + Math.sin(game.time * 2) * 0.08
+    r.badge.rotation.z = Math.sin(game.time * 1.5) * 0.15
   }
-  const bubbleTarget = game.double > 0 ? 0.6 + 0.15 * Math.sin(game.time * 6) : 0
+  const bubbleTarget = game.double > 0 ? 0.55 + 0.05 * Math.sin(game.time * 2) : 0
   const u = r.bubble.material.uniforms.uOpacity
   u.value = damp(u.value, bubbleTarget, 6, dt)
   r.bubble.visible = u.value > 0.01
-  r.bubble.scale.setScalar(1 + Math.sin(game.time * 4) * 0.03)
+  r.bubble.scale.setScalar(1 + Math.sin(game.time * 1.5) * 0.02)
 
   rocketCenter.set(p.x, p.y + 0.3, 0)
 }
 
 function updateItems(dt) {
-  const t = game.time
-  if (rainbowMat) {
-    rainbowMat.color.setHSL((t * 0.35) % 1, 0.85, 0.62)
-    rainbowMat.emissive.setHSL((t * 0.35) % 1, 0.9, 0.35)
-  }
   for (let i = items.length - 1; i >= 0; i--) {
     const it = items[i]
     const o = it.obj
@@ -770,15 +805,13 @@ function updateItems(dt) {
     else if (it.kind === 'rock') {
       if (!it.bounced) o.rotation.z = Math.sin(it.t * 0.9) * 0.25
     } else if (it.kind === 'magnet' || it.kind === 'heart') {
-      model.rotation.y = Math.sin(it.t * 2.5) * 0.4
-      o.scale.setScalar(it.k.scale * (1 + Math.sin(it.t * 7) * 0.08))
+      model.rotation.y = Math.sin(it.t * 2) * 0.4
     } else {
       model.rotation.y = Math.sin(it.t * 2.2) * 0.55
       model.rotation.z = Math.sin(it.t * 1.4) * 0.2
-      // Special stars twinkle and leave a sparkly trail, so they stand out from plain ones
-      if (it.kind !== 'star') {
-        o.scale.setScalar(it.k.scale * (1 + Math.sin(it.t * 9) * 0.07))
-        if (Math.random() < dt * 22) {
+      // Special stars leave a faint, occasional sparkle so they stand out from plain ones
+      if (it.kind !== 'star' && !it.bounced) {
+        if (Math.random() < dt * 2.5) {
           sparkle.color = it.k.colors[(Math.random() * it.k.colors.length) | 0]
           sparkle.size = rand(0.4, 0.7)
           particles.emit(o.position.x + rand(-0.35, 0.35), o.position.y + rand(0, 0.4), 0.1, sparkle)
@@ -786,8 +819,13 @@ function updateItems(dt) {
       }
     }
 
+    // Things grow in just below the HUD band instead of sliding through the score and mission card
+    const grow = it.bounced ? 1 : clamp((view.hudY - o.position.y) / 0.8 + 0.001, 0, 1)
+    o.visible = grow > 0
+    if (!it.bounced) o.scale.setScalar(it.k.scale * grow)
+
     // Catch!
-    if (game.state === 'play' && !it.bounced) {
+    if (game.state === 'play' && !it.bounced && grow >= 1) {
       const d = Math.hypot(o.position.x - rocketCenter.x, o.position.y - rocketCenter.y)
       if (d < 0.95 + it.k.r * 0.9) {
         if (it.kind === 'rock') {
@@ -801,14 +839,12 @@ function updateItems(dt) {
     }
     if (o.position.y < -view.h - 2.5 || Math.abs(o.position.x) > view.w + 4) recycle(i)
   }
-  // Halos of a kind share a material, so they pulse together on the game clock
-  const glow = 0.4 + 0.15 * Math.sin(game.time * 5)
-  for (const kind in haloMats) haloMats[kind].opacity = glow
 }
 
 function updateUfo(dt) {
   if (!ufo.obj) return
-  ufo.lightMats.forEach((m, i) => (m.emissiveIntensity = 0.6 + 1.6 * (0.5 + 0.5 * Math.sin(game.time * 8 + i * 2))))
+  // Slow, soft glow in turn: never a blink
+  ufo.lightMats.forEach((m, i) => (m.emissiveIntensity = 0.8 + 0.3 * Math.sin(game.time * 1.2 + i * 2)))
   if (!ufo.active) {
     if (game.state !== 'play' || !leg(game.stops).ufo) return
     ufo.timerLeft -= dt
@@ -818,7 +854,7 @@ function updateUfo(dt) {
     ufo.t = 0
     ufo.dropTimer = 0.8
     ufo.obj.visible = true
-    ufo.obj.position.set(-ufo.dir * (view.w + 3), view.h - 2.6, -1)
+    ufo.obj.position.set(-ufo.dir * (view.w + 3), view.hudY - 1.4, -1)
     audio.whoosh(1.4)
     return
   }
@@ -826,7 +862,7 @@ function updateUfo(dt) {
   const o = ufo.obj
   const speed = Math.max(2.4, (view.w * 2 + 6) / 8)
   o.position.x += ufo.dir * speed * dt
-  o.position.y = view.h - 2.6 + Math.sin(ufo.t * 2.2) * 0.3
+  o.position.y = view.hudY - 1.4 + Math.sin(ufo.t * 1.2) * 0.2
   o.rotation.x = 0.3
   o.rotation.z = -ufo.dir * 0.15 + Math.sin(ufo.t * 3) * 0.05
   o.rotation.y += dt * 0.8
@@ -834,7 +870,7 @@ function updateUfo(dt) {
   if (ufo.dropTimer <= 0 && o.position.x > view.xMin && o.position.x < view.xMax) {
     ufo.dropTimer = 0.75
     spawn(Math.random() < 0.2 ? 'gem' : 'star', o.position.x, o.position.y - 0.8, -leg(game.stops).speed * view.k * 0.9, { sway: 0.2 })
-    audio.tone(1200 + Math.random() * 400, { dur: 0.15, vol: 0.05, slide: 0.5, echo: false })
+    audio.tone(900 + Math.random() * 200, { dur: 0.2, vol: 0.03, slide: 0.7, echo: false })
   }
   if (Math.abs(o.position.x) > view.w + 3.5 && ufo.t > 1) {
     ufo.active = false
@@ -846,9 +882,11 @@ function updateUfo(dt) {
 // A hand swipes under the rocket when it has not been steered for a while: no reading needed
 const nudgeEl = $('nudge')
 let nudgeShown = false
+let nudgeUsed = false // one quiet hint per flight, after a long rest
 function updateNudge(dt) {
   game.idle += dt
-  const show = game.idle > 4 && !pointerDown
+  if (nudgeShown && game.idle < 1) nudgeUsed = true
+  const show = !nudgeUsed && game.idle > 30 && !pointerDown
   if (show !== nudgeShown) {
     nudgeShown = show
     nudgeEl.classList.toggle('show', show)
@@ -881,7 +919,6 @@ function frame() {
       spawnSomething()
       game.spawnTimer = L.interval * rand(0.8, 1.2)
     }
-    game.comboTimer -= dt
     game.dizzy = Math.max(0, game.dizzy - dt)
     const hadPower = game.magnet > 0 || game.double > 0
     if (game.magnet > 0 && (game.magnet -= dt) <= 0) audio.powerDown()
@@ -914,8 +951,6 @@ function frame() {
 
 resize()
 renderer.setAnimationLoop(frame)
-$('best-start').textContent = game.best ? `🏆 Best: ${game.best}` : ''
-$('best').textContent = `🏆 ${game.best}`
 renderSound()
 
 load()

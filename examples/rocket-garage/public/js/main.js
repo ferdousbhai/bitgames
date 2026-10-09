@@ -806,22 +806,23 @@ for (const type of ['pointerdown', 'keydown']) addEventListener(type, () => (las
 const idle = () => (performance.now() - lastInput) / 1000
 
 function hintTarget() {
-  if (game.state === 'party') return !$('reward').classList.contains('hidden') && idle() > 8 && performance.now() - rewardAt > 6000 ? $('again') : null
+  if (game.state === 'party') return !$('reward').classList.contains('hidden') && idle() > 30 ? $('again') : null
   if (game.state !== 'garage' || $('workshop')?.open) return null
   if (!save.picked) {
     const items = [...$('items').children]
     return items.find((b) => !b.classList.contains('on') && !b.classList.contains('locked')) ?? null
   }
-  if (save.flights === 0 || idle() > 15) return $('launch')
+  if (save.flights === 0 || idle() > 30) return $('launch')
   return null
 }
 function placeFinger() {
   const el = game.state === 'garage' || game.state === 'party' ? hintTarget() : null
   const f = $('finger')
   if (!el) return f.classList.add('hidden')
+  // The fingertip rests on the lower-right edge of the target, so its picture and label stay visible
   const r = el.getBoundingClientRect()
-  f.style.left = `${r.left + r.width / 2 - 20}px`
-  f.style.top = `${r.top + r.height / 2}px`
+  f.style.left = `${Math.min(r.right - 26, innerWidth - 60)}px`
+  f.style.top = `${Math.min(r.top + r.height * 0.62, innerHeight - 64)}px`
   f.classList.remove('hidden')
 }
 function hintStep() {
@@ -963,8 +964,9 @@ function updateCountdown(dt) {
   game.t += dt
   const k = game.t / 3
   // Shake, rumble and smoke grow toward lift-off
-  rocket.wobbler.position.x = Math.sin(game.time * 47) * 0.02 * k * 2
-  rocket.wobbler.rotation.z = Math.sin(game.time * 31) * 0.015 * k * 2
+  // A small engine rumble that builds gently
+  rocket.wobbler.position.x = Math.sin(game.time * 20) * 0.01 * k
+  rocket.wobbler.rotation.z = Math.sin(game.time * 14) * 0.008 * k
   doors.open = Math.min(1, doors.open + dt * 0.5)
   if (game.t > 1) rocket.setFlame(0.15 + Math.random() * 0.1 * k)
   audio.setEngine(k * 0.5)
@@ -972,7 +974,8 @@ function updateCountdown(dt) {
     const a = Math.random() * Math.PI * 2
     smoke.emit(Math.cos(a) * 0.6, padTop + 0.2, Math.sin(a) * 0.6, { vx: Math.cos(a) * rand(1, 3) * k, vy: rand(0.2, 1.2), vz: Math.sin(a) * rand(0.5, 1.5), spread: 0.6, life: 1.6, size: rand(0.8, 1.6) * (0.5 + k), endSize: 2.5, color: '#ffffff', drag: 1.2 })
   }
-  padLights.forEach((m, i) => (m.emissiveIntensity = Math.sin(game.time * 12 + i) > 0 ? 3 : 0.3))
+  // The pad lights brighten steadily toward lift-off: a slow glow, never a strobe
+  padLights.forEach((m) => (m.emissiveIntensity = 1 + k * 1.2))
   const n = 3 - Math.floor(game.t)
   if (n !== game.count && n >= 1) {
     game.count = n
@@ -1065,9 +1068,6 @@ function liftoff() {
 function renderStars() {
   const el = $('stars')
   el.textContent = `⭐ ${flight.stars}`
-  el.classList.remove('bump')
-  void el.offsetWidth
-  el.classList.add('bump')
   $('turbo-fill').style.width = `${Math.min(1, flight.stars / TURBO) * 100}%`
 }
 
@@ -1173,12 +1173,9 @@ addEventListener('deviceorientation', (e) => {
 function catchStar(it) {
   flight.stars++
   save.stars++
-  flight.combo = flight.comboT > 0 ? flight.combo + 1 : 0
-  flight.comboT = 1.4
-  audio.catch(flight.combo)
-  sparks.burst(it.obj.position, ['#fff3a0', '#ffd23f', '#ffffff'], 16, 5, 0.6)
-  rings.spawn(it.obj.position, '#ffd23f', 2)
-  popups.show(it.obj.position, '+1')
+  // The note follows where the star was (left low, right high): it never climbs with streaks
+  audio.catch(Math.round(clamp((it.obj.position.x - cam.x) / (view.hw * 2) + 0.5, 0, 1) * 5))
+  sparks.burst(it.obj.position, ['#fff3a0', '#ffd23f', '#ffffff'], 6, 2.5, 0.5)
   renderStars()
   if (!flight.turbo && flight.canTurbo && flight.stars >= TURBO && flight.target < DESTS.length - 1) {
     flight.turbo = true
@@ -1189,7 +1186,7 @@ function catchStar(it) {
     banner(`⚡ ${DESTS[flight.target].emoji} !`, 2000)
     $('turbo').classList.add('full')
     renderJourney()
-    sparks.burst(rocket.root.position, ['#8ef0c8', '#3bb5ff', '#c9b6ff', '#ffd23f'], 40, 8, 0.9)
+    sparks.burst(rocket.root.position, ['#8ef0c8', '#3bb5ff', '#c9b6ff', '#ffd23f'], 12, 3, 0.8)
   }
 }
 
@@ -1210,7 +1207,7 @@ function flyBy(i, pos) {
   persist()
   popups.show(pos, `👋 ${DESTS[i].emoji} 🎁`, true)
   setTimeout(() => audio.unlock1(0), 250)
-  sparks.burst(rocket.root.position, ['#fff3a0', '#ffd23f', '#ff8fc7', '#8ef0c8'], 30, 6, 0.8)
+  sparks.burst(rocket.root.position, ['#fff3a0', '#ffd23f', '#ff8fc7', '#8ef0c8'], 10, 3, 0.8)
 }
 
 function bumpJunk(it) {
@@ -1579,10 +1576,12 @@ function startParty() {
   }, 2200)
 }
 
+/** The one soft moment on landing: a few pale sparkles drift up around the pilot and the flag, once. */
 function confetti() {
-  const colors = ['#ff6b6b', '#ffd23f', '#8ef0c8', '#7cc6fe', '#c9b6ff', '#ff8fc7']
-  for (let i = 0; i < 90; i++) {
-    sparks.emit(rand(-view.hw, view.hw), cam.y + view.hh + rand(0, 2), rand(-1, 2), { vx: rand(-1, 1), vy: rand(-2, -5), spread: 1, life: 2.6, size: rand(0.4, 0.7), endSize: 0.2, color: colors[i % colors.length], grav: -1.5, drag: 0.5 })
+  const at = party.pilot?.position ?? rocket.root.position
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2
+    sparks.emit(at.x + Math.cos(a) * 1.4, at.y + 0.6 + Math.sin(a) * 0.6, at.z + 0.5, { vx: Math.cos(a) * 0.3, vy: rand(0.5, 1), spread: 0.2, life: 2.2, size: rand(0.35, 0.5), endSize: 0, color: '#fff3c4', drag: 0.6 })
   }
 }
 
@@ -1655,10 +1654,6 @@ function animateDancers(dt, dancing) {
 function updateParty(dt) {
   game.t += dt
   animateDancers(dt, true)
-  if (Math.random() < dt * 3) {
-    const colors = ['#ff6b6b', '#ffd23f', '#8ef0c8', '#7cc6fe', '#c9b6ff', '#ff8fc7']
-    sparks.emit(rand(-view.hw, view.hw), cam.y + view.hh + 1, rand(-1, 2), { vx: rand(-1, 1), vy: rand(-2, -4), spread: 1, life: 2.6, size: rand(0.4, 0.6), endSize: 0.2, color: pick(colors), grav: -1, drag: 0.5 })
-  }
 }
 
 function backToGarage(thenLaunch = false) {

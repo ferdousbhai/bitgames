@@ -25,12 +25,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @keyframes float-in { from { transform: translateY(40px) scale(.8); opacity: 0; } }
 
 .logo { font-size: clamp(38px, 10vw, 74px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1.02; }
-.logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.08); text-shadow: 0 5px 0 rgba(43, 74, 138, 0.3); animation: bob 1.8s ease-in-out infinite; }
+.logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.08); text-shadow: 0 5px 0 rgba(43, 74, 138, 0.3); transform: rotate(-3deg); }
+.logo span:nth-child(even) { transform: translateY(-4px) rotate(3deg); }
 .logo span:nth-child(6n+1) { color: #4cc9f0; } .logo span:nth-child(6n+2) { color: #ff6b9d; animation-delay: .12s; }
 .logo span:nth-child(6n+3) { color: #ffb703; animation-delay: .24s; } .logo span:nth-child(6n+4) { color: #8ac926; animation-delay: .36s; }
 .logo span:nth-child(6n+5) { color: #9b5de5; animation-delay: .48s; } .logo span:nth-child(6n) { color: #ff595e; animation-delay: .6s; }
 @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(4deg); } }
-.spinner { font-size: 72px; animation: slide 1.4s ease-in-out infinite; }
+.spinner { font-size: 72px; animation: slide 2.8s ease-in-out infinite; }
 @keyframes slide { 0%, 100% { transform: translateX(-40px) rotate(-70deg); } 50% { transform: translateX(40px) rotate(-90deg); } }
 
 .lanes { display: flex; gap: 12px; }
@@ -53,11 +54,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .big-go {
   background: linear-gradient(#5fd4ff, #2fa8e8); color: #fff; font-size: clamp(32px, 7vw, 44px); font-weight: 900; padding: 12px 54px;
   border-radius: 999px; box-shadow: 0 8px 0 #1f78b4; transition: transform .1s; text-shadow: 0 2px 0 rgba(0,0,0,.15);
-  animation: pulse 1.6s ease-in-out infinite;
 }
 .big-go:active { transform: translateY(6px); box-shadow: 0 2px 0 #1f78b4; }
-.big-go.alt { background: linear-gradient(#ffd166, #ffb703); box-shadow: 0 8px 0 #d08a00; animation: none; }
-@keyframes pulse { 50% { transform: scale(1.06); } }
+.big-go.alt { background: linear-gradient(#ffd166, #ffb703); box-shadow: 0 8px 0 #d08a00; }
 .scores { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; font-weight: 800; font-size: 18px; }
 .scores .pill { background: #ffca3a; color: #2b4a8a; }
 .row { display: flex; gap: 14px; }
@@ -101,12 +100,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .ctl { pointer-events: auto; width: 62px; height: 62px; border-radius: 50%; background: rgba(255,255,255,.85); color: #2b4a8a; font-size: 30px; font-weight: 900; box-shadow: 0 5px 0 rgba(43,74,138,.3); }
 .ctl.small { width: 54px; height: 54px; font-size: 26px; }
 .ctl:active, .go:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(43,74,138,.3); }
-.go { pointer-events: auto; height: 74px; padding: 0 26px; white-space: nowrap; flex: none; border-radius: 999px; background: linear-gradient(#ffd166, #ffb703); font-size: 38px; box-shadow: 0 6px 0 #d08a00; animation: pulse 1.6s ease-in-out infinite; }
+.go { pointer-events: auto; height: 74px; padding: 0 26px; white-space: nowrap; flex: none; border-radius: 999px; background: linear-gradient(#ffd166, #ffb703); font-size: 38px; box-shadow: 0 6px 0 #d08a00; }
 
 .banner {
   position: absolute; left: 50%; top: calc(30% + env(safe-area-inset-top) / 2); transform: translate(-50%, -50%) scale(0); opacity: 0;
   display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: calc(100vw - 24px); text-align: center;
-  transition: transform .3s cubic-bezier(.2, 1.8, .4, 1), opacity .3s;
+  transition: transform .45s ease-out, opacity .45s;
   z-index: 1; /* above the 💭/💥 result line, which can sit right next to it */
 }
 /* Upright phones: the result line fills the space under the scorecard, so the cheer
@@ -114,7 +113,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @media (max-width: 760px) and (orientation: portrait) {
   .banner { top: max(30%, calc(252px + env(safe-area-inset-top))); }
 }
-.banner.show { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
+.banner.show { transform: translate(-50%, -50%) scale(1) rotate(-2deg); opacity: 1; }
 /* Thick outlines keep every word readable over snow, sky and confetti. */
 .b-word, .b-plus {
   font-weight: 900; white-space: nowrap; line-height: 1.05; color: #fff; paint-order: stroke fill;
@@ -126,9 +125,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .b-plus { font-size: clamp(28px, min(7vw, 9vh), 56px); color: #ffe066; }
 .b-stars:empty, .b-plus:empty { display: none; }
 .banner.strike .b-word { color: #ffe066; -webkit-text-stroke-color: #e63946; text-shadow: 0 0.12em 0 #e63946, 0 0.25em 0.4em rgba(0,0,0,.25); }
-.banner.strike { animation: wiggle .5s ease-in-out infinite; }
 .banner.spare .b-word { -webkit-text-stroke-color: #7b3fd0; text-shadow: 0 0.12em 0 #7b3fd0, 0 0.25em 0.4em rgba(0,0,0,.25); }
-@keyframes wiggle { 0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(-4deg); } 50% { transform: translate(-50%, -50%) scale(1.1) rotate(4deg); } }
 
 /* "Frame 2" slides in just under the top bar, never over the pins. */
 .intro {
@@ -158,7 +155,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   100% { transform: translate(-50%, -260%) scale(1); opacity: 0; }
 }
 
-.hint-swipe { position: fixed; left: 50%; bottom: min(120px, 22vh); font-size: 60px; pointer-events: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); animation: swipe 1.6s ease-in-out infinite; }
+.hint-swipe { position: fixed; left: 50%; bottom: min(120px, 22vh); font-size: 60px; pointer-events: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); animation: swipe 2.4s ease-in-out infinite; }
 @keyframes swipe {
   0% { transform: translate(-50%, 40px); opacity: 0; }
   15% { opacity: 1; }
@@ -166,14 +163,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   100% { transform: translate(-50%, calc(var(--swipe-up, -140px) - 20px)); opacity: 0; }
 }
 
-.trophy { font-size: 70px; line-height: 1; animation: bob 1.6s ease-in-out infinite; }
+.trophy { font-size: 70px; line-height: 1; }
 .big-score { font-size: clamp(60px, 16vw, 96px); font-weight: 900; line-height: 1; color: #2fa8e8; text-shadow: 0 5px 0 rgba(43,74,138,.2); }
-.stars { font-size: 50px; display: flex; gap: 6px; }
-.stars span { animation: pop-in .5s cubic-bezier(.2, 1.8, .4, 1) backwards; }
-.stars span:nth-child(2) { animation-delay: .25s; } .stars span:nth-child(3) { animation-delay: .5s; }
-.stars .dim { filter: grayscale(1); opacity: .3; }
-@keyframes pop-in { from { transform: scale(0) rotate(-90deg); } }
-.badge { background: #ffca3a; color: #2b4a8a; font-size: 20px; animation: bob 1.4s ease-in-out infinite; }
+.stars { font-size: 40px; font-weight: 900; display: flex; gap: 14px; color: #2b4a8a; }
+.stars .mark.x { color: #ff595e; } .stars .mark.s { color: #9b5de5; }
 .results-row { display: flex; }
 
 /* Phones in portrait: the scorecard gets its own row under the buttons */
@@ -291,4 +284,16 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .hud-top { gap: 6px; }
   .hud-top .pill.score { font-size: 18px; padding: 5px 9px; }
   .frame { width: 20px; } .frame.wide { width: 27px; }
+}
+
+/* The prediction pins match the lane: snowmen on the snowy lanes, fish in Fishy Bay.
+   (The shared dialog draws plain capsules; this only swaps the picture.) */
+body #pin-prediction .pin:not(.gap)::before { content: '⛄'; border: 0; background: none; box-shadow: none; font-size: 40px; line-height: 1; width: auto; height: auto; transform: translate(-50%, -50%); margin: 0; left: 50%; top: 50%; }
+body.pins-fish #pin-prediction .pin:not(.gap)::before { content: '🐟'; transform: translate(-50%, -50%) rotate(-90deg); }
+body #pin-prediction .pin.fall:not(.gap)::before { transform: translate(-50%, -30%) rotate(80deg) scale(.85); opacity: .55; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .intro.show, .hint-swipe, .spinner, .float { animation: none; }
+  .intro.show { transform: translate(var(--ix, -50%), 0); opacity: 1; }
+  .banner, .controls, .rack i { transition: none; }
 }

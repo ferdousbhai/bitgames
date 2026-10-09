@@ -147,11 +147,11 @@ export class Audio {
 
   /** The crowd of little penguins: a wash of noise and a few happy chirps. */
   cheer(big = false) {
-    this.burst({ freq: 1200, q: 0.5, gain: big ? 0.22 : 0.14, decay: big ? 1.4 : 0.9, attack: 0.15 })
-    const n = big ? 10 : 6
+    this.burst({ freq: 1200, q: 0.5, gain: big ? 0.08 : 0.05, decay: big ? 1.0 : 0.7, attack: 0.2 })
+    const n = big ? 5 : 3
     for (let i = 0; i < n; i++) {
       const f = 900 + Math.random() * 900
-      this.tone({ freq: f, type: 'sine', gain: 0.06, decay: 0.16, delay: 0.05 + Math.random() * (big ? 1.1 : 0.7), slide: 400 })
+      this.tone({ freq: f, type: 'sine', gain: 0.04, decay: 0.16, delay: 0.05 + Math.random() * (big ? 1.1 : 0.7), slide: 400 })
     }
   }
 
@@ -162,10 +162,10 @@ export class Audio {
   }
 
   fanfare() {
-    const tune = [0, 2, 4, 5, 4, 7, 9, 10]
-    tune.forEach((s, i) => this.tone({ freq: note(s, 392), type: 'square', gain: 0.06, decay: 0.3, delay: i * 0.1 }))
-    tune.forEach((s, i) => this.tone({ freq: note(s, 392) * 2, type: 'triangle', gain: 0.09, decay: 0.32, delay: i * 0.1 }))
-    this.burst({ freq: 5000, q: 1, gain: 0.15, decay: 0.8, delay: 0.8, type: 'highpass' })
+    // A soft rising chord, played once: sine and triangle only
+    const tune = [0, 4, 7]
+    tune.forEach((s, i) => this.tone({ freq: note(s, 392), type: 'sine', gain: 0.08, decay: 0.9, delay: i * 0.14 }))
+    tune.forEach((s, i) => this.tone({ freq: note(s, 392) * 2, type: 'triangle', gain: 0.04, decay: 0.8, delay: i * 0.14 }))
   }
 
   launch(delay = 0) {
@@ -174,8 +174,8 @@ export class Audio {
   }
 
   bang(delay = 0) {
-    this.tone({ freq: 110, type: 'sine', gain: 0.4, decay: 0.5, slide: -60, delay })
-    this.burst({ freq: 500, q: 0.6, gain: 0.35, decay: 0.5, type: 'lowpass', delay })
+    this.tone({ freq: 110, type: 'sine', gain: 0.12, decay: 0.5, slide: -60, delay })
+    this.burst({ freq: 500, q: 0.6, gain: 0.1, decay: 0.5, type: 'lowpass', delay })
     for (let i = 0; i < 6; i++) this.burst({ freq: 3000 + Math.random() * 3000, q: 3, gain: 0.07, decay: 0.06, delay: delay + 0.15 + Math.random() * 0.5 })
   }
 

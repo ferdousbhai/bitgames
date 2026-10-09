@@ -114,6 +114,16 @@ class Pool {
     }
     if (any) this.mesh.instanceMatrix.needsUpdate = true
   }
+
+  /** Hide everything at once, so nothing from the last roll drifts over the next aim. */
+  clear() {
+    for (let i = 0; i < this.mesh.count; i++) {
+      if (!this.slots[i].alive) continue
+      this.slots[i].alive = false
+      this.mesh.setMatrixAt(i, HIDDEN)
+    }
+    this.mesh.instanceMatrix.needsUpdate = true
+  }
 }
 
 export const CONFETTI = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff6b9d', '#2ec4b6', '#ffffff']
@@ -206,6 +216,22 @@ export class Effects {
       v.set((Math.random() - 0.5) * 2, -Math.random() * 2, 0)
       this.confetti.spawn(p, v, { life: 3 + Math.random() * 1.5, size: 1 + Math.random() * 0.5, color: pick(CONFETTI), spin: 6 })
     }
+  }
+
+  /** The one soft celebration: a few slow, pale sparkles rising over the pin deck. */
+  glow(pos, n = 14, color = '#fff3c4') {
+    const v = this.v
+    for (let i = 0; i < n; i++) {
+      v.set((Math.random() - 0.5) * 0.8, 0.5 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4)
+      this.sparkles.spawn(this.tmp.copy(pos).add({ x: (Math.random() - 0.5) * 3, y: Math.random() * 0.6, z: (Math.random() - 0.5) * 1.2 }), v, { life: 1.6 + Math.random() * 0.6, size: 0.25 + Math.random() * 0.15, color })
+    }
+  }
+
+  /** Clear celebration particles before the next aim. */
+  clearCelebration() {
+    this.confetti.clear()
+    this.sparkles.clear()
+    this.rockets = []
   }
 
   /** A rocket whooshes up from `from` and bursts into a coloured ball of sparkles. */

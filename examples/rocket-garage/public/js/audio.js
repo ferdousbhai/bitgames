@@ -14,19 +14,19 @@ const SONGS = {
     type: 'sine',
   },
   flight: {
-    bpm: 132,
+    bpm: 112,
     melody: [7, 9, 10, null, 9, 7, 9, null, 10, 11, 10, 9, 7, null, null, null, 5, 7, 9, null, 7, 5, 4, null, 5, 7, 5, 4, 2, null, 4, null],
     bass: [0, 0, 3, 4],
     vol: 0.055,
     type: 'triangle',
   },
   dance: {
-    bpm: 150,
+    // A gentle little dance: about 100 bpm, triangle tone, no claps
+    bpm: 100,
     melody: [7, 9, 7, 4, 7, 9, 10, null, 10, 9, 7, 9, 7, 4, 5, null, 7, 9, 7, 4, 7, 9, 10, 11, 10, 9, 7, 5, 7, null, null, null],
     bass: [0, 3, 4, 3],
-    vol: 0.07,
-    type: 'square',
-    clap: true,
+    vol: 0.05,
+    type: 'triangle',
   },
 }
 const BASS_ROOTS = [130.81, 174.61, 110, 196, 146.83]
@@ -169,27 +169,28 @@ export class Audio {
   }
 
   beep(last = false) {
-    this.tone(last ? 1046.5 : 659.25, { dur: last ? 0.6 : 0.25, vol: 0.18, type: 'square', echo: !!last })
+    this.tone(last ? 784 : 523.25, { dur: last ? 0.6 : 0.35, vol: 0.09, type: 'sine', echo: !!last })
   }
 
   /** Big rumble and whoosh at lift-off. */
   liftoff() {
     if (!this.ctx) return
-    this.noiseBurst({ dur: 2.6, vol: 0.35, type: 'lowpass', freq: 120, to: 900, q: 0.7 })
-    this.noiseBurst({ when: 0.2, dur: 1.8, vol: 0.12, type: 'bandpass', freq: 400, to: 2500, q: 2 })
-    this.tone(90, { dur: 1.6, vol: 0.25, type: 'sawtooth', slide: 2.5, echo: false })
+    this.noiseBurst({ dur: 2.6, vol: 0.16, type: 'lowpass', freq: 120, to: 700, q: 0.7 })
+    this.noiseBurst({ when: 0.2, dur: 1.8, vol: 0.05, type: 'bandpass', freq: 400, to: 1800, q: 2 })
+    this.tone(90, { dur: 1.6, vol: 0.12, type: 'triangle', slide: 2.5, echo: false })
   }
 
-  catch(combo) {
+  /** step 0..5 comes from where the star was caught, so catching never climbs into a frenzy. */
+  catch(step) {
     if (!this.ctx) return
-    const n = SCALE[Math.min(combo, SCALE.length - 1)]
-    this.tone(n, { dur: 0.3, vol: 0.15 })
+    const n = SCALE[Math.min(step, SCALE.length - 1)]
+    this.tone(n, { dur: 0.3, vol: 0.1 })
     this.tone(n * 2, { dur: 0.16, vol: 0.05, type: 'triangle', echo: false })
   }
 
   turbo() {
     if (!this.ctx) return
-    this.tone(260, { dur: 0.6, vol: 0.12, type: 'sawtooth', slide: 4, echo: false })
+    this.tone(260, { dur: 0.6, vol: 0.07, type: 'triangle', slide: 4, echo: false })
     ;[0, 2, 4, 5, 7, 9].forEach((k, i) => this.tone(SCALE[Math.min(k, 10)], { when: 0.1 + i * 0.06, dur: 0.35, vol: 0.1, type: 'triangle' }))
   }
 
@@ -224,7 +225,7 @@ export class Audio {
   }
 
   thump() {
-    this.tone(110, { dur: 0.25, vol: 0.3, type: 'sine', slide: 0.5, echo: false })
+    this.tone(110, { dur: 0.25, vol: 0.18, type: 'sine', slide: 0.5, echo: false })
     this.noiseBurst({ dur: 0.3, vol: 0.12, type: 'lowpass', freq: 600, to: 150 })
   }
 
@@ -234,9 +235,9 @@ export class Audio {
 
   fanfare() {
     if (!this.ctx) return
-    ;[523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, { when: i * 0.12, dur: 0.5, vol: 0.12, type: 'triangle' }))
-    ;[523.25, 659.25, 783.99].forEach((f) => this.tone(f, { when: 0.5, dur: 1.1, vol: 0.07, type: 'triangle' }))
-    this.tone(2093, { when: 0.5, dur: 0.6, vol: 0.04 })
+    // One soft chord, played once
+    ;[523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, { when: i * 0.16, dur: 0.7, vol: 0.08, type: 'sine' }))
+    ;[523.25, 659.25, 783.99].forEach((f) => this.tone(f, { when: 0.55, dur: 1.2, vol: 0.05, type: 'triangle' }))
   }
 
   /** Sparkle for each newly unlocked part. */
