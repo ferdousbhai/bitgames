@@ -1187,17 +1187,20 @@ function winLevel() {
     if (!found.includes(card.animal)) found.push(card.animal)
   }
   talk.clear()
+  const round = game.round
   found.forEach((animal, i) => {
     const delay = 0.6 + i * WIN_CALL_GAP
     for (const card of game.cards) if (card.animal === animal) dance(card.critter, { delay, dur: 1.0, hops: 2, height: 0.35 })
-    sound.voice(animal, delay)
+    // Waited on the game clock (not booked ahead on the AudioContext), so leaving strands it
+    wait(delay).then(() => round === game.round && sound.voice(animal))
   })
   // After the last hello, name everything that was found.
+  // Only this mode's line: animals without a baby word never reach a Babies board
   const recap = {
-    twins: `${cap(listWords.format(found))}. You found all the twins!`,
-    sound: `${cap(listWords.format(found))}. You know all their sounds!`,
-    baby: `${cap(listWords.format(found.map((name) => WORDS[name].baby)))}. You found every baby!`,
-  }[game.mode]
+    twins: () => `${cap(listWords.format(found))}. You found all the twins!`,
+    sound: () => `${cap(listWords.format(found))}. You know all their sounds!`,
+    baby: () => `${cap(listWords.format(found.map((name) => WORDS[name].baby)))}. You found every baby!`,
+  }[game.mode]()
   wait(0.6 + found.length * WIN_CALL_GAP + 0.5).then(() => talk.say(recap))
 
   wait(1.6).then(() => {
@@ -1419,6 +1422,7 @@ $('mute').addEventListener('click', () => {
 })
 addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && game.state === 'menu') startLevel(nextLevel())
+  else if (e.key === 'Escape' && game.state !== 'menu' && game.state !== 'loading') enterMenu()
 })
 // Block pinch zoom and double-tap zoom on iOS.
 for (const type of ['gesturestart', 'dblclick']) document.addEventListener(type, (e) => e.preventDefault())

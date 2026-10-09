@@ -214,7 +214,9 @@ function later(fn, ms) {
   game.timers.add(id)
   return id
 }
+/** Every way out of a round or lobby (🏠, Escape, Change, Again, the host's menu) runs this: words stop and no timer fires afterwards. */
 function clearTimers() {
+  voice.hush()
   for (const id of game.timers) clearTimeout(id)
   game.timers.clear()
 }
@@ -1560,12 +1562,11 @@ const input = new Input({
 $('home').addEventListener('click', (e) => {
   e.stopPropagation()
   audio.click()
-  voice.hush()
   abortToLobby()
 })
 addEventListener('keydown', (e) => {
   audio.unlock()
-  if (e.key === 'Escape' && ['play', 'countdown', 'syncing', 'results'].includes(game.state)) $('home').click()
+  if (e.key === 'Escape' && ['play', 'countdown', 'syncing', 'ending', 'results'].includes(game.state)) $('home').click()
   if (e.key.toLowerCase() === 'm' && !e.repeat) $('music').click()
   if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
     if (game.state === 'menu') hostStartRound()

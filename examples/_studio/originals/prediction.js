@@ -100,9 +100,16 @@ export function createPrediction({ button, hud, getStanding, getLayout, onOpen, 
     say(`My prediction: ${pins(guess)} will fall.`, `💭 ${guess}`)
     sound?.('keep')
     speak(`${guess}! Let's see.`)
+    kept = true
     dialog.close()
   }
   $('#pin-close').onclick = () => dialog.close()
+  // Every way out but Keep (Just play, Escape, a roll) stops the question
+  let kept = false
+  dialog.addEventListener('close', () => {
+    if (!kept) voice.hush()
+    kept = false
+  })
   // Keep the bowling game's keyboard controls out of the open dialog.
   addEventListener('keydown', (e) => { if (dialog.open) e.stopImmediatePropagation() }, true)
 

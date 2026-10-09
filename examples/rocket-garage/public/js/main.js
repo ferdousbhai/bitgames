@@ -834,7 +834,7 @@ function placeFinger() {
   f.classList.remove('hidden')
 }
 function hintStep() {
-  setTimeout(placeFinger, 50)
+  requestAnimationFrame(placeFinger)
 }
 
 // --- Title & garage -------------------------------------------------------------------
@@ -913,11 +913,12 @@ $('experiment').onclick = () => {
 }
 
 function toTitle() {
+  game.state = 'title'
+  voice.hush()
   workshop.close()
   predictor.close()
   notebook.close()
   show('notebook-btn', false)
-  game.state = 'title'
   show('title')
   show('topbar', false)
   show('tray', false)
@@ -1838,6 +1839,7 @@ function updateParty(dt) {
 function backToGarage(thenLaunch = false) {
   if (game.busy) return
   game.busy = true
+  voice.hush()
   clearTimeout(raceTimer)
   ghost.on = false
   audio.click()
@@ -1894,7 +1896,6 @@ $('home').addEventListener('click', () => {
 })
 function goHome() {
   if (game.busy) return
-  voice.hush()
   if (game.state === 'garage') {
     audio.click()
     toTitle()

@@ -161,3 +161,8 @@ Scratchpad: `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/183efacb-6
 - The progress caption reads `option.target` (`/ target`, `target - 1` for "Hop, then tap to flip!") instead of hard-coded 4, 2 and 3.
 - `pantryWords` joins rows with a module `Intl.ListFormat('en-GB')` (same words). The "?" marker uses `canvasTexture`, now exported from `world.js` (it adds repeat wrapping and anisotropy, which do not change the sprite).
 - Verified: `browser.mjs --run simp3` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check (mute hushes and silences, unmute speaks again, choice/goal show and hide, no console errors).
+
+## Exit paths (2026-10-09)
+
+- `toMenu()` (🏠, Escape) and `start()` (Play, Again, Enter on results) each hush the voice at the top; the 🏠 handler no longer hushes on its own, and `start()` says the goal with `say` after the hush.
+- Verified: `browser.mjs --run exits` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check: Play and Again hush then say the goal, 🏠 and Escape mid-trip hush, the menu stays with no late banner, no console errors.

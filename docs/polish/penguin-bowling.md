@@ -126,3 +126,6 @@ Other tests:
   - The voice starts with `muted: audio.muted`, and the sound switch (also used when loading the saved setting) calls `voice.setMuted`.
   - The spoken pin count uses `pins(n)` from `prediction.js` (imported as `pinWord`, since `pins` is the rack); the local copy is gone.
   - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. With speech stubbed, mute cancels speech, the prediction stays silent while muted and speaks again after unmuting. No console errors.
+- Exit paths:
+  - `start()` (▶, 🔁 and Enter on results) now calls `voice.hush()` first, so the results line no longer talks over the new game. `toTitle()` already hushed, and Escape and 🏠 go through it.
+  - Checks: `node --check`, Chromium and WebKit `--run exits`, `original-quality.mjs` and the unit tests pass. With speech stubbed, Enter on results cancels speech and the game is in aim with the results card hidden three seconds later. No console errors.

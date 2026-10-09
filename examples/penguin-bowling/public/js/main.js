@@ -606,6 +606,7 @@ function toTitle() {
 }
 
 function start() {
+  voice.hush()
   prediction.reset()
   counter.clear()
   game.bonds.clear()

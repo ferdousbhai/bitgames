@@ -115,3 +115,9 @@ Quality cleanup only; play is unchanged.
 - Checked: `browser.mjs --run simp` Chromium and WebKit 0 errors; a scripted Twins and Sounds round records the expected spoken order with no console errors.
 - Iteration 2: removed the orphaned `.logo span` `animation-delay`s and the unused `@keyframes bob`.
 - Third pass: the voice is created with `muted: progress.muted` and the 🔊 toggle calls `voice.setMuted` (Talk's `clear()` still empties the queue and hushes). The "A, B and C" join is a module `Intl.ListFormat('en-GB')`; the spoken win lines are unchanged. Checked: `browser.mjs --run simp3` Chromium and WebKit 0 errors, `original-quality.mjs` pass, and a speech-stubbed run (peek names spoken, mute hushes, muted and saved-mute silent, unmute speaks, no console errors) in both engines.
+
+### Exit paths (2026-10-09)
+
+The win hellos now wait on the game clock (`wait(delay).then(() => round === game.round && sound.voice(animal))`) instead of being booked up to about 9 s ahead on the AudioContext, so `resetScene()` (🏠, Escape, 🔁, Next) strands them. Escape now goes to `enterMenu()` from any screen except the menu and loading. Checked: `browser.mjs --run exits-fmp` Chromium and WebKit 0 errors, `original-quality.mjs` pass, and a speech-stubbed run (Escape and win-🏠 during the hellos: hushed, back on the menu, no oscillator starts after the exit, no console errors) in both engines.
+
+Open bug, not fixed in this pass: in `winLevel` the `recap` object builds all three lines, so in Twins or Sounds mode an animal without a `WORDS[name].baby` (the frog or the chick) makes `listWords.format` throw. The win card then never shows. The cause is fa3f74d.

@@ -86,6 +86,7 @@ export function createColourStudio({ openButton, onOpen, onClose, voice, sound =
     voice,
     onClose: () => {
       clearTimeout(hintTimer)
+      anim = null // a pour cut short must not leave the cup waiting for frames that never come
       onClose?.()
     },
     html: `

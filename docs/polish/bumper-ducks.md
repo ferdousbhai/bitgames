@@ -218,3 +218,9 @@ Before this follow-up, the efficient autopilot finished 3 tens in 44 s with a 50
 - The voice starts with `muted: audio.muted`; `setSound` calls `voice.setMuted` (also on the saved setting at load). The local `#hud .adventure-goal[hidden]` rule is gone.
 - The setup message sends `adventure.selected`; `sayGoal` checks `adventure.option.goal` directly.
 - Verified: `browser.mjs --run simp3` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check in Bumper race (mute hushes and silences, unmute speaks again, choice/goal show and hide, no console errors).
+
+## Exit paths (2026-10-09)
+
+- `clearTimers()` now hushes the voice. It is the shared cleanup for `enterLobbyScreen` (host 🏠, Escape, Change, the host's menu message), `abortToLobby`'s friend branch and `startRound` (Go, Again), so the 🏠 handler's own hush is gone.
+- Escape now also works in the `ending` state (the 1.7–2.4 s wait before results).
+- Verified: `browser.mjs --run exits` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check: Escape during `ending` hushes and returns to the lobby with no late results, Again hushes, 🏠 mid-play hushes and stays in the lobby, no console errors. The friend branch was checked in code only (needs two devices).

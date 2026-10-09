@@ -220,7 +220,9 @@ function show(id) {
   $('home').classList.toggle('hidden', id === 'loading' || id === 'menu')
 }
 
+/** Every way back (🏠, Escape) comes here: the trip's words stop with it. */
 function toMenu() {
+  voice.hush()
   game.state = 'menu'
   game.x = 0
   sound.music(false)
@@ -240,6 +242,7 @@ function toMenu() {
 }
 
 function start() {
+  voice.hush() // Play and Again start afresh: earlier words give way to the new trip
   adventure.begin()
   sound.unlock()
   sound.click()
@@ -271,7 +274,7 @@ function start() {
   show(null)
   fitPopups()
   banner(`${BIOMES[game.biome].emoji} ${BIOMES[game.biome].name}`)
-  if (adventure.option.goal) voice.sayNow(adventure.option.goal)
+  if (adventure.option.goal) voice.say(adventure.option.goal)
 }
 
 // Floating words start a little below the score and the trip bar, so a word
@@ -532,7 +535,6 @@ $('again').onclick = start
 $('home').onclick = () => {
   sound.unlock()
   sound.click()
-  voice.hush()
   toMenu()
 }
 function toggleMute() {

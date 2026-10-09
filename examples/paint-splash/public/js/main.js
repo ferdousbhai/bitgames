@@ -460,7 +460,6 @@ function goHome() {
   audio.unlock()
   audio.click()
   if (['loading', 'menu', 'waiting'].includes(game.state)) return
-  voice.hush()
   if (isHost()) {
     send({ t: 'menu' })
     enterLobby()
@@ -696,9 +695,10 @@ function hostStartRound() {
   startRound(setup)
 }
 
-/** Clears the last round away (paint, painters, pickups, timers). */
+/** Clears the last round away (speech, paint, painters, pickups, timers). Every exit comes through here. */
 function stopRound() {
-  clearTimers()
+  voice.hush()
+  clearTimers() // includes the results line booked at 900 ms
   game.build++
   for (const p of game.painters.values()) p.dispose()
   game.painters.clear()

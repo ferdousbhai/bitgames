@@ -52,6 +52,10 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
   let recipeIndex = 0
   let layers = []
   let sharing = false
+  // One pending check at a time; closing, switching tabs or undoing cancels it
+  let checkTimer = 0
+  const checkSoon = (check, ms) => { clearTimeout(checkTimer); checkTimer = setTimeout(check, ms) }
+  const cancelCheck = () => clearTimeout(checkTimer)
   let friends = 2
   let slices = 4
   let selected = null // slice index waiting for a plate
@@ -63,6 +67,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
     title: '🎂 Birthday recipe studio',
     openButton,
     onOpen: draw,
+    onClose: cancelCheck,
     voice,
     html: `
     <div class="studio-row"><button id="recipe-tab" aria-pressed="true">Build a recipe</button><button id="share-tab" aria-pressed="false">Share the cake</button></div>
@@ -260,7 +265,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
         say(`${shared} of ${slices} slices shared.`)
         speak(`${friend.name}: ${slicesOf(f)}`)
         draw()
-        if (shared === slices) setTimeout(() => sharing && owners.every((o) => o !== null) && checkShares(), 500)
+        if (shared === slices) checkSoon(checkShares, 500)
       }
       return b
     }))
@@ -290,13 +295,14 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
       // A right layer chimes higher each time; a layer that differs from its picture gets a soft wobble.
       if (right) play('perfect', i * 2)
       else play('wobble')
-      if (layers.length === recipe().length) setTimeout(checkRecipe, 450)
+      if (layers.length === recipe().length) checkSoon(checkRecipe, 450)
       else speak(flavour)
     }
     $('#flavour-buttons').append(b)
   }
 
   $('#recipe-undo').onclick = () => {
+    cancelCheck()
     layers.pop()
     play('click')
     say('Try a different layer.')
@@ -329,12 +335,14 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
   }
 
   $('#recipe-tab').onclick = () => {
+    cancelCheck()
     sharing = false
     play('click')
     say('Build from bottom to top.')
     draw()
   }
   $('#share-tab').onclick = () => {
+    cancelCheck()
     sharing = true
     play('click')
     resetShares()
@@ -354,6 +362,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
     draw()
   }
   $('#share-undo').onclick = () => {
+    cancelCheck()
     if (history.length) owners[history.pop()] = null
     selected = null
     play('click')
@@ -361,6 +370,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
     draw()
   }
   $('#share-reset').onclick = () => {
+    cancelCheck()
     resetShares()
     play('click')
     say('Try another way to share equally.')

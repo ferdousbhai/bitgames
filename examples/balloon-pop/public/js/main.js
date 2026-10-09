@@ -260,7 +260,7 @@ function countPop(b) {
     voice.say(sky.req.named)
     const { w, h } = halfSize(0)
     effects.drift(w, h)
-    setTimeout(() => audio.chord(), 500)
+    later(audio.chord, 500)
     game.skyWait = 4.5 // a calm pause before the next request
   } else voice.say(String(sky.count))
   renderSky()
@@ -421,7 +421,7 @@ function pop(b, { chain = false } = {}) {
     audio.boom()
     const others = [...balloons.list]
     others.sort((a, c) => a.group.position.distanceTo(pos) - c.group.position.distanceTo(pos))
-    others.forEach((o, i) => setTimeout(() => pop(o, { chain: true }), 200 + i * 180))
+    others.forEach((o, i) => later(() => pop(o, { chain: true }), 200 + i * 180))
   } else if (b.kind.power === 'rainbow') {
     audio.rainbow()
     for (let i = 0; i < 6; i++) {
@@ -477,6 +477,26 @@ function updateHud() {
 }
 
 let introTimer = 0
+// Play-time timers (star chains, the sky's chord) live here so every exit can cancel them.
+const playTimers = new Set()
+function later(fn, ms) {
+  const id = setTimeout(() => {
+    playTimers.delete(id)
+    fn()
+  }, ms)
+  playTimers.add(id)
+}
+/** The one cleanup every exit and fresh start shares: words stop and no timer fires afterwards. */
+function stopPlay() {
+  voice.hush()
+  playTimers.forEach(clearTimeout)
+  playTimers.clear()
+  clearTimeout(rewardTimer)
+  $('mission-reward').classList.remove('show')
+  clearTimeout(introTimer)
+  $('intro').classList.remove('show')
+}
+
 function showIntro(emoji, title, sub) {
   $('intro-emoji').textContent = emoji
   $('intro-title').textContent = title
@@ -496,11 +516,9 @@ function show(screen) {
 }
 
 function toTitle() {
-  voice.hush() // every way back (🏠, Escape) stops the sky's words before the summary
+  stopPlay() // every way back (🏠, Escape) stops the sky's words and pending pops before the summary
   game.state = 'title'
   game.party = 0
-  clearTimeout(rewardTimer)
-  $('mission-reward').classList.remove('show')
   // Say what the child did, not how it ranks.
   let last = game.score ? `🎈 You popped ${game.score} balloon${game.score === 1 ? '' : 's'}!` : ''
   if (game.skies) {
@@ -515,10 +533,8 @@ function toTitle() {
 }
 
 function start() {
-  voice.hush() // the tap starts afresh: earlier words give way to the new request
+  stopPlay() // the tap starts afresh: earlier words and timers give way to the new request
   adventure.begin()
-  clearTimeout(rewardTimer)
-  $('mission-reward').classList.remove('show')
   audio.unlock()
   audio.click()
   balloons.clear()

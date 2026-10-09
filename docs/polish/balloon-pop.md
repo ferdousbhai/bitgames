@@ -123,3 +123,8 @@ Each level is now one calm, spoken and pictured request instead of "pop everythi
 - Options list each picture array once through `balloonRow(balloons, filled)` and no longer carry the unused `emoji`.
 - The Red hunt matches with `COLOURED_KINDS` (now exported from `sky.js`) and `colourName(b.color) === 'red'`, so a red heart (`#ff4d6d`) now counts, as a child would expect (deliberate change). `RED` is `SKY_COLOURS.red`.
 - Verified: `browser.mjs --run simp3` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check (mute hushes and silences, unmute speaks again, choice/goal show and hide, no console errors).
+
+## Exit paths (2026-10-09)
+
+- `stopPlay()` is the one cleanup shared by `toTitle()` (🏠, Escape) and `start()` (Play): it hushes the voice, clears the play timers (star-chain pops and the sky's chord, now scheduled through `later()`), the mission-reward timer and the `#intro` banner (`introTimer` and its `show` class).
+- Verified: `browser.mjs --run exits` (Chromium, WebKit), `original-quality.mjs`, `node --test`, and a stubbed-speech check: 🏠 mid star-chain cancels speech, no friend pops in the next 3 s (control run without leaving pops them all), the intro banner is cleared by 🏠 and Escape, no console errors.

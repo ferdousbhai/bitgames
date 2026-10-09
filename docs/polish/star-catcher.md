@@ -199,3 +199,6 @@ Source: the audit's Phase 2 row ("Real constellations lit star by star and named
   - Removed the unused `emoji` on the two options that set `pictures`, and the `#adventure-goal[hidden]` rule (now in `adventure.css`).
   - The voice starts with the saved mute setting, and the sound switch calls `voice.setMuted`.
   - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. With speech stubbed: the goal is hidden on the title and in free flight, shows in play, fades to opacity 0 (not hidden) after completion and is gone at Home; the mission button hides in play and returns at Home. Starting while muted is silent, unmuted start says the goal, mute cancels speech. No console errors.
+- Exit paths:
+  - `start()` keeps the handle of the 400 ms timer that hides the title, and `resetTrip()` (🏠, Escape, fly again) clears it with the mission timers and the hush, so 🏠 right after ▶ no longer leaves a bare scene.
+  - Checks: `node --check`, Chromium and WebKit `--run exits`, `original-quality.mjs` and the unit tests pass. With speech stubbed, 🏠 100 ms after ▶ cancels speech and two seconds later the title is visible (no `hidden` or `fade`) in the title state. No console errors.

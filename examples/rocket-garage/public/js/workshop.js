@@ -106,11 +106,11 @@ export function el(tag, className, text) {
   return e
 }
 
-/** Keep the garage's keyboard controls out of an open dialog. */
+/** Keep the garage's keyboard controls out of an open dialog; the dialog's own key handlers still run. */
 export function keyGuard(dialog) {
-  const guard = (e) => { if (dialog.open) e.stopPropagation() }
-  addEventListener('keydown', guard, true)
-  addEventListener('keyup', guard, true)
+  const guard = (e) => e.stopPropagation()
+  dialog.addEventListener('keydown', guard)
+  dialog.addEventListener('keyup', guard)
 }
 
 function buildCard(label, build, slot, rocketThumb) {

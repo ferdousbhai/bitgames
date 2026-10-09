@@ -965,7 +965,8 @@ function updateHint() {
 
 function toTitle() {
   voice.hush()
-  if (game.phase === 'show') finishShow()
+  // A catch on stage or flying to the book is already in the book (startShow). The mission count
+  // needs no settling: start() begins it afresh. The 15/15 trophy card lives in the hidden HUD.
   if (fish.show) {
     fish.show.c.group.removeFromParent()
     fish.show = null
@@ -1057,7 +1058,6 @@ const book = new Book({
   voice,
   creatures,
   getBook: () => game.book,
-  onClose: () => {},
 })
 const openBook = (e) => {
   e?.stopPropagation()

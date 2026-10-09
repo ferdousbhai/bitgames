@@ -457,7 +457,7 @@ function land(L) {
     customer?.cheer(0.8)
     if (grew) {
       sound.grow()
-      setTimeout(() => effects.label('↔️', at, '#ff6fae', true), 250)
+      setTimeout(() => run === game.run && effects.label('↔️', at, '#ff6fae', true), 250)
     }
   } else {
     // The overhang squishes off with a splat of icing, and a little piece tumbles onto the counter

@@ -367,7 +367,7 @@ const isHost = () => game.room && game.hostId === game.room.selfId
 /** The current race's id: every race message carries it, so stragglers from the last race are ignored. */
 const raceId = () => (game.pendingSetup ?? game.setup)?.seed ?? 0
 
-/** A timer that belongs to this race: startRace() cancels whatever is still pending. */
+/** A timer that belongs to this race: startRace() and the lobby cancel whatever is still pending. */
 function later(fn, ms) {
   const id = setTimeout(() => {
     game.timers.delete(id)
@@ -376,7 +376,9 @@ function later(fn, ms) {
   game.timers.add(id)
   return id
 }
+/** Every way out of a race (new city, Race again, the host's menu) passes here: its words and timers stop together. */
 function clearTimers() {
+  voice.hush()
   for (const id of game.timers) clearTimeout(id)
   game.timers.clear()
 }

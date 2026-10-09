@@ -657,7 +657,7 @@ addEventListener('pointercancel', (e) => {
 addEventListener('keydown', (e) => {
   sound.unlock()
   if (e.code === 'KeyM') return toggleSound()
-  if (e.code === 'Escape') return game.state === 'play' || game.state === 'nest' ? toTitle() : undefined
+  if (e.code === 'Escape') return ['play', 'nest', 'results'].includes(game.state) ? toTitle() : undefined
   if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault()
     if (e.repeat) return
@@ -839,8 +839,9 @@ function arriveAtNest() {
   game.done.add(game.world)
   store.set('dragon-glide-worlds', [...game.done])
   sound.fanfare()
-  setTimeout(() => sound.rawr(0.8), 500)
-  setTimeout(() => sound.rawr(1.3), 800)
+  // The family's roars wait for Ember to land: a trip left in the meantime keeps them quiet.
+  setTimeout(() => game.state === 'nest' && sound.rawr(0.8), 500)
+  setTimeout(() => game.state === 'nest' && sound.rawr(1.3), 800)
   const last = game.world === WORLDS.length - 1
   banner('Home to the nest! 🪺', last ? 'You flew all the way! 🌟' : `${w.emoji} ${w.name} done!`, 3200)
   // what this world's goal brought home: the family sorts it and counts it with Ember

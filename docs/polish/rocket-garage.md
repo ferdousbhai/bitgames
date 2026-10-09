@@ -150,3 +150,8 @@ The 🧪 workshop's fair test now happens on every launch after a part change. T
   - `workshop.js` exports `ruling` and `PLURAL_SLOTS`. `noteFrom` takes the note kind from `ruling` (keeping "same" when a wobbly part didn't change the wobble), and the notebook's `plural` reads `PLURAL_SLOTS`. A check over 1,620 single and double part changes gave the same notes and explanations as before.
   - The voice starts with the saved mute setting, and the sound switch calls `voice.setMuted`.
   - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. With speech stubbed, the workshop says "You changed the tank. Which rocket will fly farther?", mute cancels speech, muted taps stay silent and unmuting speaks again. No console errors.
+- Exit paths:
+  - `backToGarage()` (🔧 and 🔁 on the reward card, 🏠 mid-flight) and `toTitle()` hush; `goHome` only routes. `toTitle()` sets the title state before closing the dialogs, so the dialogs' `onBack → hintStep` hides the finger.
+  - `hintStep` waits for layout with `requestAnimationFrame` instead of a 50 ms timer.
+  - `keyGuard` stops key events on the dialog itself instead of in a window capture listener, so the guess dialog's 1/2/3 and arrow keys work again, while the garage still ignores keys pressed in a dialog.
+  - Checks: `node --check`, Chromium and WebKit `--run exits`, `original-quality.mjs` and the unit tests pass. With speech stubbed: pressing 1 in the guess dialog picks a guess and launches; 🔧 on the reward card cancels speech and the garage is settled two seconds later; arrows still switch tabs in the garage; 🏠 cancels speech and leaves the title with the finger hidden. No console errors.
