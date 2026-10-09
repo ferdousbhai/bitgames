@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Sound } from './audio.js'
 import { Course, GEMS } from './course.js'
 import { Dragon } from './dragon.js'
+import { TREASURES, countOf, goalSentence, learnedSentence, sortedRows, treasureSVG } from './goals.js'
 import { Particles, Popups, Rings } from './effects.js'
 import { loadModels } from './models.js'
 import { NEST_Y, World } from './world.js'
@@ -110,6 +111,9 @@ const game = {
   fired: 0,
   steered: 0,
   done: new Set(store.get('dragon-glide-worlds', [])),
+  goal: null, // this world's purpose: { goal, reached, got, carried } (see worlds.js and goals.js)
+  learned: [], // what each world of this trip brought home, for the nest and the end card
+  said: '', // the last thing said aloud (for tests)
 }
 if (new URLSearchParams(location.search).has('debug')) window.game = game
 
@@ -152,14 +156,26 @@ const adventure = createAdventure({
 document.body.classList.toggle('mission', !!adventure.option.goal)
 $('adventure-choice').addEventListener('click', () => document.body.classList.toggle('mission', !!adventure.option.goal))
 
-/** Says the counting goal as each world starts, for children who can't read it yet. */
-function sayGoal() {
-  if (game.state !== 'play' || !adventure.option.goal || sound.muted || !('speechSynthesis' in window)) return
-  const u = new SpeechSynthesisUtterance("Let's count four rings!")
+/** Says something aloud (unless the sound is off). `queue` waits for what is being said first. */
+function say(text, queue = false) {
+  if (!text) return
+  game.said = text
+  if (sound.muted || !('speechSynthesis' in window)) return
+  if (!queue) speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(text)
   u.lang = 'en-US'
   u.rate = 0.85
-  speechSynthesis.cancel()
   speechSynthesis.speak(u)
+}
+const hush = () => 'speechSynthesis' in window && speechSynthesis.cancel()
+
+/** Says the world's goal (and the counting mission's) as each world starts, for children who can't read yet. */
+function sayGoal() {
+  if (game.state !== 'play') return
+  const w = WORLDS[game.world]
+  const parts = [`${w.name}!`, game.goal ? goalSentence(game.goal.goal) : '']
+  if (adventure.option.goal) parts.push("And let's count four rings!")
+  say(parts.filter(Boolean).join(' '))
 }
 
 let templates, dragon, world, course, sparks, dots, rings, popups
@@ -203,6 +219,11 @@ function toTitle() {
   game.state = 'title'
   game.nestReady = false
   $('fly-on').classList.add('hidden')
+  game.goal = null
+  renderGoal()
+  clearSort()
+  clearTimeout(finishTimer)
+  hush()
   game.z = 0
   game.speed = 0
   pos.set(0, 4.3, 0)
@@ -259,6 +280,8 @@ function start(from = 0) {
   game.tipT = 0
   game.fired = 0
   game.steered = 0
+  game.learned = []
+  clearTimeout(finishTimer)
   pos.set(0, 4.3, -game.z)
   vel.set(0, 0)
   target.set(0, 4.3)
@@ -277,7 +300,8 @@ function start(from = 0) {
   $('hud').classList.remove('resting')
   const w = WORLDS[from]
   rings.setGlow(!!w.night)
-  banner(`${w.emoji} ${w.name}`, 'Fly to the nest! 🪺')
+  startGoal(from)
+  worldBanner(w, 'Fly to the nest! 🪺')
   sound.play(w.music)
   tip('👆 Drag to fly!', 3.5)
   setTimeout(sayGoal, 900)
@@ -287,14 +311,141 @@ function finishTrip() {
   game.state = 'results'
   const nest = world.nestFor(game.world)
   if (nest) nest.cheer = 1e6
-  // No grade: the end card shows the worlds Ember flew through and what Ember found on the way.
-  $('stars').innerHTML = WORLDS.slice(game.startWorld, game.world + 1).map((w) => `<span>${w.emoji}</span>`).join('')
+  // No grade: the end card shows each world Ember flew through and what Ember brought home and learned there.
+  const flown = WORLDS.slice(game.startWorld, game.world + 1).map((w, k) => [w, game.learned.find((l) => l.world === game.startWorld + k)])
+  $('learned').innerHTML = flown.map(([w, e]) => `<div class="learn"><span class="w">${w.emoji}</span>${e ? goalPicture(e, 'end') : ''}</div>`).join('')
+  const words = flown.map(([, e]) => (e ? learnedSentence(e) : '')).filter(Boolean)
+  $('learned').setAttribute('aria-label', words.join(' ') || 'The worlds you flew through')
+  clearSort()
+  clearTimeout(finishTimer)
+  finishTimer = setTimeout(() => game.state === 'results' && say(words.length ? words.join(' ') : 'Home sweet nest!'), 1300)
   $('final').textContent = game.score
   $('final-rings').textContent = game.rings
   $('final-lit').textContent = game.lit
   $('found-lit').classList.toggle('hidden', game.lit === 0)
   sound.finish()
   show('results')
+}
+
+let finishTimer
+
+// --- Each world's goal ------------------------------------------------------------------
+
+function startGoal(wi) {
+  const goal = WORLDS[wi].goal
+  game.goal = goal ? { world: wi, goal, reached: 0, got: {}, carried: [] } : null
+  renderGoal()
+}
+
+/**
+ * The goal as a picture. 'hud': numbers that light up / slots that fill, and the basket.
+ * 'start': what to look for. 'end': what was brought home.
+ */
+function goalPicture(g, mode = 'hud') {
+  const { goal } = g
+  if (goal.type === 'rings') {
+    const upTo = mode === 'start' ? goal.target : mode === 'end' ? g.reached : goal.target
+    let h = `<span class="nums${upTo > 5 ? ' ten' : ''}">`
+    for (let i = 1; i <= upTo; i++) h += `<i class="${mode !== 'hud' || i <= g.reached ? 'got' : i === g.reached + 1 ? 'next' : ''}">${i}</i>`
+    return `${h}</span>`
+  }
+  if (mode === 'end') {
+    return sortedRows(goal, g.got).map(([k, n]) => `<span class="kind">${treasureSVG(k).repeat(n)}</span>`).join('')
+  }
+  const have = mode === 'start' ? goal.count : g.got[goal.want] || 0
+  let h = '<span class="want">'
+  for (let i = 0; i < goal.count; i++) h += treasureSVG(goal.want, i >= have)
+  h += '</span>'
+  if (mode === 'start') return h
+  // the basket holds everything else Ember picked up (other kinds, and extra ones)
+  let extra = 0
+  const rest = g.carried.filter((k) => k !== goal.want || ++extra > goal.count)
+  return `${h}<span class="basket"><span class="in">${rest.slice(-8).map((k) => treasureSVG(k)).join('')}</span><b>🧺</b></span>`
+}
+
+function renderGoal() {
+  const el = $('goal')
+  const g = game.goal
+  el.classList.toggle('hidden', !g)
+  if (!g) return el.replaceChildren()
+  el.innerHTML = goalPicture(g, 'hud')
+  const { goal } = g
+  el.setAttribute('aria-label', goal.type === 'rings' ? `Rings 1 to ${goal.target}: next is ${Math.min(goal.target, g.reached + 1)}` : `${goalSentence(goal)} ${g.got[goal.want] || 0} so far.`)
+}
+
+/** The world's name, with its goal pictured underneath. */
+function worldBanner(w, fallback) {
+  if (!game.goal) return banner(`${w.emoji} ${w.name}`, fallback)
+  banner(`${w.emoji} ${w.name}`, null, 3600)
+  const pic = document.createElement('div')
+  pic.className = 'goal-pic'
+  pic.innerHTML = goalPicture(game.goal, 'start')
+  $('banner').append(pic)
+}
+
+// The nest: the family sorts the basket into rows, one by one, counting each row aloud.
+let sortPlan = [] // [{ at, run }] in nest time
+function clearSort() {
+  sortPlan = []
+  game.sortEnd = 0
+  $('sort').classList.add('hidden')
+  $('sort').replaceChildren()
+}
+
+function sortAtNest(g) {
+  clearSort()
+  const tray = $('sort')
+  const { goal } = g
+  const plan = []
+  let t = 1.1
+  if (goal.type === 'rings') {
+    if (!g.reached) return
+    const row = document.createElement('div')
+    row.className = 'sort-row'
+    row.innerHTML = goalPicture(g, 'end')
+    plan.push({ at: t, run: () => { tray.append(row); tray.classList.remove('hidden'); say(learnedSentence({ goal, reached: g.reached }), true) } })
+    game.sortEnd = t + 1.6
+  } else {
+    const rows = sortedRows(goal, g.got)
+    if (!rows.length) return
+    plan.push({ at: t, run: () => tray.classList.remove('hidden') })
+    for (const [kind, n] of rows) {
+      const row = document.createElement('div')
+      row.className = 'sort-row'
+      plan.push({ at: t, run: () => tray.append(row) })
+      for (let i = 1; i <= n; i++) {
+        t += 0.75
+        plan.push({ at: t, run: () => {
+          const item = document.createElement('span')
+          item.innerHTML = treasureSVG(kind)
+          row.append(item)
+          flyFromEmber(item)
+          sound.treasure(i)
+          say(String(i), true)
+        } })
+      }
+      t += 0.6
+      plan.push({ at: t, run: () => say(`${countOf(kind, n)}!`, true) })
+      t += 1.2
+    }
+    game.sortEnd = t
+  }
+  sortPlan = plan
+}
+
+function runSort() {
+  while (sortPlan.length && sortPlan[0].at <= game.nestT) sortPlan.shift().run()
+}
+
+/** A sorted treasure leaves Ember's basket and drops into its row. */
+function flyFromEmber(el) {
+  const to = el.getBoundingClientRect()
+  tmp.copy(pos).project(camera)
+  const x = (tmp.x * 0.5 + 0.5) * innerWidth
+  const y = (-tmp.y * 0.5 + 0.5) * innerHeight
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const from = still ? 'none' : `translate(${x - (to.left + to.width / 2)}px, ${y - (to.top + to.height / 2)}px) scale(0.5)`
+  el.animate?.([{ transform: from, opacity: 0.2 }, { transform: 'none', opacity: 1 }], { duration: still ? 300 : 650, easing: 'cubic-bezier(.3,.7,.4,1)' })
 }
 
 // --- HUD ----------------------------------------------------------------------------
@@ -592,6 +743,36 @@ function handle(events) {
       const c = WORLDS[game.world].hoop.hoop_cloud
       rings.spawn(ev.pos, typeof c === 'string' ? c : c.color, 4.5, 0.8)
       sparks.burst(ev.pos, RAINBOW, 8, 3, 0.6, { vz: -game.speed * 0.5 })
+    } else if (ev.type === 'numRing') {
+      // a numbered ring, flown in order: its number is said (the counting mission says its own count instead)
+      game.rings++
+      const counting = adventure.option.goal && !adventure.complete
+      adventure.event()
+      const target = WORLDS[game.world].goal?.target
+      if (game.goal) game.goal.reached = ev.number
+      sound.number(ev.number)
+      rings.spawn(ev.pos, '#ffd23f', 4.5, 0.8)
+      sparks.burst(ev.pos, ['#ffe066', '#fff3a0', '#ffffff'], 8, 3, 0.6, { vz: -game.speed * 0.5 })
+      if (ev.number === target) say(`${ev.number}! You flew 1 to ${target} in order! Now fly home to the nest.`, counting)
+      else if (!counting) say(String(ev.number))
+      renderGoal()
+    } else if (ev.type === 'numMiss') {
+      // not a failure: the next ring ahead takes the same number, so it waits for Ember
+      if (ev.waits) say(`Number ${ev.number} is waiting for you!`)
+    } else if (ev.type === 'treasure') {
+      const g = game.goal
+      if (!g) continue
+      const k = ev.kind
+      g.carried.push(k)
+      g.got[k] = (g.got[k] || 0) + 1
+      const want = k === g.goal.want
+      sound.treasure(want ? g.got[k] : 0)
+      sparks.burst(ev.pos, [TREASURES[k].color, '#ffffff'], 6, 3, 0.5, { vz: -game.speed * 0.6 })
+      // another kind still goes in the basket; while the goal is still open, the wanted kind is named again
+      if (!want) say(`A ${TREASURES[k].one}! Into the basket.${(g.got[g.goal.want] || 0) < g.goal.count ? ` Look for ${TREASURES[g.goal.want].many}!` : ''}`)
+      else if (g.got[k] === g.goal.count) say(`${countOf(k, g.got[k])}! That's ${g.goal.count}. Now fly home to the nest!`)
+      else say(`${countOf(k, g.got[k])}!`)
+      renderGoal()
     } else if (ev.type === 'hoopMiss') {
       game.hoops = 0
     } else if (ev.type === 'bubble') {
@@ -656,6 +837,12 @@ function arriveAtNest() {
   setTimeout(() => sound.rawr(1.3), 800)
   const last = game.world === WORLDS.length - 1
   banner('Home to the nest! 🪺', last ? 'You flew all the way! 🌟' : `${w.emoji} ${w.name} done!`, 3200)
+  // what this world's goal brought home: the family sorts it and counts it with Ember
+  const g = game.goal
+  if (g) {
+    game.learned.push({ world: game.world, goal: g.goal, reached: g.reached, got: { ...g.got } })
+    sortAtNest(g)
+  }
   // where the banner's words end, so the camera can keep the family's faces below them
   nestClear = bannerBox()?.bottom ?? 0
   dragon.twirl()
@@ -675,6 +862,7 @@ function flyOn() {
   sound.click()
   game.nestReady = false
   $('fly-on').classList.add('hidden')
+  clearSort()
   if (game.world < WORLDS.length - 1) leaveNest()
   else {
     game.state = 'done'
@@ -692,7 +880,8 @@ function leaveNest() {
   rings.setGlow(!!w.night)
   $('hud').classList.remove('resting')
   adventure.begin()
-  banner(`${w.emoji} ${w.name}`, 'Off we go! 🐉')
+  startGoal(game.world)
+  worldBanner(w, 'Off we go! 🐉')
   setTimeout(sayGoal, 900)
   sound.play(w.music)
   target.set(0, 4.5)
@@ -750,6 +939,7 @@ function tick(dt) {
   }
 
   const behindZ = camera.position.z + 25
+  course.world = game.world
   handle(course.update(dt, pos, prevZ, game.time, { magnet: game.power > 0, invulnerable: game.invuln > 0 || game.power > 0, playing, behindZ }))
   world.generate(game.z + 185, lane)
   course.generate(game.z + 180, lane)
@@ -856,7 +1046,8 @@ function updateNest(dt) {
       sparks.emit(rand(-1.5, 1.5), seatY + 1.5, -nestZ + 0.5, { vx: 0, vy: 2, spread: 0.6, life: 1.2, size: 0.7, color: '#ff8fc7', drag: 0.5 })
     }
     // No timer moves on: after the cheer, the family waits with Ember until the child taps.
-    if (game.nestT > 3.2 && !game.nestReady) offerFlyOn()
+    runSort()
+    if (game.nestT > Math.max(3.2, game.sortEnd || 0) && !game.nestReady) offerFlyOn()
   }
   showTrip()
 }

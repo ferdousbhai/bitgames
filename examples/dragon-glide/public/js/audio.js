@@ -4,6 +4,7 @@
  * effects can be switched off separately.
  */
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28]
+const MAJOR = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16]
 const hz = (semitones, base = 523.25) => base * 2 ** (semitones / 12)
 
 const load = (key, fallback) => {
@@ -233,6 +234,19 @@ export class Sound {
   }
 
   /** Four rising chimes, one as each ring pops up in the counting party (main.js COUNT_BEAT), then a sparkle. */
+  /** A numbered ring: one soft note per number, climbing a major scale, so counting up sounds like going up. */
+  number(n) {
+    this.hiss({ len: 0.4, freq: 800, q: 0.9, gain: 0.08, sweep: 3 })
+    const step = MAJOR[Math.max(0, Math.min(MAJOR.length - 1, n - 1))]
+    this.note(hz(step, 392), { at: 0.03, len: 0.45, type: 'triangle', gain: 0.13, echo: true })
+    this.note(hz(step + 12, 392), { at: 0.06, len: 0.3, type: 'sine', gain: 0.05 })
+  }
+  /** A treasure into the basket (n > 0: the n-th of the wanted kind, a step higher each time). */
+  treasure(n = 0) {
+    const step = n > 0 ? MAJOR[Math.min(MAJOR.length - 1, n + 1)] : 0
+    this.note(hz(step, 523.25), { len: 0.3, type: 'triangle', gain: 0.14, echo: true })
+    this.note(hz(step + 7, 523.25), { at: 0.07, len: 0.25, type: 'sine', gain: 0.06 })
+  }
   counted() {
     ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 523.25), { at: 0.3 + i * 0.42, len: 0.4, type: 'triangle', gain: 0.13, echo: true }))
     ;[16, 19, 24].forEach((s, i) => this.note(hz(s, 523.25), { at: 1.75 + i * 0.06, len: 0.5, type: 'sine', gain: 0.08, echo: true }))

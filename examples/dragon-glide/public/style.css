@@ -299,3 +299,85 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   .flyer, .stars span, .combo.show { animation: none; }
   .banner { transition: opacity .25s; transform: none; }
 }
+
+/* --- Phase 2: each world's goal (numbered rings in order, or treasures gathered and sorted) --- */
+/* The goal chip, under the 💎 count: numbers that light up in order, or slots that fill and a basket */
+.goal {
+  position: absolute; top: calc(124px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
+  display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 22px; background: rgba(0,0,0,0.28);
+  --s: 30px;
+}
+.nums { display: inline-grid; grid-auto-flow: column; gap: 5px; }
+/* ten numbers stand as a ten-frame: two rows of five */
+.nums.ten { grid-auto-flow: row; grid-template-columns: repeat(5, auto); }
+.nums i {
+  display: grid; place-items: center; width: var(--s); height: var(--s); border-radius: 50%; font-style: normal; font-weight: 900;
+  font-size: calc(var(--s) * 0.55); line-height: 1; color: rgba(255,255,255,0.75); border: 3px solid rgba(255,255,255,0.45); box-sizing: border-box;
+}
+.nums i.got { background: #ffcf1a; border-color: #fff; color: #6b3d00; }
+/* the number to fly through next glows steadily (no pulsing) */
+.nums i.next { border-color: #ffcf1a; color: #fff; box-shadow: 0 0 0 3px rgba(255,207,26,0.45), 0 0 12px #fff3a0; }
+svg.tre { width: var(--s); height: var(--s); display: block; overflow: visible; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.25)); }
+svg.tre.empty { filter: none; }
+.want { display: inline-flex; gap: 4px; }
+.basket { display: inline-flex; flex-direction: column; align-items: center; position: relative; min-width: calc(var(--s) * 1.4); }
+.basket b { font-size: calc(var(--s) * 1.05); line-height: 1; }
+.basket .in { display: flex; flex-wrap: wrap-reverse; justify-content: center; max-width: calc(var(--s) * 2.2); margin-bottom: -6px; --s: 16px; }
+.basket .in svg.tre { margin: -1px; }
+
+/* the world's goal pictured under its name as it begins */
+.banner .goal-pic { display: flex; justify-content: center; margin-top: 10px; --s: clamp(34px, 7vw, 56px); text-shadow: none; letter-spacing: 0; }
+.banner .goal-pic .nums i.got { box-shadow: 0 3px 0 #c98f00; }
+
+/* at the nest the family sorts the basket into rows, just above ▶ */
+.sort {
+  position: absolute; left: 50%; translate: -50% 0; bottom: calc(118px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 16px; border-radius: 22px;
+  background: rgba(40,30,90,0.5); border: 3px solid rgba(255,255,255,0.85); box-shadow: 0 6px 18px rgba(0,0,0,0.18); --s: clamp(32px, 6vw, 48px);
+}
+.sort-row { display: flex; gap: 6px; min-height: var(--s); align-items: center; }
+
+/* the end card: each world with what Ember brought home */
+.learned { display: flex; flex-direction: column; align-items: center; gap: 6px; --s: clamp(24px, 4.6vw, 36px); }
+.learn { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.22); border-radius: 99px; padding: 3px 14px 3px 6px; }
+.learn .w { font-size: calc(var(--s) * 1.25); line-height: 1; }
+.learn .kind { display: inline-flex; gap: 2px; }
+.learn .kind + .kind { margin-left: 8px; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.5); }
+.learn .nums { gap: 3px; }
+.learn .nums.ten { grid-auto-flow: column; grid-template-columns: none; }
+
+@media (max-width: 520px) {
+  .goal { top: calc(124px + env(safe-area-inset-top)); --s: 24px; gap: 8px; padding: 4px 10px; }
+  .power { top: calc(184px + env(safe-area-inset-top)); }
+  .learned { --s: 20px; }
+  .learn .nums { gap: 2px; }
+}
+@media (min-width: 760px) and (min-height: 640px) {
+  .goal { --s: 36px; }
+}
+@media (max-height: 480px) {
+  .goal { top: calc(66px + env(safe-area-inset-top)); --s: 22px; gap: 6px; padding: 3px 8px; }
+  /* the banner pictures the same goal, so on short screens the chip steps aside while it shows */
+  .goal { transition: opacity .3s; }
+  #hud.bannering .goal { opacity: 0; }
+  .power { top: calc(130px + env(safe-area-inset-top)); }
+  .nums.ten { gap: 3px; }
+  .banner .goal-pic { margin-top: 4px; --s: 30px; }
+  .sort { bottom: calc(84px + env(safe-area-inset-bottom)); --s: 26px; padding: 6px 12px; gap: 4px; }
+  .learned { --s: 18px; gap: 3px; }
+  .learn { padding: 1px 10px 1px 4px; gap: 6px; }
+}
+/* upright phones: the sorted rows stand side by side in one low strip, under the family's faces */
+@media (max-width: 520px) and (orientation: portrait) {
+  .sort { flex-direction: row; align-items: center; gap: 0; bottom: calc(112px + env(safe-area-inset-bottom)); padding: 6px 10px; --s: 26px; }
+  .sort-row { gap: 3px; }
+  .sort-row + .sort-row { margin-left: 8px; padding-left: 8px; border-left: 2px solid rgba(255,255,255,0.55); }
+}
+/* held sideways, the tray waits at the left so the family and Ember stay in view */
+@media (orientation: landscape) {
+  .sort { left: calc(20px + env(safe-area-inset-left)); translate: 0 -50%; top: 55%; bottom: auto; max-width: calc(50vw - 150px); }
+  .sort-row { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .learn, .sort-row span { animation: none; }
+}

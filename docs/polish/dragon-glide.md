@@ -31,3 +31,58 @@ Audit scores before this pass: Calm 5, Focus 4, Educational 3, Engagement 5, Vis
 - Give each world a purpose inside the steering: numbered rings flown in order, or gems gathered by colour or shape and arranged in the nest. Numbered rings need Blender work (Phase 3).
 - Optionally let the child hover or slow down by holding still.
 - A first-run choice could make Gentle flight the default.
+
+## Phase 2: a purpose in every world (2026-10-09, not yet deployed)
+
+### Design
+
+Each world now has one gentle goal, so steering means something. The goal is pictured under the world's name as it starts and spoken aloud ("Meadow Isles! Fly through the rings in order, 1 to 5!"). A small chip under the 💎 count keeps it in view.
+
+| World | Goal | What is learned |
+| --- | --- | --- |
+| 🌼 Meadow Isles | Numbered rings **1 → 5**, one at a time | Number order, numeral recognition |
+| 🍭 Candy Clouds | Hearts float in pairs, one pink and one blue. **Bring home 4 pink hearts.** | Choosing by colour, counting, sorting by colour |
+| 🏰 Sunset Castles | Numbered rings **1 → 10**, in short runs of 2–3; the chip is a ten-frame | Counting on to 10, the ten-frame |
+| 🌙 Night Sky | A star, a moon and a heart, all the same gold, float in threes. **Bring home 3 stars.** | Choosing by shape, counting, sorting by shape |
+
+- **Numbered rings.** A big purple numeral sits in the middle of each ring, so Ember flies through the number. The next number's ring is gold with a steady glow (no pulsing); later rings are pale. Each ring says its number and plays one note a step up a major scale. **A miss is not a failure:** the next ring ahead takes that number ("Number 3 is waiting for you!"). Each world lays out a few spare rings (8 for 1→5, 14 for 1→10). Spare rings beyond the goal quietly disappear. In ring worlds the plain cloud rings are switched off, so nothing muddles the count. Every numbered ring still counts for the shared ⭕ mission and the ⭕ tally.
+- **Gathering.** The treasures are extruded runtime shapes with no Blender work. They sway gently but never spin, so the shape always reads. Every treasure goes in the basket. The chip shows slots for the wanted kind that fill as Ember collects them, plus a little 🧺 holding everything else. Speech: "2 pink hearts!", "A blue heart! Into the basket. Look for pink hearts!", "4 pink hearts! That's 4. Now fly home to the nest!" The groups never stop the flight, and seven per world leave room to choose other kinds.
+- **At the nest** the family sorts the basket. One item at a time flies from Ember into its row on a tray, with the wanted kind first. Each item is counted aloud ("1, 2, 3, 4 … 4 pink hearts!"). Ring worlds show the numbers flown, 1 to N, as a row or ten-frame and say "You flew 1 to 5 in order!" The ▶ fly-on button waits until the sorting is done. The nest still waits for the child's tap.
+- **End card.** The old row of world emoji is now one line per world showing what Ember brought home: numbers 1…N, or the sorted rows divided by a line. It is spoken once, for example "You flew 1 to 5 in order! You sorted 4 pink and 3 blue hearts! You flew 1 to 10 in order! You sorted 3 stars, 2 moons and 1 heart!" The 💎/⭕/🏮 tally stays.
+- **Kept:** one calm speed, a nest that waits for a tap, the shared ⭕ ring-counting mission (adventure.js is untouched), the 🐢 Gentle flight, lanterns, bubbles, fire, the rainbow star and gems. When the counting mission is on, its spoken count wins for rings 1–4 (the two counts are the same in ring worlds), and the world goal adds "And let's count four rings!" to the start sentence. The magnet pulls gems only, never treasures, so the child's choice stays theirs.
+
+### Changes
+
+| File | What |
+| --- | --- |
+| `public/js/goals.js` (new) | Treasure kinds, shared outlines (star, heart, crescent moon) drawn as both 3D extrusions and inline SVG, numeral canvas textures, spoken sentences (`goalSentence`, `learnedSentence`, `countOf`, `sortedRows`) |
+| `public/js/worlds.js:23,41,59,77` | Each world's `goal` |
+| `public/js/course.js:89-200` | `slotsFor` spreads goal places evenly through a world. Also `numberedRings`/`numRing`/`relabel` (missed numbers wait) and `treasures`/`treasure` |
+| `public/js/course.js:222-236` | The generator lays goal places first, with nothing over them, and turns off plain rings in ring worlds |
+| `public/js/course.js:578-615` | Ring pass/miss and treasure pickup events. Only the current world's goal items show, so the next world's rings never appear behind the family at the nest |
+| `public/js/main.js:160-180` | `say()`, which respects mute, and the combined world-goal + mission start sentence |
+| `public/js/main.js:334-450` | Goal state, chip/banner/end pictures, and nest sorting driven by nest time, plus the fly-from-Ember animation (a fade only under reduced motion) |
+| `public/js/main.js:746-775` | `numRing` / `numMiss` / `treasure` handling |
+| `public/js/main.js:310-321, 844, 1049` | End-card lines and speech, recording the world at the nest, running the sort and delaying ▶ until it ends |
+| `public/js/audio.js:238-250` | `number(n)` (major-scale step per number) and `treasure(n)` |
+| `public/index.html` | `#goal` chip, `#sort` tray, `#learned` (replaces `#stars`) |
+| `public/style.css:303-` | Chip, banner picture, tray and end-card styles. Short landscape phones hide the chip while the banner shows. Upright phones get a one-strip tray; sideways screens put the tray at the left |
+
+### Evidence
+
+Screenshots and scripts are in the session scratchpad at `p2/dragon-glide/`. `play.mjs` flies all four worlds with an autopilot that steers like a child: it misses ring 2 once and picks the other kind about a third of the time. `live.mjs` is real-time flight.
+
+- I played the full trip in portrait 834×1194, landscape 1194×834, a 667×375 phone and a 375×667 phone in Chromium, and landscape in WebKit, with 0 console errors each time. In every run the missed ring 2 waited and was then flown, and both ring worlds reached 1→5 and 1→10.
+- Spoken log, for example: "Number 2 is waiting for you!", "5! You flew 1 to 5 in order!", "A blue heart! Into the basket.", "3 stars! That's 3. Now fly home to the nest!" Final: "You flew 1 to 5 in order! You sorted 4 pink and 3 blue hearts! You flew 1 to 10 in order! You sorted 5 stars and 2 hearts!"
+- With the ⭕ mission on, the start sentence was "Meadow Isles! Fly through the rings in order, 1 to 5! And let's count four rings!", and the mission counted normally.
+- `browser.mjs --ids dragon-glide --run p2`: Chromium and WebKit both BOOT + PLAY ready with 0 errors.
+- `node --test examples/_studio/tests/*.test.mjs`: 10/11 pass. The manifest-hash test fails until the coordinator rebuilds, as expected.
+- `original-quality.mjs`: the full run stops at crash-racers, which another agent is editing. Its dragon-glide section, run on its own in Chromium and WebKit, passes: the mission choice persists and starts at zero.
+
+### Left / open
+
+- Family play is needed. Watch whether 4-year-olds read the pale numbered rings ahead as "not yet" and enjoy the nest sorting, which takes about 8–12 s for 6–8 treasures.
+- When Ember lines up with a ring, Ember's body hides its numeral, though it is clear on the approach and in the chip. A copy above the ring is an option if children lose track.
+- A gather world can end with fewer than the wanted number. That is honest and has no failure message, and the end card says what was sorted. Owner's choice whether to add more chances after a shortfall.
+- Phase 3 art: the runtime rings and shapes are probably enough, so Blender numbered rings are now optional.
+

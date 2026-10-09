@@ -19,6 +19,8 @@ export const WORLDS = [
     rock: { rock: '#a99bc9', rock_grass: '#7bd14b' },
     obstacles: ['windmill', 'rock'],
     gem: 'blue',
+    // numbered rings, 1 to 5, one at a time (8 rings ahead, so a missed number can wait)
+    goal: { type: 'rings', target: 5, groups: [1, 1, 1, 1, 1, 1, 1, 1] },
     lanterns: 0,
     waterfalls: 0.25,
     speed: CALM_SPEED,
@@ -35,6 +37,8 @@ export const WORLDS = [
     rock: { rock: '#c49bff', rock_grass: '#ff9ecf' },
     obstacles: ['lollipop', 'rock'],
     gem: 'pink',
+    // two colours of heart float in pairs; bring home four pink ones
+    goal: { type: 'gather', want: 'pink', count: 4, kinds: ['pink', 'blue'], groups: 7 },
     lanterns: 0,
     waterfalls: 0.35,
     speed: CALM_SPEED,
@@ -51,6 +55,8 @@ export const WORLDS = [
     rock: { rock: '#b48ab0', rock_grass: '#8fcf5a' },
     obstacles: ['tower', 'rock'],
     gem: 'gold',
+    // numbered rings 1 to 10, in little runs of two or three (14 rings, so missed numbers can wait)
+    goal: { type: 'rings', target: 10, groups: [3, 3, 2, 2, 2, 2] },
     lanterns: 0.35,
     waterfalls: 0.3,
     speed: CALM_SPEED,
@@ -67,6 +73,8 @@ export const WORLDS = [
     rock: { rock: '#7a74b0', rock_grass: '#3f8f8a' },
     obstacles: ['rock', 'tower'],
     gem: 'blue',
+    // three shapes, all one colour, float in threes; bring home three stars
+    goal: { type: 'gather', want: 'star', count: 3, kinds: ['star', 'moon', 'heart'], groups: 7 },
     lanterns: 0.75,
     waterfalls: 0.2,
     night: true,

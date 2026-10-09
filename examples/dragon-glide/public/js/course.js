@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { makeGlowTexture } from './effects.js'
+import { numberTexture, treasureMesh } from './goals.js'
 import { copy, tinted } from './models.js'
 import { WORLDS, WORLD_LENGTH, worldAt } from './worlds.js'
 
@@ -60,6 +61,12 @@ export class Course {
     this.fireCore = new THREE.SpriteMaterial({ map: glow, color: '#fff3a0', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
     this.fireOuter = new THREE.SpriteMaterial({ map: makeGlowTexture(true), color: '#ff7b2e', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
     this.powerGlow = new THREE.SpriteMaterial({ map: glow, color: '#ffe066', transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending })
+    this.world = 0 // the world Ember is in: only its goal rings and treasures show
+    this.ringGlow = new THREE.SpriteMaterial({ map: glow, color: '#fff3a0', transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending })
+    this.treasureGlow = new THREE.SpriteMaterial({ map: glow, color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending })
+    templates.hoop.traverse((o) => {
+      if (o.isMesh && o.material.name === 'hoop_cloud') this.hoopCloud ??= o.material
+    })
     this.tmp = new THREE.Vector3()
     this.tmp2 = new THREE.Vector3()
   }
@@ -72,6 +79,124 @@ export class Course {
     this.nextZ = startZ + 45
     this.possible = 0
     this.powerGiven = new Set()
+    this.slots = new Map() // world -> the goal places still to lay out
+    this.ringNext = new Map() // world -> the number the next numbered ring shows
+  }
+
+  // --- Each world's goal ------------------------------------------------------------
+
+  /** Where a world's numbered rings or treasure groups go: spread evenly between start and nest. */
+  slotsFor(wi) {
+    if (!this.slots.has(wi)) {
+      const goal = WORLDS[wi].goal
+      const n = goal ? (goal.type === 'rings' ? goal.groups.length : goal.groups) : 0
+      const from = 70
+      const to = WORLD_LENGTH - 150
+      this.slots.set(wi, Array.from({ length: n }, (_, i) => ({ at: from + ((to - from) * i) / Math.max(1, n - 1), i })))
+    }
+    return this.slots.get(wi)
+  }
+
+  /**
+   * A run of numbered rings in a gentle curve. No gems lead into them: they'd sit right in
+   * front of the big number as Ember lines up, and the glowing ring already shows the way.
+   */
+  numberedRings(z, count) {
+    let x = this.randX(0.55)
+    let y = rand(3, 5.8)
+    const gap = 17
+    z += 6
+    for (let i = 0; i < count; i++) {
+      this.numRing(x, y, z + i * gap)
+      x = clamp(x + rand(-3, 3), -this.lane.x * 0.7, this.lane.x * 0.7)
+      y = clamp(y + rand(-1.8, 1.8), 2.8, 6.2)
+    }
+    return 6 + (count - 1) * gap + 4
+  }
+
+  numRing(x, y, z) {
+    const obj = new THREE.Group()
+    const ring = copy(this.t.hoop, { hoop_cloud: PALE_RING })
+    obj.add(ring)
+    const halo = new THREE.Sprite(this.ringGlow)
+    halo.scale.setScalar(7.5)
+    halo.position.z = -0.3
+    halo.visible = false
+    obj.add(halo)
+    // the number floats in the middle of the ring: Ember flies right through it
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: numberTexture(1), transparent: true, depthWrite: false }))
+    label.scale.setScalar(2.9)
+    label.renderOrder = 4
+    obj.add(label)
+    const scale = 1.15
+    obj.scale.setScalar(scale)
+    const it = this.add('numring', obj, x, y, z, { radius: 2.3 * scale, wi: this.wi, ring, halo, label, number: 0 })
+    this.relabel(this.wi)
+    return it
+  }
+
+  /**
+   * Numbers the rings of world `wi` still ahead, nearest first, from the number that comes next.
+   * A missed ring is behind Ember now, so the ring after it takes its number: the number waits.
+   * Rings past the goal quietly go away.
+   */
+  relabel(wi) {
+    const goal = WORLDS[wi].goal
+    let n = this.ringNext.get(wi) ?? 1
+    const ahead = this.items.filter((it) => it.type === 'numring' && it.wi === wi && !it.done).sort((a, b) => b.z - a.z)
+    for (const it of ahead) {
+      const number = n++
+      it.off = number > goal.target
+      it.obj.visible = !it.off
+      if (it.off) continue
+      if (it.number !== number) {
+        it.number = number
+        it.label.material.map = numberTexture(number)
+      }
+      const next = number === (this.ringNext.get(wi) ?? 1)
+      if (it.next !== next) {
+        it.next = next
+        it.halo.visible = next
+        it.label.material.opacity = next ? 1 : 0.75
+        const look = next ? GOLD_RING : PALE_RING
+        it.ring.traverse((o) => {
+          if (o.isMesh && o.material.name === 'hoop_cloud') o.material = tinted(this.hoopCloud, look)
+        })
+      }
+    }
+  }
+
+  /** The next number world `wi` is waiting for (1 until the first ring is flown). */
+  nextNumber(wi) {
+    return this.ringNext.get(wi) ?? 1
+  }
+
+  /** A little group of treasures side by side: the child chooses which one to fly to. */
+  treasures(z) {
+    const goal = this.w.goal
+    const kinds = [...goal.kinds].sort(() => Math.random() - 0.5)
+    const n = kinds.length
+    const s = Math.min(this.lane.x * 0.78, n === 2 ? 2.6 : 2.8)
+    const y = rand(3.4, 5.4)
+    kinds.forEach((kind, i) => {
+      const x = n === 2 ? (i ? s : -s) : (i - 1) * s
+      // three in a little arch, so there is room to fly to the middle one alone
+      const dy = n === 3 ? (i === 1 ? 1.1 : -0.7) : rand(-0.5, 0.5)
+      this.treasure(kind, x, y + dy, z + 4)
+    })
+    return 10
+  }
+
+  treasure(kind, x, y, z) {
+    const obj = new THREE.Group()
+    const m = treasureMesh(kind)
+    m.scale.setScalar(0.95)
+    obj.add(m)
+    const halo = new THREE.Sprite(this.treasureGlow)
+    halo.scale.setScalar(3)
+    halo.position.z = -0.2
+    obj.add(halo)
+    return this.add('treasure', obj, x, y, z, { kind, r: 0.95, spin: m, wi: this.wi })
   }
 
   // --- Building the course --------------------------------------------------------
@@ -94,7 +219,12 @@ export class Course {
       this.lane = lane
       let len
       const hard = Math.min(1, into / 300) // gentle at the start of each world
-      if (!this.powerGiven.has(wi) && into > WORLD_LENGTH * 0.45) {
+      const slots = this.slotsFor(wi)
+      if (slots.length && slots[0].at <= into + 60) {
+        // the world's goal comes first: nothing else is laid over a numbered ring or a treasure group
+        const slot = slots.shift()
+        len = w.goal.type === 'rings' ? this.numberedRings(this.nextZ, w.goal.groups[slot.i]) : this.treasures(this.nextZ)
+      } else if (!this.powerGiven.has(wi) && into > WORLD_LENGTH * 0.45) {
         this.powerGiven.add(wi)
         len = this.power(this.nextZ)
       } else {
@@ -102,7 +232,8 @@ export class Course {
         const pObstacle = 0.1 + hard * (0.14 + wi * 0.04)
         const pLantern = w.lanterns * 0.3
         const pBubble = 0.13
-        const pHoop = 0.26
+        // in a numbered-ring world the only rings are the numbered ones, so a plain ring never muddles the count
+        const pHoop = w.goal?.type === 'rings' ? 0 : 0.26
         if (r < pObstacle) len = this.obstacle(this.nextZ)
         else if (r < pObstacle + pLantern) len = this.lanterns(this.nextZ)
         else if (r < pObstacle + pLantern + pBubble) len = this.bubbles(this.nextZ)
@@ -134,6 +265,7 @@ export class Course {
   drop(it) {
     this.scene.remove(it.obj)
     if (it.mats) for (const m of it.mats) m.dispose()
+    if (it.label) it.label.material.dispose()
   }
 
   gem(x, y, z, kind = this.w.gem) {
@@ -443,6 +575,44 @@ export class Course {
           }
           break
         }
+        case 'numring': {
+          // the next world's rings wait unseen beyond the nest until Ember flies on
+          if (it.off || it.wi !== this.world) {
+            o.visible = false
+            break
+          }
+          o.rotation.z = Math.sin(it.t * 0.8) * 0.06
+          const away = it.done ? Math.max(0, 1 - Math.max(0, o.position.z - p.z - 1) / 3.5) : 1
+          o.scale.setScalar(1.15 * (it.done ? 1 + it.flash : 1) * away)
+          o.visible = away > 0
+          if (it.done) it.flash = Math.max(0, it.flash - dt * 1.5)
+          if (!playing || it.done) break
+          if (prevZ > it.z && p.z <= it.z) {
+            it.done = true
+            it.flash = 0.3
+            it.halo.visible = false
+            const through = Math.hypot(p.x - it.x, p.y - it.y) < it.radius * 0.95
+            const number = it.number
+            if (through) this.ringNext.set(it.wi, number + 1)
+            this.relabel(it.wi)
+            // a miss: does another ring ahead now wait with the same number?
+            const waits = !through && this.items.some((r) => r.type === 'numring' && r.wi === it.wi && !r.done && !r.off && r.number === number)
+            events.push({ type: through ? 'numRing' : 'numMiss', number, waits, pos: o.position.clone() })
+          }
+          break
+        }
+        case 'treasure': {
+          // a slow sway, never a spin, so the shape always reads
+          it.spin.rotation.y = Math.sin(it.t * 1.1) * 0.45
+          o.visible = it.wi === this.world
+          if (!o.visible) break
+          o.position.y = it.y + Math.sin(it.t * 1.6) * 0.18
+          if (playing && o.position.distanceTo(p) < it.r + R) {
+            it.gone = true
+            events.push({ type: 'treasure', kind: it.kind, pos: o.position.clone() })
+          }
+          break
+        }
         case 'bubble': {
           it.spin.rotation.y += dt * 1.8
           it.bubble.scale.set(1 + Math.sin(it.t * 4) * 0.04, 1 + Math.cos(it.t * 4) * 0.04, 1)
@@ -583,7 +753,9 @@ export class Course {
   }
 }
 
-const SMALL = new Set(['gem', 'bubble', 'lantern', 'power'])
+const SMALL = new Set(['gem', 'bubble', 'lantern', 'power', 'treasure'])
+const GOLD_RING = { color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 0.55 }
+const PALE_RING = { color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 0.2 }
 const BIG = new Set(['rock', 'windmill', 'tower', 'lolly'])
 
 /** Gives each mesh of `obj` its own transparent copy of its material and returns them all. */
