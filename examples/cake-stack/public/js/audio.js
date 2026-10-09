@@ -173,12 +173,14 @@ export class Sound {
     this.noise({ at: t, dur: 0.1, gain: 0.14, filter: { type: 'lowpass', freq: 700 } })
   }
 
-  /** Perfect: a sparkling chime that climbs with the streak. */
-  perfect(streak = 0) {
+  /**
+   * Perfect: one soft two-note chime. Stacking always plays the same chime (it never climbs into a
+   * streak); the recipe studio passes each layer's place so a checked recipe sounds as a little scale.
+   */
+  perfect(step = 0) {
     const t = this.now
-    const s = Math.min(streak, 10)
-    for (let i = 0; i < 4; i++) this.tone({ at: t + i * 0.06, type: 'triangle', dur: 0.35, gain: 0.14, freq: penta(s + i * 2) })
-    this.tone({ at: t + 0.24, type: 'sine', dur: 0.5, gain: 0.08, freq: penta(s + 10) })
+    this.tone({ at: t, type: 'sine', dur: 0.45, gain: 0.1, freq: penta(4 + step) })
+    this.tone({ at: t + 0.09, type: 'triangle', dur: 0.6, gain: 0.07, freq: penta(7 + step) })
   }
 
   /** A good (not perfect) landing: one happy note. */
@@ -189,8 +191,8 @@ export class Sound {
   /** Squishy icing splat. */
   splat() {
     const t = this.now
-    this.noise({ at: t, dur: 0.18, gain: 0.3, filter: { type: 'lowpass', freq: [[0, 1800], [0.18, 300]] } })
-    this.tone({ at: t, type: 'sine', dur: 0.25, gain: 0.22, freq: [[0, 420], [0.25, 120]] })
+    this.noise({ at: t, dur: 0.18, gain: 0.16, filter: { type: 'lowpass', freq: [[0, 1400], [0.18, 300]] } })
+    this.tone({ at: t, type: 'sine', dur: 0.25, gain: 0.14, freq: [[0, 420], [0.25, 120]] })
   }
 
   /** A sliver of cake plops onto the counter. */
@@ -210,7 +212,7 @@ export class Sound {
   /** Toppers popping onto the cake. */
   pop(delay = 0, step = 0) {
     const t = this.now + delay
-    this.tone({ at: t, type: 'sine', dur: 0.12, gain: 0.25, freq: [[0, 320 + step * 30], [0.1, 980 + step * 60]] })
+    this.tone({ at: t, type: 'sine', dur: 0.12, gain: 0.14, freq: [[0, 320 + step * 30], [0.1, 980 + step * 60]] })
   }
 
   match() {
@@ -230,12 +232,10 @@ export class Sound {
     this.tone({ at: t, type: 'sine', dur: 0.1, gain: 0.08, freq: penta(i + 3) })
   }
 
-  /** Party horn and a cheer. */
+  /** A gentle chord, played once: no party horn or crowd noise. */
   cheer() {
     const t = this.now
-    this.tone({ at: t, type: 'sawtooth', dur: 0.7, gain: 0.12, freq: [[0, 300], [0.15, 520], [0.7, 500]], filter: { type: 'lowpass', freq: 1800 }, vibrato: { rate: 14, depth: 14 } })
-    this.noise({ at: t + 0.1, dur: 1.2, gain: 0.12, attack: 0.2, filter: { type: 'bandpass', freq: 1600, Q: 0.6 } })
-    for (let i = 0; i < 10; i++) this.tone({ at: t + 0.4 + i * 0.07, type: 'sine', dur: 0.15, gain: 0.06, freq: NOTE(84 + ((i * 7) % 12)) })
+    for (const [i, n] of [72, 76, 79, 84].entries()) this.tone({ at: t + i * 0.12, type: 'sine', dur: 1.1, gain: 0.07, freq: NOTE(n) })
   }
 
   /** Happy Birthday on a little music box. Returns how long it lasts. */
@@ -251,13 +251,13 @@ export class Sound {
     return at
   }
 
-  /** New level fanfare. */
+  /** The cake is ready: a gentle rising chord on the music box. */
   fanfare() {
     const t = this.now
-    const tune = [[72, 0, 0.12], [76, 0.13, 0.12], [79, 0.26, 0.12], [84, 0.4, 0.45]]
+    const tune = [[72, 0, 0.4], [76, 0.18, 0.4], [79, 0.36, 0.4], [84, 0.54, 0.9]]
     for (const [n, d, len] of tune) {
-      this.tone({ at: t + d, type: 'square', dur: len, gain: 0.07, freq: NOTE(n), filter: { type: 'lowpass', freq: 2500 } })
-      this.tone({ at: t + d, type: 'triangle', dur: len + 0.1, gain: 0.15, freq: NOTE(n - 12) })
+      this.tone({ at: t + d, type: 'sine', dur: len, gain: 0.07, freq: NOTE(n) })
+      this.tone({ at: t + d, type: 'triangle', dur: len + 0.1, gain: 0.08, freq: NOTE(n - 12) })
     }
   }
 
@@ -272,7 +272,7 @@ export class Sound {
       this.tone({ at, type: 'sine', dur: 0.55, gain: 0.2, freq: penta(WALTZ[b % WALTZ.length], 76), out: this.musicBus })
       if (b % 3 === 0) this.tone({ at, type: 'triangle', dur: 0.9, gain: 0.26, freq: penta(WALTZ_BASS[(b / 3) % 8], 48), out: this.musicBus })
       else this.tone({ at, type: 'sine', dur: 0.3, gain: 0.08, freq: penta(WALTZ_BASS[Math.floor(b / 3) % 8] + 5, 48), out: this.musicBus })
-      this.nextBeat += 0.24
+      this.nextBeat += 0.32 // an unhurried waltz
     }
   }
 }

@@ -193,7 +193,7 @@ function renderDeliveryProgress(goal, option, count) {
 }
 
 function speakDelivery(text) {
-  if (!('speechSynthesis' in window)) return
+  if (audio.muted || !('speechSynthesis' in window)) return
   speechSynthesis.cancel()
   const words = new SpeechSynthesisUtterance(text)
   words.lang = 'en-US'
@@ -376,6 +376,8 @@ function buildMenu() {
       audio.beep()
     }
   }
+  for (const id of ['sound-btn', 'menu-sound']) $(id).onclick = () => setMuted(!audio.muted)
+  renderSound()
   $('easy-gas').onclick = () => {
     input.easyGas = !input.easyGas
     $('easy-gas').classList.toggle('on', input.easyGas)
@@ -391,6 +393,28 @@ function buildMenu() {
     enterLobbyScreen()
   }
 }
+
+/** One sound switch for the whole game (menu and race), remembered on this device. */
+function renderSound() {
+  for (const id of ['sound-btn', 'menu-sound']) {
+    const el = $(id)
+    el.textContent = audio.muted ? '🔇' : '🔊'
+    el.setAttribute('aria-label', audio.muted ? 'Sound off. Tap for sound.' : 'Sound on. Tap for quiet.')
+    el.classList.toggle('off', audio.muted)
+  }
+}
+function setMuted(muted) {
+  audio.unlock()
+  audio.setMuted(muted)
+  if (muted && 'speechSynthesis' in window) speechSynthesis.cancel()
+  try {
+    localStorage.setItem('crash-racers-sound', muted ? '0' : '1')
+  } catch {}
+  renderSound()
+}
+try {
+  if (localStorage.getItem('crash-racers-sound') === '0') audio.setMuted(true)
+} catch {}
 
 function setWaitingText(text) {
   $('waiting-text').textContent = text
@@ -864,10 +888,7 @@ function stunts(car, proj) {
   const pad = proj ? game.track.boostPadAt(proj) : null
   if (pad && car.boostPad !== pad) {
     car.boost({ free: true, seconds: 1.6 })
-    if (car.isPlayer) {
-      banner('⚡ BOOST!', 700)
-      audio.whoosh()
-    }
+    if (car.isPlayer) audio.whoosh()
   }
   car.boostPad = pad ?? null
   // At the top of a jump (still going fast: a car that just rolled onto its roof isn't flying).
@@ -899,12 +920,11 @@ function onLanding(car, { airTime, flips, upright }) {
     effects.puff(landingDust.set(p.x + (Math.random() - 0.5) * 2, 0.2, p.z + (Math.random() - 0.5) * 2), dustVelocity.set((Math.random() - 0.5) * 3, 1 + Math.random(), (Math.random() - 0.5) * 3), { color: '#d8c9a8', size: 1, life: 1 })
   }
   if (!car.isPlayer) return
-  effects.addShake(Math.min(1, airTime * 0.6))
+  effects.addShake(Math.min(0.5, airTime * 0.3))
   audio.thump(Math.min(1, airTime * 0.8))
   if (airTime < 0.8 && !flips) return
-  const praise = flips > 1 ? `🌀 ${flips}× FLIP!` : flips ? '🌀 FLIP!' : airTime > 1.4 ? '🚀 MEGA AIR!' : '✈️ BIG AIR!'
-  banner(`${praise} 🔥 Turbo ready!`, 1600)
-  audio.cheer()
+  // Says what happened (a flip, or turbo filled up), without hype words or a cheer jingle.
+  banner(flips ? `🌀 ${flips > 1 ? `${flips} flips` : 'Flip'} · 🔥 ready` : '🔥 Turbo ready', 1400)
   car.turboCooldown = 0
   if (game.mode === 'smash' && game.raceOn && flips) addScore(car, 2 * flips)
 }
@@ -922,16 +942,15 @@ function onLocalHit(car, hit) {
 }
 
 const UP = new THREE.Vector3(0, 1, 0)
-/** Sparks and a crunch for any car's crash, local or not; for the player, a shake, and on big ones a banner and slow motion. */
+/**
+ * Sparks and a crunch for any car's crash, local or not; for the player a small shake (a real bump).
+ * Calm pass: no slow-motion replay and no random "KABOOM!" banners; the dents tell the story.
+ */
 function showHit(car, point, normal, speed) {
   effects.sparkBurst(point, normal, speed)
   audio.crash(speed, car.isPlayer)
   if (!car.isPlayer) return
-  effects.addShake(Math.min(1, speed / 25))
-  if (speed > 14) {
-    banner(['💥 CRASH!', '😱 WHOA!', '💥 KABOOM!', '🤯 WOW!'][Math.floor(Math.random() * 4)])
-    if (slowmo(1400)) audio.whoosh()
-  }
+  effects.addShake(Math.min(0.45, speed / 40))
 }
 
 /** Cones, crates and barrels: count the ones each car sends flying (once each). */
@@ -970,22 +989,19 @@ function openBox(car, box) {
   if (prize === 'turbo') {
     car.boost({ free: true, seconds: 2.5 })
     if (car.isPlayer) {
-      banner('🎁 🔥 TURBO!', 1100)
+      banner('🎁 🔥 Turbo', 1100)
       audio.whoosh()
     }
   } else if (prize === 'wave') {
     shockwave(p.x, p.z, car.id)
     send({ t: 'wave', r: raceId(), id: car.id, x: +p.x.toFixed(2), z: +p.z.toFixed(2) })
-    if (car.isPlayer) banner('🎁 📯 HONK WAVE!', 1300)
+    if (car.isPlayer) banner('🎁 📯 Honk wave', 1300)
   } else if (prize === 'fix') {
     repairCar(car)
     if (car.isPlayer) banner('🎁 🔧 All fixed!', 1100)
   } else {
     addStat(car, 'stars', 5)
-    if (car.isPlayer) {
-      banner('🎁 ⭐ +5 stars!', 1100)
-      audio.cheer()
-    }
+    if (car.isPlayer) banner('🎁 ⭐ 5 stars', 1100)
   }
 }
 
@@ -1128,13 +1144,13 @@ function act(name) {
   audio.unlock()
   if (game.state === 'race') ACTIONS[name]?.()
 }
-input.on('key', (k) => act(KEYS[k]))
+input.on('key', (k) => (k === 'm' ? setMuted(!audio.muted) : act(KEYS[k])))
 input.on('button', act)
 
 function turbo() {
   if (game.player?.boost()) {
     audio.whoosh()
-    banner('🔥 TURBO!', 700)
+    banner('🔥 Turbo', 700)
   }
 }
 // Any tap, click or key unlocks sound (the engine starts by itself once it can).
@@ -1215,7 +1231,7 @@ function endRace() {
     if (prog && !prog.finished) prog.dnf = true
   }
   if (game.state === 'race' || game.state === 'countdown') {
-    banner('⏱️ TIME!', 1500)
+    banner('🏁 Everyone stops here', 1500)
     audio.cheer()
   }
   game.state = 'results'
@@ -1237,7 +1253,6 @@ function standings() {
 
 /** Everyone gets an award: each goes to whoever did the most of it and has no award yet (children first on a tie). */
 const AWARDS = [
-  { title: '💥 Crash King', stat: (s) => s.crashes, text: (n) => `${n} crash${n === 1 ? '' : 'es'}` },
   { title: '✈️ Sky Star', stat: (s) => s.air, min: 0.5, text: (n) => `${n.toFixed(1)}s flying` },
   { title: '🌀 Flip Wizard', stat: (s) => s.flips, text: (n) => `${n} flip${n > 1 ? 's' : ''}` },
   { title: '⭐ Star Catcher', stat: (s) => s.stars, text: (n) => `${n} star${n === 1 ? '' : 's'}` },
@@ -1293,7 +1308,7 @@ function renderResults() {
   updateResultsWait()
   if (!game.confetti) {
     game.confetti = true
-    confetti()
+    softFinish()
   }
 }
 
@@ -1313,47 +1328,40 @@ function endSmash() {
   game.state = 'results'
   if (isHost()) send({ t: 'end', r: raceId() })
   audio.cheer()
-  banner('⏱️ TIME!', 1800)
+  banner('🏁 Time to park', 1800)
   later(() => {
     renderResults()
     show('results')
   }, 1800)
 }
 
-function confetti() {
-  paperConfetti()
-  for (let i = 0; i < 60; i++) {
-    const p = game.player?.body.position ?? { x: 0, y: 0, z: 0 }
-    effects.sparks.spawn(new THREE.Vector3(p.x, p.y + 4, p.z), new THREE.Vector3((Math.random() - 0.5) * 10, 6 + Math.random() * 6, (Math.random() - 0.5) * 10), {
-      life: 2.5,
-      color: RAINBOW[i % 5],
-    })
-  }
-}
-
-/** Paper confetti over the results screen, where everyone can see it (the 3D confetti is behind the overlay). */
-function paperConfetti() {
+/**
+ * The one soft moment on the results screen: a dozen paper petals drift down slowly, once.
+ * (It used to be 46 paper pieces plus 60 rainbow sparks.)
+ */
+function softFinish() {
   document.querySelector('.party')?.remove()
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
   const party = document.createElement('div')
   party.className = 'party'
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; i < 12; i++) {
     const piece = document.createElement('i')
-    const fall = 2.2 + Math.random() * 1.6
-    piece.style.cssText = `left:${Math.random() * 100}%;background:${RAINBOW[i % RAINBOW.length]};animation-duration:${fall}s;animation-delay:${Math.random() * 0.8}s;--dx:${(Math.random() - 0.5) * 160}px;--spin:${(Math.random() - 0.5) * 1440}deg`
+    const fall = 5 + Math.random() * 2
+    piece.style.cssText = `left:${5 + Math.random() * 90}%;background:${RAINBOW[i % RAINBOW.length]};animation-duration:${fall}s;animation-delay:${Math.random() * 1.2}s;--dx:${(Math.random() - 0.5) * 80}px;--spin:${(Math.random() - 0.5) * 360}deg`
     party.append(piece)
   }
   document.body.append(party)
-  setTimeout(() => party.remove(), 4800)
+  setTimeout(() => party.remove(), 9000)
 }
 
-/** A child on the menu who hasn't tapped anything for a while: GO wiggles to show where to tap. */
+/** A child on the menu who hasn't tapped anything for a long while: GO glows softly, once, to show where to tap. */
 let lastTouch = performance.now()
 addEventListener('pointerdown', () => {
   lastTouch = performance.now()
   $('go').classList.remove('nudge')
 }, { capture: true, passive: true })
 setInterval(() => {
-  if (game.state === 'menu' && performance.now() - lastTouch > 9000) $('go').classList.add('nudge')
+  if (game.state === 'menu' && performance.now() - lastTouch > 30000) $('go').classList.add('nudge')
 }, 1000)
 
 // --- Main loop ------------------------------------------------------------------------------------
@@ -1433,8 +1441,9 @@ function cruise(car, controls) {
   const proj = game.progress.get(car.id)?.proj
   if (!proj) return controls
   const bend = game.track.bendAhead(proj.dist, game.track.lookAhead(car.speed))
-  const target = clamp(30 - bend * 55, 15, 30)
-  if (car.speed > target + 5) return { ...controls, throttle: 0, brake: 0.3 }
+  // Calm pass: a noticeably gentler cruise (was up to 30 m/s, about 108 km/h). Holding 🚀 still means full speed.
+  const target = clamp(19 - bend * 35, 10, 19)
+  if (car.speed > target + 3) return { ...controls, throttle: 0, brake: 0.3 }
   return { ...controls, throttle: car.speed < target ? 1 : 0.3 }
 }
 
@@ -1659,7 +1668,6 @@ function setCooldown(el, fraction) {
 }
 
 let placeUpdatedAt = 0
-let lastFinaleTick = 0
 function updateHud(now) {
   const p = game.player
   if (!p || !game.setup) return
@@ -1693,8 +1701,6 @@ function updateHud(now) {
   if (finale) {
     const left = Math.max(0, Math.ceil(game.finaleAt - game.raceTime))
     setText('finale', `🏁 ${left}`)
-    if (left <= 5 && left !== lastFinaleTick) audio.tick()
-    lastFinaleTick = left
   }
   setText('speed', String(Math.round(p.speed * 3.6)))
   drawMinimap()
@@ -1806,6 +1812,8 @@ function frame(now) {
       }
     }
   } else audio.idleEngine()
+  // Soft music on the menus and the podium only; on the road the engine is the music.
+  audio.updateMusic(['menu', 'waiting', 'results'].includes(game.state))
   effects.update(realDt, camera)
   if (game.state === 'race') measureQuality(realDt, now)
   renderer.render(scene, camera)

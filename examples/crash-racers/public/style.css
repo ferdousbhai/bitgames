@@ -286,3 +286,17 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .hud-buttons button { width: 48px; height: 48px; font-size: 24px; }
   .finale { bottom: calc(80px + env(safe-area-inset-bottom)); font-size: 26px; }
 }
+
+/* --- Calm pass (2026-10-09): nothing hops, wobbles or pulses forever --- */
+.logo span, .car-pick.selected .pic, .podium .place.me .podium-pic, .countdown.waiting, .finale { animation: none; }
+/* A battered car: 🔧 just stays highlighted in yellow, without wobbling */
+.hud-buttons #fix-btn.needed { animation: none; }
+/* After a long pause on the menu, GO glows softly once instead of wiggling */
+#go.nudge { animation: glow 2.4s ease-in-out 1; }
+@keyframes glow { 50% { box-shadow: 0 7px 0 #b38200, 0 0 0 10px rgba(255, 190, 11, .45), 0 10px 30px rgba(0,0,0,.35); } }
+.sound-chip { min-width: 52px; }
+#sound-btn.off, .sound-chip.off { opacity: .6; }
+@media (prefers-reduced-motion: reduce) {
+  .podium .place, .hud-buttons button.ready, #go.nudge, .car-spinner { animation: none; }
+  .party { display: none; }
+}

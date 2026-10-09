@@ -60,16 +60,10 @@ const game = {
   state: 'loading', // loading | title | intro | play | party | candles | card
   run: 0, // bumps whenever a game starts or ends, so stale async steps stop
   level: 1,
-  stars: 0,
-  cakeStars: 0,
-  best: 0,
   streak: 0,
   firstDrop: false,
   lastFlavour: null,
 }
-try {
-  game.best = Number(localStorage.getItem('cake-stack-best')) || 0
-} catch {}
 
 // Optional learning missions: count layers as they land.
 const adventure = createAdventure({
@@ -118,17 +112,9 @@ const FLOOR_W = MIN_W + 0.12 // the slimmest a layer gets
 const perfectWindow = (w) => Math.max(0.12, w * 0.12)
 const topY = () => STAND_TOP + (cake ? cake.layers.length : 0) * STEP
 const topLayer = () => (cake && cake.layers.length ? cake.layers[cake.layers.length - 1] : { x: 0, w: START_W })
-const speed = () => adventure.pace * Math.min(3.0, (1.3 + 0.12 * Math.min(game.level - 1, 8)) * (1 + 0.03 * (cake ? cake.layers.length : 0)))
-
-function saveBest() {
-  if (game.stars <= game.best) return false
-  game.best = game.stars
-  game.newBest = true
-  try {
-    localStorage.setItem('cake-stack-best', String(game.best))
-  } catch {}
-  return true
-}
+// One calm, constant pace: no ramp by level or cake height, so patience and timing stay the skill.
+const SLIDE_SPEED = 1.25
+const speed = () => adventure.pace * SLIDE_SPEED
 
 // --- Camera -----------------------------------------------------------------------------------
 
@@ -335,7 +321,8 @@ function updateMover(dt, t) {
   L.body.scale.set(L.w * pop, pop, L.w * pop)
   // Glows golden while it is lined up for a perfect drop
   const lined = Math.abs(L.pos) <= perfectWindow(top.w)
-  const g = lined ? 0.35 + Math.sin(t * 20) * 0.1 : 0
+  // A steady warm glow, not a flicker
+  const g = lined ? 0.35 : 0
   for (const m of L.glow) {
     m.emissive.set('#ffe28a')
     m.emissiveIntensity = lerp(m.emissiveIntensity, g, Math.min(1, dt * 20))
@@ -404,12 +391,10 @@ function land(L) {
     layer.x = lerp(fromX, newX, e)
     layer.w = lerp(fromW, newW, e)
   })
-  let stars = 1
   if (kind === 'perfect') {
-    stars = 2
-    sound.perfect(game.streak)
+    // The soft golden ring and one chime say "lined up"; no score, streak or praise banner.
+    sound.perfect()
     effects.perfect(new THREE.Vector3(newX + cake.group.position.x, y + 0.05, 0), newW)
-    banner(game.streak >= 3 ? `Perfect x${game.streak}!` : 'Perfect!', 'gold low')
     customer?.cheer(0.8)
     if (grew) {
       sound.grow()
@@ -430,9 +415,6 @@ function land(L) {
       customer?.hop(0.15)
     }
   }
-  game.stars += stars
-  game.cakeStars += stars
-  effects.label(kind === 'perfect' ? '⭐⭐' : '⭐', at, kind === 'perfect' ? '#ffb300' : '#ff6fae', kind === 'perfect')
   updateHud()
 
   const n = cake.layers.length
@@ -540,7 +522,6 @@ async function decorateSide(L, k) {
     L.decor.add(pivot)
     items.push(o)
   }
-  banner('Yummy!', 'gold low')
   const front = items.map((o, i) => ({ o, i })).sort((a, b) => Math.cos(a.o.parent.rotation.y) - Math.cos(b.o.parent.rotation.y))
   front.reverse()
   for (let j = 0; j < front.length; j++) {
@@ -633,7 +614,7 @@ async function finishCake(reason) {
     addLayer(cake, 'vanilla', 0, START_W).sq = 0.3
     sound.plop()
   }
-  showIntro('🎂', reason === 'narrow' ? 'What a tall cake!' : 'The cake is ready!', '🎉🎉🎉')
+  showIntro('🎂', reason === 'narrow' ? 'What a tall cake!' : 'The cake is ready!', customer?.def.emoji ?? '🎂')
   sound.fanfare()
   await wait(0.5)
   if (run !== game.run) return
@@ -671,8 +652,8 @@ async function finishCake(reason) {
   }
   game.state = 'candles'
   showIntro('🕯️', 'Make a wish!', '👆 Tap to blow!', true)
+  // The friend waits for the child to blow: no timer takes the wish away.
   showHintAt(candleCenter())
-  game.autoBlow = setTimeout(() => run === game.run && blowCandles(), 7000)
 }
 
 function candleCenter() {
@@ -685,7 +666,6 @@ function candleCenter() {
 async function blowCandles() {
   if (game.state !== 'candles') return
   const run = game.run
-  clearTimeout(game.autoBlow)
   game.state = 'party'
   hideIntro()
   $('hint').classList.add('hidden')
@@ -726,30 +706,15 @@ async function blowCandles() {
   c.blow = 0
   sound.plop()
 
-  // Party!
+  // One soft moment: a few slow paper petals drift down while the music box plays Happy Birthday.
   const cx = cake.group.position.x
-  effects.shower(3.5, topY() + 2.5, 220, cx)
-  // The poppers burst up and outward from either side, so confetti never hides the birthday friend's face
-  effects.popper(new THREE.Vector3(cx - 1.5, 0.2, 0.5), -0.3)
-  effects.popper(new THREE.Vector3(c.group.position.x + 0.95, 0.2, -0.1), 0.3)
-  effects.shake = 0.5
-  sound.cheer()
+  effects.drift(2.2, topY() + 1.1, 28, cx)
   const tune = sound.birthday()
   c.cheer(Math.max(3, tune))
   c.group.rotation.y = 0
   if (cake.figure) cake.figure.cheer(3)
   banner('Happy Birthday!', 'gold')
-  // The birthday bonus pops once the banner has had its moment, so the two never overlap
-  await wait(1.15)
-  if (run !== game.run) return
-  const bonus = 5
-  game.stars += bonus
-  game.cakeStars += bonus
-  effects.label(`⭐ +${bonus}`, new THREE.Vector3(cx, topY() + 0.5, 0.3), '#ffb300', true)
-  sound.pop(0, 8)
-  updateHud()
-  popScore()
-  await wait(1.25)
+  await wait(2.4)
   if (run !== game.run) return
   showCard()
 }
@@ -759,12 +724,14 @@ function showCard() {
   const def = customerDef(game.level)
   const next = customerDef(game.level + 1)
   $('card-emoji').textContent = `${def.emoji}🎂`
-  $('card-stars').textContent = game.cakeStars
+  // The card shows the cake the child made: its layers from the bottom up, and how many there are.
+  const made = cake ? cake.layers.map((l) => FLAVOURS[l.flavour].emoji) : []
+  $('card-cake').textContent = made.join('')
+  $('card-count').textContent = String(made.length)
   const fresh = next.unlock && game.level + 1 <= CUSTOMERS.length ? ` ${FLAVOURS[next.unlock].emoji}` : ''
   $('card-next').textContent = `➡️ ${next.emoji}${fresh}`
   $('card').classList.remove('hidden')
   $('hud').classList.add('carding')
-  if (saveBest()) $('best-badge').classList.remove('hidden')
 }
 
 /** Deliver the finished cake (it slides away with its friend) and bring in the next one. */
@@ -795,7 +762,6 @@ async function nextCake() {
 async function startLevel(run) {
   game.state = 'intro'
   $('hud').classList.remove('partying')
-  game.cakeStars = 0
   game.streak = 0
   cake = newCake(-9)
   const def = customerDef(game.level)
@@ -922,8 +888,6 @@ function buildPips(n) {
 }
 
 function updateHud() {
-  $('score').textContent = game.stars
-  if (game.best > 0 && game.stars > game.best) $('best-badge').classList.remove('hidden')
   const pips = $('pips').querySelectorAll('.pip')
   const layers = cake ? cake.layers : []
   pips.forEach((p, i) => {
@@ -936,14 +900,6 @@ function updateHud() {
     // Dark icing (chocolate) gets a white number so it can still be counted
     p.style.color = f && !f.rainbow && new THREE.Color(f.icing).getHSL({}).l < 0.35 ? '#fff' : ''
   })
-}
-
-/** The star count gives a happy bounce when a bonus lands in it. */
-function popScore() {
-  const el = document.querySelector('.pill.score')
-  el.classList.remove('pop')
-  void el.offsetWidth
-  el.classList.add('pop')
 }
 
 let bannerTimer = 0
@@ -964,7 +920,7 @@ function celebrateMission(text) {
   banner(`🎉 ${text}`, 'gold mission')
   missionUntil = performance.now() + 2600
   sound.grow()
-  if (cake) effects.shower(2.2, topY() + 2.2, 90, cake.group.position.x)
+  if (cake) effects.drift(1.6, topY() + 1, 14, cake.group.position.x)
   customer?.cheer(1.5)
 }
 
@@ -994,7 +950,8 @@ function showHintAt(pos) {
 function updateIdle(dt) {
   if (game.state !== 'play' || !mover || mover.dropping) return
   game.idle = (game.idle || 0) + dt
-  if (game.idle > 6 && $('hint').classList.contains('hidden')) showHintAt(null)
+  // A quiet reminder only after a long pause; a child who is simply watching is left to watch.
+  if (game.idle > 30 && $('hint').classList.contains('hidden')) showHintAt(null)
 }
 
 function updateHint() {
@@ -1027,7 +984,6 @@ function endRun() {
   missionUntil = 0
   $('hud').classList.remove('partying', 'carding')
   clearTweens()
-  clearTimeout(game.autoBlow)
   disposeCake(cake)
   cake = null
   mover = null
@@ -1040,14 +996,9 @@ function endRun() {
 }
 
 function toTitle() {
-  saveBest()
-  const newBest = game.newBest
-  const played = game.stars
   endRun()
   game.state = 'title'
   buildDemo()
-  $('best').textContent = game.best
-  $('last').textContent = played ? (newBest ? `🎉 New best: ${played} ⭐` : `Last time: ${played} ⭐`) : ''
   show('title')
   aimCamera(true)
 }
@@ -1059,8 +1010,7 @@ function start() {
   endRun()
   clearDemo()
   const debugLevel = Number(new URLSearchParams(location.search).get('level')) || 1
-  Object.assign(game, { level: debugLevel, stars: 0, cakeStars: 0, streak: 0, lastFlavour: null, newBest: false })
-  $('best-badge').classList.add('hidden')
+  Object.assign(game, { level: debugLevel, streak: 0, lastFlavour: null })
   show('play')
   startLevel(game.run)
 }
@@ -1155,7 +1105,6 @@ async function load() {
   else console.warn('animals.glb failed', a.reason)
   if (b.status === 'fulfilled') attachBakery(b.value)
   else console.warn('bakery.glb failed', b.reason)
-  $('best').textContent = game.best
   game.state = 'title'
   buildDemo()
   aimCamera(true)

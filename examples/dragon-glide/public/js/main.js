@@ -91,7 +91,9 @@ const game = {
   z: 0, // distance flown
   speed: 0,
   slow: 1,
-  score: 0,
+  score: 0, // gems found this flight
+  rings: 0, // cloud rings flown through
+  lit: 0, // lanterns lit
   gemCombo: 0,
   gemComboT: 0,
   hoops: 0, // hoops in a row
@@ -107,7 +109,6 @@ const game = {
   tipT: 0,
   fired: 0,
   steered: 0,
-  best: store.get('dragon-glide-best', 0),
   done: new Set(store.get('dragon-glide-worlds', [])),
 }
 if (new URLSearchParams(location.search).has('debug')) window.game = game
@@ -200,6 +201,8 @@ function show(id) {
 
 function toTitle() {
   game.state = 'title'
+  game.nestReady = false
+  $('fly-on').classList.add('hidden')
   game.z = 0
   game.speed = 0
   pos.set(0, 4.3, 0)
@@ -216,8 +219,7 @@ function toTitle() {
 }
 
 function renderBest() {
-  $('best').textContent = `🏆 Best: ${game.best} 💎`
-  $('best').classList.toggle('hidden', game.best === 0)
+  // The title remembers the worlds Ember has flown home from, not a score to beat.
   document.querySelectorAll('#worlds button').forEach((b, i) => b.classList.toggle('done', game.done.has(i)))
 }
 
@@ -238,12 +240,17 @@ function start(from = 0) {
   sound.unlock()
   sound.click()
   game.state = 'play'
+  game.nestReady = false
+  $('fly-on').classList.add('hidden')
   game.startWorld = from
   game.world = from
   game.z = from * WORLD_LENGTH + 2
   game.speed = 4
   game.slow = 1
   game.score = 0
+  game.rings = 0
+  game.lit = 0
+  game.nestReady = false
   game.hoops = 0
   game.gemCombo = 0
   game.power = 0
@@ -280,17 +287,12 @@ function finishTrip() {
   game.state = 'results'
   const nest = world.nestFor(game.world)
   if (nest) nest.cheer = 1e6
-  const f = game.score / Math.max(1, course.possible)
-  const stars = 1 + (f > 0.4 ? 1 : 0) + (f > 0.68 ? 1 : 0)
-  $('stars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? '' : 'off'}">⭐</span>`).join('')
+  // No grade: the end card shows the worlds Ember flew through and what Ember found on the way.
+  $('stars').innerHTML = WORLDS.slice(game.startWorld, game.world + 1).map((w) => `<span>${w.emoji}</span>`).join('')
   $('final').textContent = game.score
-  const isBest = game.score > game.best
-  if (isBest) {
-    game.best = game.score
-    store.set('dragon-glide-best', game.best)
-  }
-  $('new-best').classList.toggle('hidden', !isBest || game.score === 0)
-  $('best-line').textContent = `🏆 Best: ${game.best} 💎`
+  $('final-rings').textContent = game.rings
+  $('final-lit').textContent = game.lit
+  $('found-lit').classList.toggle('hidden', game.lit === 0)
   sound.finish()
   show('results')
 }
@@ -380,25 +382,15 @@ function tip(text, secs) {
 }
 
 function bumpScore() {
-  const el = $('score')
-  el.classList.remove('bump')
-  void el.offsetWidth
-  el.classList.add('bump')
+  // The count just changes: no bounce on every gem
   $('score-num').textContent = game.score
 }
 
 let comboTimer
+/** Calm pass: no "N rings in a row!" streak line; the rings themselves are the reward. */
 function updateCombo() {
-  const el = $('combo')
   clearTimeout(comboTimer)
-  if (game.hoops >= 2) {
-    el.textContent = `💫 ${game.hoops} rings in a row!`
-    el.classList.remove('show')
-    void el.offsetWidth
-    el.classList.add('show')
-    // it goes again after a moment instead of hanging over the sky until the next miss
-    comboTimer = setTimeout(() => el.classList.remove('show'), 2400)
-  } else el.classList.remove('show')
+  $('combo').classList.remove('show')
 }
 
 function buildTrip() {
@@ -460,6 +452,7 @@ function aimMouse(x, y) {
 
 canvas.addEventListener('pointerdown', (e) => {
   sound.unlock()
+  if (game.state === 'nest' && game.nestReady) return flyOn()
   if (game.state !== 'play') return
   if (e.pointerType === 'mouse') {
     if (e.button === 0) fire()
@@ -540,6 +533,7 @@ $('home').addEventListener('click', () => {
   sound.click()
   toTitle()
 })
+$('fly-on').addEventListener('click', flyOn)
 $('music').addEventListener('click', toggleMusic)
 $('sound').addEventListener('click', toggleSound)
 $('play').addEventListener('click', () => start(0))
@@ -551,6 +545,7 @@ $('to-title').addEventListener('click', () => {
 
 const FIRE_COLORS = ['#ffd23f', '#ff9f43', '#ff6b6b', '#fff3a0', '#ff7eb9']
 function fire() {
+  if (game.state === 'nest' && game.nestReady) return flyOn()
   if (game.state !== 'play' || game.fireCd > 0) return
   game.fireCd = 0.28
   game.fired++
@@ -570,7 +565,6 @@ function fire() {
 // --- Events from the course ---------------------------------------------------------
 
 const POWER_TIME = 7
-const YAY = ['Wheee!', 'Yay!', 'Super!', 'Woo-hoo!', 'Sparkly!']
 const OOPS = ['Bonk!', 'Boing!', 'Oopsie!', 'Bonk! 💫']
 const RAINBOW = ['#ff6b6b', '#ffd23f', '#8ef0c8', '#7cc6fe', '#c9b6ff', '#ff8fc7']
 
@@ -584,57 +578,45 @@ function handle(events) {
     if (ev.type === 'gem') {
       game.gemCombo = game.gemComboT > 0 ? game.gemCombo + 1 : 0
       game.gemComboT = 1.2
-      addScore(ev.points)
+      addScore(1) // one gem found, big or small
       const big = ev.kind === 'big'
-      sound.gem(game.gemCombo, big)
-      sparks.burst(ev.pos, GEMS[ev.kind].colors, big ? 26 : 12, big ? 7 : 4.5, big ? 0.8 : 0.55, { vz: -game.speed * 0.6 })
-      if (big) popups.show(ev.pos, `+${ev.points} ✨`, 'big')
-      else if (game.gemCombo > 0 && game.gemCombo % 5 === 4) popups.show(ev.pos, pick(YAY))
+      // a gem line walks gently up and round a five-note scale; it never climbs into a streak
+      sound.gem(game.gemCombo % 5, big)
+      sparks.burst(ev.pos, GEMS[ev.kind].colors, big ? 10 : 5, big ? 4 : 3, big ? 0.7 : 0.5, { vz: -game.speed * 0.6 })
     } else if (ev.type === 'hoop') {
       game.hoops++
+      game.rings++
       adventure.event()
-      const pts = 2 + Math.min(game.hoops, 6)
-      addScore(pts)
-      sound.hoop(game.hoops)
+      // One soft ring of light and the same gentle chime every time: no points, no streak
+      sound.hoop(0)
       const c = WORLDS[game.world].hoop.hoop_cloud
-      rings.spawn(ev.pos, typeof c === 'string' ? c : c.color, 4.5, 0.5)
-      rings.spawn(ev.pos, '#fff3a0', 6.5, 0.7)
-      sparks.burst(ev.pos, RAINBOW, 24, 8, 0.45, { vz: -game.speed * 0.5 })
-      // the points float up beside the ring (not above it, where they ran into the HUD and the counting party)
-      const side = ev.pos.x > camera.position.x ? -1 : 1
-      if (performance.now() >= bannerHold) popups.show(tmp.set(ev.pos.x + side * Math.min(2.6, lane.x * 0.7), ev.pos.y + 0.4, ev.pos.z), `+${pts}`, 'hoop')
-      if (game.hoops >= 3) dragon.twirl()
-      updateCombo()
+      rings.spawn(ev.pos, typeof c === 'string' ? c : c.color, 4.5, 0.8)
+      sparks.burst(ev.pos, RAINBOW, 8, 3, 0.6, { vz: -game.speed * 0.5 })
     } else if (ev.type === 'hoopMiss') {
-      if (game.hoops >= 2) sound.whiff()
       game.hoops = 0
-      updateCombo()
     } else if (ev.type === 'bubble') {
-      addScore(3)
+      addScore(1) // the gem inside the bubble
       sound.pop()
-      sparks.burst(ev.pos, RAINBOW, 26, 7, 0.65, { vz: -game.speed * 0.4 })
+      sparks.burst(ev.pos, RAINBOW, 10, 4, 0.6, { vz: -game.speed * 0.4 })
       rings.spawn(ev.pos, '#bdeaff', 3.5)
-      popups.show(ev.pos, '+3 Pop!', 'big')
     } else if (ev.type === 'lantern') {
-      addScore(2)
+      game.lit++
       sound.lantern()
-      sparks.burst(ev.pos, ['#fff3a0', '#ffd23f', '#ff9f43'], 20, 5, 0.6, { vz: -game.speed * 0.3 })
-      popups.show(ev.pos, '+2 ✨')
+      sparks.burst(ev.pos, ['#fff3a0', '#ffd23f', '#ff9f43'], 8, 3, 0.7, { vz: -game.speed * 0.3 })
     } else if (ev.type === 'power') {
       game.power = POWER_TIME
-      addScore(5)
       sound.power()
       dragon.twirl()
-      sparks.burst(ev.pos, RAINBOW, 40, 9, 0.8)
-      banner('🌈 Rainbow zoom!', 'Gems fly to you!', 1800)
+      sparks.burst(ev.pos, RAINBOW, 14, 4, 0.8)
+      banner('🌈 Rainbow star!', 'Gems fly to you!', 1800)
     } else if (ev.type === 'bonk') {
       dragon.bonk()
       sound.bonk()
       game.slow = 0.4
       game.invuln = 1.4
-      game.shake = 0.35
+      // a small physical wobble from the bump, nothing more (none with reduced motion)
+      game.shake = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 0.2
       game.hoops = 0
-      updateCombo()
       // bounce away from whatever we bumped
       tmp2.set(pos.x - ev.pos.x, pos.y - ev.pos.y, 0)
       if (tmp2.lengthSq() < 0.01) tmp2.set(pos.x >= 0 ? -1 : 1, 0.3, 0)
@@ -673,10 +655,32 @@ function arriveAtNest() {
   setTimeout(() => sound.rawr(0.8), 500)
   setTimeout(() => sound.rawr(1.3), 800)
   const last = game.world === WORLDS.length - 1
-  banner('🎉 Home to the nest!', last ? 'You flew all the way! 🌟' : `${w.emoji} ${w.name} done!`, 3200)
+  banner('Home to the nest! 🪺', last ? 'You flew all the way! 🌟' : `${w.emoji} ${w.name} done!`, 3200)
   // where the banner's words end, so the camera can keep the family's faces below them
   nestClear = bannerBox()?.bottom ?? 0
   dragon.twirl()
+}
+
+/** The family has had their cuddle: the child decides when Ember flies on. */
+function offerFlyOn() {
+  game.nestReady = true
+  const last = game.world === WORLDS.length - 1
+  $('fly-on').textContent = last ? '🪺 ▶' : `▶ ${WORLDS[game.world + 1].emoji}`
+  $('fly-on').setAttribute('aria-label', last ? 'See the trip' : `Fly on to ${WORLDS[game.world + 1].name}`)
+  $('fly-on').classList.remove('hidden')
+}
+
+function flyOn() {
+  if (game.state !== 'nest' || !game.nestReady) return
+  sound.click()
+  game.nestReady = false
+  $('fly-on').classList.add('hidden')
+  if (game.world < WORLDS.length - 1) leaveNest()
+  else {
+    game.state = 'done'
+    sound.play(null)
+    finishTrip()
+  }
 }
 
 function leaveNest() {
@@ -774,7 +778,8 @@ function updatePlay(dt) {
 
   // Speed: each world a little quicker; the rainbow star makes it zoom
   const w = WORLDS[game.world]
-  const cruise = w.speed * game.slow * adventure.pace * (game.power > 0 ? 1.45 : 1)
+  // One calm speed in every world; the rainbow star brings gems near but never rushes Ember
+  const cruise = w.speed * game.slow * adventure.pace
   game.speed = damp(game.speed, cruise, 1.5, dt)
   game.z += game.speed * dt
 
@@ -796,15 +801,15 @@ function updatePlay(dt) {
   pos.z = -game.z
 
   // Trails: wingtip wisps when going fast, rainbows when zooming
-  if (game.power > 0) {
-    for (let i = 0; i < 2; i++) {
+  if (game.power > 0 && Math.random() < 0.35) {
+    for (let i = 0; i < 1; i++) {
       TRAIL.color = RAINBOW[(Math.random() * RAINBOW.length) | 0]
       TRAIL.vz = -game.speed * 0.7
       sparks.emit(pos.x + rand(-0.3, 0.3), pos.y + rand(-0.2, 0.3), pos.z + 1.3, TRAIL)
     }
   }
   // drifting air sparkles rush past and sell the speed
-  if (Math.random() < dt * 30) {
+  if (Math.random() < dt * 8) {
     AIR.color = WORLDS[game.world].night ? '#fff6c9' : '#ffffff'
     sparks.emit(pos.x + rand(-14, 14), pos.y + rand(-6, 8), pos.z - rand(30, 60), AIR)
   }
@@ -838,23 +843,20 @@ function updateNest(dt) {
   } else {
     game.nestT += dt
     pos.x = damp(pos.x, 0, 3, dt)
-    pos.y = damp(pos.y, seatY + Math.abs(Math.sin(game.nestT * 3.2)) * 0.35, 4, dt)
+    // Ember's happy bounce settles into a gentle rest while the family waits for the child
+    pos.y = damp(pos.y, seatY + Math.abs(Math.sin(game.nestT * 3.2)) * 0.35 * Math.max(0.15, 1 - game.nestT / 5), 4, dt)
     vel.set(0, 0)
-    if (Math.random() < dt * 6) {
+    // a short soft shower while the family cheers, then the sky rests while they wait together
+    const cheering = game.nestT < 3.5
+    if (cheering && Math.random() < dt * 4) {
       const c = RAINBOW[(Math.random() * RAINBOW.length) | 0]
       dots.emit(rand(-5, 5), NEST_Y + rand(7, 9), -nestZ + rand(-2, 2), { vx: rand(-1, 1), vy: rand(-1, -2.5), spread: 1, life: 2.5, size: rand(0.3, 0.45), endSize: 0.2, color: c, grav: -1.2, drag: 0.4 })
     }
-    if (Math.random() < dt * 2) {
+    if (cheering && Math.random() < dt * 2) {
       sparks.emit(rand(-1.5, 1.5), seatY + 1.5, -nestZ + 0.5, { vx: 0, vy: 2, spread: 0.6, life: 1.2, size: 0.7, color: '#ff8fc7', drag: 0.5 })
     }
-    if (game.nestT > 4.6) {
-      if (game.world < WORLDS.length - 1) leaveNest()
-      else if (game.state === 'nest') {
-        game.state = 'done'
-        sound.play(null)
-        finishTrip()
-      }
-    }
+    // No timer moves on: after the cheer, the family waits with Ember until the child taps.
+    if (game.nestT > 3.2 && !game.nestReady) offerFlyOn()
   }
   showTrip()
 }
@@ -942,7 +944,7 @@ function updateCamera(dt) {
   }
   camera.lookAt(camLook)
   // a little wider when zooming
-  const fov = (view.portrait ? 74 : camera.aspect < 1.4 ? 66 : 60) + (game.power > 0 && s === 'play' ? 8 : 0) + (s === 'play' ? clamp((game.speed - 15) * 0.4, 0, 3) : 0)
+  const fov = view.portrait ? 74 : camera.aspect < 1.4 ? 66 : 60
   if (Math.abs(camera.fov - fov) > 0.05) {
     camera.fov = damp(camera.fov, fov, 3, dt)
     camera.updateProjectionMatrix()

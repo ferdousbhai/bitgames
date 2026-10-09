@@ -35,6 +35,7 @@
   <div id="banner" class="banner"></div>
   <div id="tip" class="tip"></div>
   <button id="fire" class="fire" title="Fire (Space)" aria-label="Puff fire">🔥</button>
+  <button id="fly-on" class="big-go fly-on hidden" title="Fly on (Space)">▶</button>
 </div>
 
 <div id="corner" class="corner hidden">
@@ -55,7 +56,6 @@
   <div class="menu-bottom">
     <div id="worlds" class="worlds"></div>
     <button id="play" class="big-go">▶ Let's fly!</button>
-    <div id="best" class="best hidden"></div>
     <p class="hint">👆 Drag to fly · tap for 🔥</p>
   </div>
 </div>
@@ -63,12 +63,15 @@
 <div id="results" class="screen clear hidden">
   <div class="results-top">
     <h1>Home sweet nest!</h1>
-    <div id="stars" class="stars"></div>
+    <div id="stars" class="stars" aria-label="The worlds you flew through"></div>
   </div>
   <div class="spacer"></div>
   <div class="menu-bottom">
-    <div class="tally"><span>💎</span><b id="final">0</b><span id="new-best" class="new-best hidden">🏆 New best!</span></div>
-    <div id="best-line" class="best"></div>
+    <div class="tally" aria-label="What Ember found">
+      <span class="found"><span>💎</span><b id="final">0</b></span>
+      <span class="found"><span>⭕</span><b id="final-rings">0</b></span>
+      <span id="found-lit" class="found"><span>🏮</span><b id="final-lit">0</b></span>
+    </div>
     <div class="row">
       <button id="again" class="big-go">🔁 Fly again</button>
       <button id="to-title" class="big-go alt" aria-label="Home">🏠</button>

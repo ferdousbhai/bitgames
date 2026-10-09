@@ -4,6 +4,9 @@
  */
 export const WORLD_LENGTH = 760
 
+/** One calm cruising speed in every world (it used to climb from 15 to 18): no ramp to chase. */
+const CALM_SPEED = 12
+
 export const WORLDS = [
   {
     name: 'Meadow Isles',
@@ -18,8 +21,8 @@ export const WORLDS = [
     gem: 'blue',
     lanterns: 0,
     waterfalls: 0.25,
-    speed: 15,
-    music: { tempo: 112, chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], wave: 'triangle' },
+    speed: CALM_SPEED,
+    music: { tempo: 92, chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], wave: 'triangle' },
   },
   {
     name: 'Candy Clouds',
@@ -34,8 +37,8 @@ export const WORLDS = [
     gem: 'pink',
     lanterns: 0,
     waterfalls: 0.35,
-    speed: 16.5,
-    music: { tempo: 120, chords: [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]], wave: 'square' },
+    speed: CALM_SPEED,
+    music: { tempo: 96, chords: [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]], wave: 'triangle' },
   },
   {
     name: 'Sunset Castles',
@@ -50,8 +53,8 @@ export const WORLDS = [
     gem: 'gold',
     lanterns: 0.35,
     waterfalls: 0.3,
-    speed: 17.5,
-    music: { tempo: 104, chords: [[0, 4, 7], [-3, 0, 4], [5, 9, 12], [7, 11, 14]], wave: 'triangle' },
+    speed: CALM_SPEED,
+    music: { tempo: 88, chords: [[0, 4, 7], [-3, 0, 4], [5, 9, 12], [7, 11, 14]], wave: 'triangle' },
   },
   {
     name: 'Night Sky',
@@ -67,8 +70,8 @@ export const WORLDS = [
     lanterns: 0.75,
     waterfalls: 0.2,
     night: true,
-    speed: 18,
-    music: { tempo: 92, chords: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]], wave: 'sine' },
+    speed: CALM_SPEED,
+    music: { tempo: 80, chords: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]], wave: 'sine' },
   },
 ]
 

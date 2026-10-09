@@ -117,7 +117,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .card-emoji { font-size: 64px; line-height: 1.1; animation: bob 1.2s ease-in-out infinite; }
 .card-title { font-size: clamp(30px, 7vw, 44px); font-weight: 900; }
-.card-stars { font-size: 30px; font-weight: 900; color: #e08a00; }
+.card-cake { font-size: 30px; font-weight: 900; color: #b04a7a; letter-spacing: 2px; }
+.card-cake b { display: inline-block; min-width: 1.4em; margin-left: 6px; padding: 0 10px; border-radius: 999px; background: #fff1f6; letter-spacing: 0; }
 .card-next { font-size: 30px; font-weight: 900; background: #fff1f6; border-radius: 999px; padding: 4px 18px; }
 .card-next:empty { display: none; }
 .row { display: flex; gap: 14px; margin-top: 8px; }
@@ -202,7 +203,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .card { padding: 8px 18px 12px; gap: 2px; border-radius: 26px; }
   .card-emoji { font-size: 36px; }
   .card-title { font-size: 24px; }
-  .card-stars, .card-next { font-size: 22px; }
+  .card-cake, .card-next { font-size: 22px; }
   .card .big-go { font-size: 26px; padding: 8px 26px; }
   .row { margin-top: 4px; }
   .intro { padding: 8px 20px 10px; }
@@ -428,4 +429,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 /* --- Pass 6: on short sideways phones the stacking banners sit low, so they never hide the sliding layer --- */
 @media (max-height: 420px) and (min-aspect-ratio: 1/1) {
   .banner.low:not(.mission) { top: calc(100% - 82px - env(safe-area-inset-bottom)); }
+}
+
+/* --- Calm pass (2026-10-09): nothing pulses, bobs or wiggles forever. Helpers stay, but quiet. --- */
+.logo span, .big-go, .badge, .pips.full .pip-goal, .card-emoji { animation: none; }
+#birthday-studio .recipe-step.next, #birthday-studio #recipe-next.ready { animation: none; }
+/* The tap finger shows the way a few times, slowly, then rests where it points */
+.hint-finger { animation: tap 1.6s ease-in-out 3; }
+@media (prefers-reduced-motion: reduce) {
+  .hint-finger, .title-top, .card, .done-btn, .pill.score.pop { animation: none; }
+  .banner, .pip, .goal-slices span { transition: opacity .3s; }
 }

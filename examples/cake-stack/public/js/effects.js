@@ -112,6 +112,8 @@ class Pool {
 }
 
 const CONFETTI = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff6b9d', '#2ec4b6', '#ffffff']
+// Soft bakery pastels for the party petals
+const PETALS = ['#ffc2d6', '#ffe8a3', '#c9f0e1', '#d9ccff', '#ffffff']
 const pick = (a) => a[(Math.random() * a.length) | 0]
 
 export class Effects {
@@ -124,6 +126,14 @@ export class Effects {
       material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
       gravity: 4.5,
       drag: 1.6,
+    })
+    // Slow paper petals for the one soft party moment: barely any gravity, lots of air
+    this.petals = new Pool(scene, {
+      count: 80,
+      geometry: new THREE.PlaneGeometry(0.15, 0.09),
+      material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+      gravity: 0.25,
+      drag: 0.6,
     })
     // Squishy blobs of icing
     const blob = new THREE.IcosahedronGeometry(0.08, 1)
@@ -193,10 +203,11 @@ export class Effects {
   perfect(pos, width) {
     this.ring(pos, '#fff3a0', width * 0.9, 0.5, true)
     const v = this.tmp
-    for (let i = 0; i < 26; i++) {
-      const a = Math.random() * Math.PI * 2
-      v.set(Math.cos(a) * (2 + Math.random() * 2), 1 + Math.random() * 2.5, Math.sin(a) * (2 + Math.random() * 2))
-      this.sparkles.spawn(pos, v, { life: 0.7 + Math.random() * 0.5, size: 0.25 + Math.random() * 0.3, color: pick(['#fff3a0', '#ffd23f', '#ffffff', '#ffb3d1']) })
+    // A few soft sparkles that rise slowly, not a burst
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2
+      v.set(Math.cos(a) * 0.8, 0.6 + Math.random() * 0.5, Math.sin(a) * 0.8)
+      this.sparkles.spawn(pos, v, { life: 1 + Math.random() * 0.4, size: 0.2 + Math.random() * 0.15, color: pick(['#fff3a0', '#ffd23f', '#ffffff', '#ffb3d1']) })
     }
   }
 
@@ -240,6 +251,17 @@ export class Effects {
     }
   }
 
+  /** The one soft party moment: a few paper petals that float down slowly, with no burst. */
+  drift(halfWidth, top, amount = 24, cx = 0) {
+    const p = this.tmp.clone()
+    const v = new THREE.Vector3()
+    for (let i = 0; i < amount; i++) {
+      p.set(cx + (Math.random() * 2 - 1) * halfWidth, top + Math.random() * 1.5, Math.random() * 1.2 - 0.4)
+      v.set((Math.random() - 0.5) * 0.4, -0.2 - Math.random() * 0.3, 0)
+      this.petals.spawn(p, v, { life: 4 + Math.random() * 1.5, size: 0.8 + Math.random() * 0.4, color: pick(PETALS), spin: 1.2 })
+    }
+  }
+
   sparkleAt(pos, color = '#ffffff', n = 3) {
     const v = this.tmp
     for (let i = 0; i < n; i++) {
@@ -263,6 +285,7 @@ export class Effects {
 
   update(dt) {
     this.confetti.update(dt, this.camera)
+    this.petals.update(dt, this.camera)
     this.blobs.update(dt, this.camera)
     this.puffs.update(dt, this.camera)
     this.sparkles.update(dt, this.camera)

@@ -4,6 +4,15 @@ export class Audio {
     this.ctx = null
     this.engine = null
     this.lastCrash = 0
+    this.muted = false
+    this.nextBeat = 0
+    this.beat = 0
+  }
+
+  /** The 🔊 switch: everything (engine, effects, music) fades to silence and back. */
+  setMuted(muted) {
+    this.muted = muted
+    if (this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.7, this.ctx.currentTime, 0.05)
   }
 
   /** Browsers only allow audio after a tap or key press. */
@@ -18,7 +27,7 @@ export class Audio {
       return
     }
     this.master = this.ctx.createGain()
-    this.master.gain.value = 0.7
+    this.master.gain.value = this.muted ? 0 : 0.7
     this.master.connect(this.ctx.destination)
     const len = this.ctx.sampleRate
     this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate)
@@ -119,20 +128,21 @@ export class Audio {
     const now = performance.now()
     if (now - this.lastCrash < 60) return
     this.lastCrash = now
+    // Calm pass: about half the old loudness, and the tinny high ring is softer
     const v = Math.min(1, speed / 25) * (near ? 1 : 0.4)
-    this.tone({ freq: 90, type: 'sine', gain: 0.6 * v, decay: 0.35, slide: -50 })
-    this.burst({ freq: 900, q: 0.6, gain: 0.7 * v, decay: 0.25 + v * 0.5 })
-    this.burst({ freq: 3200, q: 4, gain: 0.25 * v, decay: 0.4 + v * 0.4, delay: 0.02 })
-    if (v > 0.5) this.burst({ freq: 300, q: 0.8, gain: 0.5 * v, decay: 0.8, delay: 0.05 })
+    this.tone({ freq: 90, type: 'sine', gain: 0.32 * v, decay: 0.35, slide: -50 })
+    this.burst({ freq: 900, q: 0.6, gain: 0.32 * v, decay: 0.25 + v * 0.4 })
+    this.burst({ freq: 2600, q: 4, gain: 0.08 * v, decay: 0.3 + v * 0.3, delay: 0.02 })
+    if (v > 0.5) this.burst({ freq: 300, q: 0.8, gain: 0.22 * v, decay: 0.6, delay: 0.05 })
   }
 
   glass(strength = 1) {
-    for (let i = 0; i < 6 * strength; i++) this.tone({ freq: 2500 + Math.random() * 3500, type: 'triangle', gain: 0.06, decay: 0.15 + Math.random() * 0.3, delay: Math.random() * 0.25 })
-    this.burst({ freq: 6000, q: 2, gain: 0.25 * strength, decay: 0.3 })
+    for (let i = 0; i < 6 * strength; i++) this.tone({ freq: 2500 + Math.random() * 2500, type: 'triangle', gain: 0.04, decay: 0.15 + Math.random() * 0.3, delay: Math.random() * 0.25 })
+    this.burst({ freq: 5000, q: 2, gain: 0.12 * strength, decay: 0.3 })
   }
 
   clunk(strength = 1) {
-    this.tone({ freq: 160, type: 'square', gain: 0.12 * strength, decay: 0.15, slide: -80 })
+    this.tone({ freq: 160, type: 'triangle', gain: 0.12 * strength, decay: 0.15, slide: -80 })
     this.burst({ freq: 1400, q: 3, gain: 0.15 * strength, decay: 0.2 })
   }
 
@@ -142,52 +152,72 @@ export class Audio {
 
   /** A car landing from a jump: a deep thud and some dust noise. */
   thump(strength = 1) {
-    this.tone({ freq: 70, type: 'sine', gain: 0.5 * strength, decay: 0.3, slide: -30 })
-    this.burst({ freq: 400, q: 0.7, gain: 0.25 * strength, decay: 0.3, type: 'lowpass' })
+    this.tone({ freq: 70, type: 'sine', gain: 0.32 * strength, decay: 0.3, slide: -30 })
+    this.burst({ freq: 400, q: 0.7, gain: 0.15 * strength, decay: 0.3, type: 'lowpass' })
   }
 
   splash() {
     this.burst({ freq: 700, q: 0.7, gain: 0.25, decay: 0.4, type: 'lowpass' })
   }
 
+  /** A friendly two-note toot (triangle, not a square-wave blare). */
   horn() {
-    this.tone({ freq: 392, type: 'square', gain: 0.12, decay: 0.45 })
-    this.tone({ freq: 494, type: 'square', gain: 0.1, decay: 0.45 })
+    this.tone({ freq: 392, type: 'triangle', gain: 0.1, decay: 0.45 })
+    this.tone({ freq: 494, type: 'triangle', gain: 0.08, decay: 0.45 })
   }
 
   beep(high = false) {
-    this.tone({ freq: high ? 880 : 440, type: 'square', gain: 0.15, decay: high ? 0.6 : 0.25 })
+    this.tone({ freq: high ? 784 : 523, type: 'triangle', gain: 0.1, decay: high ? 0.6 : 0.25 })
   }
 
   cheer() {
-    ;[523, 659, 784, 1047, 1319].forEach((f, i) => this.tone({ freq: f, type: 'triangle', gain: 0.15, decay: 0.3, delay: i * 0.09 }))
+    // One gentle rising chord
+    ;[523, 659, 784, 1047].forEach((f, i) => this.tone({ freq: f, type: 'sine', gain: 0.08, decay: 0.9, delay: i * 0.12 }))
   }
 
   whoosh() {
     this.burst({ freq: 500, q: 0.5, gain: 0.3, decay: 0.8, type: 'lowpass' })
   }
 
-  /** A star: a bright ding that climbs with a streak of stars. */
+  /** A star: a soft ding that walks round a five-note scale along a line of stars (it never climbs forever). */
   coin(streak = 0) {
-    const f = 988 * Math.pow(2, Math.min(streak, 12) / 12)
-    this.tone({ freq: f, type: 'square', gain: 0.07, decay: 0.08 })
-    this.tone({ freq: f * 1.5, type: 'triangle', gain: 0.1, decay: 0.25, delay: 0.06 })
+    const f = 784 * Math.pow(2, [0, 2, 4, 7, 9][streak % 5] / 12)
+    this.tone({ freq: f, type: 'sine', gain: 0.07, decay: 0.12 })
+    this.tone({ freq: f * 1.5, type: 'triangle', gain: 0.05, decay: 0.25, delay: 0.06 })
   }
 
   /** A mystery box opening: a quick rising arpeggio. */
   box() {
-    ;[392, 494, 587, 784, 988].forEach((f, i) => this.tone({ freq: f, type: 'square', gain: 0.07, decay: 0.12, delay: i * 0.05 }))
+    ;[392, 494, 587, 784].forEach((f, i) => this.tone({ freq: f, type: 'triangle', gain: 0.07, decay: 0.2, delay: i * 0.07 }))
   }
 
   /** The horn shockwave: a big honk and a whoomp. */
   wave() {
     this.horn()
-    this.tone({ freq: 120, type: 'sine', gain: 0.5, decay: 0.6, slide: -80 })
-    this.burst({ freq: 300, q: 0.6, gain: 0.4, decay: 0.7, type: 'lowpass' })
+    this.tone({ freq: 120, type: 'sine', gain: 0.25, decay: 0.6, slide: -80 })
+    this.burst({ freq: 300, q: 0.6, gain: 0.2, decay: 0.7, type: 'lowpass' })
   }
 
-  /** The last seconds of the finish countdown. */
-  tick() {
-    this.tone({ freq: 660, type: 'triangle', gain: 0.08, decay: 0.08 })
+  /**
+   * A soft music-box loop for the menus and the podium (called every frame; `on` false lets it rest).
+   * Slow pentatonic notes over a low drone, well under the effects.
+   */
+  updateMusic(on) {
+    if (!this.ctx || !on || this.ctx.state !== 'running') {
+      if (this.ctx) this.nextBeat = 0
+      return
+    }
+    const now = this.ctx.currentTime
+    if (this.nextBeat < now) this.nextBeat = now + 0.1
+    const tune = [0, 4, 7, 9, 7, 4, 2, 4, 0, 2, 4, 7, 9, 12, 9, 7]
+    const scale = [0, 2, 4, 7, 9, 12]
+    while (this.nextBeat < now + 0.3) {
+      const b = this.beat++
+      const at = this.nextBeat - now
+      const n = tune[b % tune.length]
+      this.tone({ freq: 392 * Math.pow(2, n / 12), type: 'sine', gain: 0.035, decay: 0.7, delay: at })
+      if (b % 4 === 0) this.tone({ freq: 98 * Math.pow(2, scale[(b / 4) % 4] / 12), type: 'triangle', gain: 0.04, decay: 1.6, delay: at })
+      this.nextBeat += 0.42
+    }
   }
 }

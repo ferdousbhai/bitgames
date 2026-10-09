@@ -282,3 +282,20 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   #title .big-go { font-size: 24px; padding: 8px 30px; }
   .banner small { display: none; }
 }
+
+/* --- Calm pass (2026-10-09): no endless pulses or nudges; the end card shows what Ember found --- */
+.logo span, .big-go, .power, .tip { animation: none; }
+#results .tally { gap: clamp(10px, 3vw, 26px); }
+#results .found { display: inline-flex; align-items: center; gap: 4px; }
+#results .found.hidden { display: none; }
+#results .stars span { animation-duration: .9s; }
+/* At the nest the family waits for the child: one tap flies on */
+.fly-on {
+  pointer-events: auto; position: absolute; left: 50%; translate: -50% 0; bottom: calc(26px + env(safe-area-inset-bottom));
+  padding: 10px 40px; font-size: clamp(30px, 6vw, 42px);
+}
+.fly-on.hidden { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .flyer, .stars span, .combo.show { animation: none; }
+  .banner { transition: opacity .25s; transform: none; }
+}

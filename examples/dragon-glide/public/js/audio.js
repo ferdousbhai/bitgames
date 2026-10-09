@@ -173,14 +173,14 @@ export class Sound {
   }
 
   fire() {
-    this.hiss({ len: 0.35, freq: 900, q: 0.6, gain: 0.26, type: 'lowpass', sweep: 0.35 })
-    this.note(330, { len: 0.25, type: 'sawtooth', gain: 0.04, slide: 0.5 })
+    this.hiss({ len: 0.35, freq: 900, q: 0.6, gain: 0.16, type: 'lowpass', sweep: 0.35 })
+    this.note(330, { len: 0.25, type: 'triangle', gain: 0.04, slide: 0.5 })
     for (let i = 0; i < 4; i++) this.note(hz(24 + PENTA[i * 2]), { at: 0.05 + i * 0.04, len: 0.08, gain: 0.05 })
   }
 
   pop() {
-    this.note(520, { len: 0.12, gain: 0.2, slide: 2.5 })
-    this.hiss({ len: 0.05, freq: 3000, q: 1, gain: 0.12 })
+    this.note(520, { len: 0.12, gain: 0.13, slide: 2.5 })
+    this.hiss({ len: 0.05, freq: 3000, q: 1, gain: 0.06 })
     ;[0, 4, 7, 12, 16].forEach((s, i) => this.note(hz(s + 7), { at: 0.08 + i * 0.045, len: 0.22, type: 'triangle', gain: 0.07, echo: true }))
   }
 
@@ -216,14 +216,13 @@ export class Sound {
 
   fanfare() {
     ;[0, 4, 7, 12, 7, 12, 16].forEach((s, i) => this.note(hz(s, 392), { at: i * 0.12, len: 0.32, type: 'triangle', gain: 0.12, echo: true }))
-    ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 392), { at: i * 0.12, len: 0.32, type: 'square', gain: 0.03 }))
     ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 0.84, len: 1.2, type: 'sine', gain: 0.1 }))
   }
 
   /** A happy family of dragons going "rawr!" */
   rawr(pitch = 1) {
-    this.note(180 * pitch, { len: 0.35, type: 'sawtooth', gain: 0.07, slide: 1.6 })
-    this.note(360 * pitch, { len: 0.35, type: 'triangle', gain: 0.16, slide: 1.4 })
+    this.note(180 * pitch, { len: 0.35, type: 'triangle', gain: 0.06, slide: 1.6 })
+    this.note(360 * pitch, { len: 0.35, type: 'triangle', gain: 0.11, slide: 1.4 })
     this.hiss({ len: 0.3, freq: 700 * pitch, q: 2, gain: 0.08, sweep: 1.5 })
   }
 
