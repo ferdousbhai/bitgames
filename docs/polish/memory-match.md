@@ -99,5 +99,8 @@ Progress is kept per mode: Twins keeps the existing `progress.stars`, and Sounds
 
 - A quiet ambient bed, which Phase 1 listed, is still not done. It is outside this core-loop change.
 - Speech uses the device voice. On iPad that is the system en-US voice, so it is worth a listen on a real device.
-- The 10-pair level in Sounds has 10 identical loudspeakers, which is hard for young children. Levels 1–3 are the sweet spot; consider capping Sounds at 8 pairs if it proves too hard.
 - `public/bitgames.json` is stale until the coordinator rebuilds.
+
+### Follow-up: Sounds stops at 8 pairs (2026-10-09)
+
+Sounds now offers 5 levels, up to 8 pairs (16 cards); Twins and Babies keep all 6. `levelsFor(mode)` (`public/js/main.js:70`) drives the level menu, `nextLevel()`, the win card's Next button and `startLevel()`, which also clamps the level, so no path can start a 10-pair Sounds round. An old save that marks the 10-pair Sounds level done is ignored. Checked: an old Sounds save with all 6 levels done shows 5 levels with 🐾 marks, and Play starts the 8-pair level; Twins still shows 6 (`scratchpad/p2/memory-match/soundcap.mjs` and `soundcap-{portrait,phone}-menu.png`). `browser.mjs --browser chromium --ids memory-match`: BOOT + PLAY ready, 0 errors.

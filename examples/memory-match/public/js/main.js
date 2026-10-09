@@ -63,6 +63,11 @@ const MATCH_WORDS = {
 }
 /** Pairs per level: gentle for 3-year-olds, a real puzzle by the end. */
 const LEVELS = [2, 3, 4, 6, 8, 10]
+/**
+ * The levels a mode offers. Sounds stops at 8 pairs: ten identical loudspeakers is too much to hold
+ * in mind for a young child. (An old Sounds save marking level 6 done is simply ignored.)
+ */
+const levelsFor = (mode) => (mode === 'sound' ? LEVELS.slice(0, 5) : LEVELS)
 /** Seconds between each animal's hello when a board is finished, so only one voice plays at a time. */
 const WIN_CALL_GAP = 0.9
 
@@ -892,14 +897,15 @@ function show(screen) {
 
 function nextLevel() {
   const done = doneLevels()
-  const i = LEVELS.findIndex((_, k) => !done[k])
-  return i < 0 ? LEVELS.length - 1 : i
+  const levels = levelsFor(progress.mode)
+  const i = levels.findIndex((_, k) => !done[k])
+  return i < 0 ? levels.length - 1 : i
 }
 
 function renderLevels() {
   const next = nextLevel()
   const done = doneLevels()
-  $('levels').innerHTML = LEVELS.map((pairs, i) => {
+  $('levels').innerHTML = levelsFor(progress.mode).map((pairs, i) => {
     // A finished level gets a paw print: no grading by turns
     const row = done[i] ? '<span aria-label="Done">🐾</span>' : ''
     return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}"><span class="num">${i + 1}</span><span class="cards"><i class="mini"></i>${pairs * 2}</span><span class="lstars">${row}</span></button>`
@@ -1026,7 +1032,7 @@ function resetScene() {
 
 function startLevel(level) {
   resetScene()
-  game.level = level
+  game.level = Math.min(level, levelsFor(progress.mode).length - 1)
   game.matched = 0
   game.turns = 0
   game.peekUsed = false
@@ -1036,7 +1042,7 @@ function startLevel(level) {
   game.state = 'dealing'
   game.mode = progress.mode
   show('play')
-  const pairs = LEVELS[level]
+  const pairs = LEVELS[game.level]
   const picks = shuffle([...(game.mode === 'baby' ? WITH_BABIES : NAMES)]).slice(0, pairs)
   // Each pair: an animal and its twin, its sound card or its baby.
   const partner = { twins: 'animal', sound: 'sound', baby: 'baby' }[game.mode]
@@ -1191,7 +1197,7 @@ function winLevel() {
   wait(0.6 + found.length * WIN_CALL_GAP + 0.5).then(() => talk.say(recap))
 
   wait(1.6).then(() => {
-    const last = game.level === LEVELS.length - 1
+    const last = game.level === levelsFor(game.mode).length - 1
     $('win-title').textContent = 'You found them all!'
     $('win-text').textContent = {
       twins: `${pairs} pairs of animal twins`,
@@ -1391,7 +1397,7 @@ $('again').addEventListener('click', () => {
 })
 $('next').addEventListener('click', () => {
   sound.tap()
-  startLevel(Math.min(LEVELS.length - 1, game.level + 1))
+  startLevel(Math.min(levelsFor(game.mode).length - 1, game.level + 1))
 })
 for (const el of document.querySelectorAll('[data-mode]')) {
   el.addEventListener('click', () => {
