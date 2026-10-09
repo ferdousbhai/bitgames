@@ -191,6 +191,20 @@ export class Audio {
     ;[392, 494, 587, 784].forEach((f, i) => this.tone({ freq: f, type: 'triangle', gain: 0.07, decay: 0.2, delay: i * 0.07 }))
   }
 
+  /** Delivery Town: a soft rubbery boing for a friendly bump (no crunch). */
+  bump(strength = 1) {
+    const now = performance.now()
+    if (now - this.lastCrash < 250) return
+    this.lastCrash = now
+    this.tone({ freq: 220, type: 'sine', gain: 0.09 * strength, decay: 0.32, slide: 140 })
+  }
+
+  /** Delivery Town: a doorbell, ding-dong, when a parcel is handed over. */
+  doorbell() {
+    this.tone({ freq: 659, type: 'sine', gain: 0.08, decay: 0.7 })
+    this.tone({ freq: 523, type: 'sine', gain: 0.08, decay: 0.9, delay: 0.42 })
+  }
+
   /** The horn shockwave: a big honk and a whoomp. */
   wave() {
     this.horn()

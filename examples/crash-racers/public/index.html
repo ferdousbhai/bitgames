@@ -30,7 +30,8 @@
   <div class="logo small"><span>C</span><span>R</span><span>A</span><span>S</span><span>H</span> <span>R</span><span>A</span><span>C</span><span>E</span><span>R</span><span>S</span></div>
   <div id="players" class="players"></div>
   <div class="modes">
-    <button data-mode="race" class="mode on"><span>🏁</span>Race</button>
+    <button data-mode="town" class="mode on" aria-label="Delivery Town: drive slowly and deliver picture parcels"><span>📦</span>Deliver</button>
+    <button data-mode="race" class="mode"><span>🏁</span>Race</button>
     <button data-mode="smash" class="mode"><span>💥</span>Smash!</button>
   </div>
   <h2>Pick your car 🚗</h2>
@@ -62,6 +63,7 @@
     <div id="stars" class="pill">⭐ 0</div>
     <div id="timer" class="pill hidden">⏱️ 2:00</div>
   </div>
+  <div id="parcels" class="parcels hidden" role="group" aria-label="Parcels in the van"></div>
   <canvas id="minimap" width="160" height="160"></canvas>
   <div id="speed" class="speed">0<small>km/h</small></div>
   <div id="banner" class="banner"></div>
@@ -69,6 +71,7 @@
     <button data-touch="turbo" title="Turbo (Shift)" id="turbo-btn">🔥</button>
     <button data-touch="fix" title="Fix my car (F)" id="fix-btn">🔧</button>
     <button data-touch="reset" title="Back on the road (R)" id="reset-btn">🔄</button>
+    <button data-touch="turn" title="Turn round (U)" id="turn-btn" aria-label="Turn round">↩️</button>
     <button data-touch="horn" title="Horn (H)">📯</button>
     <button data-touch="camera" title="Camera (C)">🎥</button>
     <button id="sound-btn" title="Sound (M)">🔊</button>
@@ -89,8 +92,12 @@
 <div id="countdown" class="countdown hidden"></div>
 
 <div id="results" class="screen hidden">
-  <h1>🏁 Finish!</h1>
+  <h1 id="results-title">🏁 Finish!</h1>
   <div id="podium" class="podium"></div>
+  <div id="recap" class="recap hidden">
+    <canvas id="recap-map" width="560" height="560" aria-label="Your delivery route"></canvas>
+    <div id="recap-stops" class="recap-stops"></div>
+  </div>
   <div class="row">
     <button id="again" class="big-go">🔁 Race again</button>
     <button id="change-city" class="big-go alt">🗺️ New city</button>

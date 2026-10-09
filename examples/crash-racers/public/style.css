@@ -300,3 +300,53 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .podium .place, .hud-buttons button.ready, #go.nudge, .car-spinner { animation: none; }
   .party { display: none; }
 }
+
+/* --- Delivery Town (Phase 2): a calm HUD of parcels and a big paper map --- */
+#turn-btn { display: none; }
+#hud.town #position, #hud.town #lap, #hud.town #crashes, #hud.town #stars, #hud.town #timer, #hud.town .speed,
+#hud.town #turbo-btn, #hud.town #fix-btn, #hud.town [data-touch="horn"], #hud.town [data-touch="camera"] { display: none; }
+#hud.town #turn-btn { display: block; }
+#hud.town .hud-buttons { top: calc(var(--parcel) + 26px + env(safe-area-inset-top)); }
+:root { --parcel: 60px; --map: min(42vmin, 300px); }
+.parcels { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); display: flex; gap: 8px; pointer-events: auto; }
+.parcel {
+  position: relative; width: var(--parcel); height: var(--parcel); border-radius: 16px; padding: 0;
+  background: linear-gradient(90deg, transparent 43%, #e63946 43%, #e63946 57%, transparent 57%), #c99a62;
+  border: 4px solid var(--tint, #fff); box-shadow: 0 4px 0 rgba(0,0,0,.28); touch-action: manipulation;
+}
+.parcel .picture { display: grid; place-items: center; width: 78%; height: 78%; margin: 11%; border-radius: 50%; background: #fff; font-size: calc(var(--parcel) * 0.46); line-height: 1; }
+.parcel.chosen { border-color: #ffbe0b; box-shadow: 0 0 0 4px #fff, 0 4px 0 rgba(0,0,0,.28); transform: translateY(-3px); }
+.parcel.delivered { opacity: .45; box-shadow: none; }
+.parcel .tick { position: absolute; right: -8px; top: -8px; width: 26px; height: 26px; border-radius: 50%; background: #5fae1e; color: #fff; font-size: 17px; font-weight: 900; display: grid; place-items: center; }
+#hud.town #minimap { width: var(--map); height: var(--map); top: calc(64px + env(safe-area-inset-top)); background: none; border-radius: 0; filter: drop-shadow(0 4px 0 rgba(0,0,0,.25)); }
+#hud.town .banner { font-size: clamp(30px, 6vw, 56px); color: #fff; text-shadow: 0 3px 0 rgba(43,45,66,.55), 0 6px 18px rgba(0,0,0,.3); transition: opacity .4s; transform: none; }
+.recap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#recap-map { width: min(72vmin, 440px); height: min(72vmin, 440px); filter: drop-shadow(0 6px 0 rgba(0,0,0,.25)); }
+.recap-stops { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; font-size: 34px; }
+.recap-stops .stop { position: relative; display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; background: #fff; border: 4px solid var(--tint, #fff); }
+.recap-stops .stop b { position: absolute; top: -10px; left: -10px; width: 28px; height: 28px; border-radius: 50%; background: #ff6b9d; color: #fff; font-size: 17px; display: grid; place-items: center; }
+.recap-stops .arrow { font-size: 24px; opacity: .8; }
+@media (any-pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
+  :root { --parcel: 76px; --map: min(36vmin, 320px); }
+  #hud.town #minimap { top: calc(64px + env(safe-area-inset-top)); }
+}
+@media (max-width: 520px) {
+  :root { --parcel: 54px; --map: min(46vw, 200px); }
+  .parcels { gap: 6px; }
+  #hud.town #minimap { top: calc(var(--parcel) + 26px + env(safe-area-inset-top)); }
+  #hud.town .banner { font-size: min(30px, 6.5vw); }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  :root { --parcel: 50px; --map: min(46vh, 180px); }
+  #hud.town #minimap { top: calc(56px + env(safe-area-inset-top)); }
+  /* The recap sits beside its stops, so the map and both buttons fit a sideways phone. */
+  #results:has(#recap:not(.hidden)) { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .recap { flex-direction: row; gap: 16px; }
+  #recap-map { width: min(50vh, 300px); height: min(50vh, 300px); }
+  .recap-stops { font-size: 26px; flex-direction: column; flex-wrap: nowrap; gap: 2px; } .recap-stops .stop { width: 46px; height: 46px; }
+  .recap-stops .arrow { transform: rotate(90deg); font-size: 16px; line-height: 1; }
+}
+@media (max-height: 500px) and (orientation: landscape) and (any-pointer: coarse) {
+  #hud.town .hud-buttons { top: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .parcel.chosen { transform: none; } }

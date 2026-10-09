@@ -2,7 +2,7 @@
   "id": "crash-racers",
   "title": "Crash Racers",
   "tagline": "Race up to 4 cars through Ubud, Helsinki and Montreal. Crashes welcome!",
-  "howToPlay": "Steer with the arrows (or ◀ ▶ on a tablet). The car drives itself in Easy gas mode. 🔧 fixes your car, 🔄 puts you back on the road.",
+  "howToPlay": "📦 Deliver: drive slowly round a picture town with four parcels. Tap a parcel to load it, find its matching house on the big map (🍎 fruit shop, 🌸 florist, 🐶 dog's house…), then drive there to hand it over. ↩️ turns you round for a shorter way. At the end, see the route you chose. 🏁 Race and 💥 Smash! are still there for lively play with friends: steer with the arrows or on-screen buttons, and 🔊 turns the sound off.",
   "emoji": "🏎️",
   "color": "#ff595e",
   "category": "race",
@@ -13,5 +13,5 @@
     5,
     8
   ],
-  "learning": "Map reading, ordered deliveries and spatial planning"
+  "learning": "Map reading, matching and route planning"
 }

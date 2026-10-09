@@ -265,10 +265,11 @@ export class Track {
    * long either way) doesn't overlap a ramp, so a respawned car isn't put
    * inside one and flipped.
    */
-  clearOfRamps(dist, margin = 3) {
+  clearOfRamps(dist, margin = 3, dir = 1) {
     for (const ramp of this.ramps) {
       const offset = this.offset(dist, ramp.dist)
-      if (Math.abs(offset) < ramp.half + margin) return wrap(ramp.dist + ramp.half + margin, this.length)
+      // dir -1: driving the loop backwards (Delivery Town), so clear of the ramp means before it.
+      if (Math.abs(offset) < ramp.half + margin) return wrap(ramp.dist + dir * (ramp.half + margin), this.length)
     }
     return wrap(dist, this.length)
   }

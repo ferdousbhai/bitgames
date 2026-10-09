@@ -551,6 +551,15 @@ export class Car {
     // A blow from straight below is the car bottoming out on a landing: a jolt, not a crash.
     const fromBelow = dir.y > 0.7
     const effective = (otherCar ? speed * 0.85 : speed) * (fromBelow ? 0.4 : 1)
+    if (this.gentle) {
+      // Delivery Town: a friendly bump is a soft, funny wobble. No dents, nothing falls off.
+      const k = Math.min(1, effective / 10)
+      this.body.angularVelocity.y += (Math.random() - 0.5) * 1.6 * k
+      this.body.angularVelocity.z += (Math.random() - 0.5) * 0.8 * k
+      this.body.velocity.y += 0.9 * k
+      this.onHit?.({ local, dir, speed: effective, seed, otherCar, world, normal: normal.negate(), gentle: true })
+      return
+    }
     this.damage.impact(local, dir, effective, seed)
     // A jolt: big hits lift and twist the car a little, like the chassis kicking back.
     if (effective > 10) {

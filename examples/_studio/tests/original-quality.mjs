@@ -33,7 +33,15 @@ async function assertTouchableInViewport(selector) {
 await runChecks(session, async (pass) => {
   for (const id of ['balloon-pop', 'bumper-ducks', 'bunny-hop', 'cake-stack', 'crash-racers', 'dragon-glide', 'fish-pond', 'star-catcher']) {
     const choiceReady = () => window.__adventure && document.getElementById('adventure-choice')?.getBoundingClientRect().width > 0
-    await open(id, choiceReady)
+    // Crash Racers opens on Delivery Town; its racing mission chip shows once Race is picked.
+    const pickRace = async () => {
+      if (id !== 'crash-racers') return
+      await page.waitForFunction(() => window.__adventure?.game.state === 'menu', null, { timeout: 40000 })
+      await tap('[data-mode="race"]')
+    }
+    await open(id, id === 'crash-racers' ? () => window.__adventure?.game.state === 'menu' : choiceReady)
+    await pickRace()
+    await page.waitForFunction(choiceReady)
     await page.evaluate(() => localStorage.removeItem(`${location.pathname.split('/')[1]}:adventure`))
     // Advance to the first mission through the real native control.
     for (let attempt = 0; !(await mission()).goal; attempt++) {
@@ -43,6 +51,7 @@ await runChecks(session, async (pass) => {
     }
     const selected = (await mission()).label
     await page.reload()
+    await pickRace()
     await page.waitForFunction(choiceReady, null, { timeout: 40000 })
     assert.equal((await mission()).label, selected)
     await tap(originalStartButton(id))
@@ -55,6 +64,7 @@ await runChecks(session, async (pass) => {
 
   // Moving the car onto each delivery marker, out of order first.
   await open('crash-racers', () => window.__adventure?.game.state === 'menu')
+  await tap('[data-mode="race"]')
   await tap('#go')
   await page.waitForFunction(() => window.__adventure.game.raceOn)
   async function visit(index) {
