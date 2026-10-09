@@ -8,6 +8,8 @@ import { Effects } from './effects.js'
 import { tween, wait, ease, updateTweens, clearTweens } from './tween.js'
 import { CakeKit, FLAVOURS, STEP, STAND_TOP, START_W, MIN_W } from './cake.js'
 import { AnimalKit, CUSTOMERS } from './animals.js'
+import { orderFor, orderWords, animalName } from './orders.js'
+import { createPartyShare } from './party-share.js'
 
 const $ = (id) => document.getElementById(id)
 const lerp = THREE.MathUtils.lerp
@@ -57,13 +59,27 @@ const COUNTER_Z = 0.9 // the counter top runs from z -0.9 to 0.9
 const FLOOR_Y = -1.2
 
 const game = {
-  state: 'loading', // loading | title | intro | play | party | candles | card
+  state: 'loading', // loading | title | intro | play | party | candles | share | card
   run: 0, // bumps whenever a game starts or ends, so stale async steps stop
   level: 1,
   streak: 0,
   firstDrop: false,
   lastFlavour: null,
+  order: null, // the friend's pictured order, bottom to top: { layers, unit }, or null when stacking freely
+  misses: 0, // layers in a row that were not the next one in the order
 }
+
+// Spoken words for pre-readers. They respect the game's mute.
+const canSpeak = 'speechSynthesis' in window
+function speak(text) {
+  if (!canSpeak || sound.muted || !text) return
+  speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(text)
+  u.lang = 'en-US'
+  u.rate = 0.85
+  speechSynthesis.speak(u)
+}
+const hush = () => canSpeak && speechSynthesis.cancel()
 
 // Optional learning missions: count layers as they land.
 const adventure = createAdventure({
@@ -90,10 +106,12 @@ const adventure = createAdventure({
     words.textContent = option.goal
     el.append(words, row, ` ${count} / ${option.target}`)
   },
+  // The friend's order is the default; the counting missions and free stacking keep any flavour that lands.
   options: [
-    { emoji: '🎂', label: 'Free stacking' },
+    { emoji: '🧁', label: "Friend's order", order: true },
     { emoji: '🐢', label: 'Gentle layer counting', pace: 0.6, goal: 'Stack 3 layers', target: 3, reward: 'Three layers make your little cake!' },
     { emoji: '🧮', label: 'Count five layers', pace: 0.65, goal: 'Stack 5 layers', target: 5, reward: 'Five layers, counted one at a time!' },
+    { emoji: '🎂', label: 'Free stacking' },
   ],
 })
 
@@ -107,6 +125,10 @@ const customerDef = (level) => {
   const def = CUSTOMERS[(level - 1) % CUSTOMERS.length]
   return { ...def, layers: level > CUSTOMERS.length ? 10 : def.layers }
 }
+const orderMode = () => !!game.order
+/** How many layers this cake needs: the friend's order, or the friend's layer count when stacking freely. */
+const targetLayers = () => (game.order ? game.order.layers.length : customerDef(game.level).layers)
+const wanted = () => (game.order && cake ? game.order.layers[cake.layers.length] : null)
 const unlockedFlavours = (level) => ['vanilla', ...CUSTOMERS.slice(0, Math.min(level, CUSTOMERS.length)).map((c) => c.unlock).filter(Boolean)]
 const FLOOR_W = MIN_W + 0.12 // the slimmest a layer gets
 const perfectWindow = (w) => Math.max(0.12, w * 0.12)
@@ -169,7 +191,7 @@ function liftForDots(y) {
 function aimCamera(snap = false) {
   if (game.state === 'title' || game.state === 'loading') {
     aimTitle()
-  } else if (['party', 'candles', 'card'].includes(game.state) && cake) {
+  } else if (['party', 'candles', 'share', 'card'].includes(game.state) && cake) {
     const top = topY() + 0.6
     const cx = cake.group.position.x
     const left = cx - 1.1
@@ -178,7 +200,7 @@ function aimCamera(snap = false) {
     // Room for the "Make a wish" bubble above the candles
     camGoal.halfH += 0.35
     camGoal.y += 0.3
-    if (game.state === 'card') {
+    if (game.state === 'card' || game.state === 'share') {
       // Leave room for the party card: beside the cake on wide screens, below it on tall ones
       if (camera.aspect > 1.2) {
         camGoal.halfW *= 1.9
@@ -223,7 +245,7 @@ function resize() {
   const dist = distFor(view.R + START_W / 2 + 0.25, 2.0)
   const halfWAtCustomer = (dist + 1.5) * tanHalf() * camera.aspect
   view.custX = clamp(halfWAtCustomer - 0.55, 1.25, 2.3)
-  if (customer && game.state !== 'party' && game.state !== 'candles' && game.state !== 'card') customer.group.position.x = view.custX
+  if (customer && !['party', 'candles', 'share', 'card'].includes(game.state)) customer.group.position.x = view.custX
 }
 addEventListener('resize', resize)
 resize()
@@ -270,6 +292,20 @@ function pickFlavour() {
   return f
 }
 
+/**
+ * The friend's order: the wanted flavour comes along often, and never more than two other
+ * layers slide past in a row, so waiting for it takes patience but never too long.
+ */
+function pickOrderFlavour() {
+  const want = wanted()
+  const others = [...new Set([...game.order.layers, ...unlockedFlavours(game.level)])].filter((f) => f !== want && f !== game.lastFlavour)
+  const match = !others.length || game.misses >= 2 || Math.random() < (game.misses ? 0.55 : 0.4)
+  const f = match ? want : others[(Math.random() * others.length) | 0]
+  game.misses = match ? 0 : game.misses + 1
+  game.lastFlavour = f
+  return f
+}
+
 function addLayer(c, flavour, x, w) {
   const L = cakeKit.layer(flavour)
   L.x = x
@@ -285,7 +321,7 @@ function addLayer(c, flavour, x, w) {
 
 function spawnMover() {
   if (!cake) return
-  const flavour = pickFlavour()
+  const flavour = orderMode() ? pickOrderFlavour() : pickFlavour()
   const top = topLayer()
   const L = cakeKit.layer(flavour)
   L.w = top.w
@@ -297,9 +333,15 @@ function spawnMover() {
   L.appear = 0
   L.body.scale.set(L.w, 1, L.w)
   L.group.position.set(L.x, topY() + HOVER, 0)
+  // A layer the order does not need yet slides past once; the wanted one waits, sliding to and fro.
+  L.passing = orderMode() && flavour !== wanted()
+  L.fade = 0
   cake.group.add(L.group)
   mover = L
   sound.appear()
+  showMoverTag(flavour)
+  // The friend perks up when the layer they are waiting for comes along
+  if (orderMode() && !L.passing) customer?.hop(0.12)
 }
 
 function updateMover(dt, t) {
@@ -307,7 +349,18 @@ function updateMover(dt, t) {
   const L = mover
   L.appear = Math.min(1, L.appear + dt * 4)
   L.pos += L.dir * speed() * dt
-  if (L.pos > view.R) {
+  if (L.passing && L.pos * L.dir > view.R) {
+    // Past the far side: it shrinks away and the next layer comes along.
+    L.fade = Math.min(1, L.fade + dt * 2.5)
+    if (L.fade >= 1) {
+      L.group.removeFromParent()
+      mover = null
+      hideMoverTag()
+      const run = game.run
+      setTimeout(() => run === game.run && game.state === 'play' && !mover && spawnMover(), 350)
+      return
+    }
+  } else if (L.pos > view.R) {
     L.pos = view.R
     L.dir = -1
   } else if (L.pos < -view.R) {
@@ -316,11 +369,11 @@ function updateMover(dt, t) {
   }
   const top = topLayer()
   L.x = top.x + L.pos
-  const pop = ease.outBack(L.appear)
+  const pop = ease.outBack(L.appear) * (1 - (L.fade || 0))
   L.group.position.set(L.x, topY() + HOVER + Math.sin(t * 3) * 0.04, 0)
   L.body.scale.set(L.w * pop, pop, L.w * pop)
   // Glows golden while it is lined up for a perfect drop
-  const lined = Math.abs(L.pos) <= perfectWindow(top.w)
+  const lined = !L.passing && Math.abs(L.pos) <= perfectWindow(top.w)
   // A steady warm glow, not a flicker
   const g = lined ? 0.35 : 0
   for (const m of L.glow) {
@@ -330,9 +383,10 @@ function updateMover(dt, t) {
 }
 
 async function drop() {
-  if (game.state !== 'play' || !mover || mover.dropping || mover.appear < 0.6) return
+  if (game.state !== 'play' || !mover || mover.dropping || mover.appear < 0.6 || mover.fade > 0.5) return
   const run = game.run
   const L = mover
+  if (L.passing) return notThisOne(L)
   L.dropping = true
   game.firstDrop = true
   game.idle = 0
@@ -344,6 +398,35 @@ async function drop() {
   await tween(0.2, (t) => (L.group.position.y = lerp(y0, y1, ease.inCubic(t))))
   if (run !== game.run) return
   land(L)
+}
+
+/**
+ * A layer the order does not need yet: it bounces softly on the cake and floats back up to slide
+ * on. Nothing is lost; the friend says which flavour comes next.
+ */
+async function notThisOne(L) {
+  const run = game.run
+  L.dropping = true
+  game.firstDrop = true
+  game.idle = 0
+  $('hint').classList.add('hidden')
+  const want = wanted()
+  speak(`That one is ${L.flavour}. Let's wait for ${want}!`)
+  askPip()
+  sound.whoosh()
+  const y0 = L.group.position.y
+  const y1 = topY() + 0.08
+  await tween(0.2, (t) => (L.group.position.y = lerp(y0, y1, ease.inCubic(t))))
+  if (run !== game.run || mover !== L) return
+  sound.wobble()
+  customer?.hop(0.1)
+  await tween(0.55, (t) => {
+    L.group.position.y = lerp(y1, topY() + HOVER, ease.outCubic(t))
+    const s = 0.82 + 0.18 * ease.outBack(t)
+    L.body.scale.set(L.w * (1 + (1 - s) * 0.6), s, L.w * (1 + (1 - s) * 0.6))
+  })
+  if (run !== game.run || mover !== L) return
+  L.dropping = false
 }
 
 function land(L) {
@@ -374,6 +457,7 @@ function land(L) {
     kind = ad < top.w * 0.3 ? 'good' : 'squish'
   }
   mover = null
+  hideMoverTag()
   L.group.removeFromParent()
   cakeKit.unglow(L)
   const layer = addLayer(cake, L.flavour, L.x, top.w)
@@ -418,12 +502,14 @@ function land(L) {
   updateHud()
 
   const n = cake.layers.length
-  const target = customerDef(game.level).layers
+  const target = targetLayers()
+  // Each layer of the order is named as it lands, so the sequence is heard as well as seen.
+  if (orderMode() && n < target) speak(L.flavour)
   if (n >= target) {
     setTimeout(() => run === game.run && finishCake('done'), 450)
     return
   }
-  if (n >= 3) $('done').classList.remove('hidden')
+  if (n >= 3 && !orderMode()) $('done').classList.remove('hidden')
   if (n % 3 === 0) setTimeout(() => run === game.run && decorateSide(layer, n / 3 - 1), 300)
   // A finished mission gets its moment: the next layer waits until the ribbon has gone, so it never slides hidden behind it.
   setTimeout(() => {
@@ -616,6 +702,12 @@ async function finishCake(reason) {
   }
   showIntro('🎂', reason === 'narrow' ? 'What a tall cake!' : 'The cake is ready!', customer?.def.emoji ?? '🎂')
   sound.fanfare()
+  hideMoverTag()
+  // Name what the child built: the order followed layer by layer, or the pattern finished.
+  if (game.order && customer && cake.layers.length === game.order.layers.length) {
+    const words = orderWords(game.order.layers)
+    speak(game.order.unit ? `You finished the pattern! ${words}.` : `${words}. Just like ${animalName(customer.def.animal)}'s order!`)
+  }
   await wait(0.5)
   if (run !== game.run) return
   if (!(await topDecorations(run))) return
@@ -716,7 +808,41 @@ async function blowCandles() {
   banner('Happy Birthday!', 'gold')
   await wait(2.4)
   if (run !== game.run) return
-  showCard()
+  startShare()
+}
+
+// --- Sharing the cake --------------------------------------------------------------------------
+
+const PLATES = ['#bedacc', '#bed4ed', '#e6caea', '#ffe3b8']
+const share = createPartyShare({
+  root: $('share'),
+  speak,
+  sound,
+  onDone: (result) => {
+    if (game.state !== 'share') return
+    game.shared = result
+    share.hide()
+    showCard()
+  },
+})
+
+/** Who came to the party: the birthday friend and one, two or three friends from earlier cakes. */
+function partyGuests() {
+  const n = 2 + ((game.level - 1) % 3)
+  const host = customerDef(game.level)
+  const list = [host]
+  for (let k = 1; list.length < n; k++) {
+    const f = CUSTOMERS[(game.level - 1 + k) % CUSTOMERS.length]
+    if (f.animal !== host.animal) list.push(f)
+  }
+  return list.map((f, i) => ({ emoji: f.emoji, name: animalName(f.animal), plate: PLATES[i] }))
+}
+
+function startShare() {
+  game.state = 'share'
+  game.shared = null
+  $('hud').classList.add('carding')
+  share.start(partyGuests(), cake.layers.map((l) => FLAVOURS[l.flavour]))
 }
 
 function showCard() {
@@ -728,6 +854,10 @@ function showCard() {
   const made = cake ? cake.layers.map((l) => FLAVOURS[l.flavour].emoji) : []
   $('card-cake').textContent = made.join('')
   $('card-count').textContent = String(made.length)
+  // ...and how it was shared: every friend's plate with the same number of slices.
+  const shared = game.shared
+  $('card-share').textContent = shared ? shared.guests.map((g) => `${g.emoji}${'🍰'.repeat(shared.each)}`).join('  ') : ''
+  $('card-share').setAttribute('aria-label', shared ? `${shared.guests.length} friends, ${shared.each} slices each` : '')
   const fresh = next.unlock && game.level + 1 <= CUSTOMERS.length ? ` ${FLAVOURS[next.unlock].emoji}` : ''
   $('card-next').textContent = `➡️ ${next.emoji}${fresh}`
   $('card').classList.remove('hidden')
@@ -765,11 +895,14 @@ async function startLevel(run) {
   game.streak = 0
   cake = newCake(-9)
   const def = customerDef(game.level)
+  game.order = adventure.option.order ? orderFor(game.level) : null
+  game.misses = 0
+  game.lastFlavour = null
   customer = animals.make(def)
   customer.group.scale.setScalar(1.85)
   customer.group.position.set(view.custX, FLOOR_Y - 1.9, -1.5)
   scene.add(customer.group)
-  buildPips(def.layers)
+  buildPips(targetLayers())
   updateHud()
   // The new cake stand slides in and the birthday friend pops up behind the counter
   const c = cake
@@ -779,8 +912,16 @@ async function startLevel(run) {
   sound.voice(def.animal)
   tween(0.5, (t) => (customer.group.position.y = FLOOR_Y - 1.9 * (1 - ease.outBack(t))))
   const fresh = def.unlock && game.level <= CUSTOMERS.length ? FLAVOURS[def.unlock].emoji : ''
-  showIntro(`${def.emoji}🎂`, `${def.layers} layers!`, fresh ? `New flavour ${fresh}` : '🎈🎈🎈')
-  await wait(1.6)
+  if (game.order) {
+    // The order is a picture, bottom to top, and it is spoken so a child who cannot read can follow it.
+    const pics = game.order.layers.map((f) => FLAVOURS[f].emoji).join('')
+    showIntro(`${def.emoji}🎂`, pics, game.order.unit ? '🔁' : fresh ? `✨ ${fresh}` : '🎈🎈🎈')
+    sayOrder()
+    await wait(2.4)
+  } else {
+    showIntro(`${def.emoji}🎂`, `${def.layers} layers!`, fresh ? `New flavour ${fresh}` : '🎈🎈🎈')
+    await wait(1.6)
+  }
   if (run !== game.run) return
   game.state = 'play'
   game.idle = 0
@@ -873,12 +1014,24 @@ function updateDemo(dt, t) {
 function buildPips(n) {
   const el = $('pips')
   el.classList.remove('full')
+  el.classList.toggle('order', orderMode())
   el.innerHTML = ''
   for (let i = 0; i < n; i++) {
     const p = document.createElement('span')
     p.className = 'pip'
     p.textContent = String(i + 1)
     p.setAttribute('aria-label', `Layer ${i + 1}`)
+    if (game.order) {
+      // The friend's order is drawn on the dots: each dot shows its flavour, bottom layer first.
+      const f = FLAVOURS[game.order.layers[i]]
+      p.classList.add('want')
+      p.textContent = f.emoji
+      p.style.setProperty('--want', f.rainbow ? '#ffe3ef' : f.icing)
+      p.style.setProperty('--want-rim', f.sponge)
+      p.setAttribute('aria-label', `Layer ${i + 1}: ${game.order.layers[i]}`)
+      // Patterns are grouped by their repeating unit, so the repeat is easy to see.
+      if (game.order.unit && i > 0 && i % game.order.unit === 0) p.classList.add('unit')
+    }
     el.appendChild(p)
   }
   const goal = document.createElement('span')
@@ -893,6 +1046,10 @@ function updateHud() {
   pips.forEach((p, i) => {
     const on = i < layers.length
     p.classList.toggle('on', on)
+    if (game.order) {
+      p.classList.toggle('next', i === layers.length && game.state !== 'party')
+      return
+    }
     const f = on ? FLAVOURS[layers[i].flavour] : null
     p.style.background = f ? (f.rainbow ? 'conic-gradient(#ff6b6b, #ffe066, #69db7c, #74c0fc, #b197fc, #ff6b6b)' : f.icing) : ''
     // The sponge colour rings each landed layer, so pale icings (vanilla) still read as filled
@@ -900,6 +1057,46 @@ function updateHud() {
     // Dark icing (chocolate) gets a white number so it can still be counted
     p.style.color = f && !f.rainbow && new THREE.Color(f.icing).getHSL({}).l < 0.35 ? '#fff' : ''
   })
+}
+
+/** Say the friend's order aloud, from the bottom layer to the top. */
+function sayOrder() {
+  if (!game.order || !customer) return
+  const words = orderWords(game.order.layers)
+  speak(game.order.unit ? `${animalName(customer.def.animal)} wants a pattern! ${words}.` : `${animalName(customer.def.animal)} wants ${words}!`)
+}
+
+/** Point at the next dot of the order for a moment, after a layer it did not need yet. */
+let askTimer = 0
+function askPip() {
+  const p = $('pips').querySelector('.pip.next')
+  if (!p) return
+  p.classList.add('ask')
+  clearTimeout(askTimer)
+  askTimer = setTimeout(() => p.classList.remove('ask'), 1600)
+}
+
+// The sliding layer carries its flavour picture, so it can be matched to the order's dots.
+const moverTag = $('mover-tag')
+function showMoverTag(flavour) {
+  if (!orderMode()) return
+  moverTag.textContent = FLAVOURS[flavour].emoji
+  moverTag.classList.remove('hidden')
+}
+function hideMoverTag() {
+  moverTag.classList.add('hidden')
+}
+const tagSpot = new THREE.Vector3()
+function updateMoverTag() {
+  if (moverTag.classList.contains('hidden')) return
+  if (!mover || !cake || game.state !== 'play') return hideMoverTag()
+  mover.group.getWorldPosition(tagSpot)
+  tagSpot.y += 0.32
+  const v = tagSpot.project(camera)
+  const x = ((v.x + 1) / 2) * innerWidth
+  const y = ((1 - v.y) / 2) * innerHeight
+  const s = Math.max(0.001, mover.appear * (1 - (mover.fade || 0)))
+  moverTag.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%) scale(${Math.min(1, s)})`
 }
 
 let bannerTimer = 0
@@ -990,6 +1187,10 @@ function endRun() {
   customer?.group.removeFromParent()
   customer = null
   clearSlivers()
+  share.hide()
+  hideMoverTag()
+  hush()
+  game.order = null
   hideIntro()
   $('hint').classList.add('hidden')
   $('done').classList.add('hidden')
@@ -1081,11 +1282,20 @@ addEventListener('keydown', (e) => {
   if (e.repeat) return
   if (e.key === 'Escape' && game.state !== 'title' && game.state !== 'loading') return toTitle()
   if (e.key === ' ' || e.key === 'Enter') {
+    // A focused plate button handles its own key; otherwise the next waiting friend gets a slice.
+    if (game.state === 'share' && document.activeElement?.classList.contains('share-plate')) return
     e.preventDefault()
     if (game.state === 'title') return start()
     if (game.state === 'card') return nextCake()
+    if (game.state === 'share') return share.giveNext()
     tap()
   }
+  if (game.state === 'share' && /^[1-4]$/.test(e.key)) share.give(Number(e.key) - 1)
+})
+// Tapping the order's dots says the order again.
+$('pips').parentElement.addEventListener('click', (e) => {
+  e.stopPropagation()
+  if (game.order && game.state === 'play') sayOrder()
 })
 
 // --- Loading ---------------------------------------------------------------------------------------
@@ -1139,6 +1349,7 @@ function frame(dt) {
   effects.update(dt)
   updateIdle(dt)
   updateHint()
+  updateMoverTag()
   sound.updateMusic(game.state !== 'loading')
   renderer.render(scene, camera)
 }
@@ -1153,7 +1364,7 @@ load()
 
 // ?debug exposes the game for testing in the console
 if (new URLSearchParams(location.search).has('debug')) {
-  window.cakeStack = { game, frame, get cake() { return cake }, get mover() { return mover }, get customer() { return customer }, camera, scene, recipeStudio }
+  window.cakeStack = { game, frame, get cake() { return cake }, get mover() { return mover }, get customer() { return customer }, camera, scene, recipeStudio, share, drop, startShare }
   window.__adventure = { mission: adventure, game }
 }
 // Background test tabs get no animation frames, so keep time moving there too.

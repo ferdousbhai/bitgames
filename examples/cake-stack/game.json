@@ -2,7 +2,7 @@
   "id": "cake-stack",
   "title": "Cake Stack",
   "tagline": "Stack yummy cake layers into a giant birthday cake for your animal friends!",
-  "howToPlay": "A cake layer slides back and forth: tap, click or press Space to drop it on the cake. Line it up for a Perfect sparkle, and a wobbly drop just squishes a little. Stack all the layers (or tap the candle button when you are done) and an animal friend comes for a birthday party: tap to help blow out the candles! Every new friend brings a new flavour. Open Recipe studio to build pictured flavour recipes from bottom to top and share equal slices fairly among two or three friends.",
+  "howToPlay": "Each birthday friend orders a cake in pictures, from the bottom layer to the top: listen to the order, then wait for the matching layer and tap, click or press Space to drop it when it lines up. Layers the order doesn't need yet just slide past. Later friends order patterns like strawberry, mint, strawberry, mint. Blow out the candles, then share the cake fairly: give every friend the same number of slices. Choose 🎂 Free stacking to drop any layer, or open Recipe studio to build pictured recipes and share equal slices.",
   "emoji": "🎂",
   "color": "#ff8fab",
   "category": "puzzle",
@@ -13,5 +13,5 @@
     3,
     8
   ],
-  "learning": "Counting, ordered recipes and equal sharing"
+  "learning": "Sequencing, patterns, counting and equal sharing"
 }

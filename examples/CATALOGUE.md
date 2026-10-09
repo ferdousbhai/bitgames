@@ -7,7 +7,7 @@ The twelve original games, preserved after the generated batch was retired. Qual
 | [🎈 Balloon Pop](./balloon-pop/public/index.html) | 2–6 | Counting, colours and shape recognition |
 | [🦆 Bumper Ducks](./bumper-ducks/public/index.html) | 3–8 | Counting in tens (place value), sorting by colour, cooperation and spatial awareness |
 | [🐰 Bunny Hop](./bunny-hop/public/index.html) | 3–8 | Movement patterns, counting and timing |
-| [🎂 Cake Stack](./cake-stack/public/index.html) | 3–8 | Counting, ordered recipes and equal sharing |
+| [🎂 Cake Stack](./cake-stack/public/index.html) | 3–8 | Sequencing, patterns, counting and equal sharing |
 | [🏎️ Crash Racers](./crash-racers/public/index.html) | 5–8 | Map reading, ordered deliveries and spatial planning |
 | [🐉 Dragon Glide](./dragon-glide/public/index.html) | 4–8 | Spatial awareness, ring counting and coordination |
 | [🎣 Fish Pond](./fish-pond/public/index.html) | 2–8 | Observation, animal habitats and counting |

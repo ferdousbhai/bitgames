@@ -440,3 +440,104 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .hint-finger, .title-top, .card, .done-btn, .pill.score.pop { animation: none; }
   .banner, .pip, .goal-slices span { transition: opacity .3s; }
 }
+
+/* --- Phase 2: the friend's pictured order on the layer dots, and sharing the cake at the party --- */
+.pips.order .pip.want {
+  width: 34px; height: 34px; font-size: 19px; line-height: 1; color: inherit;
+  background: var(--want); border: 3px dashed var(--want-rim); opacity: .55; filter: saturate(.7);
+}
+.pips.order .pip.want.on { opacity: 1; filter: none; border-style: solid; border-width: 4px; }
+/* The next layer the order needs: a steady ring, never a pulse */
+.pips.order .pip.want.next { opacity: 1; filter: none; box-shadow: 0 0 0 3px #fff, 0 0 0 6px #ff8fb8; transform: scale(1.12); }
+.pips.order .pip.want.ask { transform: scale(1.4); }
+.pips.order .pip.unit { margin-left: 10px; }
+#hud .progress { pointer-events: auto; }
+.mover-tag {
+  position: fixed; left: 0; top: 0; pointer-events: none; font-size: 34px; line-height: 1; padding: 6px 8px; border-radius: 999px;
+  background: rgba(255, 255, 255, .88); box-shadow: 0 3px 0 rgba(176, 74, 122, .25); transform-origin: 50% 100%;
+}
+@media (min-width: 768px) and (min-height: 700px) {
+  .pips.order .pip.want { width: 44px; height: 44px; font-size: 25px; }
+  .mover-tag { font-size: 42px; }
+}
+@media (max-width: 560px) {
+  .pips.order .pip.want { width: 28px; height: 28px; font-size: 16px; border-width: 2px; }
+  .pips.order .pip.unit { margin-left: 6px; }
+}
+@media (max-height: 420px) {
+  .pips.order .pip.want { width: 26px; height: 26px; font-size: 15px; }
+  .mover-tag { font-size: 26px; padding: 4px 6px; }
+}
+
+.share-wrap { display: flex; align-items: flex-end; justify-content: center; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+.share-card {
+  pointer-events: auto; background: rgba(255, 255, 255, .95); border-radius: 36px; padding: 16px 22px 18px; color: #b04a7a;
+  box-shadow: 0 10px 0 rgba(176, 74, 122, .25), 0 20px 50px rgba(0, 0, 0, .15); max-width: min(560px, 100%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px; animation: card-in .6s cubic-bezier(.2, 1.6, .4, 1);
+}
+.share-head { display: flex; align-items: center; gap: 14px; }
+.share-cake { width: clamp(96px, 22vmin, 150px); height: auto; }
+.share-cake .wedge { transition: opacity .35s, transform .35s; transform-origin: 0 0; }
+.share-cake .wedge.gone { opacity: .12; transform: scale(.92); }
+.share-faces { font-size: 34px; letter-spacing: 2px; }
+.share-plates { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.share-plate {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 96px; min-height: 96px; padding: 6px 8px 8px;
+  border-radius: 28px; background: var(--plate); border: 4px solid #fff; box-shadow: 0 5px 0 rgba(113, 91, 122, .3);
+  transition: transform .2s, box-shadow .2s;
+}
+.share-plate:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(113, 91, 122, .3); }
+.share-plate .face { font-size: 36px; line-height: 1.1; }
+.share-plate .on-plate {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; min-height: 34px; min-width: 70px; padding: 2px 6px;
+  border-radius: 999px; background: rgba(255, 255, 255, .85);
+}
+.share-plate .slice { width: 30px; height: 30px; }
+.share-plate .slice.arrive { animation: pop-in .35s cubic-bezier(.2, 1.8, .4, 1); }
+/* The friends still waiting for a slice: a steady ring, not a pulse */
+.share-plate.waiting { box-shadow: 0 5px 0 rgba(113, 91, 122, .3), 0 0 0 4px #ffd23f; }
+.share-plate.nudge { animation: nudge .5s ease-in-out; }
+@keyframes nudge { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.share-plates.fair .share-plate { box-shadow: 0 5px 0 rgba(113, 91, 122, .3), 0 0 0 4px #8ce99a; }
+.share-say { min-height: 1.3em; font-size: 26px; font-weight: 900; text-align: center; }
+.card-share { font-size: 24px; letter-spacing: 1px; }
+.card-share:empty { display: none; }
+@media (min-aspect-ratio: 6/5) {
+  .share-wrap { align-items: center; justify-content: flex-end; padding-right: calc(24px + env(safe-area-inset-right)); }
+  .share-card { max-width: min(620px, 56vw); }
+}
+@media (max-width: 440px) {
+  .share-card { padding: 12px 12px 14px; gap: 8px; }
+  .share-plates { gap: 6px; }
+  .share-plate { min-width: 76px; min-height: 84px; padding: 4px 4px 6px; }
+  .share-plate .face { font-size: 30px; }
+  .share-plate .on-plate { min-width: 56px; }
+  .share-plate .slice { width: 24px; height: 24px; }
+  .share-faces { font-size: 26px; }
+}
+@media (max-height: 420px) {
+  .share-card { padding: 8px 14px 10px; gap: 6px; border-radius: 26px; }
+  .share-cake { width: 76px; }
+  .share-faces { font-size: 24px; }
+  .share-plate { min-width: 72px; min-height: 72px; padding: 3px 5px 5px; border-radius: 20px; }
+  .share-plate .face { font-size: 26px; }
+  .share-plate .on-plate { min-height: 26px; min-width: 52px; }
+  .share-plate .slice { width: 22px; height: 22px; }
+  .share-say { font-size: 20px; }
+  .card-share { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .share-card, .share-plate .slice.arrive, .share-plate.nudge { animation: none; }
+  .share-cake .wedge, .pip { transition: opacity .3s; }
+}
+@media (min-width: 768px) and (min-height: 700px) {
+  .share-card { padding: 20px 28px 22px; gap: 14px; }
+  .share-cake { width: 170px; }
+  .share-faces { font-size: 44px; }
+  .share-plate { min-width: 128px; min-height: 124px; }
+  .share-plate .face { font-size: 48px; }
+  .share-plate .on-plate { min-width: 96px; min-height: 44px; }
+  .share-plate .slice { width: 40px; height: 40px; }
+  .share-say { font-size: 32px; }
+  .card-share { font-size: 28px; }
+}
