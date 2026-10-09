@@ -3,9 +3,9 @@
 // hint?(count), accept?(data, count), reward }. Without accept, every event counts.
 // The game's voice (speech.js) is required so mission words queue with the game's own words.
 // announce(text, kind) decides what is said ('choice' | 'count' | 'reward' | 'hint'); it defaults
-// to saying everything. renderChoice decorates the default button; renderProgress replaces the
-// default picture row (the goal's aria-label is already set). place(button) puts the button somewhere other than just before anchor.
-export function createAdventure({ id, anchor, place = (button) => anchor.before(button), hud, options, voice, celebrate, renderProgress, renderChoice, goalWords = false, announce = (text, kind) => voice.say(text, { interrupt: kind === 'choice' }) }) {
+// to saying everything. renderProgress replaces the default picture row (the goal's aria-label
+// is already set). place(button) puts the button somewhere other than just before anchor.
+export function createAdventure({ id, anchor, place = (button) => anchor.before(button), hud, options, voice, celebrate, renderProgress, goalWords = false, announce = (text, kind) => voice.say(text, { interrupt: kind === 'choice' }) }) {
   const storageKey = `${id}:adventure`
   let selected = 0
   let count = 0
@@ -66,7 +66,6 @@ export function createAdventure({ id, anchor, place = (button) => anchor.before(
   function update() {
     const option = options[selected]
     drawChoice(option)
-    renderChoice?.(button, option)
     button.setAttribute('aria-label', `Adventure: ${option.label}. Tap to choose another.`)
     goal.hidden = !option.goal || !enabled
     goal.classList.toggle('adventure-done', done)

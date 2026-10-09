@@ -8,21 +8,12 @@ export const listWords = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 export function createVoice({ muted = false, rate = 0.85, pitch = 1.05 } = {}) {
   const canSpeak = 'speechSynthesis' in window
   let pending = 0
-  let waiters = []
   let gen = 0
-
-  function settle() {
-    if (pending > 0) return
-    const done = waiters
-    waiters = []
-    for (const resolve of done) resolve()
-  }
 
   function hush() {
     gen++
     pending = 0
     if (canSpeak) speechSynthesis.cancel()
-    settle()
   }
 
   function say(text, { interrupt = false, onend } = {}) {
@@ -48,7 +39,6 @@ export function createVoice({ muted = false, rate = 0.85, pitch = 1.05 } = {}) {
       if (myGen !== gen) return
       pending = Math.max(0, pending - 1)
       onend?.()
-      settle()
     }
     words.onend = words.onerror = finish
     speechSynthesis.speak(words)
@@ -68,7 +58,5 @@ export function createVoice({ muted = false, rate = 0.85, pitch = 1.05 } = {}) {
       if (on) hush()
     },
     get speaking() { return pending > 0 },
-    /** Resolves once everything queued has been said (or hushed). */
-    idle: () => (pending > 0 ? new Promise((resolve) => waiters.push(resolve)) : Promise.resolve()),
   }
 }
