@@ -1,6 +1,5 @@
 import * as THREE from 'three'
-import { BIOMES, JOURNEY, OBSTACLES, START_X, biomeIndexAt } from './biomes.js'
-import { GRAVITY, HOP } from './bunny.js'
+import { BIOME_LENGTH, BIOMES, JOURNEY, OBSTACLES, START_X, biomeIndexAt } from './biomes.js'
 import { copy } from './models.js'
 import { keepWhere, pick, rand } from './util.js'
 
@@ -49,9 +48,48 @@ function halo() {
  */
 export const speedAt = () => 6.6
 
+/** Path between the carrots of a counted row: room to say each number as Pip munches it. */
+export const ROW_STEP = 4.4
+/** Path between the obstacles of a rhythm: evenly spaced, so hopping them makes a steady beat. */
+export const BEAT = 8
+const GAP = 20 // quiet path between one row or rhythm and the next
+const UNITS = 3 // a rhythm plays its pattern three times; the third time may stop to ask what comes next
+
+const randInt = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1))
+
+/** A soft "?" bubble that stands where the next obstacle of a pattern is hidden. */
+let askMaterial
+function askMarker() {
+  if (!askMaterial) {
+    const c = document.createElement('canvas')
+    c.width = c.height = 128
+    const g = c.getContext('2d')
+    g.fillStyle = 'rgba(255,255,255,0.92)'
+    g.strokeStyle = '#ffcf1a'
+    g.lineWidth = 10
+    g.beginPath()
+    g.arc(64, 64, 52, 0, Math.PI * 2)
+    g.fill()
+    g.stroke()
+    g.fillStyle = '#7a4fc2'
+    g.font = '900 78px ui-rounded, system-ui, sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText('?', 64, 70)
+    const map = new THREE.CanvasTexture(c)
+    map.colorSpace = THREE.SRGBColorSpace
+    askMaterial = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, fog: false })
+  }
+  const s = new THREE.Sprite(askMaterial)
+  s.scale.setScalar(1.5)
+  s.renderOrder = 3
+  return s
+}
+
 /**
- * Carrots to munch and things to hop over, laid out in little patterns ahead
- * of the bunny. The hit test is forgiving and a bump never ends the game.
+ * The trip is planned as a story, place by place: a counted row of carrots, an obstacle rhythm,
+ * a golden carrot to flip for, then a second (bigger or equal) row. Rows grow from 2–3 carrots in
+ * the meadow to 6–10 in the snow. Pieces are built just ahead of the bunny. A bump never ends the game.
  */
 export class Course {
   constructor(scene, templates) {
@@ -62,16 +100,51 @@ export class Course {
     this.reset()
   }
 
-  /** Clear the course; the first pattern starts START_X ahead of x. */
-  reset(x = 0) {
-    for (const it of this.items) this.scene.remove(it.obj, ...(it.glow ? [it.glow] : []))
+  /** Clear the course and plan the rest of the trip from x. `maxRow` caps the rows (5 on the 🐢 pace: one ten-frame row). */
+  reset(x = 0, maxRow = Infinity) {
+    for (const it of this.items) this.scene.remove(it.obj, ...(it.glow ? [it.glow] : []), ...(it.marker ? [it.marker] : []))
     this.items = []
-    this.nextX = x + START_X
-    this.possible = 0
-    this.patterns = 0
+    this.plan(x, maxRow)
   }
 
-  carrot(x, y, gold = false) {
+  plan(x0, maxRow = Infinity) {
+    const segments = []
+    const golds = []
+    let x = x0 + START_X + 14 // a couple of seconds of plain hopping first, while the tap hint shows
+    for (let b = biomeIndexAt(x0); b < BIOMES.length; b++) {
+      const biome = BIOMES[b]
+      const end = Math.min((b + 1) * BIOME_LENGTH - 4, JOURNEY - 12)
+      x = Math.max(x, b * BIOME_LENGTH + 12)
+      const [lo, hi] = biome.rows
+      const sizes = [randInt(lo, hi), randInt(lo, hi)].map((n) => Math.min(n, maxRow)).sort((p, q) => p - q)
+      const add = (seg, len) => {
+        if (x + len > end) return false
+        Object.assign(seg, { x, end: x + len, biome: b })
+        segments.push(seg)
+        x += len + GAP
+        return true
+      }
+      const row = (n) => {
+        // a row too long for what's left of this place shrinks to fit
+        n = Math.min(n, Math.floor((end - x) / ROW_STEP) + 1)
+        if (n >= 1) add({ kind: 'row', n, got: 0 }, (n - 1) * ROW_STEP)
+      }
+      row(sizes[0])
+      const unit = pick(biome.rhythms)
+      const items = Array.from({ length: unit.length * UNITS }, (_, i) => unit[i % unit.length])
+      // Ask about one obstacle in the third repeat, once the pattern has been seen twice.
+      if (add({ kind: 'rhythm', unit, items, ask: unit.length * 2 + randInt(0, unit.length - 1), passed: 0 }, (items.length - 1) * BEAT)) {
+        golds.push(x - GAP / 2)
+      }
+      row(sizes[1])
+    }
+    this.segments = segments
+    this.golds = golds
+    this.spawned = 0
+    this.goldsSpawned = 0
+  }
+
+  carrot(x, y, gold = false, seg = null, index = 0) {
     const obj = copy(this.templates[gold ? 'carrot_gold' : 'carrot'], { shadow: true })
     obj.position.set(x, y, 0)
     obj.scale.setScalar(gold ? 1.45 : 1.1)
@@ -80,78 +153,46 @@ export class Course {
     const glow = gold ? halo() : null
     if (glow) this.scene.add(glow)
     this.scene.add(obj)
-    this.items.push({ kind: 'carrot', gold, obj, glow, x, y, phase: rand(0, 6) })
-    this.possible += gold ? 5 : 1
+    this.items.push({ kind: 'carrot', gold, obj, glow, x, y, phase: rand(0, 6), seg, index })
   }
 
-  obstacle(x, name) {
+  obstacle(x, name, seg = null, index = 0, hidden = false) {
     const obj = copy(this.templates[name], { recolor: BIOMES[biomeIndexAt(x)].recolor, shadow: true })
     obj.position.set(x, 0, 0)
     obj.rotation.y = name === 'log' ? rand(-0.15, 0.15) : rand(-0.6, 0.6)
     obj.userData.kind = name // tappable: a poke sets userData.boing, and it wobbles
+    obj.visible = !hidden
+    const marker = hidden ? askMarker() : null
+    if (marker) {
+      marker.position.set(x, 1.1, 0)
+      this.scene.add(marker)
+    }
     this.scene.add(obj)
-    this.items.push({ kind: 'obstacle', name, obj, x, ...OBSTACLES[name], hit: false, cleared: false, wobble: 0 })
+    this.items.push({ kind: 'obstacle', name, obj, x, ...OBSTACLES[name], hit: false, cleared: false, wobble: 0, seg, index, marker })
   }
 
-  /** Carrots along the path a hop takes, centred over x. */
-  arc(x, speed, count = 4) {
-    const t0 = HOP / GRAVITY // time to the top of the hop
-    for (let i = 0; i < count; i++) {
-      const t = 0.12 + (i / (count - 1)) * (2 * t0 - 0.24)
-      this.carrot(x + speed * (t - t0), HOP * t - (GRAVITY * t * t) / 2 + CARROT_Y)
-    }
-  }
-
-  /** Lay out the next little pattern; returns how much path it used. */
-  pattern(x) {
-    const biome = BIOMES[biomeIndexAt(x)]
-    const speed = speedAt(x)
-    const n = this.patterns++
-    const pickObstacle = () => pick(biome.obstacles)
-    // The first few teach the game: carrots on the ground, then a single log.
-    const r = n === 0 ? 0 : n === 1 ? 0.3 : n < 4 ? 0.45 : Math.random()
-    if (r < 0.2) {
-      const count = 4 + Math.floor(Math.random() * 3)
-      for (let i = 0; i < count; i++) this.carrot(x + i * 1.3, CARROT_Y)
-      return count * 1.3
-    }
-    if (r < 0.55) {
-      this.obstacle(x + 3, pickObstacle())
-      this.arc(x + 3, speed, 4 + (Math.random() < 0.5 ? 1 : 0))
-      return 6
-    }
-    if (r < 0.7) {
-      this.obstacle(x + 2, pickObstacle())
-      return 4
-    }
-    if (r < 0.82) {
-      // a staircase in the air: hop to reach it
-      const ys = [0.6, 1.4, 2.2, 2.6, 2.2, 1.4]
-      ys.forEach((y, i) => this.carrot(x + i * 1.2, y))
-      return ys.length * 1.2
-    }
-    if (r < 0.92 && n > 6) {
-      // two hops in a row, with room to land between
-      const gap = speed * 0.8 + 3.5
-      this.obstacle(x + 2, pickObstacle())
-      this.obstacle(x + 2 + gap, pickObstacle())
-      this.carrot(x + 2 + gap / 2, CARROT_Y)
-      return gap + 5
-    }
-    // a golden carrot up high: double hop!
-    this.obstacle(x + 3, pickObstacle())
-    this.carrot(x + 3, 4.5, true)
-    this.carrot(x + 3 - speed * 0.25, 2.3)
-    this.carrot(x + 3 + speed * 0.25, 2.3)
-    return 6
-  }
-
+  /** Builds the planned rows and rhythms that are coming into view. */
   generate(aheadX) {
-    while (this.nextX < aheadX && this.nextX < JOURNEY - 12) {
-      const used = this.pattern(this.nextX)
-      const speed = speedAt(this.nextX)
-      this.nextX += used + speed * rand(0.9, 1.5) + 2
+    while (this.spawned < this.segments.length && this.segments[this.spawned].x < aheadX) {
+      const seg = this.segments[this.spawned++]
+      if (seg.kind === 'row') for (let i = 0; i < seg.n; i++) this.carrot(seg.x + i * ROW_STEP, CARROT_Y, false, seg, i)
+      else seg.items.forEach((name, i) => this.obstacle(seg.x + i * BEAT, name, seg, i, i === seg.ask))
     }
+    while (this.goldsSpawned < this.golds.length && this.golds[this.goldsSpawned] < aheadX) {
+      // a golden carrot up high: flip for it!
+      this.carrot(this.golds[this.goldsSpawned++], 4.5, true)
+    }
+  }
+
+  /** Shows the obstacle a pattern was hiding behind its "?" (after the child has guessed). */
+  reveal(seg) {
+    const it = this.items.find((o) => o.seg === seg && o.index === seg.ask)
+    if (!it || it.obj.visible) return null
+    it.obj.visible = true
+    it.wobble = 1
+    if (it.marker) this.scene.remove(it.marker)
+    it.marker = null
+    return it.obj.position
   }
 
   /**
@@ -174,6 +215,7 @@ export class Course {
         }
         if (bunny && this.eat(it, bunny, dt, events)) return false
       } else {
+        if (it.marker) it.marker.position.y = 1.1 + Math.sin(time * 2 + it.x) * 0.12
         if (bunny) this.bump(it, bunny, events)
         if (o.userData.boing) {
           o.userData.boing = 0
@@ -189,6 +231,7 @@ export class Course {
       if (it.x < behindX) {
         this.scene.remove(o)
         if (it.glow) this.scene.remove(it.glow)
+        if (it.marker) this.scene.remove(it.marker)
         return false
       }
       return true
@@ -198,7 +241,7 @@ export class Course {
 
   /** The logs, pumpkins and snowmen on the path, for taps. */
   obstacles() {
-    return this.items.filter((it) => it.kind === 'obstacle').map((it) => it.obj)
+    return this.items.filter((it) => it.kind === 'obstacle' && it.obj.visible).map((it) => it.obj)
   }
 
   /** Returns true when the bunny munches this carrot. */
@@ -209,17 +252,19 @@ export class Course {
     let dx = it.x - cx
     let dy = o.position.y - cy
     const d = Math.hypot(dx, dy)
-    if (d < (it.gold ? PICKUP : MAGNET) && dx > -0.8) {
+    // A counted row is always caught whole: its carrots fly to Pip even mid-hop, so the count is true.
+    const row = it.seg && dx < MAGNET
+    if (row || (d < (it.gold ? PICKUP : MAGNET) && dx > -0.8)) {
       // drift towards the bunny so near misses still count
-      const pull = Math.min(1, dt * 7)
+      const pull = Math.min(1, dt * (row ? 12 : 7))
       it.x -= dx * pull
       it.y -= dy * pull
       o.position.x = it.x
       dx = it.x - cx
       dy = it.y - cy
     }
-    if (Math.hypot(dx, dy) >= PICKUP) return false
-    events.push({ type: 'carrot', gold: it.gold, pos: o.position.clone() })
+    if (Math.hypot(dx, dy) >= PICKUP && !(row && dx < -0.4)) return false
+    events.push({ type: 'carrot', gold: it.gold, pos: o.position.clone(), seg: it.seg })
     this.scene.remove(o)
     if (it.glow) this.scene.remove(it.glow)
     return true
@@ -232,10 +277,10 @@ export class Course {
     if (!bunny.tumbling && Math.abs(dx) < it.w * 0.7 + 0.25 && bunny.y < it.h * 0.65) {
       it.hit = true
       it.wobble = 1
-      events.push({ type: 'bump', pos: o.position.clone() })
+      events.push({ type: 'bump', pos: o.position.clone(), seg: it.seg, index: it.index, name: it.name })
     } else if (dx < -(it.w + 0.3)) {
       it.cleared = true
-      events.push({ type: 'cleared', pos: o.position.clone() })
+      events.push({ type: 'cleared', pos: o.position.clone(), seg: it.seg, index: it.index, name: it.name })
     }
   }
 }

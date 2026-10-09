@@ -35,6 +35,8 @@ export const BIOMES = [
     hillTrees: ['tree_pine', 'tree_round'], // dotted on the near hills (picked at random)
     butterflies: 3,
     obstacles: ['log', 'rock', 'log'],
+    rows: [2, 3], // how many carrots in each counted row (grows place by place)
+    rhythms: [['log', 'rock']], // repeating obstacle patterns: one is picked per place
     near: [['grass', 4, 0.9, 1.4], ['flower', 3, 0.8, 1.2]],
     side: [['fence', 3, 1, 1], ['bush', 2, 0.7, 1], ['flower', 2, 1, 1.3]],
     mid: [['tree_round', 5, 0.8, 1.15], ['bush', 2, 1, 1.4], ['tree_pine', 1, 0.8, 1]],
@@ -64,6 +66,8 @@ export const BIOMES = [
     hillTrees: [], // dotted on the near hills (picked at random)
     butterflies: 2,
     obstacles: ['toadstool', 'stump', 'toadstool'],
+    rows: [3, 5],
+    rhythms: [['toadstool', 'toadstool', 'stump'], ['toadstool', 'stump', 'stump']],
     near: [['grass', 3, 0.9, 1.3], ['flower', 2, 0.8, 1.1], ['toadstool', 1, 0.35, 0.55]],
     side: [['toadstool', 3, 0.5, 0.9], ['bush', 1, 0.7, 1], ['stump', 1, 0.8, 1]],
     mid: [['mushroom_red', 4, 0.8, 1.3], ['mushroom_blue', 4, 0.9, 1.4], ['tree_round', 2, 0.9, 1.1]],
@@ -93,6 +97,8 @@ export const BIOMES = [
     hillTrees: ['tree_pine', 'tree_round'], // dotted on the near hills (picked at random)
     butterflies: 2,
     obstacles: ['pumpkin', 'log', 'stump'],
+    rows: [4, 7],
+    rhythms: [['pumpkin', 'log', 'stump'], ['pumpkin', 'pumpkin', 'log']],
     near: [['grass', 4, 0.9, 1.3], ['pumpkin', 1, 0.4, 0.6]],
     side: [['pumpkin', 3, 0.6, 0.9], ['fence', 2, 1, 1], ['bush', 2, 0.7, 1]],
     mid: [['tree_round', 6, 0.85, 1.2], ['tree_pine', 2, 0.9, 1.1]],
@@ -123,6 +129,8 @@ export const BIOMES = [
     hillTrees: ['tree_pine_snow', 'tree_pine_snow', 'tree_round_snow'], // dotted on the near hills (picked at random)
     butterflies: 0,
     obstacles: ['snowman', 'rock', 'snowman'],
+    rows: [6, 10],
+    rhythms: [['snowman', 'rock', 'rock'], ['snowman', 'snowman', 'rock']],
     near: [['grass', 3, 0.8, 1.2], ['rock', 1, 0.35, 0.5], ['snowman', 1, 0.4, 0.5]],
     side: [['snowman', 2, 0.6, 0.85], ['rock', 2, 0.6, 1], ['tree_pine_snow', 1, 0.4, 0.55]],
     mid: [['tree_pine_snow', 6, 0.8, 1.25], ['tree_round_snow', 2, 0.9, 1.1]],
@@ -136,6 +144,10 @@ export const HOME_X = JOURNEY + 10
 export function biomeIndexAt(x) {
   return clamp(Math.floor(x / BIOME_LENGTH), 0, BIOMES.length - 1)
 }
+
+/** What each obstacle is called aloud, and its own soft note (semitones above C5) so a rhythm sounds like a tune. */
+export const OBSTACLE_NAMES = { log: 'log', rock: 'rock', stump: 'stump', toadstool: 'toadstool', pumpkin: 'pumpkin', snowman: 'snowman' }
+export const OBSTACLE_NOTES = { log: 0, pumpkin: 2, stump: 4, rock: 7, toadstool: 9, snowman: 12 }
 
 /** Hop-over obstacles: half width along the path and height, for the (forgiving) hit test. */
 export const OBSTACLES = {

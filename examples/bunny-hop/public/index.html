@@ -30,6 +30,8 @@
   </div>
   <div id="banner" class="banner"></div>
   <div id="tap-hint" class="tap-hint">👆 Tap to hop!</div>
+  <div id="cue" class="cue" role="status" aria-live="polite" hidden></div>
+  <div id="ask" class="ask" hidden></div>
 </div>
 
 <button id="mute" class="round hidden" title="Sound on/off (M)">🔊</button>
@@ -46,6 +48,11 @@
   <p class="sub">Help Pip hop all the way home! 🏡</p>
   <div class="spacer"></div>
   <div class="menu-bottom">
+    <div id="menu-options" class="menu-options">
+      <button id="pace" class="pace-choice" type="button" aria-pressed="false" aria-label="Slow hopping for little ones">
+        <span class="pace-fast" aria-hidden="true">🐇</span><span class="pace-slow" aria-hidden="true">🐢</span>
+      </button>
+    </div>
     <button id="play" class="big-go">▶ Let's hop!</button>
     <p class="hint">Tap to hop · tap again in the air to flip!</p>
   </div>
@@ -58,7 +65,7 @@
   </div>
   <div class="spacer"></div>
   <div class="menu-bottom">
-    <div class="tally"><span>🥕</span><b id="final">0</b></div>
+    <div id="pantry" class="pantry" aria-label="Pip's pantry"></div>
     <p id="found" class="found"></p>
     <button id="again" class="big-go">🔁 Hop again</button>
   </div>

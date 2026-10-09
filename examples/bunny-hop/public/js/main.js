@@ -2,10 +2,11 @@ import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Sound } from './audio.js'
-import { BIOME_LENGTH, BIOMES, HOME_X, biomeIndexAt } from './biomes.js'
+import { BIOME_LENGTH, BIOMES, HOME_X, OBSTACLE_NAMES, OBSTACLE_NOTES, biomeIndexAt } from './biomes.js'
 import { Bunny } from './bunny.js'
-import { Course, speedAt } from './course.js'
+import { BEAT, Course, speedAt } from './course.js'
 import { Effects, Glints, Popups, Weather } from './effects.js'
+import { Cue, carrotWords, createVoice, obstaclePictures, pantryWords, patternWords, renderPantry } from './learning.js'
 import { loadModels } from './models.js'
 import { clamp, easeStep, pick } from './util.js'
 import { World } from './world.js'
@@ -81,16 +82,27 @@ const game = {
   speed: 0,
   slow: 1,
   score: 0,
-  combo: 0,
-  streak: 0, // carrots munched in a row, for the counting pop-up
-  comboTimer: 0,
   hops: 0,
   biome: 0,
   homeTime: 0,
   time: 0,
   shake: 0,
   golden: 0, // golden carrots found this trip
+  rows: [], // the counted carrot rows Pip brought home, for the burrow pantry
+  patterns: [], // the obstacle rhythms hopped this trip
+  seg: null, // the row or rhythm being cued now
+  segIndex: 0,
+  cueHold: 0, // a finished row stays in its tray for a moment
+  asking: null, // the rhythm paused on "What comes next?"
+  gentle: false, // the 🐢 slow pace for the littlest hoppers
 }
+try {
+  game.gentle = localStorage.getItem('bunny-hop:gentle') === '1'
+} catch {}
+/** The 🐢 pace: the same gentle 0.6 the learning missions use. */
+const GENTLE = 0.6
+const CUE_LEAD = 16 // a row or rhythm is shown and named this far before it starts
+const ASK_AT = 7 // Pip stops a few steps before the hidden obstacle, so its "?" is well in view
 if (new URLSearchParams(location.search).has('debug')) window.game = game
 
 // Optional learning missions. A flip is the bunny's 'double' hop.
@@ -123,12 +135,15 @@ function renderMissionProgress(goal, option, count) {
 }
 
 function speakMission(text) {
-  if (sound.muted || !('speechSynthesis' in window)) return
-  speechSynthesis.cancel()
-  const words = new SpeechSynthesisUtterance(text)
-  words.lang = 'en-US'
-  words.rate = 0.82
-  speechSynthesis.speak(words)
+  // said over any counting, which is then said again after it
+  voice.interject(() => {
+    if (sound.muted || !('speechSynthesis' in window)) return
+    speechSynthesis.cancel()
+    const words = new SpeechSynthesisUtterance(text)
+    words.lang = 'en-US'
+    words.rate = 0.82
+    speechSynthesis.speak(words)
+  })
 }
 
 const adventure = createAdventure({
@@ -145,7 +160,7 @@ const adventure = createAdventure({
   renderProgress: renderMissionProgress,
   options: [
     { emoji: '🐰', label: 'Free hopping' },
-    { emoji: '🐢', label: 'Gentle hop counting', pace: 0.6, goal: 'Make four hops', target: 4, reward: 'Four! You made four hops!' },
+    { emoji: '🔢', label: 'Gentle hop counting', pace: 0.6, goal: 'Make four hops', target: 4, reward: 'Four! You made four hops!' },
     { emoji: '🎶', label: 'Hop, hop, flip pattern', pace: 0.6, goal: 'Hop twice, then hop and tap again in the air to flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => n < 2 ? kind === 'hop' || kind === 'double' : kind === 'double', reward: 'You made the hop, hop, flip pattern!' },
   ],
 })
@@ -167,8 +182,27 @@ function renderMissionChoice() {
 }
 renderMissionChoice()
 $('adventure-choice').addEventListener('click', renderMissionChoice)
+// The mission choice and the 🐢 pace share one row on the menu.
+$('menu-options').prepend($('adventure-choice'))
 
-let bunny, world, course, effects, weather, glints, popups
+const voice = createVoice(() => sound.muted)
+function renderPace() {
+  $('pace').setAttribute('aria-pressed', String(game.gentle))
+  $('pace').classList.toggle('gentle', game.gentle)
+}
+renderPace()
+$('pace').onclick = () => {
+  sound.unlock()
+  sound.click()
+  game.gentle = !game.gentle
+  try {
+    localStorage.setItem('bunny-hop:gentle', game.gentle ? '1' : '0')
+  } catch {}
+  renderPace()
+  voice.say(game.gentle ? 'Slow and gentle, like a tortoise.' : 'Hopping along like a bunny.')
+}
+
+let bunny, world, course, effects, weather, glints, popups, cue
 const camPos = new THREE.Vector3(1.2, 2, 8)
 const camLook = new THREE.Vector3(0.3, 1.1, 0)
 const tmp = new THREE.Vector3()
@@ -195,7 +229,8 @@ async function init() {
   weather.setKind(BIOMES[0].weather)
   glints = new Glints(scene)
   popups = new Popups($('popups'), camera)
-  if (window.game) Object.assign(window, { course, view, camera, bunny })
+  cue = new Cue($('cue'), $('ask'), obstaclePictures(templates))
+  if (window.game) Object.assign(window, { course, view, camera, bunny, cue })
   applyQuality()
   toMenu()
   requestAnimationFrame(frame)
@@ -217,6 +252,8 @@ function toMenu() {
   bunny.reset()
   world.reset()
   course.reset()
+  resetLessons()
+  renderMissionChoice()
   game.biome = 0
   weather.setKind(BIOMES[0].weather)
   // Coming home from a trip: cut straight to the close-up of Pip, never pan back across the whole trip.
@@ -235,17 +272,20 @@ function start() {
   game.speed = 0
   game.slow = 1
   game.score = 0
-  game.combo = 0
   game.hops = 0
   game.golden = 0
   game.time = 0
+  game.rows = []
+  game.patterns = []
   // ?biome=2 starts further along the trip (for trying out the later places)
   const skip = clamp(Number(new URLSearchParams(location.search).get('biome')) || 0, 0, BIOMES.length - 1)
   game.x = skip ? skip * BIOME_LENGTH + 1 : 0
   game.biome = skip
   bunny.reset()
   world.reset(game.x)
-  course.reset(game.x)
+  // the 🐢 pace keeps every row to one ten-frame row of 5 or fewer
+  course.reset(game.x, game.gentle ? 5 : Infinity)
+  resetLessons()
   // swoop out from a close-up of Pip (and never pan across the whole trip)
   camPos.set(game.x + 0.6, 1.6, 6.5)
   camLook.set(game.x + 0.1, 1.1, 0)
@@ -285,13 +325,13 @@ function bumpScore() {
 }
 
 function hop() {
-  if (game.state !== 'play') return
+  if (game.state !== 'play' || game.asking) return
   const kind = bunny.hop()
   if (!kind) return
   if (adventure.option.sequence && adventure.progress === 2 && kind === 'hop') {
     banner('👆 Tap again!', 900)
     speakMission('Tap again in the air to flip!')
-  } else adventure.event(kind)
+  } else voice.interject(() => adventure.event(kind)) // a mission count must not swallow the row's numbers
   sound.hop(kind === 'double')
   tmp.set(game.x, 0, 0)
   if (kind === 'hop') effects.puff(tmp, 6, dustColor(), 0.9)
@@ -304,6 +344,7 @@ const dustColor = () => BIOMES[game.biome].dust
 function finish() {
   game.state = 'home'
   game.homeTime = 0
+  resetLessons()
   sound.music(false)
   sound.finish()
   banner('🏡 Home!', 2600)
@@ -313,16 +354,124 @@ function finish() {
   effects.confettiBurst(tmp, 16, true)
 }
 
-/** Home: say what Pip found on the way, not how well the trip was graded (calm pass: no stars or best). */
+/**
+ * Home: the burrow pantry shows each counted row Pip brought home (3 + 4 + 5 = 12) and says the
+ * total; the words underneath name the patterns hopped. No stars or best score (calm pass).
+ */
 function showResults() {
   game.state = 'results'
-  const carrots = game.score - game.golden * 5
-  $('final').textContent = carrots
-  const found = [`Pip found ${carrots} carrot${carrots === 1 ? '' : 's'}`]
-  if (game.golden) found.push(`${game.golden} golden one${game.golden === 1 ? '' : 's'}`)
-  $('found').textContent = `${found.join(' and ')} on the way home.`
+  const total = game.rows.reduce((sum, n) => sum + n, 0)
+  renderPantry($('pantry'), game.rows, total)
+  // the patterns hopped, as little pictures (one strip per place), named for screen readers
+  const found = $('found')
+  found.replaceChildren(...game.patterns.map(({ unit, biome }) => {
+    const strip = document.createElement('span')
+    strip.className = 'found-pattern'
+    for (const name of unit) strip.append(cue.picture(biome, name))
+    return strip
+  }))
+  found.setAttribute('aria-label', game.patterns.length ? `Patterns hopped: ${game.patterns.map(({ unit }) => patternWords(unit)).join('; ')}` : '')
   $('golden').textContent = game.golden ? '✨🥕'.repeat(Math.min(game.golden, 6)) : ''
   show('results')
+  voice.say(pantryWords(game.rows, total))
+  const n = game.patterns.length
+  if (n) voice.say(n === 1 ? `And you hopped a ${patternWords(game.patterns[0].unit)} pattern!` : `And you hopped ${n} patterns!`, true)
+}
+
+// --- Counted rows and obstacle rhythms ------------------------------------------------
+
+function resetLessons() {
+  game.seg = null
+  game.segIndex = 0
+  game.cueHold = 0
+  game.asking = null
+  cue?.hide()
+}
+
+/** Each frame of play: cue the next row or rhythm, and pause to ask about a pattern. */
+function updateLessons(dt) {
+  const seg = game.seg
+  if (!seg) {
+    const next = course.segments[game.segIndex]
+    if (next && game.x >= next.x - CUE_LEAD) beginSegment(next)
+    return
+  }
+  if (seg.finished) {
+    game.cueHold -= dt
+    if (game.cueHold <= 0) {
+      cue.hide()
+      game.seg = null
+      game.segIndex++
+    }
+    return
+  }
+  // Nothing in a row or rhythm can be skipped, but just in case, never leave a cue hanging.
+  if (game.x > seg.end + 8) finishSegment(seg)
+  else if (seg.kind === 'rhythm' && !seg.asked && !game.asking && game.x >= seg.x + seg.ask * BEAT - ASK_AT) askNext(seg)
+}
+
+function beginSegment(seg) {
+  game.seg = seg
+  $('tap-hint').classList.add('gone')
+  if (seg.kind === 'row') {
+    cue.row(seg.n)
+    voice.say(`${carrotWords(seg.n)}!`)
+  } else {
+    cue.rhythm(seg)
+    // hear the pattern once before it starts: each obstacle's own note
+    seg.unit.forEach((name, i) => sound.step(OBSTACLE_NOTES[name], i * 0.45))
+    voice.say(`${patternWords(seg.unit)}.`)
+  }
+}
+
+function finishSegment(seg) {
+  if (seg.finished) return
+  seg.finished = true
+  game.cueHold = 1
+  if (seg.kind === 'row') game.rows.push(seg.got)
+  else game.patterns.push({ unit: seg.unit, biome: seg.biome })
+}
+
+/** Pip stops before the hidden obstacle and asks, in pictures, which one comes next. */
+function askNext(seg) {
+  seg.asked = true
+  game.asking = seg
+  sound.wonder()
+  voice.say('What comes next?')
+  cue.ask(seg, (name) => answer(seg, name))
+}
+
+/** Any answer is fine: the obstacle appears, Pip says what it is, and carries on. */
+function answer(seg, name) {
+  if (game.asking !== seg) return
+  game.asking = null
+  cue.closeAsk()
+  const real = seg.items[seg.ask]
+  const at = course.reveal(seg)
+  cue.revealStep(seg)
+  sound.step(OBSTACLE_NOTES[real])
+  if (at) effects.sparkle(tmp.set(at.x, 1, 0), 10, ['#ffffff', '#ffd23f'], 2.5)
+  const said = OBSTACLE_NAMES[real]
+  voice.say(name === real ? `Yes! A ${said} comes next.` : `Look, a ${said}! ${patternWords(seg.unit)}.`)
+}
+
+function lessonCarrot(ev) {
+  const seg = ev.seg
+  seg.got++
+  cue.fill(seg.got)
+  // the count, said aloud and floating above Pip in one spot
+  popups.show(String(seg.got), tmp.set(game.x + 0.4, bunny.y + 1.9, 0), '', true)
+  if (seg.got >= seg.n) {
+    voice.say(`${carrotWords(seg.n)}!`, true)
+    finishSegment(seg)
+  } else voice.say(String(seg.got), true)
+}
+
+function lessonObstacle(ev) {
+  const seg = ev.seg
+  sound.step(OBSTACLE_NOTES[ev.name])
+  cue.passed(ev.index)
+  if (++seg.passed >= seg.items.length) finishSegment(seg)
 }
 
 // --- Input: tap / click anywhere, or space, up arrow, W ---------------------------------
@@ -385,7 +534,17 @@ addEventListener('keydown', (e) => {
     if (e.repeat) return
     sound.unlock()
     if (game.state === 'menu' || game.state === 'results') start()
-    else hop()
+    else if (game.asking) {
+      // the "What comes next?" pictures: Space or Enter picks the one in focus
+      const pick = cue.choices.find((b) => b === document.activeElement) ?? cue.choices[0]
+      pick?.click()
+    } else hop()
+  } else if (game.asking && /^Digit[1-3]$/.test(e.code)) {
+    cue.choices[Number(e.code.slice(5)) - 1]?.click()
+  } else if (game.asking && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
+    const list = cue.choices
+    const i = list.indexOf(document.activeElement)
+    list[(i + (e.code === 'ArrowLeft' ? list.length - 1 : 1)) % list.length]?.focus()
   } else if (e.code === 'KeyM') toggleMute()
   else if (e.code === 'Escape' && game.state !== 'menu' && game.state !== 'loading') $('home').click()
 })
@@ -400,6 +559,7 @@ $('again').onclick = start
 $('home').onclick = () => {
   sound.unlock()
   sound.click()
+  voice.hush()
   toMenu()
 }
 function toggleMute() {
@@ -417,10 +577,8 @@ const OOPS = ['Boing!', 'Whoopsie!', 'Oopsy daisy!', 'Bonk!']
 function handleEvents(events) {
   for (const ev of events) {
     if (ev.type === 'carrot') {
-      game.combo = game.comboTimer > 0 ? game.combo + 1 : 0
-      game.streak = game.combo && !ev.gold ? game.streak + 1 : ev.gold ? 0 : 1
-      game.comboTimer = 1.1
-      game.score += ev.gold ? 5 : 1
+      // one carrot is one carrot: the 🥕 count matches the carrots in the pantry (plus golden ones)
+      game.score += 1
       if (ev.gold) game.golden++
       bumpScore()
       bunny.munch()
@@ -428,11 +586,11 @@ function handleEvents(events) {
         sound.gold()
         effects.sparkle(ev.pos, 10, ['#ffe066', '#ffffff', '#ffb000'], 2.5)
       } else {
-        sound.munch(game.streak % 5)
+        // the munch note walks up the scale with the row
+        sound.munch(ev.seg ? ev.seg.got % 5 : 0)
         effects.crumbs(ev.pos)
         effects.sparkle(ev.pos, 3, undefined, 1.5)
-        // A learning helper, not a score: a row of carrots is counted 1, 2, 3… in one spot above Pip.
-        popups.show(String(game.streak), tmp.set(game.x + 0.4, bunny.y + 1.9, 0), '', true)
+        if (ev.seg) lessonCarrot(ev)
       }
     } else if (ev.type === 'bump') {
       bunny.bonk()
@@ -444,6 +602,8 @@ function handleEvents(events) {
       effects.puff(ev.pos, 8, dustColor(), 1.3)
       popups.show(pick(OOPS), tmp.set(game.x, 2.4, 0), 'oops')
     }
+    // Each obstacle of a rhythm rings its own note as Pip passes it, bumped or cleared, so the pattern is heard.
+    if ((ev.type === 'bump' || ev.type === 'cleared') && ev.seg) lessonObstacle(ev)
     // Calm pass: clearing a log is its own reward; no random "Nice hop!" praise.
   }
 }
@@ -515,10 +675,11 @@ function frame(now) {
   if (game.state === 'play') {
     mode = 'run'
     game.slow = Math.min(1, game.slow + dt * 0.7)
-    const target = speedAt(game.x) * game.slow * adventure.pace
+    // the 🐢 pace and a mission's pace never stack: the gentler one wins
+    const pace = Math.min(adventure.pace, game.gentle ? GENTLE : 1)
+    const target = game.asking ? 0 : speedAt(game.x) * game.slow * pace
     game.speed = THREE.MathUtils.damp(game.speed, target, 3, dt)
     game.x += game.speed * dt
-    game.comboTimer -= dt
 
     const idx = biomeIndexAt(game.x)
     if (idx !== game.biome) {
@@ -533,6 +694,7 @@ function frame(now) {
     probe.y = bunny.y
     probe.tumbling = bunny.tumbleT < 1
     handleEvents(course.update(dt, probe, game.time, game.x - view.halfW - 15))
+    updateLessons(dt)
     if (game.x >= HOME_X - 1.4) finish()
 
     showTrip(clamp(game.x / HOME_X, 0, 1))
@@ -553,6 +715,8 @@ function frame(now) {
     course.update(dt, null, game.time, -1e9)
   }
 
+  // waiting for an answer, Pip stops and turns to look at the child
+  if (game.asking && game.speed < 0.6) mode = 'menu'
   const landed = bunny.update(dt, game.state === 'play' ? game.speed : 0, mode)
   if (landed !== 0) {
     tmp.set(game.x, 0, 0)

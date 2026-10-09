@@ -13,6 +13,21 @@ The owner wants all twelve originals brought to 10/10 rather than any new games.
 
 Work one game at a time and record each pass in `docs/polish/<game-id>.md`. The scorecard and three-phase plan are in [docs/polish/AUDIT_2026-10-09.md](polish/AUDIT_2026-10-09.md). Polish notes for the retired games are archived in `docs/archive/retired-polish-2026-10-07/`. Blender 5.2 runs on the owner's machine. The CLI is preferred because jobs can run in parallel; the Blender MCP server works but runs jobs one at a time.
 
+## Phase 2 design decisions (2026-10-09)
+
+The owner delegated the open Phase 2 questions ("use your judgement"). These defaults hold until family play says otherwise.
+
+| Game | Decision | Reason |
+| --- | --- | --- |
+| Paint Splash | Wet paint stays glossy and lighter for 8 s. Robots keep one primary each, so purple is the child's own discovery. Ask (don't auto-end) at 85% | Discovery and the child's choice of ending are the point. The paint pots make every mix reachable alone |
+| Bumper Ducks | Count every landing aloud. Goals advance after each round | Counting objects aloud is the learning |
+| Star Catcher | 30-star trip. Pink and lilac stars light ordinary stars | Short enough to finish; simple is clearer |
+| Rocket Garage | No turbo on test flights. Fives counted aloud throughout | Fair tests change one thing; counting in fives is the skill |
+| Bunny Hop | One "What comes next?" per place. Rows up to 10 at normal pace, capped at 5 on 🐢. No pantry collectables yet | Keeps the trip flowing; toddlers get one ten-frame row |
+| Cake Stack | Leaving an order cake early is via 🏠 only. Each landed flavour is named. Guests appear on the share card, not in 3D | Orders are only 4–6 layers; naming reinforces sequencing |
+| Crash Racers | Brief slow motion on big jumps stays | It's a stunt moment, not crash spectacle |
+| Fish Pond | Clownfish is an interim rare lake visitor with a corrective note, until a sea/reef place is built (Phase 2/3) | Removing it would break the 15-creature book |
+
 ## Phase 1 calm pass complete (2026-10-09, not yet deployed)
 
 All twelve originals had the Phase 1 calm pass described in the audit:

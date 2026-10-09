@@ -2,7 +2,7 @@
   "id": "bunny-hop",
   "title": "Bunny Hop",
   "tagline": "Hop Pip the bunny home through meadows, mushrooms, autumn woods and snow!",
-  "howToPlay": "Tap the screen or press the space bar to hop. Tap again in the air for a flippy double hop! Munch carrots, hop over logs and pumpkins, and leap for the golden carrots on the way home.",
+  "howToPlay": "Tap the screen or press the space bar to hop, and tap again in the air for a flippy double hop. Carrots come in rows: hear how many, then count them as Pip munches. Logs, rocks and pumpkins come in little repeating patterns with their own notes; when a ? appears, pick what comes next. Choose 🐢 for a slower trip. At home, see all your carrot rows added up in Pip's pantry.",
   "emoji": "🐰",
   "color": "#8ac926",
   "category": "jump",
@@ -13,5 +13,5 @@
     3,
     8
   ],
-  "learning": "Movement patterns, counting and timing"
+  "learning": "Counting, adding rows, patterns and timing"
 }

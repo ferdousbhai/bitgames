@@ -150,6 +150,21 @@ export class Sound {
     ;[0, 4, 7].forEach((s, i) => this.note(hz(s, 392), { at: i * 0.06, len: 1.6, type: 'sine', gain: 0.07, attack: 0.04 }))
   }
 
+  /**
+   * An obstacle's own soft note (semitones above C5), played as Pip passes it, so a
+   * log, log, rock rhythm is heard as a little tune: a bell-like sine with a quiet octave.
+   */
+  step(semitones, at = 0) {
+    this.note(hz(semitones), { at, len: 0.7, type: 'sine', gain: 0.13, attack: 0.01 })
+    this.note(hz(semitones + 12), { at: at + 0.01, len: 0.35, type: 'triangle', gain: 0.03 })
+  }
+
+  /** "What comes next?": two soft rising notes, a question. */
+  wonder() {
+    this.note(hz(4, 392), { len: 0.4, type: 'sine', gain: 0.08, attack: 0.03 })
+    this.note(hz(9, 392), { at: 0.22, len: 0.6, type: 'sine', gain: 0.08, attack: 0.03 })
+  }
+
   /** Poked scenery: a rustle, a ting, a boing, a thud, a knock or a flutter. */
   poke(kind) {
     const r = PENTA[Math.floor(Math.random() * 5)]
