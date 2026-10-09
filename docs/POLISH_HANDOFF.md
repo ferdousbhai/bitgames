@@ -13,6 +13,22 @@ The owner wants all twelve originals brought to 10/10 rather than any new games.
 
 Work one game at a time and record each pass in `docs/polish/<game-id>.md`. The scorecard and three-phase plan are in [docs/polish/AUDIT_2026-10-09.md](polish/AUDIT_2026-10-09.md). Polish notes for the retired games are archived in `docs/archive/retired-polish-2026-10-07/`. Blender 5.2 runs on the owner's machine. The CLI is preferred because jobs can run in parallel; the Blender MCP server works but runs jobs one at a time.
 
+## Phase 1 calm pass complete (2026-10-09, not yet deployed)
+
+All twelve originals had the Phase 1 calm pass described in the audit:
+- strobes, infinite pulses, confetti storms, combo and score pressure, best scores and star grades removed
+- sine/triangle audio
+- a constant gentle pace
+- idle nudges at 30 s or later
+
+Bugs fixed in the same pass:
+- 🏠 buttons in Bunny Hop and Star Catcher
+- a remembered mute in Crash Racers
+- Fish Pond habitats: the ice place became Icy Sea; the clownfish is an interim rare lake visitor with a corrective note until a sea place exists
+- Dragon Glide's nest waits for a tap
+
+Each game's changes, evidence and remaining Phase 2 work are in `docs/polish/<game-id>.md`. Chromium and WebKit smoke playtests pass for all twelve with 0 errors, and the node tests pass. The 321-file original snapshot is intentionally superseded. Timed rounds (Paint Splash, Bumper Ducks) and racing (Crash Racers) remain; the agreed Phase 2 direction makes calm, untimed play the default and keeps lively modes as menu choices. Before deploying, have the owner's children play the calm versions.
+
 ## Loose ends closed 2026-10-09
 
 - Crash Racers' Web Audio `resume()` and `suspend()` calls now catch rejections, as the other originals already did. The WebKit `Failed to start the audio device` error no longer fails the clean-console check: WebKit and Chromium both pass with 0 errors. This intentionally changes one file (`crash-racers/public/js/audio.js`) in the 321-file original snapshot.

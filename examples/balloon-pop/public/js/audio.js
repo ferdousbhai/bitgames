@@ -80,33 +80,42 @@ export class Audio {
     osc.stop(t + decay + 0.05)
   }
 
-  /** The pop: a snap of noise, a rubbery thump and a note that climbs with the combo. */
-  pop(combo = 0, size = 1) {
-    this.burst({ freq: 2200, q: 0.7, gain: 0.55, decay: 0.07, type: 'highpass' })
-    this.burst({ freq: 900, q: 1.2, gain: 0.35 * size, decay: 0.12 })
-    this.tone({ freq: 180 / size, type: 'sine', gain: 0.35, decay: 0.12, slide: -110 })
-    this.tone({ freq: note(Math.min(combo, 14)), type: 'triangle', gain: 0.16, decay: 0.25, delay: 0.02 })
+  /**
+   * The pop: a soft snap, a rubbery thump and a note. `step` picks the note (each balloon
+   * colour has its own). Calm pass: the bright highpass snap is much quieter.
+   */
+  pop(step = 0, size = 1) {
+    this.burst({ freq: 1600, q: 0.7, gain: 0.16, decay: 0.06, type: 'bandpass' })
+    this.burst({ freq: 800, q: 1.2, gain: 0.22 * size, decay: 0.12 })
+    this.tone({ freq: 180 / size, type: 'sine', gain: 0.28, decay: 0.12, slide: -110 })
+    this.tone({ freq: note(Math.min(step, 14)), type: 'triangle', gain: 0.14, decay: 0.3, delay: 0.02 })
   }
 
   sparkle() {
     for (let i = 0; i < 5; i++) this.tone({ freq: note(5 + i * 2), type: 'sine', gain: 0.12, decay: 0.35, delay: i * 0.05 })
   }
 
+  /** The star balloon: a soft whoomph and a slow shimmer (calm pass: no crackle). */
   boom() {
-    this.tone({ freq: 120, type: 'sine', gain: 0.5, decay: 0.6, slide: -80 })
-    this.burst({ freq: 400, q: 0.6, gain: 0.5, decay: 0.7, type: 'lowpass' })
-    for (let i = 0; i < 8; i++) this.burst({ freq: 3000 + Math.random() * 3000, q: 3, gain: 0.12, decay: 0.08, delay: 0.15 + Math.random() * 0.5 })
+    this.tone({ freq: 140, type: 'sine', gain: 0.25, decay: 0.6, slide: -60 })
+    this.burst({ freq: 400, q: 0.6, gain: 0.18, decay: 0.6, type: 'lowpass' })
+    for (let i = 0; i < 4; i++) this.tone({ freq: note(7 + i), type: 'sine', gain: 0.06, decay: 0.5, delay: 0.1 + i * 0.12 })
   }
 
   rainbow() {
     for (let i = 0; i < 8; i++) this.tone({ freq: note(i), type: 'triangle', gain: 0.13, decay: 0.3, delay: i * 0.045 })
   }
 
+  /** A finished level: a slow, gentle rising arpeggio (calm pass: triangle and sine, no square or hiss). */
   levelUp() {
-    const tune = [0, 2, 4, 5, 4, 7]
-    tune.forEach((s, i) => this.tone({ freq: note(s, 392), type: 'square', gain: 0.07, decay: 0.28, delay: i * 0.11 }))
-    tune.forEach((s, i) => this.tone({ freq: note(s, 392) * 2, type: 'triangle', gain: 0.09, decay: 0.3, delay: i * 0.11 }))
-    this.burst({ freq: 5000, q: 1, gain: 0.15, decay: 0.6, delay: 0.66, type: 'highpass' })
+    const tune = [0, 2, 4, 7]
+    tune.forEach((s, i) => this.tone({ freq: note(s, 392), type: 'triangle', gain: 0.1, decay: 0.6, delay: i * 0.18, attack: 0.02 }))
+    tune.forEach((s, i) => this.tone({ freq: note(s, 392) * 2, type: 'sine', gain: 0.04, decay: 0.6, delay: i * 0.18, attack: 0.02 }))
+  }
+
+  /** A finished mission: one soft major chord, played once. */
+  chord() {
+    ;[0, 2, 4].forEach((s, i) => this.tone({ freq: note(s, 392), type: 'sine', gain: 0.09, decay: 1.6, delay: i * 0.06, attack: 0.04 }))
   }
 
   click() {
@@ -183,9 +192,10 @@ export class Audio {
     while (this.nextBeat < ctx.currentTime + 0.25) {
       const b = this.beat++
       const t = this.nextBeat - ctx.currentTime
-      if (b % 2 === 0) this.tone({ freq: note(MELODY[(b / 2) % 16], 523.25), type: 'sine', gain: 0.18, decay: 0.5, delay: t, out: this.musicBus })
-      if (b % 4 === 0) this.tone({ freq: note(BASS[(b / 4) % 8], 130.8), type: 'triangle', gain: 0.25, decay: 0.8, delay: t, out: this.musicBus })
-      this.nextBeat += 0.19
+      if (b % 2 === 0) this.tone({ freq: note(MELODY[(b / 2) % 16], 523.25), type: 'sine', gain: 0.14, decay: 0.7, delay: t, out: this.musicBus })
+      if (b % 4 === 0) this.tone({ freq: note(BASS[(b / 4) % 8], 130.8), type: 'triangle', gain: 0.22, decay: 1.1, delay: t, out: this.musicBus })
+      // Calm pass: a slow music box (was 0.19 s per step, about 158 bpm).
+      this.nextBeat += 0.3
     }
   }
 }

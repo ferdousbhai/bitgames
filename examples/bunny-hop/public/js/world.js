@@ -151,6 +151,7 @@ export class World {
     for (const it of this.items) this.scene.remove(it)
     this.items = []
     this.spawnX = Object.fromEntries(LAYERS.map((l) => [l.key, x - 40 + rand(0, 3)]))
+    this.resetX = x
     this.hillX = [x - 80, x - 90]
     this.home = null
     for (const f of this.butterflies) this.scene.remove(f)
@@ -175,6 +176,9 @@ export class World {
   }
 
   spawnLayer(layer, x) {
+    // Keep the menu close-up clear: a flower right in front of the camera looked like a big dark
+    // blur behind the mission chip and the Play button.
+    if (layer.key === 'near' && Math.abs(x - this.resetX) < 5) return 0
     const b = BIOMES[biomeIndexAt(x)]
     const choices = b[layer.key]
     let total = 0

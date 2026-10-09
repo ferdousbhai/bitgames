@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
 /**
- * Pop juice: confetti, rubber shreds, puffs, sparkles, shock rings, falling
- * strings and floating "+1" labels. Particles live in pooled InstancedMeshes so
+ * Pop effects: rubber shreds, puffs, a few sparkles, soft rings, falling
+ * strings and slow celebration petals. Particles live in pooled InstancedMeshes so
  * a twenty-balloon star blast stays smooth on a tablet.
  */
 /** A texture painted once by `draw(ctx, width, height)`. */
@@ -137,6 +137,14 @@ export class Effects {
       gravity: 4.5,
       drag: 1.6,
     })
+    // Slow, floaty petals for the one soft celebration moment
+    this.petals = new Pool(scene, {
+      count: 60,
+      geometry: new THREE.PlaneGeometry(0.2, 0.12),
+      material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+      gravity: 0.1,
+      drag: 0.1,
+    })
     // Curled scraps of balloon rubber
     const shred = new THREE.CircleGeometry(0.22, 5, 0, Math.PI * 0.9)
     this.shreds = new Pool(scene, {
@@ -181,8 +189,6 @@ export class Effects {
     }
     this.ringNext = 0
     this.falling = []
-    this.labels = document.getElementById('labels')
-    this.shake = 0
     this.tmp = new THREE.Vector3()
   }
 
@@ -195,11 +201,14 @@ export class Effects {
     r.visible = true
   }
 
-  /** The main pop: a ring, rubber shreds in the balloon's colour, a puff and a fistful of confetti. */
+  /**
+   * The main pop: a soft ring, rubber shreds in the balloon's colour and a puff.
+   * Calm pass: no confetti per pop; golden and power balloons add a few slow twinkles.
+   */
   pop(pos, color, { big = false, gold = false } = {}) {
     const v = this.tmp
-    this.ring(pos, color, big ? 3 : 1.8)
-    for (let i = 0; i < (big ? 14 : 8); i++) {
+    this.ring(pos, color, big ? 2.4 : 1.6, 0.5)
+    for (let i = 0; i < (big ? 10 : 7); i++) {
       v.set(Math.random() - 0.5, Math.random() - 0.3, Math.random() - 0.5).normalize().multiplyScalar(4 + Math.random() * 4)
       this.shreds.spawn(pos, v, { life: 0.9 + Math.random() * 0.4, size: 0.6 + Math.random() * 0.8, color, spin: 10 })
     }
@@ -207,26 +216,25 @@ export class Effects {
       v.set(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(2)
       this.puffs.spawn(pos, v, { life: 0.45, size: 0.8 + Math.random() * 0.5, color: '#ffffff' })
     }
-    for (let i = 0; i < (big ? 50 : 22); i++) {
-      v.set(Math.random() - 0.5, Math.random() * 0.8 - 0.2, Math.random() - 0.5).normalize().multiplyScalar(5 + Math.random() * 6)
-      this.confetti.spawn(pos, v, { life: 1.4 + Math.random() * 0.8, size: 0.8 + Math.random() * 0.6, color: gold ? pick(['#ffd23f', '#fff1a8', '#ffb300']) : pick(CONFETTI), spin: 8 })
-    }
     if (gold || big) {
-      for (let i = 0; i < 24; i++) {
-        v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(3 + Math.random() * 5)
-        this.sparkles.spawn(pos, v, { life: 0.8 + Math.random() * 0.5, size: 0.4 + Math.random() * 0.5, color: gold ? '#ffe680' : pick(CONFETTI) })
+      for (let i = 0; i < 8; i++) {
+        v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(1.5 + Math.random() * 2)
+        this.sparkles.spawn(pos, v, { life: 1 + Math.random() * 0.5, size: 0.4 + Math.random() * 0.4, color: gold ? '#ffe680' : '#fff3b0' })
       }
     }
   }
 
-  /** A celebration shower of confetti from the top of the screen. */
-  shower(halfWidth, top, amount = 160) {
+  /**
+   * One soft moment for a finished level or mission: a few slow petals of colour drift down
+   * from the top of the screen (calm pass: replaces the 160-piece confetti shower).
+   */
+  drift(halfWidth, top, amount = 18) {
     const p = this.tmp.clone()
     const v = new THREE.Vector3()
     for (let i = 0; i < amount; i++) {
-      p.set((Math.random() * 2 - 1) * halfWidth, top + Math.random() * 3, Math.random() * 2 - 1)
-      v.set((Math.random() - 0.5) * 2, -Math.random() * 2, 0)
-      this.confetti.spawn(p, v, { life: 3 + Math.random() * 1.5, size: 1 + Math.random() * 0.5, color: pick(CONFETTI), spin: 6 })
+      p.set((Math.random() * 2 - 1) * halfWidth * 0.9, top + Math.random() * 1.5, Math.random() * 2 - 1)
+      v.set((Math.random() - 0.5) * 0.6, -0.6 - Math.random() * 0.6, 0)
+      this.petals.spawn(p, v, { life: 5 + Math.random() * 1.5, size: 1 + Math.random() * 0.4, color: pick(CONFETTI), spin: 1.5 })
     }
   }
 
@@ -272,21 +280,9 @@ export class Effects {
     this.falling.push(mesh)
   }
 
-  /** "+1" in the balloon's colour, floating up from where it popped. */
-  label(text, pos, color, big = false) {
-    const p = this.tmp.copy(pos).project(this.camera)
-    const el = document.createElement('div')
-    el.className = 'float' + (big ? ' big' : '')
-    el.textContent = text
-    el.style.left = `${((p.x + 1) / 2) * 100}%`
-    el.style.top = `${((1 - p.y) / 2) * 100}%`
-    el.style.color = color
-    this.labels.appendChild(el)
-    el.addEventListener('animationend', () => el.remove())
-  }
-
   update(dt) {
     this.confetti.update(dt, this.camera)
+    this.petals.update(dt, this.camera)
     this.shreds.update(dt, this.camera)
     this.puffs.update(dt, this.camera)
     this.smokePuffs.update(dt, this.camera)
@@ -315,6 +311,5 @@ export class Effects {
         this.falling.splice(i, 1)
       }
     }
-    this.shake = Math.max(0, this.shake - dt * 2.5)
   }
 }

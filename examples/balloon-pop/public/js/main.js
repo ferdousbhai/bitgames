@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
-import { Balloons, COLORS, KINDS } from './balloons.js'
+import { Balloons, COLORS, KINDS, PALETTE } from './balloons.js'
 import { Effects } from './effects.js'
 import { World, halfSize as viewSize } from './world.js'
 
@@ -36,21 +36,21 @@ const effects = new Effects(scene, camera)
 // Each level adds one new friend. Nothing is ever lost: balloons that float
 // away just float away, and every pop fills the level bar a little more.
 
+// Calm pass: one gentle, constant pace for every level. Levels only introduce new friends;
+// they never speed up (the old ramp reached 2.3x speed and a balloon every 0.55 s).
+const PACE = { speed: 1.0, every: 1.35 }
 const LEVELS = [
-  { goal: 8, speed: 1.0, every: 1.3, kinds: { round: 3, smile: 2 } },
-  { goal: 10, speed: 1.1, every: 1.2, kinds: { round: 3, smile: 2, heart: 2 }, intro: ['💖', 'Heart balloons!', 'They are worth 2'], show: 'heart' },
-  { goal: 12, speed: 1.15, every: 1.1, kinds: { round: 3, smile: 2, heart: 1.5, gold: 0.7 }, intro: ['👑', 'Golden balloons!', 'They are worth 5'], show: 'gold' },
-  { goal: 12, speed: 1.2, every: 1.05, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 2 }, intro: ['🐰', 'Bunny balloons!', 'Boing boing! Worth 3'], show: 'bunny' },
-  { goal: 14, speed: 1.25, every: 1.0, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 1.2, star: 0.35 }, intro: ['⭐', 'Star balloon!', 'Pop it to pop them ALL'], show: 'star' },
-  { goal: 15, speed: 1.3, every: 0.95, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 1.2, star: 0.3, rainbow: 0.45 }, intro: ['🌈', 'Rainbow balloon!', 'It makes baby balloons'], show: 'rainbow' },
+  { goal: 8, ...PACE, kinds: { round: 3, smile: 2 } },
+  { goal: 10, ...PACE, kinds: { round: 3, smile: 2, heart: 2 }, intro: ['💖', 'Heart balloons!', 'Can you find the hearts?'], show: 'heart' },
+  { goal: 12, ...PACE, kinds: { round: 3, smile: 2, heart: 1.5, gold: 0.7 }, intro: ['👑', 'Golden balloons!', 'They wear a little crown'], show: 'gold' },
+  { goal: 12, ...PACE, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 2 }, intro: ['🐰', 'Bunny balloons!', 'Boing boing!'], show: 'bunny' },
+  { goal: 14, ...PACE, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 1.2, star: 0.35 }, intro: ['⭐', 'Star balloon!', 'Pop it to pop them all'], show: 'star' },
+  { goal: 15, ...PACE, kinds: { round: 2.5, smile: 2, heart: 1, gold: 0.4, bunny: 1.2, star: 0.3, rainbow: 0.45 }, intro: ['🌈', 'Rainbow balloon!', 'It makes baby balloons'], show: 'rainbow' },
 ]
 function level(n) {
-  if (n <= LEVELS.length) return LEVELS[n - 1]
-  const extra = n - LEVELS.length
-  const last = LEVELS[LEVELS.length - 1]
-  return { ...last, goal: Math.min(25, last.goal + extra), speed: Math.min(2.3, last.speed + extra * 0.08), every: Math.max(0.55, last.every - extra * 0.04) }
+  return LEVELS[Math.min(n, LEVELS.length) - 1]
 }
-const PARTY_EVERY = 3 // a bonus Balloon Party after every third level
+const PARTY_EVERY = 3 // a calm Balloon Parade of friends after every third level
 
 // --- Game state -------------------------------------------------------------------
 
@@ -62,16 +62,10 @@ const game = {
   spawnIn: 1,
   pause: 0, // seconds without spawning (between levels)
   party: 0, // seconds of Balloon Party left
-  combo: 0,
-  lastPop: -10,
-  best: 0,
   forced: null,
   firstPop: false,
   lastLane: 0,
 }
-try {
-  game.best = Number(localStorage.getItem('balloon-pop-best')) || 0
-} catch {}
 
 // Optional learning missions. Hunts also make their balloons more common (see spawn).
 const RED = '#ff595e'
@@ -117,7 +111,8 @@ function celebrateMission(text) {
   void reward.offsetWidth
   reward.classList.add('show')
   const { w, h } = halfSize(0)
-  effects.shower(w, h)
+  effects.drift(w, h)
+  audio.chord()
   clearTimeout(rewardTimer)
   rewardTimer = setTimeout(() => reward.classList.remove('show'), 3500)
 }
@@ -162,15 +157,6 @@ function announceMission() {
   words.lang = 'en-US'
   words.rate = 0.82
   speechSynthesis.speak(words)
-}
-
-function saveBest() {
-  if (game.score <= game.best) return false
-  game.best = game.score
-  try {
-    localStorage.setItem('balloon-pop-best', String(game.best))
-  } catch {}
-  return true
 }
 
 // --- View helpers -------------------------------------------------------------------
@@ -218,7 +204,7 @@ function spawn(kindName, opts = {}) {
   game.lastLane = lane
   const x = -w + (2 * w * (lane + 0.5)) / lanes + (Math.random() - 0.5) * 0.6
   b.group.position.set(x, -h - 1.6 * s, z)
-  b.speed = (game.state === 'title' ? 0.8 : lv.speed * adventure.pace) * (0.85 + Math.random() * 0.3) * (game.party > 0 ? 1.3 : 1)
+  b.speed = (game.state === 'title' ? 0.8 : lv.speed * adventure.pace) * (0.85 + Math.random() * 0.3)
   if (b.kind.power) b.speed *= 0.8
   return b
 }
@@ -236,14 +222,14 @@ function spawnTick(dt) {
     spawn(game.forced)
     game.forced = null
   } else if (game.party > 0) {
-    if (balloons.list.length >= 15) return
+    if (balloons.list.length >= 9) return
     spawn(pickKind({ round: 3, smile: 2, heart: 2, bunny: 1.5, gold: 0.8 }))
   } else {
     // Never more than a comfortable handful on screen at once
     if (balloons.list.length >= 9) return
     spawn(pickKind(level(game.level).kinds))
   }
-  game.spawnIn = game.party > 0 ? 0.22 : level(game.level).every * (0.8 + Math.random() * 0.4)
+  game.spawnIn = (game.party > 0 ? 0.9 : level(game.level).every) * (0.8 + Math.random() * 0.4)
 }
 
 // --- Popping ------------------------------------------------------------------------
@@ -282,19 +268,16 @@ function balloonAt(px, py) {
 
 function pop(b, { chain = false } = {}) {
   if (!b.alive) return
-  const t = timer.getElapsed()
   const pos = b.group.position.clone()
   balloons.remove(b)
   if (b.string) effects.dropString(b.string)
   if (b.crown) effects.dropString(b.crown, 4)
   const playing = game.state === 'play'
-  if (!chain) {
-    game.combo = t - game.lastPop < 1.1 ? game.combo + 1 : 0
-    game.lastPop = t
-  }
   const big = !!b.kind.power
   effects.pop(pos, b.color, { big, gold: b.kind.gold })
-  audio.pop(chain ? 3 + ((Math.random() * 6) | 0) : game.combo, b.scale < 0.6 ? 0.7 : b.kindName === 'bunny' ? 1.2 : 1)
+  // Each colour sings its own note, so pops make a little tune instead of a climbing combo.
+  const colourNote = Math.max(0, PALETTE.indexOf(b.color))
+  audio.pop(chain ? 3 + ((Math.random() * 6) | 0) : colourNote, b.scale < 0.6 ? 0.7 : b.kindName === 'bunny' ? 1.2 : 1)
   if (b.kind.gold) audio.sparkle()
   if (!game.firstPop) {
     game.firstPop = true
@@ -303,22 +286,14 @@ function pop(b, { chain = false } = {}) {
   if (!playing) return
   if (!chain) adventure.event(b)
 
-  let points = b.kind.points
-  game.score += points
-  effects.label(`+${points}`, pos, b.color === '#ffffff' ? '#ff6b9d' : b.color, points >= 3)
-  if (!chain && game.combo >= 2 && game.combo % 3 === 2) {
-    const bonus = Math.min(5, Math.ceil(game.combo / 3))
-    game.score += bonus
-    banner(`${['', 'Nice!', 'Super!', 'Wow!', 'Amazing!', 'Balloon boss!'][bonus]} +${bonus}`, 'combo')
-  }
+  // The counter shows how many balloons the child popped (no points, combos or bonuses).
+  game.score += 1
 
   if (b.kind.power === 'star') {
-    effects.shake = 0.6
     audio.boom()
-    banner('⭐ Star power! ⭐', 'combo')
     const others = [...balloons.list]
     others.sort((a, c) => a.group.position.distanceTo(pos) - c.group.position.distanceTo(pos))
-    others.forEach((o, i) => setTimeout(() => pop(o, { chain: true }), 90 + i * 80))
+    others.forEach((o, i) => setTimeout(() => pop(o, { chain: true }), 200 + i * 180))
   } else if (b.kind.power === 'rainbow') {
     audio.rainbow()
     for (let i = 0; i < 6; i++) {
@@ -342,12 +317,12 @@ function levelUp() {
   game.pause = 2.6
   audio.levelUp()
   const { w, h } = halfSize(0)
-  effects.shower(w, h)
+  effects.drift(w, h)
   const finished = game.level - 1
   if (finished % PARTY_EVERY === 0) {
-    game.party = 7
+    game.party = 9
     game.pause = 1.6
-    showIntro('🎉', 'Balloon party!', 'Pop as many as you can!')
+    showIntro('🎈', 'Balloon parade!', 'All your friends float by')
     return
   }
   introduceLevel()
@@ -367,19 +342,9 @@ function introduceLevel() {
 
 function updateHud() {
   $('score').textContent = game.score
-  if (game.best > 0 && game.score > game.best) $('best-badge').classList.remove('hidden')
-  $('level').textContent = game.party > 0 ? '🎉 Party!' : `Level ${game.level}`
+  $('level').textContent = game.party > 0 ? '🎈 Parade' : `Level ${game.level}`
   const goal = level(game.level).goal
   $('bar-fill').style.width = `${game.party > 0 ? 100 : Math.min(100, (game.progress / goal) * 100)}%`
-}
-
-let bannerTimer = 0
-function banner(text, kind = '') {
-  const el = $('banner')
-  el.textContent = text
-  el.className = `banner show ${kind}`
-  clearTimeout(bannerTimer)
-  bannerTimer = setTimeout(() => (el.className = 'banner'), 1300)
 }
 
 let introTimer = 0
@@ -402,13 +367,13 @@ function show(screen) {
 }
 
 function toTitle() {
-  const newBest = saveBest()
   game.state = 'title'
   game.party = 0
   clearTimeout(rewardTimer)
   $('mission-reward').classList.remove('show')
-  $('best').textContent = game.best
-  $('last').textContent = game.score ? (newBest ? `🎉 New best: ${game.score}!` : `Last time: ${game.score}`) : ''
+  // Say what the child did, not how it ranks.
+  $('last').textContent = game.score ? `🎈 You popped ${game.score} balloon${game.score === 1 ? '' : 's'}!` : ''
+  $('last').classList.toggle('hidden', !game.score)
   show('title')
 }
 
@@ -419,9 +384,8 @@ function start() {
   audio.unlock()
   audio.click()
   balloons.clear()
-  Object.assign(game, { state: 'play', level: 1, score: 0, progress: 0, spawnIn: 0.4, pause: 0, party: 0, combo: 0, forced: null })
+  Object.assign(game, { state: 'play', level: 1, score: 0, progress: 0, spawnIn: 0.4, pause: 0, party: 0, forced: null })
   show('play')
-  $('best-badge').classList.add('hidden')
   updateHud()
   showIntro('🎈', 'Pop the balloons!', 'Tap them before they fly away')
   announceMission()
@@ -581,7 +545,6 @@ async function load() {
   const warm = Object.keys(KINDS).map((k) => balloons.make(k))
   renderer.compile(scene, camera)
   for (const b of warm) balloons.remove(b)
-  $('best').textContent = game.best
   game.state = 'title'
   game.spawnIn = 0.2
   show('title')
@@ -591,7 +554,6 @@ async function load() {
 
 const timer = new THREE.Timer()
 timer.connect(document)
-const camBase = camera.position.clone()
 const twinkleAt = new THREE.Vector3()
 
 renderer.setAnimationLoop(() => {
@@ -614,7 +576,7 @@ renderer.setAnimationLoop(() => {
     balloons.update(dt, t, halfSize(-1.5).h)
     // Golden and star balloons twinkle as they rise
     for (const b of balloons.list) {
-      if (!(b.kind.gold || b.kind.power === 'star') || Math.random() >= dt * 8) continue
+      if (!(b.kind.gold || b.kind.power === 'star') || Math.random() >= dt * 2) continue
       twinkleAt.set((Math.random() - 0.5) * 1.6, (Math.random() - 0.5) * 2, 0.6).add(b.group.position)
       effects.sparkleAt(twinkleAt, '#fff3b0', 1)
     }
@@ -624,8 +586,6 @@ renderer.setAnimationLoop(() => {
   updatePin(dt)
   updateHint()
   audio.updateMusic(game.state !== 'loading')
-  const sh = effects.shake * effects.shake * 0.5
-  camera.position.set(camBase.x + (Math.random() - 0.5) * sh, camBase.y + (Math.random() - 0.5) * sh, camBase.z)
   renderer.render(scene, camera)
 })
 

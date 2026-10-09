@@ -201,15 +201,16 @@ export class Effects {
     })
   }
 
-  confetti(w = 10) {
+  /** One soft moment: a few stars drift slowly down over the water (calm pass: was 90 fast ones). */
+  confetti(w = 10, count = 24) {
     const colors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff9ccb']
-    for (let i = 0; i < 90; i++) {
-      this.stars.spawn((Math.random() - 0.5) * w * 2, 6 + Math.random() * 4, (Math.random() - 0.5) * w * 1.5, (Math.random() - 0.5) * 4, Math.random() * 5, (Math.random() - 0.5) * 4, {
+    for (let i = 0; i < count; i++) {
+      this.stars.spawn((Math.random() - 0.5) * w * 1.6, 6 + Math.random() * 3, (Math.random() - 0.5) * w * 1.2, (Math.random() - 0.5) * 0.8, -0.3 - Math.random() * 0.5, (Math.random() - 0.5) * 0.8, {
         color: colors[i % colors.length],
-        size: 0.5 + Math.random() * 0.5,
-        life: 2.6,
-        gravity: -5,
-        drag: 0.6,
+        size: 0.5 + Math.random() * 0.4,
+        life: 4.5,
+        gravity: -0.6,
+        drag: 0.3,
       })
     }
   }

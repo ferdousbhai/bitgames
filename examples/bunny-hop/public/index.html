@@ -33,6 +33,7 @@
 </div>
 
 <button id="mute" class="round hidden" title="Sound on/off (M)">🔊</button>
+<button id="home" class="round home hidden" title="Home (Esc)" aria-label="Home">🏠</button>
 
 <div id="loading" class="screen">
   <div class="logo"><span>B</span><span>u</span><span>n</span><span>n</span><span>y</span> <span>H</span><span>o</span><span>p</span></div>
@@ -45,7 +46,6 @@
   <p class="sub">Help Pip hop all the way home! 🏡</p>
   <div class="spacer"></div>
   <div class="menu-bottom">
-    <div id="best" class="best hidden"></div>
     <button id="play" class="big-go">▶ Let's hop!</button>
     <p class="hint">Tap to hop · tap again in the air to flip!</p>
   </div>
@@ -54,12 +54,12 @@
 <div id="results" class="screen clear hidden">
   <div class="results-top">
     <h1>Home sweet home!</h1>
-    <div id="stars" class="stars"></div>
+    <div id="golden" class="golden" aria-hidden="true"></div>
   </div>
   <div class="spacer"></div>
   <div class="menu-bottom">
-    <div class="tally"><span>🥕</span><b id="final">0</b><span id="new-best" class="new-best hidden">🏆 New best!</span></div>
-    <div id="best-line" class="best"></div>
+    <div class="tally"><span>🥕</span><b id="final">0</b></div>
+    <p id="found" class="found"></p>
     <button id="again" class="big-go">🔁 Hop again</button>
   </div>
 </div>

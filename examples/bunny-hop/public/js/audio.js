@@ -104,12 +104,13 @@ export class Sound {
     this.hiss({ len: 0.06, freq: 600, gain: 0.05 })
   }
 
-  munch(combo) {
+  /** A crunch and a note; `step` picks the note (a row of carrots walks up the scale). */
+  munch(step) {
     this.hiss({ len: 0.05, freq: 3200, q: 2, gain: 0.12 })
     this.hiss({ at: 0.06, len: 0.05, freq: 2600, q: 2, gain: 0.1 })
-    const step = PENTA[Math.min(combo, PENTA.length - 1)]
-    this.note(hz(step), { at: 0.01, len: 0.18, type: 'triangle', gain: 0.13 })
-    this.note(hz(step + 12), { at: 0.04, len: 0.12, gain: 0.05 })
+    const tone = PENTA[Math.min(step, PENTA.length - 1)]
+    this.note(hz(tone), { at: 0.01, len: 0.18, type: 'triangle', gain: 0.13 })
+    this.note(hz(tone + 12), { at: 0.04, len: 0.12, gain: 0.05 })
   }
 
   gold() {
@@ -132,20 +133,21 @@ export class Sound {
     this.note(660, { at: 0.02, len: 0.2, type: 'triangle', gain: 0.05, slide: 0.6 })
   }
 
-  nice() {
-    this.note(hz(7), { len: 0.1, type: 'triangle', gain: 0.08 })
-    this.note(hz(12), { at: 0.08, len: 0.16, type: 'triangle', gain: 0.08 })
-  }
-
+  /** A new place: a slow, soft rising arpeggio (calm pass: no square wave). */
   fanfare() {
-    ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 392), { at: i * 0.12, len: 0.3, type: 'square', gain: 0.045 }))
-    ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 392), { at: i * 0.12, len: 0.32, type: 'triangle', gain: 0.1 }))
+    ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 392), { at: i * 0.18, len: 0.5, type: 'triangle', gain: 0.08 }))
   }
 
+  /** Home: a gentle tune that settles on a chord. */
   finish() {
-    const tune = [0, 4, 7, 12, 7, 12, 16, 19, 24]
-    tune.forEach((s, i) => this.note(hz(s, 392), { at: i * 0.11, len: 0.28, type: 'triangle', gain: 0.13 }))
-    ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 0.9, len: 1.2, type: 'sine', gain: 0.1 }))
+    const tune = [0, 4, 7, 12, 7, 12]
+    tune.forEach((s, i) => this.note(hz(s, 392), { at: i * 0.16, len: 0.4, type: 'triangle', gain: 0.1 }))
+    ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 1, len: 1.6, type: 'sine', gain: 0.08 }))
+  }
+
+  /** A finished mission: one soft major chord, played once. */
+  chord() {
+    ;[0, 4, 7].forEach((s, i) => this.note(hz(s, 392), { at: i * 0.06, len: 1.6, type: 'sine', gain: 0.07, attack: 0.04 }))
   }
 
   /** Poked scenery: a rustle, a ting, a boing, a thud, a knock or a flutter. */

@@ -26,26 +26,23 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @keyframes float-in { from { transform: translateY(40px) scale(.8); opacity: 0; } }
 
 .logo { font-size: clamp(36px, 10.5vw, 72px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1; }
-.logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.08); text-shadow: 0 5px 0 rgba(91, 63, 160, 0.3); animation: bob 1.8s ease-in-out infinite; }
-.logo span:nth-child(6n+1) { color: #ff595e; } .logo span:nth-child(6n+2) { color: #ff9f1c; animation-delay: .12s; }
-.logo span:nth-child(6n+3) { color: #ffca3a; animation-delay: .24s; } .logo span:nth-child(6n+4) { color: #8ac926; animation-delay: .36s; }
-.logo span:nth-child(6n+5) { color: #2ec4b6; animation-delay: .48s; } .logo span:nth-child(6n) { color: #9b5de5; animation-delay: .6s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-9px) rotate(4deg); } }
-.spinner { font-size: 72px; animation: rise 1.4s ease-in-out infinite; }
+.logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.08); text-shadow: 0 5px 0 rgba(91, 63, 160, 0.3); }
+/* Calm pass: the letters rest at a gentle tilt instead of bobbing forever. */
+.logo span:nth-child(odd) { transform: rotate(-3deg); } .logo span:nth-child(even) { transform: rotate(3deg); }
+.logo span:nth-child(6n+1) { color: #ff595e; } .logo span:nth-child(6n+2) { color: #ff9f1c; }
+.logo span:nth-child(6n+3) { color: #ffca3a; } .logo span:nth-child(6n+4) { color: #8ac926; }
+.logo span:nth-child(6n+5) { color: #2ec4b6; } .logo span:nth-child(6n) { color: #9b5de5; }
+.spinner { font-size: 72px; animation: rise 3s ease-in-out infinite; }
 @keyframes rise { 0%, 100% { transform: translateY(10px) rotate(-6deg); } 50% { transform: translateY(-14px) rotate(6deg); } }
 .tag { margin: 0; font-size: clamp(18px, 3.6vw, 24px); font-weight: 800; text-wrap: balance; }
 .friends { display: flex; gap: 8px; font-size: clamp(30px, 7vw, 44px); }
-.friends span { animation: bob 2s ease-in-out infinite; } .friends span:nth-child(2n) { animation-delay: .5s; }
 
 .big-go {
   background: linear-gradient(#ff7aa8, #ff4d8d); color: #fff; font-size: clamp(32px, 7vw, 46px); font-weight: 900; padding: 14px 56px;
   border-radius: 999px; box-shadow: 0 8px 0 #c2185b; transition: transform .1s; text-shadow: 0 2px 0 rgba(0,0,0,.15);
-  animation: pulse 1.6s ease-in-out infinite;
 }
 .big-go:active { transform: translateY(6px); box-shadow: 0 2px 0 #c2185b; }
-@keyframes pulse { 50% { transform: scale(1.06); } }
 .scores { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; font-weight: 800; font-size: 18px; }
-.scores .pill { background: #ffca3a; color: #5b3fa0; }
 
 .pill { background: rgba(91, 63, 160, 0.55); border-radius: 999px; padding: 6px 16px; font-size: 24px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); }
 #hud { position: fixed; inset: 0; pointer-events: none; }
@@ -55,30 +52,24 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .round-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(91,63,160,.3); }
 .round-btn.off { opacity: .45; }
 .score b { display: inline-block; min-width: 1.2em; }
-.badge { background: #ffca3a; color: #5b3fa0; font-size: 18px; animation: bob 1.4s ease-in-out infinite; }
+/* Balloons rise from behind the level bar: it is see-through, and taps pass through the HUD to them. */
 .level-wrap {
+  opacity: .85;
   position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom));
   width: min(60vw, 360px); display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 .level { font-weight: 900; font-size: 20px; text-shadow: 0 2px 0 rgba(91,63,160,.6); }
 .bar { width: 100%; height: 18px; border-radius: 999px; background: rgba(255,255,255,.55); border: 3px solid #fff; overflow: hidden; box-shadow: 0 3px 0 rgba(91,63,160,.3); }
-#bar-fill { height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #ff595e, #ff9f1c, #ffca3a, #8ac926, #2ec4b6, #9b5de5); background-size: min(60vw, 360px) 100%; transition: width .3s cubic-bezier(.2, 1.5, .4, 1); }
-
-.banner {
-  position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%) scale(0); font-size: clamp(30px, 7vw, 56px); font-weight: 900;
-  white-space: nowrap; color: #fff; text-shadow: 0 4px 0 #ff4d8d, 0 8px 18px rgba(0,0,0,.2); transition: transform .25s cubic-bezier(.2, 1.8, .4, 1), opacity .3s; opacity: 0;
-}
-.banner.show { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
-.banner.combo { color: #ffe066; text-shadow: 0 4px 0 #9b5de5, 0 8px 18px rgba(0,0,0,.2); }
+#bar-fill { height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #ff595e, #ff9f1c, #ffca3a, #8ac926, #2ec4b6, #9b5de5); background-size: min(60vw, 360px) 100%; transition: width .5s ease-out; }
 
 .intro {
   position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%) scale(0); opacity: 0; text-align: center;
   background: rgba(255,255,255,.88); color: #5b3fa0; border-radius: 30px; padding: 14px 28px 18px; box-shadow: 0 8px 0 rgba(91,63,160,.25);
   max-width: calc(100vw - 32px);
 }
-.intro.show { animation: intro 2.6s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+.intro.show { animation: intro 2.6s ease-out forwards; }
 @keyframes intro {
-  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  0% { transform: translate(-50%, -50%) scale(.85); opacity: 0; }
   15%, 80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   100% { transform: translate(-50%, -80%) scale(.9); opacity: 0; }
 }
@@ -87,23 +78,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 #intro-sub { font-size: clamp(17px, 3.5vw, 22px); font-weight: 800; opacity: .85; }
 
 #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-.float {
-  position: absolute; transform: translate(-50%, -50%); font-size: 38px; font-weight: 900; white-space: nowrap;
-  /* Balloon-coloured fill, white rim and a purple outline: readable over sky, hills and balloons alike */
-  -webkit-text-stroke: 6px #fff; paint-order: stroke fill;
-  text-shadow: 3px 0 0 #5b3fa0, -3px 0 0 #5b3fa0, 0 3px 0 #5b3fa0, 0 -3px 0 #5b3fa0, 2px 2px 0 #5b3fa0, -2px 2px 0 #5b3fa0,
-    2px -2px 0 #5b3fa0, -2px -2px 0 #5b3fa0, 0 6px 0 #5b3fa0;
-  animation: float-up 1s ease-out forwards;
-}
-.float.big { font-size: 50px; }
-@keyframes float-up {
-  0% { transform: translate(-50%, -50%) scale(.4); opacity: 1; }
-  25% { transform: translate(-50%, -90%) scale(1.25); }
-  100% { transform: translate(-50%, -260%) scale(1); opacity: 0; }
-}
-
 .hint-finger, .reticle { position: fixed; left: 0; top: 0; pointer-events: none; font-size: 54px; }
-.hint-finger { margin: 10px 0 0 -20px; animation: tap 0.9s ease-in-out infinite; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
+.hint-finger { margin: 10px 0 0 -20px; animation: tap 1.8s ease-in-out infinite; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
 @keyframes tap { 0%, 100% { translate: 0 18px; } 50% { translate: 0 0; } }
 .reticle { margin: -50px 0 0 -16px; filter: drop-shadow(0 4px 4px rgba(0,0,0,.3)); font-size: 44px; }
 
@@ -149,7 +125,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .mission-reward.show { animation: mission-party 3.5s ease-out forwards; }
 .mission-reward .mission-picture { width: 35px; height: 38px; font-size: 32px; }
 @keyframes mission-party {
-  0% { transform: translate(-50%, -20px) scale(.5) rotate(-6deg); opacity: 0; }
+  0% { transform: translate(-50%, -20px) scale(.9); opacity: 0; }
   12%, 82% { transform: translate(-50%, 0) scale(1) rotate(0); opacity: 1; }
   100% { transform: translate(-50%, -16px) scale(.9); opacity: 0; }
 }
@@ -195,4 +171,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .level { font-size: 28px; text-shadow: 0 3px 0 rgba(91,63,160,.6); }
   .bar { height: 24px; }
   #bar-fill { background-size: min(50vw, 460px) 100%; }
+}
+
+/* Calm pass: honour reduced motion for the animations that remain (cards fade in place). */
+@media (prefers-reduced-motion: reduce) {
+  .card, .spinner, .hint-finger { animation: none; }
+  .intro.show, .mission-reward.show { animation-timing-function: linear; }
+  @keyframes intro { 0%, 100% { opacity: 0; transform: translate(-50%, -50%); } 10%, 85% { opacity: 1; transform: translate(-50%, -50%); } }
+  @keyframes mission-party { 0%, 100% { opacity: 0; transform: translate(-50%, 0); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); } }
+  #bar-fill { transition: none; }
 }

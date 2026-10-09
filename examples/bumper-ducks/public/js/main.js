@@ -162,9 +162,10 @@ const adventure = createAdventure({
   isMuted: () => audio.muted || quietMission,
   celebrate: () => {
     const n = adventure.option.target
-    banner(`🎉 ${n} 🫧 🎉`, 2400, true)
-    audio.star()
-    if (game.me) effects.sparkle(game.me.x, 1.6, game.me.z, '#ffd23f', 30)
+    // One soft moment: the number of bubbles counted, a gentle chord and a few twinkles.
+    banner(`${n} 🫧`, 2400, true)
+    audio.chord()
+    if (game.me) effects.sparkle(game.me.x, 1.6, game.me.z, '#ffd23f', 10)
   },
   // The goal as bubbles that fill in, one per bubble counted, so it reads without words.
   renderProgress: (goal, option, count) => {
@@ -665,6 +666,7 @@ function startRound(setup) {
   game.run = 0
   game.lastShake = 0
   game.lastSteer = 0
+  game.idleHinted = false
   game.childActive = 0
   game.lastZzz = -9
   const entries = setup.entries.slice(0, MAX_PLAYERS).map((e) => ({ ...e, duck: validDuck(e.duck) ? e.duck : 'sunny', emoji: String(e.emoji ?? '🙂').slice(0, 8) }))
@@ -771,12 +773,15 @@ function hideHint() {
   $('keys-hint').classList.add('hidden')
 }
 
-/** A child who has stopped paddling for a while sees the steering hint again for a moment. */
+/**
+ * A child who has not paddled for a long while (30 s) sees the steering hint once, quietly.
+ * Calm pass: this used to repeat every 6 s of rest; resting is fine, and the robots nap too.
+ */
 function idleHint() {
   const sim = game.sim
-  if (game.state !== 'play' || !game.me || game.sitOut || !sim) return
-  if (sim.time - (game.lastSteer ?? 0) < 6 || sim.time > 88) return
-  game.lastSteer = sim.time
+  if (game.state !== 'play' || !game.me || game.sitOut || !sim || game.idleHinted) return
+  if (sim.time - (game.lastSteer ?? 0) < 30) return
+  game.idleHinted = true
   const touch = matchMedia('(any-pointer: coarse)').matches
   if (touch) placeHint()
   const el = $(touch ? 'hint' : 'keys-hint')
@@ -794,13 +799,14 @@ function endRound() {
     send({ t: 'end', r: roundId(), scores: game.sim.ducks.map((d) => d.score), stats: game.sim.ducks.map((d) => d.stats) })
   }
   for (const d of game.sim.ducks) d.ix = d.iz = 0
+  // Calm pass: one soft moment (a gentle chord and a few slow stars), no alarm banner or confetti burst.
   audio.cheer()
-  banner('⏰ TIME! ⏰', 1600)
+  banner('🫧 All done! 🫧', 1600)
   later(() => {
     game.state = 'results'
     renderResults()
     show('results')
-    effects.confetti(R)
+    effects.confetti(R, 24)
   }, 1700)
 }
 
@@ -852,26 +858,25 @@ function playEvent(e) {
       const y = v ? v.body.position.y : 0.8
       removeItemView(e.item)
       const d = posOf(e.id)
-      const color = mine ? '#ffffff' : game.views.get(e.id)?.color ?? '#fff'
       if (e.kind === 'bubble') {
         effects.pop(e.x, y, e.z)
         if (mine) {
           const now = performance.now() / 1000
+          // A run of bubbles walks up and down a five-note scale instead of climbing like a combo.
           game.run = now - game.lastBubble < 1.6 ? game.run + 1 : 0
           game.lastBubble = now
-          audio.bubble(game.run)
+          audio.bubble(game.run % 5)
         } else if (Math.random() < 0.5) audio.bubble(0)
-        effects.label('+1', { x: e.x, y: 1.6, z: e.z }, { color })
+        // Calm pass: no "+1" / "⭐+3" score pop-ups; the duck's counter shows what it collected.
       } else if (e.kind === 'star') {
-        effects.sparkle(e.x, 1.2, e.z, '#ffd23f', 18)
+        effects.sparkle(e.x, 1.2, e.z, '#ffd23f', 10)
         audio.star()
-        effects.label('⭐+3', { x: e.x, y: 2, z: e.z }, { color, size: mine ? 'big' : 'normal' })
       } else if (e.kind === 'gift' && e.p) {
-        effects.sparkle(e.x, 1, e.z, '#c9a7ff', 20)
+        effects.sparkle(e.x, 1, e.z, '#c9a7ff', 12)
         audio.gift()
         later(() => audio.power(e.p), 250)
+        // The power's picture floats up from the duck: it says what the gift does without words.
         effects.label(POWERS[e.p].emoji, { x: d?.x ?? e.x, y: 3, z: d?.z ?? e.z }, { size: 'big' })
-        if (mine) banner({ giant: '🍄 BIG DUCK! 🍄', speedy: '⚡ ZOOM! ⚡', shield: '🛡️ BOING! 🛡️' }[e.p])
       }
       bumpScore(e.id)
       break
@@ -884,8 +889,9 @@ function playEvent(e) {
       effects.splash(e.x, e.z, Math.min(1.2, s / 8))
       water.ripple(e.x, e.z, Math.min(2, s / 4))
       audio.bonk(s / 6)
-      effects.label(s > 7 ? 'KA-BONK!' : 'BONK!', { x: e.x, y: 2.4, z: e.z }, { size: 'big' })
-      if ((e.a === meId || e.b === meId) && s > 4) effects.shake = Math.min(1, s / 12)
+      // A bonk is a real bump, so a child's own duck still feels a small nudge on hard ones.
+      if (s > 4) effects.label('bonk!', { x: e.x, y: 2.4, z: e.z })
+      if ((e.a === meId || e.b === meId) && s > 6) effects.shake = Math.min(0.35, s / 30)
       break
     }
     case 'thud': {
@@ -918,7 +924,6 @@ function playEvent(e) {
       effects.label('WHEE!', { x: d.x, y: 3, z: d.z }, { size: 'big' })
       if (e.by) {
         const by = posOf(e.by)
-        if (by) effects.label('💦+2', { x: by.x, y: 2.4, z: by.z }, { color: game.views.get(e.by)?.color, size: e.by === meId ? 'big' : 'normal' })
         bumpScore(e.by)
       }
       break
@@ -928,7 +933,7 @@ function playEvent(e) {
       effects.splash(e.x, e.z, 1.6)
       water.ripple(e.x, e.z, 2)
       game.views.get(e.id)?.bonked(8)
-      if (mine) effects.shake = 0.5
+      if (mine) effects.shake = 0.3
       break
     case 'drop':
       audio.plop()
@@ -1002,9 +1007,8 @@ function updateHud() {
   const text = `⏱️ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
   if (text !== lastTimerText) {
     lastTimerText = text
+    // Calm pass: the clock never turns pink, pulses or beeps as the round ends.
     $('timer').textContent = text
-    $('timer').classList.toggle('hurry', left <= 10 && game.state === 'play')
-    if (left <= 5 && left > 0 && game.state === 'play') audio.beep(false)
   }
   const best = Math.max(...sim.ducks.map((d) => d.score))
   sim.ducks.forEach((d, i) => {
@@ -1017,10 +1021,10 @@ function updateHud() {
     el.classList.toggle('lead', best > 0 && d.score === best)
   })
   idleHint()
-  // Bubble party for the last seconds.
+  // A gentle bubble shower for the last seconds (calm pass: no shouting, no faster music).
   if (game.state === 'play' && sim.party && !game.partyShown) {
     game.partyShown = true
-    banner('🫧 BUBBLE PARTY! 🫧', 2000)
+    banner('🫧 Bubbles! 🫧', 2000)
     audio.gift()
   }
   // My power: its emoji with a ring that runs down.
@@ -1247,7 +1251,7 @@ function tick(now) {
   })
   water.update(t)
   effects.update(dt)
-  audio.updateMusic(game.state !== 'loading', game.sim?.party && game.state === 'play')
+  audio.updateMusic(game.state !== 'loading')
   // Camera: a gentle sway, and a shake on big bonks.
   const sh = effects.shake * effects.shake * 0.6
   camShake.set((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, 0)

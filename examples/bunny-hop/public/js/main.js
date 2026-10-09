@@ -88,13 +88,10 @@ const game = {
   biome: 0,
   homeTime: 0,
   time: 0,
-  best: 0,
   shake: 0,
+  golden: 0, // golden carrots found this trip
 }
 if (new URLSearchParams(location.search).has('debug')) window.game = game
-try {
-  game.best = Number(localStorage.getItem('bunnyhop.best')) || 0
-} catch {}
 
 // Optional learning missions. A flip is the bunny's 'double' hop.
 const missionSteps = {
@@ -140,8 +137,10 @@ const adventure = createAdventure({
   hud: $('hud'),
   isMuted: () => sound.muted,
   celebrate: () => {
-    banner(adventure.option.sequence ? '⭐ Pattern! ⭐' : '⭐ Four hops! ⭐', 2600)
-    effects.confettiBurst(new THREE.Vector3(game.x, bunny.y + 1, 0), 35)
+    // One soft moment: what the child made, a gentle chord and a few slow petals.
+    banner(adventure.option.sequence ? '↑ ↑ ↻ Pattern!' : '↑ ↑ ↑ ↑ Four hops!', 2600)
+    sound.chord()
+    effects.confettiBurst(new THREE.Vector3(game.x, bunny.y + 1, 0), 10, true)
   },
   renderProgress: renderMissionProgress,
   options: [
@@ -206,16 +205,24 @@ function show(id) {
   for (const s of ['loading', 'menu', 'results']) $(s).classList.toggle('hidden', s !== id)
   $('hud').classList.toggle('hidden', id !== null)
   $('mute').classList.toggle('hidden', id === 'loading')
+  $('home').classList.toggle('hidden', id === 'loading' || id === 'menu')
 }
 
 function toMenu() {
   game.state = 'menu'
   game.x = 0
+  sound.music(false)
+  clearTimeout(bannerTimer)
+  $('banner').classList.remove('show')
   bunny.reset()
   world.reset()
   course.reset()
-  $('best').textContent = `🏆 Best: ${game.best} 🥕`
-  $('best').classList.toggle('hidden', game.best === 0)
+  game.biome = 0
+  weather.setKind(BIOMES[0].weather)
+  // Coming home from a trip: cut straight to the close-up of Pip, never pan back across the whole trip.
+  camPos.set(game.x + 0.6, 1.6, innerWidth < innerHeight ? 8.5 : 5.6)
+  camLook.set(game.x + 0.1, 1.2, 0)
+  // Calm pass: the menu no longer shows a best score to beat.
   show('menu')
 }
 
@@ -230,6 +237,7 @@ function start() {
   game.score = 0
   game.combo = 0
   game.hops = 0
+  game.golden = 0
   game.time = 0
   // ?biome=2 starts further along the trip (for trying out the later places)
   const skip = clamp(Number(new URLSearchParams(location.search).get('biome')) || 0, 0, BIOMES.length - 1)
@@ -300,28 +308,20 @@ function finish() {
   sound.finish()
   banner('🏡 Home!', 2600)
   $('tap-hint').classList.add('gone')
+  // One soft moment at the burrow: a few slow petals (calm pass: was a 90-piece burst, then more every frame).
   tmp.set(HOME_X + 1, 1.5, -1)
-  effects.confettiBurst(tmp, 90)
+  effects.confettiBurst(tmp, 16, true)
 }
 
+/** Home: say what Pip found on the way, not how well the trip was graded (calm pass: no stars or best). */
 function showResults() {
   game.state = 'results'
-  const possible = Math.max(1, course.possible)
-  const f = game.score / possible
-  const stars = 1 + (f > 0.35 ? 1 : 0) + (f > 0.65 ? 1 : 0)
-  $('stars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? '' : 'off'}">⭐</span>`).join('')
-  $('final').textContent = game.score
-  const isBest = game.score > game.best
-  if (isBest) {
-    game.best = game.score
-    try {
-      localStorage.setItem('bunnyhop.best', String(game.best))
-    } catch {}
-  }
-  $('new-best').classList.toggle('hidden', !isBest || game.score === 0)
-  $('best-line').textContent = `🏆 Best: ${game.best} 🥕`
-  // a new best already says so on the tally
-  $('best-line').classList.toggle('hidden', game.best === 0 || (isBest && game.score > 0))
+  const carrots = game.score - game.golden * 5
+  $('final').textContent = carrots
+  const found = [`Pip found ${carrots} carrot${carrots === 1 ? '' : 's'}`]
+  if (game.golden) found.push(`${game.golden} golden one${game.golden === 1 ? '' : 's'}`)
+  $('found').textContent = `${found.join(' and ')} on the way home.`
+  $('golden').textContent = game.golden ? '✨🥕'.repeat(Math.min(game.golden, 6)) : ''
   show('results')
 }
 
@@ -387,6 +387,7 @@ addEventListener('keydown', (e) => {
     if (game.state === 'menu' || game.state === 'results') start()
     else hop()
   } else if (e.code === 'KeyM') toggleMute()
+  else if (e.code === 'Escape' && game.state !== 'menu' && game.state !== 'loading') $('home').click()
 })
 addEventListener('contextmenu', (e) => e.preventDefault())
 document.addEventListener('gesturestart', (e) => e.preventDefault())
@@ -395,6 +396,12 @@ document.addEventListener('visibilitychange', () => {
 })
 $('play').onclick = start
 $('again').onclick = start
+// Home: back to the menu (and its mission choice) from a trip or from the burrow.
+$('home').onclick = () => {
+  sound.unlock()
+  sound.click()
+  toMenu()
+}
 function toggleMute() {
   sound.unlock()
   sound.setMuted(!sound.muted)
@@ -405,9 +412,7 @@ $('mute').textContent = sound.muted ? '🔇' : '🔊'
 
 // --- Main loop ----------------------------------------------------------------------
 
-const YUM = ['Yum!', 'Crunch!', 'Munch!', 'Yummy!']
 const OOPS = ['Boing!', 'Whoopsie!', 'Oopsy daisy!', 'Bonk!']
-const NICE = ['Nice hop!', 'Wheee!', 'Super!', 'Great jump!']
 
 function handleEvents(events) {
   for (const ev of events) {
@@ -416,36 +421,30 @@ function handleEvents(events) {
       game.streak = game.combo && !ev.gold ? game.streak + 1 : ev.gold ? 0 : 1
       game.comboTimer = 1.1
       game.score += ev.gold ? 5 : 1
+      if (ev.gold) game.golden++
       bumpScore()
       bunny.munch()
       if (ev.gold) {
         sound.gold()
-        effects.sparkle(ev.pos, 24, ['#ffe066', '#ffffff', '#ffb000'], 4.5)
-        popups.show('+5', ev.pos.setY(ev.pos.y + 0.6), 'gold')
+        effects.sparkle(ev.pos, 10, ['#ffe066', '#ffffff', '#ffb000'], 2.5)
       } else {
-        sound.munch(game.combo)
+        sound.munch(game.streak % 5)
         effects.crumbs(ev.pos)
-        effects.sparkle(ev.pos, 5, undefined, 2)
-        // a row of carrots counts up in one spot above Pip: +1, +2, +3…
-        popups.show(`+${game.streak}`, tmp.set(game.x + 0.4, bunny.y + 1.9, 0), '', true)
-        if (game.combo >= 3 && game.combo % 2 === 1) popups.show(pick(YUM), tmp.set(game.x + 1.4, bunny.y + 2.9, 0), 'nice')
+        effects.sparkle(ev.pos, 3, undefined, 1.5)
+        // A learning helper, not a score: a row of carrots is counted 1, 2, 3… in one spot above Pip.
+        popups.show(String(game.streak), tmp.set(game.x + 0.4, bunny.y + 1.9, 0), '', true)
       }
     } else if (ev.type === 'bump') {
       bunny.bonk()
       game.slow = 0.35
-      game.shake = 0.35
+      game.shake = 0.15 // a real bump, so a small nudge (was 0.35)
       sound.bonk()
       tmp.set(game.x, 1.6, 0)
       effects.dizzy(tmp)
       effects.puff(ev.pos, 8, dustColor(), 1.3)
       popups.show(pick(OOPS), tmp.set(game.x, 2.4, 0), 'oops')
-    } else if (ev.type === 'cleared') {
-      if (Math.random() < 0.45) {
-        sound.nice()
-        popups.show(pick(NICE), tmp.set(game.x, 2.6, 0), 'nice')
-        effects.sparkle(tmp.set(ev.pos.x, 1.2, 0), 6, ['#bfe6ff', '#ffffff'], 2)
-      }
     }
+    // Calm pass: clearing a log is its own reward; no random "Nice hop!" praise.
   }
 }
 
@@ -543,7 +542,6 @@ function frame(now) {
     game.x = Math.min(HOME_X, game.x + game.speed * dt)
     game.homeTime += dt
     if (game.state === 'home' && game.homeTime > 3) showResults()
-    if (Math.random() < dt * 3) effects.confettiBurst(tmp.set(game.x + (Math.random() - 0.5) * 6, 5, -1), 8)
     smokeTimer -= dt
     if (world.home && smokeTimer <= 0) {
       smokeTimer = 0.35

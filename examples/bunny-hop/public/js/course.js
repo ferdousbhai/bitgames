@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { BIOMES, JOURNEY, OBSTACLES, START_X, biomeIndexAt } from './biomes.js'
 import { GRAVITY, HOP } from './bunny.js'
 import { copy } from './models.js'
-import { clamp, keepWhere, pick, rand } from './util.js'
+import { keepWhere, pick, rand } from './util.js'
 
 const CARROT_Y = 0.6
 const PICKUP = 1.05 // generous: a carrot this close to the bunny's middle is caught
@@ -43,8 +43,11 @@ function halo() {
   return s
 }
 
-/** The gentle speed ramp: from a stroll to a brisk hop over the whole trip. */
-export const speedAt = (x) => 6.2 + 3.2 * clamp(x / JOURNEY, 0, 1)
+/**
+ * One gentle, constant hopping pace for the whole trip (calm pass: it used to ramp from 6.2 to
+ * 9.4 by the snow). Callers still pass a position, so a future pace can vary by place.
+ */
+export const speedAt = () => 6.6
 
 /**
  * Carrots to munch and things to hop over, laid out in little patterns ahead

@@ -31,7 +31,7 @@
     <p class="tag">Tap the balloons before they float away!</p>
     <div class="friends"><span>🎈</span><span>💖</span><span>👑</span><span>🐰</span><span>⭐</span><span>🌈</span></div>
     <button id="play" class="big-go">▶ Play</button>
-    <div class="scores"><span class="pill">🏆 Best <b id="best">0</b></span> <span id="last"></span></div>
+    <div class="scores"><span id="last" class="hidden"></span></div>
   </div>
 </div>
 
@@ -39,7 +39,6 @@
   <div class="hud-left">
     <button id="home" class="round-btn" title="Home (Esc)">🏠</button>
     <div class="pill score">🎈 <b id="score">0</b></div>
-    <div id="best-badge" class="pill badge hidden">🏆 Best!</div>
   </div>
   <div class="hud-right">
     <button id="music" class="round-btn" title="Music">🎵</button>
@@ -49,7 +48,6 @@
     <div id="level" class="level">Level 1</div>
     <div class="bar"><div id="bar-fill"></div></div>
   </div>
-  <div id="banner" class="banner"></div>
   <div id="mission-reward" class="mission-reward" role="status" aria-live="polite"></div>
   <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div><div id="intro-sub"></div></div>
 </div>

@@ -128,11 +128,13 @@ export class Effects {
     }
   }
 
-  confettiBurst(at, count = 60) {
+  /** `soft`: the calm celebration, a few petals tossed gently up that float slowly down. */
+  confettiBurst(at, count = 60, soft = false) {
     const colors = ['#ff6b9d', '#ffd23f', '#36a8ff', '#8ac926', '#b28dff', '#ff8a1f']
     for (let i = 0; i < count; i++) {
-      this.v.set(rand(-4, 4), rand(5, 10), rand(-3, 3))
-      this.confetti.spawn(at, this.v, { life: rand(1.6, 2.6), size: rand(0.14, 0.24), color: colors[i % colors.length], spin: 8, shrink: false })
+      if (soft) this.v.set(rand(-1.5, 1.5), rand(2.5, 4.5), rand(-1, 1))
+      else this.v.set(rand(-4, 4), rand(5, 10), rand(-3, 3))
+      this.confetti.spawn(at, this.v, { life: soft ? rand(2.6, 3.4) : rand(1.6, 2.6), size: rand(0.14, 0.24), color: colors[i % colors.length], spin: soft ? 3 : 8, shrink: false })
     }
   }
 

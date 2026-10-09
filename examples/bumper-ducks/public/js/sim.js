@@ -400,8 +400,9 @@ export class Sim {
     for (const k of Object.keys(t)) t[k] -= dt
     const party = this.party
     if (t.bubble <= 0) {
-      t.bubble = party ? 0.18 : 0.55
-      if (this.count('bubble') < (party ? 22 : 11)) this.addItem('bubble')
+      // The last seconds bring a gentle bubble shower (calm pass: was every 0.18 s, up to 22).
+      t.bubble = party ? 0.35 : 0.55
+      if (this.count('bubble') < (party ? 16 : 11)) this.addItem('bubble')
     }
     if (t.star <= 0) {
       t.star = party ? 3 : 6 + Math.random() * 3
