@@ -45,7 +45,7 @@ world.glb top-level nodes (shore_* nodes live in their own shore_*.glb):
   lakebed          pebbles, rocks, shells and starfish on the lake floor (z = 0)
   shore_lake       hills, pines, a cabin with a dock (also used at night)
   shore_river      reeds, a willow, a stone bridge and a barn for the sunset river
-  shore_ice        snowy hills, snowy pines, an igloo, a snowman and penguins
+  shore_ice        Arctic shore: snowy hills, snowy pines, an igloo, a snowman and seals
   shore_reef       a warm sea: palms, a beach hut and a lighthouse on the shore, and a coral
                    garden on the sea floor (y = FLOOR_Y) with three anemones
     reef_anemone_0..2  anemone pivots on the floor (the game sways them gently)
@@ -1368,22 +1368,30 @@ def build_shore_ice(sm, m):
           material("hat_dark", "#3b3355", roughness=0.6), rt, segments=16, loc=(sx, sy, 0))
     for s in (-1, 1):
         tube(f"snowman_arm{s}", [(sx + s * 0.6, sy, 2.7), (sx + s * 1.3, sy, 3.2), (sx + s * 1.6, sy, 3.6)], 0.06, sm["trunk"], rt, sides=5)
-    # Penguin pals
-    black = material("penguin_black", "#2b3150", roughness=0.5)
-    belly = material("penguin_belly", "#ffffff", roughness=0.6)
-    orange = material("penguin_orange", "#ffa62b", roughness=0.5)
-    for i, (px, py, s) in enumerate(((-13, 15, 1.7), (-11.4, 16.2, 1.25), (14, 17, 1.6))):
-        body = sphere(f"penguin_body{i}", 0.5 * s, (px, py, 0.6 * s), black, rt, scale=(0.9, 0.85, 1.25), segs=14, rings=8)
-        sphere(f"penguin_belly{i}", 0.4 * s, (px, py - 0.18 * s, 0.55 * s), belly, rt, scale=(0.85, 0.6, 1.2), segs=12, rings=8)
-        sphere(f"penguin_beak{i}", 0.09 * s, (px, py - 0.46 * s, 0.95 * s), orange, rt, scale=(1.2, 1.4, 0.6), segs=8, rings=5)
-        fp = Face(body, m, rt)
+    # Seal pals resting on the ice: Arctic animals, like the narwhal (penguins live in the far south)
+    fur = material("seal_grey", "#8291ab", roughness=0.6)
+    spot = material("seal_spot", "#56637e", roughness=0.6)
+    nose = material("seal_nose", "#2b3150", roughness=0.4)
+    for i, (px, py, s, d) in enumerate(((-13.5, 15, 2.1, 1), (-10.4, 16.4, 1.5, -1), (14, 17, 2.0, -1))):
+        body = sphere(f"seal_body{i}", 0.5 * s, (px, py, 0.28 * s), fur, rt, scale=(1.5, 0.8, 0.6), segs=16, rings=8)
+        hx = px + d * 0.62 * s
+        head = sphere(f"seal_head{i}", 0.3 * s, (hx, py - 0.08 * s, 0.55 * s), fur, rt, scale=(1.0, 0.95, 0.9), segs=14, rings=8)
+        fb = Face(body, m, rt)
+        for k, (ox, oz) in enumerate(((-0.25, 0.48), (0.05, 0.52), (-0.45, 0.36))):
+            loc, n = fb.hit((px + d * ox * s, py - 3, oz * s), (0, 1, 0))
+            sphere(f"seal_spot{i}{k}", 0.05 * s, loc, spot, rt, scale=(1, 0.3, 1), segs=8, rings=5, rot=n.to_track_quat("-Y", "Z"))
+        fh = Face(head, m, rt)
         for e in (-1, 1):
-            fp.eye(f"penguin_eye{i}{e}", (px + e * 0.13 * s, py - 3, 1.05 * s), (0, 1, 0), 0.06 * s, squash=0.5)
-            fp.cheek(f"penguin_cheek{i}{e}", (px + e * 0.24 * s, py - 3, 0.88 * s), (0, 1, 0), 0.05 * s)
-            sphere(f"penguin_foot{i}{e}", 0.12 * s, (px + e * 0.15 * s, py - 0.3 * s, 0.03), orange, rt, scale=(1, 1.5, 0.4), segs=8,
-                   rings=5)
-            sphere(f"penguin_wing{i}{e}", 0.18 * s, (px + e * 0.43 * s, py, 0.6 * s), black, rt, scale=(0.35, 0.8, 1.4), segs=10,
-                   rings=6, rot=Matrix.Rotation(e * 0.3, 3, "Y"))
+            fh.eye(f"seal_eye{i}{e}", (hx + e * 0.12 * s, py - 3, 0.62 * s), (0, 1, 0), 0.06 * s, squash=0.5)
+            fh.cheek(f"seal_cheek{i}{e}", (hx + e * 0.2 * s, py - 3, 0.5 * s), (0, 1, 0), 0.045 * s)
+            # front flippers on the ice
+            sphere(f"seal_flipper{i}{e}", 0.14 * s, (px + d * 0.3 * s, py + e * 0.38 * s, 0.06 * s), fur, rt, scale=(1.4, 0.7, 0.3),
+                   segs=8, rings=5)
+            # tail flippers
+            sphere(f"seal_tail{i}{e}", 0.13 * s, (px - d * 0.85 * s, py + e * 0.12 * s, 0.12 * s), fur, rt, scale=(1.3, 0.6, 0.3),
+                   segs=8, rings=5, rot=Matrix.Rotation(e * d * 0.5, 3, "Z"))
+        loc, n = fh.hit((hx, py - 3, 0.53 * s), (0, 1, 0))
+        sphere(f"seal_nose{i}", 0.045 * s, loc, nose, rt, scale=(1.3, 0.6, 1), segs=8, rings=5)
     for k in range(10):
         ico(f"ice_chunk{k}", rnd.uniform(0.4, 0.8), (-30 + k * 6.5 + rnd.uniform(-1, 1), SHORE_Y + rnd.uniform(0, 1), 0.15), sm["ice"],
             rt, scale=(1.3, 1, 0.7), jitter=0.15, rnd=rnd)

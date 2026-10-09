@@ -138,3 +138,9 @@ Blender's glTF export is not byte-repeatable: two runs of the unchanged builder 
 - Icy Sea still mixes Arctic animals (narwhal, from Phase 1) with penguins on its shore, and penguins live in the far south. A seaward shore without penguins, or a note, is the Phase 3 follow-up.
 - Humpback whales also visit warm reef waters to calve. The whale stays Icy Sea only for clarity (owner's call).
 - Family play: does a 2–3-year-old find the glow without the finger, and is 7.5 s on stage too long for children who don't tap?
+
+### Follow-up: Arctic shore (2026-10-09)
+
+Icy Sea is an Arctic scene, because narwhals live in the Arctic and penguins live in the far south. The three penguins on `shore_ice` are now three resting seals (`blender/models.py` `build_shore_ice`, "Seal pals"), and the title tile shows 🦭 instead of 🐧. A `world.js` comment names the place Arctic. The field notes already agree: narwhal "icy Arctic Ocean", snow crabs and jellyfish in icy seas. The whale stays Icy Sea only, and pufferfish and crab keep the fresh-water/sea split.
+
+The rebuild with `assets.mjs` changed only `shore_ice.glb` (306,788 bytes, 7,239 faces; was 296,736 bytes and 6,903 faces). The other five GLBs kept their SHA-256 (`models-before-seal.sha256` and `models-after-seal.sha256`). Chromium and WebKit `--run p2`: BOOT + PLAY 0 errors. Screenshot: `shots/place-ice.png`.

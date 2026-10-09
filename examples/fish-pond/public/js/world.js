@@ -38,6 +38,7 @@ export const PLACES = {
     hemi: ['#7c8ce8', '#1f2350', 0.9], key: ['#c8d6ff', 1.3], keyPos: [5, 9, 7],
     sun: { kind: 'moon', pos: [0.55, 0.6], scale: 1.7 }, clouds: null, extra: 'fireflies', pads: 6, night: true,
   },
+  // An Arctic sea: narwhals, a whale, snow crabs and jellyfish, with seals resting on the shore
   ice: {
     emoji: '❄️', name: 'Icy Sea', shore: 'shore_ice',
     sky: { top: '#7fb3ea', horizon: '#eef6ff', glow: '#ffffff', stars: 0 },
