@@ -26,7 +26,8 @@ const ANIMALS = {
 const NAMES = Object.keys(ANIMALS)
 /** Pairs per level: gentle for 3-year-olds, a real puzzle by the end. */
 const LEVELS = [2, 3, 4, 6, 8, 10]
-const PRAISE = ['Yay!', 'Match!', 'Super!', 'Great!', 'Hooray!', 'Wow!', 'Yes!']
+/** Seconds between each animal's hello when a board is finished, so only one voice plays at a time. */
+const WIN_CALL_GAP = 0.9
 
 const CARD_W = 1.0
 const CARD_D = 1.3
@@ -118,7 +119,7 @@ const game = {
   layout: null,
   paradeAnimals: [],
   time: 0,
-  idle: 0, // seconds since the last tap while playing (see frameLoop's nudge)
+  idle: 0, // seconds since the last tap while playing
   cam: { pos: new THREE.Vector3(0, 9, 9), offset: new THREE.Vector2() }, // always looks at the origin
 }
 
@@ -453,7 +454,7 @@ class Card {
     this.hover = 0
     this.hoverTarget = 0
     this.lift = 0
-    this.wiggle = 0 // the idle "tap me!" wobble (see nudge)
+    this.wiggle = 0
     this.bob = 0
     this.revealed = null
   }
@@ -520,17 +521,6 @@ class Card {
   showRing() {
     this.ring.visible = true
     tween(0.5, (t) => this.ring.scale.setScalar(ease.outBack(t) + 0.001))
-  }
-
-  /** A little hop and wobble, so a child who is stuck sees the cards want to be tapped. */
-  nudge() {
-    sound.nudge()
-    tween(0.7, (t) => {
-      const fade = this.state === 'down' ? 1 - t : 0 // a tap mid-wobble flips it cleanly
-      this.bob = Math.abs(Math.sin(t * Math.PI * 2)) * 0.16 * fade
-      this.wiggle = Math.sin(t * Math.PI * 4) * 0.16 * fade
-      if (t >= 1) this.bob = this.wiggle = 0
-    })
   }
 
   worldTop() {
@@ -738,8 +728,8 @@ function nextLevel() {
 function renderLevels() {
   const next = nextLevel()
   $('levels').innerHTML = LEVELS.map((pairs, i) => {
-    const stars = progress.stars[i] ?? 0
-    const row = [0, 1, 2].map((k) => `<span class="${k < stars ? '' : 'off'}">⭐</span>`).join('')
+    // A finished level gets a paw print: no grading by turns
+    const row = progress.stars[i] ? '<span aria-label="Done">🐾</span>' : ''
     return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}"><span class="num">${i + 1}</span><span class="cards"><i class="mini"></i>${pairs * 2}</span><span class="lstars">${row}</span></button>`
   }).join('')
   for (const el of document.querySelectorAll('[data-level]')) {
@@ -928,12 +918,11 @@ function onMatch(a, b) {
   for (const card of [a, b]) {
     dance(card.critter, { delay: 0.05 })
     card.showRing()
-    effects.sparkle(card.worldTop(), { count: 26 })
+    effects.sparkle(card.worldTop(), { count: 8, speed: 1.2, up: 1.2 })
   }
+  // The pair joins the row of found animals at the top (no praise banner).
   renderPairs()
-  const done = game.matched === LEVELS[game.level]
-  if (!done) banner(PRAISE[(Math.random() * PRAISE.length) | 0], 800, [a, b])
-  else wait(1.1).then(winLevel)
+  if (game.matched === LEVELS[game.level]) wait(1.1).then(winLevel)
 }
 
 function onMismatch(a, b) {
@@ -961,53 +950,43 @@ function closeMismatch(fast) {
   }
 }
 
-function starsFor(pairs, turns) {
-  const extra = turns - pairs
-  if (extra <= Math.ceil(pairs * 0.5)) return 3
-  if (extra <= pairs * 1.5) return 2
-  return 1
-}
-
 function winLevel() {
   game.state = 'won'
   const pairs = LEVELS[game.level]
-  const stars = starsFor(pairs, game.turns)
-  const before = progress.stars[game.level] ?? 0
-  const bestTurns = progress.best[game.level]
-  const newBest = bestTurns === undefined || game.turns < bestTurns
-  progress.stars[game.level] = Math.max(before, stars)
-  if (newBest) progress.best[game.level] = game.turns
+  // A finished level is remembered as done (1). Saves from before the calm pass may hold 2 or 3.
+  progress.stars[game.level] = Math.max(progress.stars[game.level] ?? 0, 1)
   save()
 
-  // Party: everyone dances in a wave, confetti everywhere.
+  // One soft moment: a gentle chord, a few slow pieces drifting down, then each
+  // animal waves and says hello in turn, one voice at a time (WIN_CALL_GAP apart).
   sound.fanfare()
-  banner('You did it!', 1600)
   const { hw, hd } = game.layout
-  effects.rain(new THREE.Vector3(0, 0, 0), hw + 0.6, hd + 0.6, 160 + pairs * 20)
-  effects.cannon(new THREE.Vector3(-hw - 0.3, 0.2, -hd))
-  effects.cannon(new THREE.Vector3(hw + 0.3, 0.2, -hd))
-  game.cards.forEach((card, i) => {
-    dance(card.critter, { delay: (card.slot.x + hw) * 0.12 + Math.random() * 0.1, dur: 1.4, hops: 3, height: 0.55 })
-    sound.voice(card.animal, 0.5 + (i % pairs) * 0.18)
+  effects.rain(new THREE.Vector3(0, 0, 0), hw + 0.6, hd + 0.6, 24)
+  const found = []
+  for (const card of [...game.cards].sort((a, b) => a.slot.z - b.slot.z || a.slot.x - b.slot.x)) {
+    if (!found.includes(card.animal)) found.push(card.animal)
+  }
+  found.forEach((animal, i) => {
+    const delay = 0.6 + i * WIN_CALL_GAP
+    for (const card of game.cards) if (card.animal === animal) dance(card.critter, { delay, dur: 1.0, hops: 2, height: 0.35 })
+    sound.voice(animal, delay)
   })
 
-  wait(2.3).then(() => {
+  wait(1.6).then(() => {
     const last = game.level === LEVELS.length - 1
-    $('win-title').textContent = last ? 'Champion!' : { 3: 'Amazing!', 2: 'Hooray!', 1: 'Well done!' }[stars]
-    $('win-text').textContent = last
-      ? `You found all ${pairs} pairs! You matched them all! 🏆`
-      : `You found ${pairs} pairs in ${game.turns} tries!${newBest && bestTurns !== undefined ? ' New best! 🎉' : ''}`
+    $('win-title').textContent = 'You found them all!'
+    $('win-text').textContent = `${pairs} pairs of animal twins`
     $('next').classList.toggle('hidden', last)
-    const spans = $('win-stars').children
-    for (let i = 0; i < 3; i++) {
-      spans[i].className = ''
-      wait(0.35 + i * 0.3).then(() => {
-        spans[i].className = i < stars ? 'on' : 'off'
-        if (i < stars) sound.star(i)
-      })
-    }
+    // Show what the child found: the animals, in the order they say hello
+    $('win-stars').replaceChildren(...found.map((animal, i) => {
+      const el = document.createElement('span')
+      el.textContent = ANIMALS[animal].emoji
+      el.style.animationDelay = `${(0.6 + i * WIN_CALL_GAP - 1.6).toFixed(2)}s`
+      return el
+    }))
+    $('win-stars').setAttribute('aria-label', found.join(', '))
     show('win')
-    relayout(true) // the camera pulls back so the party stays in view above the card
+    relayout(true) // the camera pulls back so the animals stay in view above the card
   })
 }
 
@@ -1217,25 +1196,16 @@ function frameLoop() {
   for (const card of game.cards) card.update(dt, game.time)
   for (const a of game.paradeAnimals) {
     poseAnimal(a, game.time)
-    if (!a.busy && Math.random() < dt * 0.25) hopOnce(a, 0.25)
+    if (!a.busy && Math.random() < dt * 0.08) hopOnce(a, 0.2)
   }
   if (game.state === 'play' || game.state === 'won') {
-    // Matched animals hop now and then; once every pair is found they keep on celebrating.
-    const rate = game.state === 'won' ? 0.35 : 0.06
+    // Matched animals hop now and then, quietly.
+    const rate = game.state === 'won' ? 0.08 : 0.04
     for (const card of game.cards) {
       if (card.state === 'matched' && !card.critter.busy && Math.random() < dt * rate) hopOnce(card.critter, 0.2)
     }
   }
-  if (game.state === 'play' && !game.busy && !game.mismatch) {
-    // Nobody has tapped for a while: one face-down card hops and knocks, to say "tap me!".
-    // The first nudge waits a little longer than the ones after it.
-    game.idle += dt
-    if (game.idle > 7) {
-      game.idle = 2 // and again every 5 s
-      const down = game.cards.filter((c) => c.state === 'down')
-      down[(Math.random() * down.length) | 0]?.nudge()
-    }
-  }
+  // No idle nudges: a child who is thinking is left to think (calm pass 2026-10-09).
   effects.update(dt, camera)
   syncCamera()
   renderer.render(scene, camera)

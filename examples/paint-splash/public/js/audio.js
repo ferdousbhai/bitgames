@@ -117,10 +117,9 @@ export class Audio {
 
   /** A paint bucket: a wet SPLOSH and a happy rising run. */
   splash(near = 1) {
-    this.tone({ freq: 220, type: 'sine', gain: 0.5 * near, decay: 0.35, slide: -150 })
-    this.burst({ freq: 700, q: 0.8, gain: 0.6 * near, decay: 0.45, type: 'lowpass' })
-    this.burst({ freq: 2400, q: 1.5, gain: 0.25 * near, decay: 0.25, delay: 0.03 })
-    for (let i = 0; i < 4; i++) this.tone({ freq: note(3 + i), type: 'triangle', gain: 0.12 * near, decay: 0.2, delay: 0.12 + i * 0.06 })
+    this.tone({ freq: 220, type: 'sine', gain: 0.3 * near, decay: 0.35, slide: -150 })
+    this.burst({ freq: 700, q: 0.8, gain: 0.3 * near, decay: 0.45, type: 'lowpass' })
+    for (let i = 0; i < 3; i++) this.tone({ freq: note(3 + i), type: 'triangle', gain: 0.07 * near, decay: 0.25, delay: 0.14 + i * 0.09 })
   }
 
   /** A rainbow puddle: a sparkly glissando. */
@@ -133,7 +132,7 @@ export class Audio {
     this.tone({ freq: 400, type: 'sine', gain: 0.3 * near, decay: 0.15, slide: 500 })
     this.tone({ freq: 500, type: 'sine', gain: 0.25 * near, decay: 0.15, slide: 600, delay: 0.12 })
     this.burst({ freq: 1500, q: 0.7, gain: 0.25 * near, decay: 0.35, type: 'highpass', delay: 0.05 })
-    this.tone({ freq: 1400, type: 'square', gain: 0.05 * near, decay: 0.12, slide: 500, delay: 0.3 })
+    this.tone({ freq: 1400, type: 'triangle', gain: 0.04 * near, decay: 0.12, slide: 500, delay: 0.3 })
   }
 
   /** Two painters bump: a rubbery boing. */
@@ -152,8 +151,8 @@ export class Audio {
         for (let i = 0; i < 3; i++) this.tone({ freq: 1500 + i * 150, type: 'sine', gain: 0.12, decay: 0.07, slide: 400, delay: i * 0.08 })
         break
       case 'piglet':
-        this.tone({ freq: 220, type: 'sawtooth', gain: 0.12, decay: 0.18, slide: -60 })
-        this.tone({ freq: 240, type: 'sawtooth', gain: 0.1, decay: 0.15, slide: -60, delay: 0.2 })
+        this.tone({ freq: 220, type: 'triangle', gain: 0.16, decay: 0.18, slide: -60 })
+        this.tone({ freq: 240, type: 'triangle', gain: 0.13, decay: 0.15, slide: -60, delay: 0.2 })
         break
       case 'chick':
         this.tone({ freq: 2200, type: 'sine', gain: 0.12, decay: 0.08, slide: 900 })
@@ -182,13 +181,10 @@ export class Audio {
     } else this.click()
   }
 
+  /** The count in: soft sine notes, and a warm two-note chime to start. */
   beep(high = false) {
-    this.tone({ freq: high ? 988 : 659, type: 'triangle', gain: 0.2, decay: high ? 0.5 : 0.22 })
-    if (high) this.tone({ freq: 1318, type: 'sine', gain: 0.12, decay: 0.5, delay: 0.05 })
-  }
-
-  tick() {
-    this.tone({ freq: 880, type: 'triangle', gain: 0.07, decay: 0.08 })
+    this.tone({ freq: high ? 784 : 523, type: 'sine', gain: 0.12, decay: high ? 0.7 : 0.3, attack: 0.02 })
+    if (high) this.tone({ freq: 1047, type: 'sine', gain: 0.06, decay: 0.7, delay: 0.08, attack: 0.02 })
   }
 
   whoosh() {
@@ -196,21 +192,18 @@ export class Audio {
     this.tone({ freq: 200, type: 'sine', gain: 0.15, decay: 1.2, slide: 600, attack: 0.3 })
   }
 
-  /** The picture is revealed: a little fanfare. */
+  /** The picture is revealed: one gentle rolled chord, played once. */
   fanfare() {
-    const tune = [0, 2, 4, 5, 4, 5, 7]
-    const times = [0, 0.12, 0.24, 0.36, 0.6, 0.72, 0.84]
-    tune.forEach((s, i) => this.tone({ freq: note(s, 392), type: 'square', gain: 0.06, decay: i === 6 ? 0.8 : 0.22, delay: times[i] }))
-    tune.forEach((s, i) => this.tone({ freq: note(s, 392) * 2, type: 'triangle', gain: 0.1, decay: i === 6 ? 0.9 : 0.25, delay: times[i] }))
-    this.burst({ freq: 5000, q: 1, gain: 0.15, decay: 0.8, delay: 0.84, type: 'highpass' })
+    ;[0, 2, 4, 5].forEach((s, i) => this.tone({ freq: note(s, 392), type: 'sine', gain: 0.1, decay: 1.6, attack: 0.05, delay: i * 0.1 }))
+    this.tone({ freq: note(0, 196), type: 'triangle', gain: 0.07, decay: 1.8, attack: 0.08 })
   }
 
-  /** A gentle bouncy loop, scheduled a little ahead each frame. */
-  updateMusic(playing, fast = false) {
+  /** A gentle loop at one steady, unhurried tempo, scheduled a little ahead each frame. */
+  updateMusic(playing) {
     if (!this.ready || !this.musicOn || !playing) return
     const ctx = this.ctx
     if (this.nextBeat < ctx.currentTime) this.nextBeat = ctx.currentTime + 0.05
-    const step = fast ? 0.14 : 0.17
+    const step = 0.22
     while (this.nextBeat < ctx.currentTime + 0.25) {
       const b = this.beat++
       const t = this.nextBeat - ctx.currentTime

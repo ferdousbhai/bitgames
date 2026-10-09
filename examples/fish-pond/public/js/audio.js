@@ -141,7 +141,7 @@ export class Audio {
   /** The rod swishes through the air. */
   cast() {
     this.burst({ freq: 900, q: 0.8, gain: 0.25, decay: 0.32, attack: 0.08, sweep: 2600 })
-    for (let i = 0; i < 6; i++) this.tone({ freq: 1800 + i * 120, type: 'square', gain: 0.025, decay: 0.03, delay: 0.1 + i * 0.05 })
+    for (let i = 0; i < 6; i++) this.tone({ freq: 1800 + i * 120, type: 'triangle', gain: 0.02, decay: 0.03, delay: 0.1 + i * 0.05 })
   }
 
   plop() {
@@ -170,19 +170,20 @@ export class Audio {
 
   /** The reel clicks round quickly. */
   reel() {
-    for (let i = 0; i < 10; i++) this.burst({ freq: 3200, q: 4, gain: 0.12, decay: 0.025, delay: i * 0.045 })
+    for (let i = 0; i < 6; i++) this.burst({ freq: 2400, q: 4, gain: 0.06, decay: 0.03, delay: i * 0.07 })
   }
 
-  /** Celebration: an arpeggio that grows with the creature's stars. */
+  /** A catch: a short, soft music-box arpeggio (one note longer for rarer finds). */
   fanfare(stars = 1) {
-    const tune = [0, 2, 4, 5, 7, 9, 10]
-    const n = 3 + stars
-    for (let i = 0; i < n; i++) {
-      this.tone({ freq: note(tune[i], 392), type: 'square', gain: 0.06, decay: 0.3, delay: i * 0.1 })
-      this.tone({ freq: note(tune[i], 392) * 2, type: 'triangle', gain: 0.1, decay: 0.32, delay: i * 0.1 })
-    }
-    this.tone({ freq: note(tune[n - 1], 392) * 2, type: 'triangle', gain: 0.12, decay: 0.9, delay: n * 0.1 })
-    if (stars >= 3) this.sparkle(n * 0.1 + 0.1)
+    const tune = [0, 2, 4, 5, 7]
+    const n = 2 + Math.min(stars, 3)
+    for (let i = 0; i < n; i++) this.tone({ freq: note(tune[i], 392), type: 'sine', gain: 0.1, decay: 0.5, delay: i * 0.16 })
+    this.tone({ freq: note(tune[n - 1], 392) / 2, type: 'triangle', gain: 0.06, decay: 1.0, delay: n * 0.16 })
+  }
+
+  /** A prize: one gentle chord, played once. */
+  chord() {
+    for (const [i, step] of [0, 2, 4].entries()) this.tone({ freq: note(step, 392), type: 'sine', gain: 0.08, decay: 1.6, attack: 0.08, delay: i * 0.05 })
   }
 
   sparkle(delay = 0) {
@@ -214,7 +215,7 @@ export class Audio {
   }
 
   creak() {
-    this.tone({ freq: 140, type: 'sawtooth', gain: 0.06, decay: 0.4, slide: 90, attack: 0.05 })
+    this.tone({ freq: 140, type: 'triangle', gain: 0.08, decay: 0.4, slide: 90, attack: 0.05 })
     this.sparkle(0.3)
   }
 
@@ -231,8 +232,8 @@ export class Audio {
     if (this.ambientIn > 0) return
     const p = this.place
     if (p === 'night') {
-      for (let i = 0; i < 3; i++) this.tone({ freq: 4200, type: 'sine', gain: 0.025, decay: 0.04, delay: i * 0.08, out: this.ambBus })
-      this.ambientIn = 0.7 + Math.random() * 1.6
+      for (let i = 0; i < 3; i++) this.tone({ freq: 3400, type: 'sine', gain: 0.018, decay: 0.05, delay: i * 0.1, out: this.ambBus })
+      this.ambientIn = 2.5 + Math.random() * 3
     } else if (p === 'ice') {
       this.burst({ freq: 700, q: 0.6, gain: 0.08, decay: 2.2, attack: 0.9, out: this.ambBus, sweep: 400 })
       this.ambientIn = 3 + Math.random() * 4

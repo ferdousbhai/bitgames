@@ -11,7 +11,7 @@
 const NOTES = {
   goldfish: 'Real goldfish live in fresh water. People keep them in ponds and fish tanks.',
   bluefish: 'Blue Fish is a made-up friend who lives in our pretend pond.',
-  clownfish: 'Real clownfish live in warm seas. They hide in wiggly sea anemones.',
+  clownfish: 'Real clownfish live in warm seas, not lakes. They hide in wiggly sea anemones.',
   trout: 'Real rainbow trout like cool, clean rivers and lakes.',
   duck: 'A rubber duck is a toy. Real ducks have feathers and can fly.',
   boot: 'Oops, a boot! Rubbish in the water can hurt animals, so we take it out.',
@@ -19,7 +19,7 @@ const NOTES = {
   crab: 'Many real crabs scuttle sideways on their walking legs.',
   turtle: 'Real pond turtles climb onto logs to warm up in the sun.',
   octopus: 'A real octopus has eight arms and lives in the sea.',
-  jellyfish: 'Some real jellyfish can make their own light in the dark sea.',
+  jellyfish: 'Most real jellyfish live in the sea. Some can make their own light in the dark.',
   narwhal: 'Real narwhals are whales from the icy Arctic Ocean. The long tusk is a tooth!',
   goldenfish: 'Golden Fish is a magic pretend fish. It is very hard to find!',
   chest: 'Treasure! A pretend surprise, not an animal.',

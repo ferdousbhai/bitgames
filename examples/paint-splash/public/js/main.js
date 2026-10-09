@@ -12,7 +12,7 @@ import { Input } from './input.js'
 import { ITEM_KINDS, Items } from './items.js'
 import { HALF_D, HALF_W, PaintMap, RAINBOW, SEAT_COLORS } from './paint.js'
 import { ANIMALS, ANIMAL_IDS, COLLIDE_AHEAD, COLLIDE_R, MAX_SPEED, Painter, newStats } from './painter.js'
-import { clamp, damp, easeInOut, escapeHtml, store } from './util.js'
+import { clamp, damp, easeInOut, store } from './util.js'
 
 const params = new URLSearchParams(location.search)
 const DEBUG = params.has('debug')
@@ -28,20 +28,12 @@ const RAINBOW_MS = 6000
 const REVEAL_MS = 2600
 /** Once the camera has settled over the finished picture, it goes into My pictures by itself. */
 const AUTO_KEEP_MS = 1500
-/** A child who hasn't rolled for this long sees the dragging finger again. */
-const IDLE_HINT_MS = 4000
+/** The dragging finger shows at the start; a child who stops to look gets it back only after a long pause. */
+const IDLE_HINT_MS = 30000
+/** Seconds between new pickups (min, extra random), so the playground stays calm. */
+const PICKUP_WAIT = { bucket: [7, 5], water: [8, 6], rainbow: [18, 8] }
 /** Seats start in the four corners, facing the middle. Seat 0 is nearest the camera on the left. */
 const START = [[-11, 6.5], [11, 6.5], [-11, -6.5], [11, -6.5]]
-const AWARDS = [
-  ['🎨', 'Most paint!', (s) => s.pct],
-  ['💥', 'Most splashes!', (s) => s.splash],
-  ['🌀', 'Biggest swirl!', (s) => s.swirl],
-  ['🌈', 'Rainbow roller!', (s) => s.rainbow],
-  ['🔄', 'Colour swapper!', (s) => s.swap],
-  ['💧', 'Splish splash!', (s) => s.water],
-  ['🏃', 'Speedy roller!', (s) => s.dist],
-]
-const EXTRA_AWARDS = [['🌟', 'Super painter!'], ['😊', 'Happy helper!'], ['✨', 'Sparkly artist!'], ['🖌️', 'Busy brush!']]
 
 // --- Renderer, scene, camera -------------------------------------------------------------
 
@@ -145,7 +137,6 @@ const game = {
   lastSend: 0,
   lastSnap: 0,
   lastHud: 0,
-  lastTick: 0,
   itemSeq: 0,
   itemWait: { bucket: 0, rainbow: 8, water: 3 },
   pendingGrab: new Set(),
@@ -695,13 +686,12 @@ function buildRound(setup) {
     meMarker.userData.mat.color.set(game.me.color)
     meMarker.userData.mat.emissive.set(game.me.color)
   }
-  game.itemWait = { bucket: 1.5, rainbow: 9, water: 4 }
+  game.itemWait = { bucket: 3, rainbow: 15, water: 8 }
   game.lastStrokeAt = 0
   game.roundStart = now()
   placeCamera(true)
   updateBar()
   $('timer').textContent = `⏱️ ${game.setup.seconds}`
-  $('timer').classList.remove('hurry')
   // Everyone builds the playground at their own pace; the host says go once all are ready.
   game.state = 'syncing'
   show(null)
@@ -732,7 +722,8 @@ function runCountdown() {
   game.state = 'countdown'
   show(null)
   const el = $('countdown')
-  const steps = ['3', '2', '1', '🎨 GO!']
+  // A soft, unhurried count in: gentle numbers that fade in, then the palette (no shouted GO!).
+  const steps = ['3', '2', '1', '🎨']
   steps.forEach((text, i) => {
     later(() => {
       el.textContent = text
@@ -741,7 +732,7 @@ function runCountdown() {
       el.classList.add('pop')
       audio.beep(i === steps.length - 1)
       if (i === steps.length - 1) startPainting()
-    }, i * 800)
+    }, i * 900)
   })
 }
 
@@ -796,32 +787,17 @@ function endRound() {
   camStart.look.copy(camLook)
   audio.whoosh()
   later(() => {
+    // One soft moment over the finished picture: a gentle chord and a few slow petals in our colours.
     audio.fanfare()
-    effects.party([...SEAT_COLORS, ...RAINBOW], 220)
+    effects.party([...SEAT_COLORS], 28)
     if (game.final) showResults()
   }, REVEAL_MS)
 }
 
+/** The shared result: who painted (and in which colour) and how much of the picture we filled together. No ranking. */
 function computeFinal() {
-  const shares = paint.shares()
-  const rows = game.setup.entries.map((e) => {
-    const s = game.stats.get(e.seat) ?? newStats()
-    return { seat: e.seat, pct: Math.round(shares[e.seat] * 100), stats: { ...s, pct: shares[e.seat] } }
-  })
-  // Everyone gets an award: each goes to the best painter who doesn't have one yet.
-  const given = new Map()
-  for (const [emoji, text, score] of AWARDS) {
-    let best = null
-    for (const r of rows) {
-      if (given.has(r.seat) || !(score(r.stats) > 0)) continue
-      if (!best || score(r.stats) > score(best.stats)) best = r
-    }
-    if (best) given.set(best.seat, [emoji, text])
-  }
-  let extra = 0
-  for (const r of rows) if (!given.has(r.seat)) given.set(r.seat, EXTRA_AWARDS[extra++ % EXTRA_AWARDS.length])
   const total = Math.round((1 - paint.counts[0] / paint.paintable) * 100)
-  return { t: 'final', r: roundId(), total, rows: rows.map((r) => ({ seat: r.seat, pct: r.pct, award: given.get(r.seat) })) }
+  return { t: 'final', r: roundId(), total, rows: game.setup.entries.map((e) => ({ seat: e.seat })) }
 }
 
 function sendFinal() {
@@ -857,17 +833,13 @@ function pictureRect() {
   return [cx - w / 2, cy - h / 2, w, h]
 }
 
-/** Puts this round's finished picture in My pictures, once, with a camera flash. */
-function keepFinishedPicture(flash) {
+/** Puts this round's finished picture in My pictures, once; the frame button hops to show where it went (no white flash). */
+function keepFinishedPicture(announce) {
   if (game.state !== 'results' || game.keptRound === roundId()) return
   game.keptRound = roundId()
   gallery.keep(pictureRect())
-  if (!flash) return
+  if (!announce) return
   audio.studio('keep')
-  const el = $('flash')
-  el.classList.remove('go')
-  void el.offsetWidth
-  el.classList.add('go')
   const btn = $('results-save')
   btn.classList.remove('kept')
   void btn.offsetWidth
@@ -878,17 +850,16 @@ function renderResults() {
   const final = game.final
   if (!final) return
   const self = game.room.selfId
-  $('together').textContent = `🤝 Together: ${clamp(final.total | 0, 0, 100)}% painted!`
+  $('together').textContent = `🤝 We painted ${clamp(final.total | 0, 0, 100)}% together!`
+  // The painters who made it, each with their colour: nobody is ranked or scored.
   $('cards').innerHTML = final.rows
     .map((row, i) => {
       const entry = game.setup.entries.find((e) => e.seat === row.seat)
       if (!entry) return ''
-      const award = Array.isArray(row.award) ? row.award : EXTRA_AWARDS[0]
       const animal = validAnimal(entry.animal) ? ANIMALS[entry.animal].emoji : '🙂'
       return `<div class="card${entry.id === self ? ' me' : ''}" style="--c:${SEAT_COLORS[row.seat] ?? '#999'}; animation-delay:${0.15 * i}s">
         <span class="who">${animal}${entry.bot ? '<small>🤖</small>' : ''}${entry.id === self ? '<small>⭐</small>' : ''}</span>
-        <span class="pct">${clamp(row.pct | 0, 0, 100)}%</span>
-        <span class="award"><b>${escapeHtml(award[0])}</b> ${escapeHtml(award[1])}</span></div>`
+        <span class="swatch" aria-hidden="true"></span></div>`
     })
     .join('')
   const canRestart = isHost()
@@ -919,7 +890,8 @@ function hostItems(dt) {
     if (game.itemWait[kind] > 0) continue
     const spot = freeSpot()
     if (!spot) continue
-    game.itemWait[kind] = kind === 'rainbow' ? 9 + Math.random() * 6 : 2.5 + Math.random() * 3.5
+    const [min, extra] = PICKUP_WAIT[kind] ?? [8, 6]
+    game.itemWait[kind] = min + Math.random() * extra
     const id = `${game.room.selfId.slice(0, 4)}${++game.itemSeq}`
     const x = Math.round(spot.x * 100) / 100, z = Math.round(spot.z * 100) / 100
     items.add(id, kind, x, z)
@@ -968,15 +940,13 @@ function pickup(p, kind, x, z) {
   const seed = 1 + Math.floor(Math.random() * 1e9)
   if (kind === 'bucket') {
     p.stats.splash++
+    // The splash on the ground says what happened: no shouted banners.
     emit([1, p.seat, t, q(p.x + Math.sin(p.yaw) * 0.6), q(p.z + Math.cos(p.yaw) * 0.6), seed])
-    if (p === game.me) banner('💥 SPLASH!')
   } else if (kind === 'water') {
     p.stats.water++
     emit([2, p.seat, t, q(x), q(z), seed])
-    if (p === game.me) banner('💧 Splish splash!')
   } else if (kind === 'rainbow') {
     p.rainbowUntil = now() + RAINBOW_MS
-    if (p === game.me) banner('🌈 Rainbow!')
   }
 }
 
@@ -1109,7 +1079,7 @@ function updatePainters(dt, t) {
       const r = p.rollerAt()
       effects.drip(r.x, r.z, p.rainbow ? RAINBOW[Math.floor(Math.random() * 6)] : p.color)
     }
-    if (p.rainbow && Math.random() < dt * 10) effects.sparkle(p.x, 1.2, p.z, RAINBOW[Math.floor(Math.random() * 6)], 1, 1.6)
+    if (p.rainbow && Math.random() < dt * 3) effects.sparkle(p.x, 1.2, p.z, RAINBOW[Math.floor(Math.random() * 6)], 1, 1.6)
   }
   if (playing) {
     for (const p of game.painters.values()) if (p.local) tryGrab(p)
@@ -1183,14 +1153,6 @@ function updateCamera(dt, t) {
 
 // --- HUD -------------------------------------------------------------------------------------------
 
-function banner(text, ms = 1300) {
-  const el = $('banner')
-  el.textContent = text
-  el.classList.add('show')
-  clearTimeout(banner.timer)
-  banner.timer = setTimeout(() => el.classList.remove('show'), ms)
-}
-
 function updateBar() {
   const shares = paint.shares()
   $('bar').innerHTML = shares.map((s, i) => `<i style="width:${(s * 100).toFixed(1)}%;background:${SEAT_COLORS[i]}"></i>`).join('')
@@ -1211,12 +1173,8 @@ function updateHud(t) {
   if (game.state !== 'play') return
   $('hint').classList.toggle('hidden', t - game.lastMoveAt < IDLE_HINT_MS)
   const left = Math.max(0, Math.ceil(game.setup.seconds - (t - game.roundStart) / 1000))
+  // The time just counts down quietly: no hurry colour, pulse or ticking at the end.
   $('timer').textContent = `⏱️ ${left}`
-  $('timer').classList.toggle('hurry', left <= 10)
-  if (left <= 10 && left > 0 && left !== game.lastTick) {
-    game.lastTick = left
-    audio.tick()
-  }
 }
 
 // --- Loop ------------------------------------------------------------------------------------------
@@ -1237,8 +1195,8 @@ function step(dt, realDt, t) {
     updateHud(t)
     if (game.me && (game.state === 'play' || game.state === 'countdown' || game.state === 'syncing')) {
       meMarker.visible = true
-      meMarker.position.set(game.me.x, 2.6 + Math.abs(Math.sin(t / 250)) * 0.35, game.me.z)
-      meMarker.rotation.y = t / 500
+      meMarker.position.set(game.me.x, 2.6 + Math.sin(t / 700) * 0.12, game.me.z)
+      meMarker.rotation.y = t / 1500
     } else meMarker.visible = false
     if (game.arena.sails) game.arena.sails.rotation.z = -t / 900
     if (!game.room.solo) {
@@ -1267,7 +1225,7 @@ function frame() {
     paint.upload()
     if (game.state === 'play') measureQuality(realDt, t)
   }
-  audio.updateMusic(game.state !== 'loading', game.state === 'play' && game.setup && (t - game.roundStart) / 1000 > game.setup.seconds - 10)
+  audio.updateMusic(game.state !== 'loading') // one steady, gentle tempo (no speed-up at the end)
   if (!colourStudio.open) renderer.render(scene, camera)
   requestAnimationFrame(frame)
 }

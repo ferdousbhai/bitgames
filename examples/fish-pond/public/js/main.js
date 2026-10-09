@@ -7,7 +7,7 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { Audio } from './audio.js'
 import { AMBIENT, BY_ID, CREATURES, Creatures, SWIM_SCALE, roll } from './creatures.js'
-import { Effects, canvasTexture, softDot } from './effects.js'
+import { Effects, softDot } from './effects.js'
 import { HOLES, PLACES, RIG, World } from './world.js'
 import { Book } from './book.js'
 
@@ -61,7 +61,6 @@ const game = {
   phase: 'idle', // idle | cast | wait | bite | catch | show | toBook
   book: store.get('fish-pond-book', {}),
   luck: store.get('fish-pond-luck', 0),
-  session: 0,
   casts: 0,
   phaseT: 0,
   misses: 0,
@@ -219,28 +218,10 @@ function updateLine(sag) {
 const stage = new THREE.Group()
 stage.position.set(0, 0.15, -5)
 camera.add(stage)
-const raysTex = canvasTexture(512, 512, (g, s) => {
-  g.translate(s / 2, s / 2)
-  for (let i = 0; i < 16; i++) {
-    g.rotate((Math.PI * 2) / 16)
-    const grad = g.createLinearGradient(0, 0, s / 2, 0)
-    grad.addColorStop(0, 'rgba(255,248,200,0.9)')
-    grad.addColorStop(1, 'rgba(255,248,200,0)')
-    g.fillStyle = grad
-    g.beginPath()
-    g.moveTo(0, 0)
-    g.lineTo(s / 2, -s * 0.07)
-    g.lineTo(s / 2, s * 0.07)
-    g.fill()
-  }
-})
-const rays = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: raysTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, opacity: 0 }))
-rays.position.z = -2
-rays.renderOrder = 6
 const glow = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), new THREE.MeshBasicMaterial({ map: softDot, transparent: true, depthWrite: false, color: '#fffbe6', opacity: 0, toneMapped: false }))
 glow.position.z = -1.9
 glow.renderOrder = 6
-stage.add(rays, glow)
+stage.add(glow)
 const stageLight = new THREE.PointLight('#fff6e8', 0, 12, 2)
 stageLight.position.set(1.2, 1.8, 1.5)
 stage.add(stageLight)
@@ -261,8 +242,8 @@ const adventure = createAdventure({
   // The mission speaks its own reward; the screen shows a big trophy to go with it
   celebrate: () => {
     showIntro('🏆', '1, 2, 3!', '🐟 🐟 🐟', false, true)
-    effects.party(tmp.copy(stageWorld).add(new THREE.Vector3(0, 0, -1.5)), 90, true, 0.5)
-    audio.fanfare(3)
+    softMoment()
+    audio.chord()
   },
   // Fish to fill in as you count, so a child who can't read can follow along
   renderProgress: (el, option, count) => {
@@ -352,7 +333,8 @@ function landed() {
 function sendBiter() {
   const pick = BY_ID[debug.force] ?? roll(game.place, game.book, game.luck)
   fish.pick = pick
-  fish.nibbles = 1 + ((Math.random() * 2) | 0)
+  // Two or three slow bobs to watch before the real bite
+  fish.nibbles = 2 + ((Math.random() * 2) | 0)
   fish.nibbleT = 0
   const spot = bob.pos
   const away = (dist) => {
@@ -464,7 +446,7 @@ function nibbleStep(dt) {
   if (fish.nibbleT > 0) return
   if (fish.nibbles > 0) {
     fish.nibbles--
-    fish.nibbleT = rand(0.5, 0.8)
+    fish.nibbleT = rand(0.8, 1.2)
     bob.dip = 0.12
     effects.ripple(bob.pos, 0.6, 0.6)
     audio.nibble()
@@ -476,7 +458,8 @@ function nibbleStep(dt) {
 
 function bite() {
   setPhase('bite')
-  fish.window = (adventure.pace < 1 ? 6 : 2.1) + Math.min(1.5, game.misses * 0.5) + (totalCaught() < 3 ? 0.6 : 0)
+  // A patient window by default: there is time to look, then tap (BITE_WINDOW)
+  fish.window = (adventure.pace < 1 ? 6 : BITE_WINDOW) + Math.min(1.5, game.misses * 0.5) + (totalCaught() < 3 ? 0.6 : 0)
   bob.shake = 1
   audio.bite()
   effects.ripple(bob.pos, 1.4, 0.8)
@@ -491,7 +474,7 @@ function updateBite(dt) {
   fish.window -= dt
   const w = fish.who
   if (w && !w.ghost) creatures.steer(w, bob.pos, dt * 0.05, 0.01, 4)
-  if (Math.random() < dt * 8) effects.ripple(bob.pos, 0.7, 0.5)
+  if (Math.random() < dt * 2) effects.ripple(bob.pos, 0.7, 0.5)
   if (fish.window <= 0) {
     // It got away: no harm done, somebody else will come along
     game.misses++
@@ -523,7 +506,7 @@ function reel() {
   const from = c.group.position.clone()
   const big = pick.id === 'whale' ? 2 : pick.stars >= 3 ? 1.5 : 1
   effects.splash(bob.pos, big)
-  effects.shake = pick.id === 'whale' ? 0.8 : 0.35
+  // No camera shake: the splash and the leap carry the moment
   audio.splash(big > 1 ? 1.3 : 1)
   audio.reel()
   fish.catch = { c, pick, from, t: 0, dur: 0.95, startScale: c.group.scale.x, spin: rand(-1, 1) > 0 ? 1 : -1 }
@@ -550,6 +533,15 @@ function updateCatch(dt) {
   if (e >= 1) startShow()
 }
 
+/** Bite window in seconds: long enough to watch the bobber and then tap, with no rush. */
+const BITE_WINDOW = 4.5
+
+/** The one soft moment for a catch or a prize: a few slow bubbles rising behind the stage. */
+function softMoment() {
+  stage.getWorldPosition(stageWorld)
+  for (let i = 0; i < 8; i++) effects.bubble(tmp.copy(stageWorld).add(new THREE.Vector3(rand(-1.4, 1.4), rand(-0.8, 0.2), -1.2)), 1, 0.3)
+}
+
 /** Boxy or round things look bigger than fish of the same length. */
 const SHOW_SIZE = { chest: 0.78, pufferfish: 0.85, boot: 0.9, duck: 0.9 }
 
@@ -570,7 +562,6 @@ function startShow() {
   store.set('fish-pond-book', game.book)
   game.luck = pick.stars === 3 ? 0 : game.luck + 1
   store.set('fish-pond-luck', game.luck)
-  game.session++
   const isNew = before === 0
   fish.show = { c, pick, t: 0, isNew, puffed: false, all: isNew && caughtKinds() === CREATURES.length }
   setPhase('show')
@@ -581,10 +572,9 @@ function startShow() {
   $('card-new').classList.toggle('hidden', !isNew)
   $('card').className = `card-catch show stars${pick.stars}`
   audio.fanfare(pick.stars)
-  if (isNew) audio.newOne()
   audio.say(SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${pick.name.toLowerCase()}!`)
-  effects.party(tmp.copy(stageWorld).add(new THREE.Vector3(0, 0, -1.5)), pick.stars >= 3 ? 80 : 45, pick.stars >= 3, 0.5)
-  stageLight.intensity = 14
+  softMoment()
+  stageLight.intensity = 6
   updateHud()
 }
 
@@ -614,9 +604,9 @@ function updateShow(dt, t) {
       audio.creak()
     }
     s.c.parts.lid.rotation.z = ease(k) * 1.3
-    if (k > 0 && Math.random() < dt * 25) effects.sparkleAt(stageWorld.clone().add(new THREE.Vector3(rand(-0.6, 0.6), 0.6, 0.4)), '#ffe066', 1, 2.5, 0.35)
+    if (k > 0 && Math.random() < dt * 6) effects.sparkleAt(stageWorld.clone().add(new THREE.Vector3(rand(-0.6, 0.6), 0.6, 0.4)), '#ffe066', 1, 2.5, 0.35)
   }
-  if (id === 'goldenfish' && Math.random() < dt * 20) effects.sparkleAt(stageWorld.clone().add(new THREE.Vector3(rand(-1, 1), rand(-0.6, 0.6), 0.5)), '#fff3a0', 1, 1, 0.3)
+  if (id === 'goldenfish' && Math.random() < dt * 5) effects.sparkleAt(stageWorld.clone().add(new THREE.Vector3(rand(-1, 1), rand(-0.6, 0.6), 0.5)), '#fff3a0', 1, 1, 0.3)
   if (id === 'whale' && s.t > 0.4 && s.t < 2.2 && Math.random() < dt * 40) {
     const top = new THREE.Vector3(0.2, 0.55, 0.3).multiplyScalar(base / s.c.unit)
     const p = stageWorld.clone().add(top)
@@ -631,10 +621,8 @@ function updateShow(dt, t) {
   if (s.c.parts.tail) s.c.parts.tail.rotation[id === 'whale' || id === 'narwhal' ? 'z' : 'y'] = Math.sin(s.t * 12) * 0.5
   // Rays and glow behind
   const a = Math.min(1, s.t * 3)
-  rays.material.opacity = a * (s.pick.stars >= 3 ? 0.75 : 0.5)
-  rays.rotation.z = t * 0.25
-  rays.scale.setScalar(0.6 + 0.4 * ease(a))
-  glow.material.opacity = a * 0.55
+  // A still, soft glow behind the catch (no spinning rays)
+  glow.material.opacity = a * 0.4
   glow.material.color.set(s.pick.stars >= 3 ? '#ffe680' : '#fffbe6')
   if (s.t > 4.6) finishShow()
 }
@@ -663,11 +651,9 @@ function updateToBook(dt) {
   g.position.lerpVectors(s.from, s.to, e * e)
   g.scale.setScalar(s.fromScale * (1 - 0.88 * e))
   g.rotation.y += dt * 8
-  rays.material.opacity *= 0.85
   glow.material.opacity *= 0.85
   if (e >= 1) {
     g.removeFromParent()
-    rays.material.opacity = 0
     glow.material.opacity = 0
     stageLight.intensity = 0
     audio.thump()
@@ -686,8 +672,8 @@ function updateToBook(dt) {
     // Finding all 15 is the bigger prize: its card goes up last so nothing covers it
     if (s.all) {
       showIntro('🏆', 'You found them all!', '📖 15 / 15', false, true)
-      effects.party(tmp.copy(stageWorld).add(new THREE.Vector3(0, 0, -1.5)), 120, true, 0.5)
-      audio.fanfare(4)
+      softMoment()
+      audio.chord()
     }
   }
 }
@@ -739,15 +725,15 @@ function updateBear(dt, t) {
   bear.cheer = damp(bear.cheer, cheering ? 1 : 0, 6, dt)
   bear.wave = Math.max(0, bear.wave - dt)
   const baseY = PLACES[game.place].ice ? 0.46 : 0.22
-  b.position.y = baseY + Math.abs(Math.sin(t * 8)) * 0.08 * bear.cheer
+  b.position.y = baseY + Math.abs(Math.sin(t * 3)) * 0.05 * bear.cheer
   if (world.head) {
     world.head.rotation.y = -bear.yaw * 0.55 + Math.sin(t * 0.7) * 0.08
     world.head.rotation.x = ph === 'bite' ? 0.18 : ph === 'wait' ? 0.1 : -0.1 * bear.cheer
-    world.head.rotation.z = Math.sin(t * 0.9) * 0.06 + Math.sin(t * 6) * 0.08 * bear.cheer
+    world.head.rotation.z = Math.sin(t * 0.9) * 0.06 + Math.sin(t * 2.5) * 0.06 * bear.cheer
   }
   if (world.armL) {
     const up = Math.max(bear.cheer, Math.min(1, bear.wave * 2))
-    world.armL.rotation.z = -2.2 * up + Math.sin(t * 12) * 0.35 * up
+    world.armL.rotation.z = -2.2 * up + Math.sin(t * 4) * 0.25 * up
   }
   // Rod: wind up, flick, wait, dip on a bite, yank on a catch
   if (world.rod) {
@@ -827,7 +813,6 @@ function updateBobber(dt, t) {
 function updateHud() {
   $('count').textContent = `${caughtKinds()}/${CREATURES.length}`
   $('title-count').textContent = `${caughtKinds()}/${CREATURES.length}`
-  $('session').textContent = game.session
 }
 
 const bang = $('bang')
@@ -880,7 +865,7 @@ function updateHint() {
   // First cast, or a little one who has stopped: point at the water again
   // (after the place's name card has gone, so the finger never covers its words)
   const placeCardUp = introIsPlace && $('intro').classList.contains('show')
-  if (game.phase === 'idle' && !placeCardUp && (game.casts === 0 || game.idleT > 8)) target = tmp.set(1.6, 0, 2.2)
+  if (game.phase === 'idle' && !placeCardUp && (game.casts === 0 || game.idleT > 30)) target = tmp.set(1.6, 0, 2.2)
   else if (game.phase === 'bite' && (totalCaught() < 2 || game.misses > 0)) target = tmp.copy(bob.pos).setY(0)
   if (!target) return hintEl.classList.add('hidden')
   hintEl.classList.remove('hidden')
@@ -899,7 +884,6 @@ function toTitle() {
   letGo(false)
   hideBang()
   $('card').className = 'card-catch'
-  rays.material.opacity = 0
   glow.material.opacity = 0
   stageLight.intensity = 0
   setPhase('idle')

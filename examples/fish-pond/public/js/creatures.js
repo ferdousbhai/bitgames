@@ -10,33 +10,40 @@ import * as THREE from 'three'
  *   surface  bobs along on top of the water
  *   deep     hidden in the deep: only a trail of bubbles comes
  *   whale    a big shadow glides in from far away
+ *
+ * Habitats (calm pass 2026-10-09): lake, river and night are fresh water, so sea animals
+ * live only in the icy sea (whale, narwhal, octopus, pufferfish; crabs live in both).
+ * Clownfish and the glow jellyfish have no true home here until a warm sea place exists:
+ * the clownfish is a rare lake visitor and both field notes say where the real ones live.
  */
 export const CREATURES = [
-  { id: 'goldfish', name: 'Goldfish', stars: 1, size: 0.9, how: 'swim', places: { lake: 10, river: 5, night: 5, ice: 5 } },
+  { id: 'goldfish', name: 'Goldfish', stars: 1, size: 0.9, how: 'swim', places: { lake: 10, river: 5, night: 5 } },
   { id: 'bluefish', name: 'Blue Fish', stars: 1, size: 0.95, how: 'swim', places: { lake: 8, river: 5, night: 6, ice: 9 } },
-  { id: 'clownfish', name: 'Clownfish', stars: 1, size: 0.85, how: 'swim', places: { lake: 8, river: 3 } },
+  { id: 'clownfish', name: 'Clownfish', stars: 1, size: 0.85, how: 'swim', places: { lake: 3 } },
   { id: 'trout', name: 'Rainbow Trout', stars: 1, size: 1.1, how: 'swim', places: { river: 10, lake: 1.5 } },
   { id: 'duck', name: 'Rubber Duck', stars: 1, size: 0.75, how: 'surface', places: { lake: 2.5, river: 3, night: 2, ice: 1.5 } },
   { id: 'boot', name: 'Old Boot', stars: 1, size: 0.8, how: 'deep', places: { lake: 2.5, river: 3, night: 2.5, ice: 2 } },
-  { id: 'pufferfish', name: 'Pufferfish', stars: 2, size: 0.85, how: 'swim', places: { lake: 3, river: 3, night: 3, ice: 3 } },
-  { id: 'crab', name: 'Crab', stars: 2, size: 0.85, how: 'swim', places: { lake: 3, river: 4 } },
-  { id: 'turtle', name: 'Turtle', stars: 2, size: 1.0, how: 'swim', places: { lake: 3, river: 3.5 } },
-  { id: 'octopus', name: 'Octopus', stars: 2, size: 0.9, how: 'swim', places: { lake: 2.5, night: 4 } },
+  { id: 'pufferfish', name: 'Pufferfish', stars: 2, size: 0.85, how: 'swim', places: { river: 2, ice: 4 } },
+  { id: 'crab', name: 'Crab', stars: 2, size: 0.85, how: 'swim', places: { lake: 2, river: 4, ice: 3 } },
+  { id: 'turtle', name: 'Turtle', stars: 2, size: 1.0, how: 'swim', places: { lake: 3, river: 3.5, night: 2 } },
+  { id: 'octopus', name: 'Octopus', stars: 2, size: 0.9, how: 'swim', places: { ice: 4 } },
   { id: 'jellyfish', name: 'Glow Jellyfish', stars: 2, size: 0.9, how: 'swim', places: { night: 9 } },
   { id: 'narwhal', name: 'Baby Narwhal', stars: 2, size: 1.2, how: 'swim', places: { ice: 7 } },
   { id: 'goldenfish', name: 'Golden Fish', stars: 3, size: 0.95, how: 'swim', places: { lake: 0.8, river: 0.8, night: 0.8, ice: 0.8 } },
   { id: 'chest', name: 'Treasure Chest', stars: 3, size: 0.8, how: 'deep', places: { lake: 0.8, river: 0.8, night: 0.9, ice: 0.8 } },
-  { id: 'whale', name: 'Friendly Whale', stars: 3, size: 2.4, how: 'whale', places: { lake: 0.5, river: 0.5, night: 0.5, ice: 0.6 } },
+  { id: 'whale', name: 'Friendly Whale', stars: 3, size: 2.4, how: 'whale', places: { ice: 1.2 } },
 ]
 export const BY_ID = Object.fromEntries(CREATURES.map((c) => [c.id, c]))
 
 /** The common fish that swim about in each place while you wait. */
 export const AMBIENT = {
-  lake: ['goldfish', 'bluefish', 'clownfish', 'goldfish', 'turtle'],
+  lake: ['goldfish', 'bluefish', 'trout', 'goldfish', 'turtle'],
   river: ['trout', 'goldfish', 'trout', 'bluefish', 'crab'],
-  night: ['jellyfish', 'bluefish', 'jellyfish', 'goldfish', 'octopus'],
-  ice: ['bluefish', 'narwhal', 'goldfish', 'bluefish', 'pufferfish'],
+  night: ['jellyfish', 'bluefish', 'jellyfish', 'goldfish', 'turtle'],
+  ice: ['bluefish', 'narwhal', 'octopus', 'bluefish', 'pufferfish'],
 }
+
+const MAX_LUCK = 8
 
 /** Rarity roll: brand-new creatures and long waits for a rare one both tip the odds. */
 export function roll(place, book, luck) {
@@ -44,7 +51,8 @@ export function roll(place, book, luck) {
   const weights = options.map((c) => {
     let w = c.places[place]
     if (!book[c.id]) w *= 2.2
-    if (c.stars === 3) w *= 1 + luck * 0.12
+    // The wait for a rare one helps a little, but never more than double (no ever-growing pity)
+    if (c.stars === 3) w *= 1 + Math.min(luck, MAX_LUCK) * 0.12
     return w
   })
   const total = weights.reduce((a, b) => a + b, 0)

@@ -174,13 +174,6 @@ export class Sound {
     this.tone({ at: this.now, type: 'triangle', dur: 0.05, gain: 0.08, freq: 1700 + Math.random() * 500 })
   }
 
-  /** A soft knock-knock from a card asking to be flipped. */
-  nudge() {
-    const t = this.now
-    this.tone({ at: t, type: 'triangle', dur: 0.07, gain: 0.1, freq: [[0, 700], [0.07, 820]] })
-    this.tone({ at: t + 0.16, type: 'triangle', dur: 0.08, gain: 0.1, freq: [[0, 880], [0.08, 1040]] })
-  }
-
   tap() {
     this.tone({ at: this.now, type: 'sine', dur: 0.09, gain: 0.18, freq: [[0, 600], [0.09, 900]] })
   }
@@ -215,8 +208,7 @@ export class Sound {
 
   match() {
     const t = this.now
-    ;[72, 76, 79, 84].forEach((n, i) => this.tone({ at: t + i * 0.08, type: 'triangle', dur: 0.3, gain: 0.2, freq: NOTE(n) }))
-    for (let i = 0; i < 6; i++) this.tone({ at: t + 0.3 + i * 0.05, type: 'sine', dur: 0.12, gain: 0.07, freq: NOTE(91 + ((i * 5) % 12)) })
+    ;[72, 76, 79].forEach((n, i) => this.tone({ at: t + i * 0.1, type: 'triangle', dur: 0.4, gain: 0.13, freq: NOTE(n) }))
   }
 
   miss() {
@@ -231,13 +223,10 @@ export class Sound {
     this.tone({ at: t, type: 'sine', dur: 0.5, gain: 0.1, freq: NOTE(88 + i * 4) })
   }
 
+  /** The board is finished: one soft, rolled chord, played once. */
   fanfare() {
     const t = this.now
-    const tune = [[72, 0, 0.14], [72, 0.15, 0.14], [72, 0.3, 0.14], [76, 0.45, 0.3], [74, 0.78, 0.14], [77, 0.93, 0.14], [79, 1.08, 0.14], [84, 1.25, 0.6]]
-    for (const [n, d, len] of tune) {
-      this.tone({ at: t + d, type: 'square', dur: len, gain: 0.08, freq: NOTE(n), filter: { type: 'lowpass', freq: 2500 } })
-      this.tone({ at: t + d, type: 'triangle', dur: len + 0.1, gain: 0.16, freq: NOTE(n - 12) })
-    }
-    for (let i = 0; i < 10; i++) this.tone({ at: t + 1.3 + i * 0.06, type: 'sine', dur: 0.15, gain: 0.06, freq: NOTE(88 + ((i * 7) % 12)) })
+    ;[60, 64, 67, 72].forEach((n, i) => this.tone({ at: t + i * 0.09, type: 'sine', dur: 1.6, gain: 0.1, freq: NOTE(n), attack: 0.06 }))
+    this.tone({ at: t, type: 'triangle', dur: 1.8, gain: 0.06, freq: NOTE(48), attack: 0.1 })
   }
 }

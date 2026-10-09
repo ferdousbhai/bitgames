@@ -39,7 +39,7 @@ export const PLACES = {
     sun: { kind: 'moon', pos: [0.55, 0.6], scale: 1.7 }, clouds: null, extra: 'fireflies', pads: 6, night: true,
   },
   ice: {
-    emoji: '❄️', name: 'Frozen Pond', shore: 'shore_ice',
+    emoji: '❄️', name: 'Icy Sea', shore: 'shore_ice',
     sky: { top: '#7fb3ea', horizon: '#eef6ff', glow: '#ffffff', stars: 0 },
     fog: '#e6f1ff', fogNear: 28, fogFar: 90,
     water: { shallow: '#3c9ccf', deep: '#1d5a96', sky: '#cfe6ff', sun: '#ffffff', sparkle: 0.6, near: 0.4 },

@@ -2,9 +2,9 @@ import * as THREE from 'three'
 
 /** How close a roller must come to grab each pickup, and how many the host keeps out. */
 export const ITEM_KINDS = {
-  bucket: { reach: 1.5, max: 3, node: 'bucket' },
+  bucket: { reach: 1.5, max: 2, node: 'bucket' },
   rainbow: { reach: 1.6, max: 1, node: 'puddle_rainbow' },
-  water: { reach: 1.5, max: 2, node: 'puddle_water' },
+  water: { reach: 1.5, max: 1, node: 'puddle_water' },
 }
 
 /**
@@ -81,9 +81,10 @@ export class Items {
       it.group.scale.setScalar(Math.max(0.01, s))
       const t = now / 1000 + it.phase
       if (it.kind === 'bucket') {
-        it.model.position.y = 0.25 + Math.sin(t * 3) * 0.15
-        it.model.rotation.y = t * 1.2
-        it.paint?.color.setHSL((t * 0.25) % 1, 0.85, 0.58)
+        // A slow float and a slow drift through the colours (calm pass: was a quick bounce and spin)
+        it.model.position.y = 0.25 + Math.sin(t * 1.4) * 0.08
+        it.model.rotation.y = t * 0.5
+        it.paint?.color.setHSL((t * 0.06) % 1, 0.75, 0.6)
       } else if (it.kind === 'rainbow') {
         it.model.rotation.y = t * 0.4
       } else {

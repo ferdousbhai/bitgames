@@ -30,13 +30,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 .logo { font-size: clamp(42px, 10vw, 92px); font-weight: 900; letter-spacing: 2px; white-space: nowrap; line-height: 1.05; }
 .logo.small { font-size: clamp(34px, 7vw, 62px); }
-.logo span { display: inline-block; -webkit-text-stroke: 0.13em #fff; paint-order: stroke fill; text-shadow: 0 5px 0 rgba(60,20,120,0.35); animation: bob 1.6s ease-in-out infinite; }
+.logo span { display: inline-block; -webkit-text-stroke: 0.13em #fff; paint-order: stroke fill; text-shadow: 0 5px 0 rgba(60,20,120,0.35); }
 .logo span:nth-child(5n+1) { color: #ff4d8d; } .logo span:nth-child(5n+2) { color: #ff9f1c; animation-delay: .1s; }
 .logo span:nth-child(5n+3) { color: #ffd23f; animation-delay: .2s; } .logo span:nth-child(5n+4) { color: #2ec27e; animation-delay: .3s; }
 .logo span:nth-child(5n) { color: #3a86ff; animation-delay: .4s; }
 @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
-.spinner { font-size: 72px; animation: wiggle 1.2s ease-in-out infinite; }
-@keyframes wiggle { 0%, 100% { transform: rotate(-15deg) scale(1); } 50% { transform: rotate(15deg) scale(1.12); } }
+.spinner { font-size: 72px; animation: wiggle 3s ease-in-out infinite; } /* a slow rock while loading only */
+@keyframes wiggle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
 
 .players { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .player { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.22); border-radius: 999px; padding: 4px 14px 4px 6px; font-size: 26px; font-weight: 800; }
@@ -79,7 +79,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 #menu .extra-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(60,20,120,.35); }
 #menu .extra-btn .ico { font-size: 22px; letter-spacing: -6px; padding-right: 6px; }
 #gallery-open .ico { letter-spacing: 0; padding-right: 0; }
-#go { position: sticky; bottom: calc(6px + env(safe-area-inset-bottom)); z-index: 3; animation: pulse 1.6s ease-in-out infinite; box-shadow: 0 7px 0 #c48a00, 0 10px 30px rgba(0,0,0,.3); }
+#go { position: sticky; bottom: calc(6px + env(safe-area-inset-bottom)); z-index: 3; box-shadow: 0 7px 0 #c48a00, 0 10px 30px rgba(0,0,0,.3); }
 @keyframes pulse { 50% { transform: scale(1.06); } }
 .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 
@@ -91,7 +91,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .round-btn.off { opacity: .45; }
 .hud-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .pill { background: rgba(90,45,145,0.6); border-radius: 999px; padding: 4px 18px; font-size: 26px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); }
-.timer.hurry { background: #ff4d8d; animation: pulse .5s ease-in-out infinite; }
 .cover-bar { display: flex; width: min(46vw, 340px); height: 22px; border-radius: 999px; background: #fff; border: 3px solid #fff; overflow: hidden; box-shadow: 0 3px 0 rgba(90,45,145,.3); }
 .cover-bar i { display: block; height: 100%; transition: width .4s; }
 .voice-btn {
@@ -116,9 +115,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
   font-size: clamp(120px, 30vw, 240px); font-weight: 900; color: #fff; -webkit-text-stroke: 0.12em #ff4d8d; paint-order: stroke fill; text-shadow: 0 10px 0 #b8245c, 0 20px 40px rgba(0,0,0,.3);
 }
-.countdown.pop { animation: count-pop .9s ease-out; }
-@keyframes count-pop { 0% { transform: scale(.3); opacity: 0; } 25% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
-.countdown.waiting { font-size: 90px; animation: pulse 1s ease-in-out infinite; }
+.countdown.pop { animation: count-pop .7s ease-out; }
+/* Each number fades in softly: no zoom or overshoot */
+@keyframes count-pop { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+.countdown.waiting { font-size: 90px; }
 
 /* --- The picture ----------------------------------------------------------------------- */
 .results { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none;
@@ -127,12 +127,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .results h1 { margin: 0; font-size: clamp(30px, 6vw, 54px); -webkit-text-stroke: 0.2em #9b5de5; paint-order: stroke fill; text-shadow: 0 4px 0 #5a2d91, 0 8px 20px rgba(0,0,0,.25); }
 .keep-btn { vertical-align: middle; margin: 6px 0 0 8px; box-shadow: 0 4px 0 rgba(90,45,145,.3), 0 0 0 4px #ffd23f; }
 /* The finished picture was just kept: the frame button hops and sparkles. */
-.keep-btn.kept { animation: kept-hop .7s cubic-bezier(.2, 1.8, .4, 1), pulse 1.6s ease-in-out .7s 3; }
-@keyframes kept-hop { 0% { transform: scale(.4) rotate(-20deg); } 60% { transform: scale(1.35) rotate(8deg); } }
-.flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }
-.flash.go { animation: flash .6s ease-out; }
-@keyframes flash { 0% { opacity: .6; } 100% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .flash.go { animation: none; } }
+.keep-btn.kept { animation: kept-hop .7s ease-out; }
+@keyframes kept-hop { 0% { transform: scale(.7); } 60% { transform: scale(1.12); } }
 .together { display: inline-block; vertical-align: middle; margin-top: 6px; background: rgba(255,255,255,.9); color: #5a2d91; border-radius: 999px; padding: 4px 18px; font-size: clamp(20px, 3.6vw, 28px); font-weight: 900; }
 @keyframes drop-in { from { transform: translateY(-60px); opacity: 0; } }
 .panel { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; animation: rise-in .6s cubic-bezier(.2, 1.4, .4, 1) .2s both; }
@@ -140,14 +136,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .cards { display: flex; gap: min(10px, 1.6vw); justify-content: center; max-width: 100%; }
 .card {
   width: min(150px, 22.5vw); background: rgba(255,255,255,.94); color: #5a2d91; border-radius: 24px; padding: 8px 8px 10px; border: 5px solid var(--c);
-  box-shadow: 0 6px 0 rgba(0,0,0,.18); display: flex; flex-direction: column; align-items: center; gap: 2px; animation: card-pop .5s cubic-bezier(.2, 1.8, .4, 1) both;
+  box-shadow: 0 6px 0 rgba(0,0,0,.18); display: flex; flex-direction: column; align-items: center; gap: 2px; animation: card-pop .5s ease-out both;
 }
 .card.me { transform: scale(1.06); box-shadow: 0 0 0 5px #ffd23f, 0 6px 0 rgba(0,0,0,.18); }
-@keyframes card-pop { from { transform: scale(.2); opacity: 0; } }
+@keyframes card-pop { from { transform: translateY(12px); opacity: 0; } }
 .card .who { font-size: 40px; line-height: 1.1; }
-.card .pct { font-size: 30px; font-weight: 900; color: var(--c); -webkit-text-stroke: 1px rgba(0,0,0,.15); }
-.card .award { font-size: 15px; font-weight: 900; background: var(--c); color: #fff; border-radius: 16px; padding: 3px 8px; text-shadow: 0 1px 0 rgba(0,0,0,.25); text-align: center; line-height: 1.15; max-width: 100%; }
-.card .award b { font-size: 20px; }
+/* Each painter's colour, as a dab of paint (no score) */
+.card .swatch { width: 70%; height: 22px; border-radius: 999px 999px 999px 40%; background: var(--c); margin: 4px 0 2px; }
 
 /* Narrow phones */
 @media (max-width: 560px) {
@@ -158,7 +153,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .places { gap: 8px; flex-wrap: nowrap; }
   .place { width: 29vw; padding: 6px 4px 8px; } .place .emoji { font-size: 40px; } .place .name { font-size: 15px; }
   .card { padding: 4px 3px 6px; border-width: 4px; border-radius: 18px; }
-  .card .who { font-size: 26px; } .card .who small { font-size: 14px; } .card .pct { font-size: 20px; } .card .award { font-size: 11px; padding: 2px 4px; } .card .award b { font-size: 15px; }
+  .card .who { font-size: 26px; } .card .who small { font-size: 14px; } .card .swatch { height: 16px; }
   .big-go { padding: 12px 28px; }
   .pill { font-size: 22px; }
   .round-btn { width: 44px; height: 44px; font-size: 22px; }
@@ -186,8 +181,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .keep-btn { margin: 0; width: 44px; height: 44px; font-size: 22px; }
   .panel { flex-direction: row; align-items: center; justify-content: center; gap: 10px; }
   .card { width: 96px; padding: 2px 3px 4px; border-width: 3px; border-radius: 16px; gap: 0; }
-  .card .who { font-size: 20px; } .card .who small { font-size: 11px; } .card .pct { font-size: 17px; }
-  .card .award { font-size: 10px; padding: 1px 4px; } .card .award b { font-size: 12px; }
+  .card .who { font-size: 20px; } .card .who small { font-size: 11px; } .card .swatch { height: 12px; margin: 2px 0; }
   .panel .row { flex-direction: column; gap: 8px; }
   .big-go { font-size: 20px; padding: 7px 18px; }
   .big-go.alt, #again { box-shadow: 0 4px 0 #1b8178; } #again { box-shadow: 0 4px 0 #c48a00; }
@@ -238,4 +232,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .picks .place .emoji { font-size: 28px; line-height: 1.1; } .picks .place .name { font-size: 13px; }
   .picks .place { width: 100px; padding: 3px; border-width: 4px; border-radius: 20px; }
   .picks .animal { width: 52px; height: 52px; font-size: 30px; }
+}
+
+/* Calm pass: honour reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
 }
