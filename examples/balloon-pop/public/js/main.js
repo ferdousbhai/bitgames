@@ -496,6 +496,7 @@ function show(screen) {
 }
 
 function toTitle() {
+  voice.hush() // every way back (🏠, Escape) stops the sky's words before the summary
   game.state = 'title'
   game.party = 0
   clearTimeout(rewardTimer)
@@ -541,7 +542,6 @@ $('play').addEventListener('click', start)
 $('home').addEventListener('click', (e) => {
   e.stopPropagation()
   audio.click()
-  voice.hush()
   toTitle()
 })
 const soundBtn = $('sound')

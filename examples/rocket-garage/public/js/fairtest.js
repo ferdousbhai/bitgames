@@ -124,6 +124,8 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
   const guesses = dialog.querySelector('.ft-guesses')
   let test = null
   let said = ''
+  let going = null // the guessed test, once the dialog is closing to launch it
+  let launchTimer = 0
 
   function swapPicture(changed) {
     const swap = dialog.querySelector('.ft-swap')
@@ -149,19 +151,25 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
     for (const b of guesses.children) b.setAttribute('aria-pressed', String(b.dataset.guess === id))
     voice.sayNow(`You think ${guessOf(id).say}. Let’s find out!`)
     const chosen = test
-    setTimeout(() => {
-      if (dialog.open) dialog.close()
-      onGuess(chosen)
+    launchTimer = setTimeout(() => {
+      going = chosen
+      dialog.close()
     }, 450)
   }
 
   dialog.querySelector('#predict-say').onclick = () => voice.sayNow(said)
-  dialog.querySelector('#predict-back').onclick = () => {
+  dialog.querySelector('#predict-back').onclick = () => dialog.close()
+  // Every way out ends here: a guess that is on its way launches; 🔧, Escape or leaving the garage
+  // (even straight after a guess) goes back to building and stops the question.
+  dialog.addEventListener('close', () => {
+    clearTimeout(launchTimer)
+    const chosen = going
+    going = null
     test = null
-    dialog.close()
+    if (chosen) return onGuess(chosen)
+    voice.hush()
     onBack()
-  }
-  dialog.addEventListener('cancel', () => { test = null; onBack() })
+  })
   dialog.addEventListener('keydown', (e) => {
     const i = { 1: 0, 2: 1, 3: 2 }[e.key]
     if (i !== undefined) return choose(GUESSES[i].id)
@@ -198,10 +206,7 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
       dialog.focus()
       voice.sayNow(said)
     },
-    close() {
-      test = null
-      if (dialog.open) dialog.close()
-    },
+    close() { if (dialog.open) dialog.close() },
   }
 }
 
@@ -248,6 +253,7 @@ export function createNotebook({ notes, thumbOf, voice, sound = () => {} }) {
   }
 
   dialog.querySelector('#notebook-close').onclick = () => dialog.close()
+  dialog.addEventListener('close', () => voice.hush())
   dialog.querySelector('#notebook-say').onclick = () => voice.sayNow(said)
 
   return {
