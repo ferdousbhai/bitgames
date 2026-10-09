@@ -101,7 +101,7 @@ function ensureIndexed(geometry) {
 export function buildArena(id, gltfScene, paint) {
   const def = PLACES[id]
   const root = new THREE.Group()
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2 * HALF_W, 2 * HALF_D).rotateX(-Math.PI / 2), groundMaterial(textures[def.base](), paint.texture))
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2 * HALF_W, 2 * HALF_D).rotateX(-Math.PI / 2), groundMaterial(textures[def.base](), paint))
   root.add(ground)
   const outerTex = textures[def.outer]()
   const outer = new THREE.Mesh(new THREE.PlaneGeometry(160, 160).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: outerTex, roughness: 0.95 }))

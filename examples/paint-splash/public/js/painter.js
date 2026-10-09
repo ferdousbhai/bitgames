@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { SEAT_COLORS } from './paint.js'
+import { MIXES, SEAT_PAINT } from './paint.js'
 import { angleDiff, canvasTexture, clamp, damp, dampAngle } from './util.js'
 
 export const ANIMALS = {
@@ -38,7 +38,9 @@ export class Painter {
    */
   constructor({ id, seat, animal, template, local, bot }) {
     Object.assign(this, { id, seat, animal, local, bot })
-    this.color = SEAT_COLORS[seat]
+    /** The paint in this painter's roller: one of the red, yellow and blue bits. */
+    this.paint = SEAT_PAINT[seat]
+    this.color = MIXES[this.paint].hex
     this.group = new THREE.Group()
     this.model = template.clone(true)
     this.group.add(this.model)
@@ -67,6 +69,14 @@ export class Painter {
     this.target = { x: 0, z: 0, yaw: 0, speed: 0, at: 0 }
     this.controls = { x: 0, z: 0 }
     this.last = { x: 0, z: 0 }
+  }
+
+  /** Dips the roller in another pot (red, yellow or blue). */
+  setPaint(bits) {
+    if (!MIXES[bits] || bits === this.paint) return false
+    this.paint = bits
+    this.color = MIXES[bits].hex
+    return true
   }
 
   place(x, z, yaw) {
@@ -120,9 +130,10 @@ export class Painter {
     this.speed = t.speed
   }
 
-  setTarget(x, z, yaw, speed, rainbow) {
+  setTarget(x, z, yaw, speed, rainbow, paint) {
     Object.assign(this.target, { x, z, yaw, speed, at: performance.now() })
     this.rainbow = rainbow
+    if (paint) this.setPaint(paint)
   }
 
   /** Moves the model to the painter's state, spins the roller and waddles. */

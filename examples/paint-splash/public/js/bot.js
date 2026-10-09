@@ -4,7 +4,7 @@ import { clamp } from './util.js'
 
 /**
  * Friendly computer painters for empty seats. They look for bare ground to
- * paint (and sometimes a friend's colour), go for pickups now and then, roll
+ * paint (and sometimes a friend's colour, where the paints mix), go for pickups now and then, roll
  * round obstacles and do the odd happy swirl. A little slower than a child.
  */
 export class Bot {
@@ -87,9 +87,10 @@ export class Bot {
       if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 1.5)) continue
       let score = 0
       for (const [ox, oz] of [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) {
-        const owner = paint.ownerAt(x + ox, z + oz)
-        if (owner === 0) score += 3
-        else if (owner > 0 && owner !== p.seat + 1) score += 1.2
+        // Bare ground first; a friend's different colour is fine too (that is where colours mix).
+        const mix = paint.mixAt(x + ox, z + oz)
+        if (mix === 0) score += 3
+        else if (mix > 0 && mix !== p.paint) score += 1.2
       }
       score -= Math.hypot(x - p.x, z - p.z) * 0.25
       score += this.rnd() * 2

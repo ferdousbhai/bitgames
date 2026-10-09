@@ -10,7 +10,7 @@ import { Bot } from './bot.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
 import { ITEM_KINDS, Items } from './items.js'
-import { HALF_D, HALF_W, PaintMap, RAINBOW, SEAT_COLORS } from './paint.js'
+import { HALF_D, HALF_W, MIXED, MIXES, PRIMARIES, PaintMap, RAINBOW, SEAT_COLORS, SEAT_PAINT, mixWords } from './paint.js'
 import { ANIMALS, ANIMAL_IDS, COLLIDE_AHEAD, COLLIDE_R, MAX_SPEED, Painter, newStats } from './painter.js'
 import { clamp, damp, easeInOut, store } from './util.js'
 
@@ -32,6 +32,24 @@ const AUTO_KEEP_MS = 1500
 const IDLE_HINT_MS = 30000
 /** Seconds between new pickups (min, extra random), so the playground stays calm. */
 const PICKUP_WAIT = { bucket: [7, 5], water: [8, 6], rainbow: [18, 8] }
+/**
+ * Two ways to paint. The default has no clock: the picture is done when a child
+ * says so (🖼️ Finished!), and asks when the playground is nearly all painted. Its only pickup
+ * is the paint bucket, a big splash that mixes like the rollers. The quick round
+ * is the old 75 s round with the water and rainbow puddles.
+ */
+const MODES = {
+  calm: { painters: 3, items: ['bucket'] },
+  timed: { painters: 4, items: ['bucket', 'water', 'rainbow'] },
+}
+/** The picture is "nearly all painted" here: the bar is full and the host asks if it's finished. */
+const CALM_DONE = (DEBUG && Number(params.get('done'))) || 0.85
+/** A mixed colour counts as found once it covers about this many cells (a roller's width square). */
+const FOUND_CELLS = 150
+/** After 🖌️ keep painting, ask again only once this much more is painted. */
+const ASK_AGAIN = 0.05
+/** Time between spoken discoveries, so each one is heard. */
+const NOTE_MS = 4200
 /** Seats start in the four corners, facing the middle. Seat 0 is nearest the camera on the left. */
 const START = [[-11, 6.5], [11, 6.5], [-11, -6.5], [11, -6.5]]
 
@@ -152,7 +170,13 @@ const game = {
   lastMoveAt: 0,
   build: 0,
   keptRound: null,
+  mode: 'calm', // the menu choice: calm (no clock) | timed (the quick 75 s round)
+  found: [], // mixed colours found this round, in order
+  notes: [], // discoveries waiting to be said
+  noteAt: 0,
+  askAt: Infinity, // the coverage at which the host next asks "Is your picture finished?"
 }
+const modeOf = () => (game.setup?.mode === 'timed' ? 'timed' : 'calm')
 
 // Opening (or closing) the gallery or colour studio lets go of the roller so the animal stops.
 function releaseControls() {
@@ -329,6 +353,17 @@ function buildMenu() {
     send({ t: 'menu' })
     enterLobby()
   }
+  $('mode').onclick = () => {
+    audio.unlock()
+    audio.click()
+    setMode(game.mode === 'timed' ? 'calm' : 'timed')
+    speak(game.mode === 'timed' ? 'A quick round, with a clock.' : 'No clock. Paint until you are finished.')
+  }
+  setMode('calm')
+  for (const el of document.querySelectorAll('[data-pot]')) el.onclick = () => choosePot(Number(el.dataset.pot))
+  $('finish').onclick = () => askFinished()
+  $('finish-yes').onclick = () => finishPicture()
+  $('finish-no').onclick = () => closeFinishAsk(true)
   $('home').onclick = () => goHome()
   $('music').onclick = () => {
     audio.unlock()
@@ -355,6 +390,8 @@ function buildMenu() {
   input.on('key', (k) => {
     audio.unlock()
     if (k === ' ' && game.state === 'play') say()
+    const pot = { 1: 1, 2: 2, 3: 4, r: 1, y: 2, b: 4 }[k]
+    if (pot && game.state === 'play') choosePot(pot)
     if (k === 'escape') goHome()
   })
   input.on('touch', () => {
@@ -363,6 +400,63 @@ function buildMenu() {
   })
   addEventListener('pointerdown', () => audio.unlock())
   document.addEventListener('visibilitychange', () => audio.setHidden(document.hidden))
+}
+
+/** The menu choice: no clock (default) or the quick round. Not remembered: every visit starts calm. */
+function setMode(mode) {
+  game.mode = mode === 'timed' ? 'timed' : 'calm'
+  const timed = game.mode === 'timed'
+  $('mode').classList.toggle('on', timed)
+  $('mode').setAttribute('aria-pressed', String(timed))
+  $('go').textContent = timed ? "⏱️ Let's paint!" : "🎨 Let's paint!"
+}
+
+/** Dips the child's roller in the red, yellow or blue pot. */
+function choosePot(bits) {
+  const me = game.me
+  if (!me || game.state !== 'play' || !PRIMARIES.includes(bits)) return
+  audio.unlock()
+  if (me.setPaint(bits)) {
+    // Paint already rolled keeps its colour; the next stroke starts here in the new paint.
+    emitStrokes(true)
+    audio.studio('drip', PRIMARIES.indexOf(bits))
+    speak(MIXES[bits].word[0].toUpperCase() + MIXES[bits].word.slice(1))
+  }
+  updatePots()
+}
+
+function updatePots() {
+  const bits = game.me?.paint
+  for (const el of document.querySelectorAll('[data-pot]')) {
+    const on = Number(el.dataset.pot) === bits
+    el.classList.toggle('on', on)
+    el.setAttribute('aria-pressed', String(on))
+  }
+}
+
+/** 🖼️ Finished!: a small ✅ / 🖌️ question first, so a stray tap never ends the picture. */
+function askFinished(words = 'Is your picture finished?') {
+  if (game.state !== 'play') return
+  audio.unlock()
+  audio.click()
+  $('finish-ask').classList.remove('hidden')
+  speak(words)
+  clearTimeout(game.askTimer)
+  // Unanswered, the question goes away and painting simply carries on.
+  game.askTimer = setTimeout(() => closeFinishAsk(), 12000)
+}
+
+function closeFinishAsk(spoken = false) {
+  clearTimeout(game.askTimer)
+  $('finish-ask').classList.add('hidden')
+  if (spoken && game.state === 'play') speak('Keep painting!')
+}
+
+function finishPicture() {
+  closeFinishAsk()
+  if (game.state !== 'play') return
+  if (isHost()) endRound()
+  else send({ t: 'finish', r: roundId() })
 }
 
 function updateToggles() {
@@ -483,7 +577,7 @@ function migrateHost() {
   else if (game.state === 'results') renderResults()
 }
 
-const ROUND_MESSAGES = new Set(['s', 'e', 'item', 'grab', 'gone', 'ready', 'go', 'end', 'stats', 'final', 'say'])
+const ROUND_MESSAGES = new Set(['s', 'e', 'item', 'grab', 'gone', 'ready', 'go', 'end', 'stats', 'final', 'say', 'finish'])
 
 function onMessage(msg, from) {
   if (ROUND_MESSAGES.has(msg.t)) {
@@ -537,7 +631,7 @@ function onMessage(msg, from) {
       for (const snap of Array.isArray(msg.p) ? msg.p : []) {
         const p = paintersBySeat()[snap?.[0]]
         if (!p || p.local || !snap.slice(1, 5).every(Number.isFinite)) continue
-        p.setTarget(snap[1] / 100, snap[2] / 100, snap[3] / 100, snap[4] / 100, !!(snap[5] & 1))
+        p.setTarget(snap[1] / 100, snap[2] / 100, snap[3] / 100, snap[4] / 100, !!(snap[5] & 1), PRIMARIES.includes(snap[6]) ? snap[6] : 0)
       }
       break
     case 'e':
@@ -562,6 +656,10 @@ function onMessage(msg, from) {
     }
     case 'end':
       if (from === game.hostId && game.state === 'play') endRound()
+      break
+    case 'finish':
+      // A friend says the picture is finished: the host ends it for everyone.
+      if (isHost() && game.state === 'play' && modeOf() === 'calm') endRound()
       break
     case 'stats':
       if (!isHost()) return
@@ -598,8 +696,10 @@ function hostStartRound() {
   const entries = humans.map((p, seat) => ({ id: p.id, seat, animal: validAnimal(p.animal) ? p.animal : ANIMAL_IDS[seat], bot: false }))
   // Friendly bots fill the empty seats, with the animals nobody picked first.
   const free = ANIMAL_IDS.filter((a) => !entries.some((e) => e.animal === a)).sort(() => Math.random() - 0.5)
-  for (let seat = entries.length; seat < 4; seat++) entries.push({ id: `bot${seat}`, seat, animal: free.shift() ?? ANIMAL_IDS[seat], bot: true })
-  const setup = { t: 'setup', r: 1 + Math.floor(Math.random() * 1e9), place: game.place, seconds: ROUND_SECONDS, entries, host: game.room.selfId }
+  // With no clock there are three painters, one for each paint, so the child's own rolling counts for more.
+  const mode = game.mode === 'timed' ? 'timed' : 'calm'
+  for (let seat = entries.length; seat < MODES[mode].painters; seat++) entries.push({ id: `bot${seat}`, seat, animal: free.shift() ?? ANIMAL_IDS[seat], bot: true })
+  const setup = { t: 'setup', r: 1 + Math.floor(Math.random() * 1e9), place: game.place, mode, seconds: ROUND_SECONDS, entries, host: game.room.selfId }
   game.ready = new Set()
   send(setup)
   startRound(setup)
@@ -620,6 +720,11 @@ function stopRound() {
   game.pendingGrab.clear()
   game.final = null
   game.roundQueue = []
+  game.found = []
+  game.notes = []
+  game.askAt = CALM_DONE
+  closeFinishAsk()
+  $('mix-note').classList.add('hidden')
   input.enabled = false
   input.release()
   audio.roll(0)
@@ -635,6 +740,7 @@ async function startRound(setup) {
   stopRound()
   game.setup = setup
   game.setup.seconds = clamp(Number(setup.seconds) || ROUND_SECONDS, 10, 180)
+  game.setup.mode = setup.mode === 'timed' ? 'timed' : 'calm'
   game.place = Object.hasOwn(PLACES, setup.place) ? setup.place : 'square'
   if (!setup.entries.some((e) => e.id === game.room.selfId)) {
     // This picture started before we arrived: wait for the next one.
@@ -686,12 +792,16 @@ function buildRound(setup) {
     meMarker.userData.mat.color.set(game.me.color)
     meMarker.userData.mat.emissive.set(game.me.color)
   }
-  game.itemWait = { bucket: 3, rainbow: 15, water: 8 }
+  game.itemWait = modeOf() === 'calm' ? { bucket: 10, rainbow: Infinity, water: Infinity } : { bucket: 3, rainbow: 15, water: 8 }
   game.lastStrokeAt = 0
   game.roundStart = now()
   placeCamera(true)
   updateBar()
+  updatePots()
+  renderFoundRow()
   $('timer').textContent = `⏱️ ${game.setup.seconds}`
+  $('timer').classList.toggle('hidden', modeOf() !== 'timed')
+  $('finish').classList.toggle('hidden', modeOf() !== 'calm')
   // Everyone builds the playground at their own pace; the host says go once all are ready.
   game.state = 'syncing'
   show(null)
@@ -722,6 +832,14 @@ function runCountdown() {
   game.state = 'countdown'
   show(null)
   const el = $('countdown')
+  if (modeOf() === 'calm') {
+    // No clock, so no count in: one soft chime and the painting starts.
+    el.textContent = '🎨'
+    el.className = 'countdown waiting'
+    audio.beep(true)
+    startPainting()
+    return
+  }
   // A soft, unhurried count in: gentle numbers that fade in, then the palette (no shouted GO!).
   const steps = ['3', '2', '1', '🎨']
   steps.forEach((text, i) => {
@@ -746,11 +864,21 @@ function startPainting() {
   later(() => $('countdown').classList.add('hidden'), 700)
   // The dragging finger shows straight away, and again whenever the child stops rolling for a while.
   game.lastMoveAt = now() - IDLE_HINT_MS
+  updatePots()
+  if (modeOf() === 'calm') {
+    // The goal, in pictures and words: two paints and a question mark.
+    showNote(`${dot(MIXES[1].hex)}<b>+</b>${dot(MIXES[2].hex)}<b>=</b><span class="q">❓</span>`, 5000)
+    later(() => speak('Roll your paint. Roll a new colour over wet, shiny paint to mix!'), 600)
+  }
 }
 
-/** The time is up: everyone stops and the camera swoops up to look at the picture. */
+/** The picture is finished (or the time is up): everyone stops and the camera swoops up to look at it. */
 function endRound() {
   if (game.state !== 'play') return
+  closeFinishAsk()
+  noticeMixes()
+  game.notes = []
+  $('mix-note').classList.add('hidden')
   game.state = 'reveal'
   game.revealAt = now()
   input.enabled = false
@@ -789,15 +917,16 @@ function endRound() {
   later(() => {
     // One soft moment over the finished picture: a gentle chord and a few slow petals in our colours.
     audio.fanfare()
-    effects.party([...SEAT_COLORS], 28)
+    effects.party([...new Set([...game.setup.entries.map((e) => SEAT_COLORS[e.seat]), ...game.found.map((m) => MIXES[m].hex)])], 28)
     if (game.final) showResults()
   }, REVEAL_MS)
 }
 
-/** The shared result: who painted (and in which colour) and how much of the picture we filled together. No ranking. */
+/** The shared result: who painted, the colours we found by mixing, and how much we filled together. No ranking. */
 function computeFinal() {
-  const total = Math.round((1 - paint.counts[0] / paint.paintable) * 100)
-  return { t: 'final', r: roundId(), total, rows: game.setup.entries.map((e) => ({ seat: e.seat })) }
+  noticeMixes()
+  const total = Math.round(paint.coverage() * 100)
+  return { t: 'final', r: roundId(), total, found: [...game.found], rows: game.setup.entries.map((e) => ({ seat: e.seat })) }
 }
 
 function sendFinal() {
@@ -813,8 +942,21 @@ function showResults() {
   game.state = 'results'
   show(null)
   renderResults()
-  if (first) later(() => keepFinishedPicture(true), AUTO_KEEP_MS)
+  if (first) {
+    later(() => keepFinishedPicture(true), AUTO_KEEP_MS)
+    // The natural ending names what was learned.
+    later(() => speak(resultWords(foundOf(game.final))), 900)
+  }
 }
+
+/** The mixed colours in a final message (the host's list, checked). */
+const foundOf = (final) => (Array.isArray(final?.found) ? final.found.filter((m) => MIXED.includes(m)) : [])
+
+function resultWords(found) {
+  if (!found.length) return 'What a picture! Next time, roll a new colour over wet paint to mix.'
+  return `We made ${listWords(found.map((m) => MIXES[m].word))}! ` + found.map(mixWords).join(' ')
+}
+const listWords = (w) => (w.length > 1 ? `${w.slice(0, -1).join(', ')} and ${w.at(-1)}` : w[0])
 
 /** Where the playground is on screen (CSS pixels), a little wider than 4:3 like the gallery frames. */
 function pictureRect() {
@@ -850,14 +992,20 @@ function renderResults() {
   const final = game.final
   if (!final) return
   const self = game.room.selfId
-  $('together').textContent = `🤝 We painted ${clamp(final.total | 0, 0, 100)}% together!`
+  $('together').textContent = '🤝 We painted it together!'
+  // The colours found by mixing, each with its recipe: ● + ● = ●.
+  const found = foundOf(final)
+  $('found').innerHTML = found.length
+    ? found.map((m, i) => `<div class="recipe" style="animation-delay:${0.2 * i}s" title="${mixWords(m)}">${recipe(m)}</div>`).join('')
+    : `<div class="recipe none">${PRIMARIES.map((b) => dot(MIXES[b].hex)).join('')}<span class="hint-mix">➕💧</span></div>`
+  $('found').setAttribute('aria-label', resultWords(found))
   // The painters who made it, each with their colour: nobody is ranked or scored.
   $('cards').innerHTML = final.rows
     .map((row, i) => {
       const entry = game.setup.entries.find((e) => e.seat === row.seat)
       if (!entry) return ''
       const animal = validAnimal(entry.animal) ? ANIMALS[entry.animal].emoji : '🙂'
-      return `<div class="card${entry.id === self ? ' me' : ''}" style="--c:${SEAT_COLORS[row.seat] ?? '#999'}; animation-delay:${0.15 * i}s">
+      return `<div class="card${entry.id === self ? ' me' : ''}" style="--c:${paintersBySeat()[row.seat]?.color ?? SEAT_COLORS[row.seat] ?? '#999'}; animation-delay:${0.15 * i}s">
         <span class="who">${animal}${entry.bot ? '<small>🤖</small>' : ''}${entry.id === self ? '<small>⭐</small>' : ''}</span>
         <span class="swatch" aria-hidden="true"></span></div>`
     })
@@ -885,7 +1033,7 @@ function freeSpot() {
 
 function hostItems(dt) {
   for (const [kind, def] of Object.entries(ITEM_KINDS)) {
-    if (items.count(kind) >= def.max) continue
+    if (!MODES[modeOf()].items.includes(kind) || items.count(kind) >= def.max) continue
     game.itemWait[kind] -= dt
     if (game.itemWait[kind] > 0) continue
     const spot = freeSpot()
@@ -916,7 +1064,7 @@ function tryGrab(p) {
 
 function hostGrab(id, seat) {
   const it = items.items.get(id)
-  if (!it || game.state !== 'play' || !paintersBySeat()[seat]) return
+  if (!it || game.state !== 'play' || !paintersBySeat()[seat] || !MODES[modeOf()].items.includes(it.kind)) return
   const msg = { t: 'gone', r: roundId(), id, seat, k: it.kind, x: it.x, z: it.z }
   send(msg)
   onGone(msg)
@@ -941,7 +1089,7 @@ function pickup(p, kind, x, z) {
   if (kind === 'bucket') {
     p.stats.splash++
     // The splash on the ground says what happened: no shouted banners.
-    emit([1, p.seat, t, q(p.x + Math.sin(p.yaw) * 0.6), q(p.z + Math.cos(p.yaw) * 0.6), seed])
+    emit([1, p.seat, t, q(p.x + Math.sin(p.yaw) * 0.6), q(p.z + Math.cos(p.yaw) * 0.6), seed, p.paint])
   } else if (kind === 'water') {
     p.stats.water++
     emit([2, p.seat, t, q(x), q(z), seed])
@@ -956,28 +1104,28 @@ const q = (v) => Math.round(v * 100)
 
 /** Applies a paint event here and queues it for everyone else. */
 function emit(e) {
-  const swaps = applyEvent(e)
+  applyEvent(e)
   game.outbox.push(e)
-  return swaps
 }
 
 /**
- * Paint events: [0 stroke, seat, t, x0, z0, x1, z1, rainbow] [1 splat, seat, t, x, z, seed]
+ * Paint events: [0 stroke, seat, t, x0, z0, x1, z1, paint bits, rainbow] [1 splat, seat, t, x, z, seed, paint bits]
  * [2 wash, seat, t, x, z, seed], positions in cm. Every device applies the same list.
  */
 function applyEvent(e) {
   const [kind, seat, t] = e
-  if (!(seat >= 0 && seat < 4) || !Number.isInteger(t) || t < 1 || !e.slice(3, kind === 0 ? 7 : 6).every(Number.isFinite)) return 0
+  if (!(seat >= 0 && seat < 4) || !Number.isInteger(t) || t < 1 || !e.slice(3, kind === 0 ? 7 : 6).every(Number.isFinite)) return
   const x = e[3] / 100, z = e[4] / 100
-  if (kind === 0) return paint.stroke(t, seat, x, z, e[5] / 100, e[6] / 100, !!e[7])
+  const bits = PRIMARIES.includes(e[kind === 0 ? 7 : 6]) ? e[kind === 0 ? 7 : 6] : SEAT_PAINT[seat]
+  if (kind === 0) return paint.stroke(t, bits, x, z, e[5] / 100, e[6] / 100, !!e[8])
   const near = game.me ? clamp(1 - Math.hypot(game.me.x - x, game.me.z - z) / 30, 0.3, 1) : 1
   if (kind === 1) {
-    const swaps = paint.splat(t, seat, x, z, e[5] >>> 0)
+    paint.splat(t, bits, x, z, e[5] >>> 0)
     if (game.state === 'play') {
-      effects.splash(x, z, SEAT_COLORS[seat], 60, 1.2)
+      effects.splash(x, z, MIXES[bits].hex, 60, 1.2)
       audio.splash(near)
     }
-    return swaps
+    return
   }
   if (kind === 2) {
     paint.wash(t, x, z, e[5] >>> 0)
@@ -987,7 +1135,6 @@ function applyEvent(e) {
       audio.water(near)
     }
   }
-  return 0
 }
 
 /** Every STROKE_MS each local roller paints from where it was to where it is. */
@@ -1000,8 +1147,8 @@ function emitStrokes(force = false) {
     const r = p.rollerAt()
     const from = p.strokeFrom
     if (Math.hypot(r.x - from.x, r.z - from.z) < 0.04) continue
-    const e = [0, p.seat, t, q(from.x), q(from.z), q(r.x), q(r.z), p.rainbow ? 1 : 0]
-    p.stats.swap += emit(e)
+    const e = [0, p.seat, t, q(from.x), q(from.z), q(r.x), q(r.z), p.paint, p.rainbow ? 1 : 0]
+    emit(e)
     p.strokeFrom = { x: e[5] / 100, z: e[6] / 100 }
   }
 }
@@ -1063,7 +1210,8 @@ function updatePainters(dt, t) {
   for (const p of game.painters.values()) {
     if (p.local) {
       if (playing) {
-        p.drive(dt, p.bot ? 0.8 : 1)
+        // Robot friends roll a little slower than a child, and slower still with no clock, so the child's paint counts.
+        p.drive(dt, p.bot && !(p === game.me) ? (modeOf() === 'calm' ? 0.65 : 0.8) : 1)
         collide(p)
       } else p.speed = damp(p.speed, 0, 8, dt)
       p.rainbow = playing && t < p.rainbowUntil
@@ -1112,7 +1260,7 @@ function revealTarget(pos, look) {
   const fov = THREE.MathUtils.degToRad(camera.fov)
   const shown = game.state === 'results'
   const top = shown ? $('results').querySelector('.results-top').getBoundingClientRect().bottom + 8 : innerHeight * 0.16
-  const bottom = shown ? $('cards').getBoundingClientRect().top - 8 : innerHeight * 0.62
+  const bottom = shown ? $('results').querySelector('.panel').getBoundingClientRect().top - 8 : innerHeight * 0.62
   const free = Math.max(innerHeight * 0.3, bottom - top)
   const pxPerM = Math.min(free / (2 * HALF_D + 1.5), innerWidth / (2 * HALF_W + 2))
   const h = innerHeight / (pxPerM * 2 * Math.tan(fov / 2))
@@ -1153,9 +1301,55 @@ function updateCamera(dt, t) {
 
 // --- HUD -------------------------------------------------------------------------------------------
 
+/** One "together" fill: how much of the picture everyone has painted, full when it's nearly all painted. */
 function updateBar() {
-  const shares = paint.shares()
-  $('bar').innerHTML = shares.map((s, i) => `<i style="width:${(s * 100).toFixed(1)}%;background:${SEAT_COLORS[i]}"></i>`).join('')
+  const full = modeOf() === 'calm' ? CALM_DONE : 1
+  $('bar').firstElementChild.style.width = `${(clamp(paint.coverage() / full, 0, 1) * 100).toFixed(1)}%`
+}
+
+const dot = (hex) => `<i class="dab" style="background:${hex}"></i>`
+/** A mixed colour's recipe in pictures: ● + ● = ●. */
+const recipe = (mask) => `${MIXES[mask].recipe.map((b) => dot(MIXES[b].hex)).join('<b>+</b>')}<b>=</b>${dot(MIXES[mask].hex)}`
+
+/** The colours found so far, as dabs under the bar. */
+function renderFoundRow() {
+  $('found-row').innerHTML = game.found.map((m) => `<i class="dab" style="background:${MIXES[m].hex}" title="${MIXES[m].word}"></i>`).join('')
+}
+
+/** A recipe card that fades in under the bar for a few seconds. */
+function showNote(html, ms) {
+  const el = $('mix-note')
+  el.innerHTML = html
+  el.classList.remove('hidden', 'show')
+  void el.offsetWidth
+  el.classList.add('show')
+  clearTimeout(game.noteTimer)
+  game.noteTimer = setTimeout(() => el.classList.add('hidden'), ms)
+}
+
+/** Looks for mixed colours appearing on the ground for the first time this round. */
+function noticeMixes() {
+  for (const m of MIXED) {
+    if (game.found.includes(m) || paint.counts[m] < FOUND_CELLS) continue
+    game.found.push(m)
+    if (game.state === 'play') game.notes.push(m)
+  }
+}
+
+/** Says each new colour once, one at a time: "Red and yellow made orange!" */
+function sayNextMix(t) {
+  if (!game.notes.length || t - game.noteAt < NOTE_MS) return
+  const m = game.notes.shift()
+  game.noteAt = t
+  renderFoundRow()
+  showNote(recipe(m), NOTE_MS - 400)
+  speak(mixWords(m))
+  audio.studio('keep')
+  const at = paint.lastAt[m]
+  if (at >= 0) {
+    const c = paint.cellCentre(at)
+    effects.sparkle(c.x, 0.6, c.z, MIXES[m].hex, 8, 1.2)
+  }
 }
 
 function say() {
@@ -1172,6 +1366,9 @@ function updateHud(t) {
   updateBar()
   if (game.state !== 'play') return
   $('hint').classList.toggle('hidden', t - game.lastMoveAt < IDLE_HINT_MS)
+  noticeMixes()
+  sayNextMix(t)
+  if (modeOf() !== 'timed') return
   const left = Math.max(0, Math.ceil(game.setup.seconds - (t - game.roundStart) / 1000))
   // The time just counts down quietly: no hurry colour, pulse or ticking at the end.
   $('timer').textContent = `⏱️ ${left}`
@@ -1186,9 +1383,15 @@ function step(dt, realDt, t) {
     updatePainters(dt, t)
     if (game.state === 'play') {
       if (isHost()) hostItems(dt)
-      const elapsed = (t - game.roundStart) / 1000
-      if (isHost() && elapsed >= game.setup.seconds) endRound()
-      else if (!isHost() && elapsed >= game.setup.seconds + 3) endRound()
+      if (modeOf() === 'timed') {
+        const elapsed = (t - game.roundStart) / 1000
+        if (isHost() && elapsed >= game.setup.seconds) endRound()
+        else if (!isHost() && elapsed >= game.setup.seconds + 3) endRound()
+      } else if (isHost() && paint.coverage() >= game.askAt) {
+        // Nearly all painted: the host asks (never ends it alone). After 🖌️, the next question waits for another 5%.
+        game.askAt = paint.coverage() + ASK_AGAIN
+        askFinished('The playground is nearly all painted! Is your picture finished?')
+      }
     }
     items.update(dt, t)
     updateCamera(realDt, t)
@@ -1202,7 +1405,7 @@ function step(dt, realDt, t) {
     if (!game.room.solo) {
       if (t - game.lastSnap > SNAP_MS && ['play', 'countdown', 'reveal'].includes(game.state)) {
         game.lastSnap = t
-        const p = [...game.painters.values()].filter((x) => x.local).map((x) => [x.seat, q(x.x), q(x.z), q(x.yaw), q(x.speed), x.rainbow ? 1 : 0])
+        const p = [...game.painters.values()].filter((x) => x.local).map((x) => [x.seat, q(x.x), q(x.z), q(x.yaw), q(x.speed), x.rainbow ? 1 : 0, x.paint])
         send({ t: 's', r: roundId(), p }, { fast: true })
       }
       if (t - game.lastSend > SEND_MS) {
@@ -1222,6 +1425,7 @@ function frame() {
   last = t
   const dt = Math.min(realDt, 1 / 20)
   if (step(dt, realDt, t)) {
+    paint.now.value = gameTime() / 100
     paint.upload()
     if (game.state === 'play') measureQuality(realDt, t)
   }
@@ -1254,6 +1458,8 @@ if (DEBUG) {
   window.__paint = {
     game, paint, items, audio, effects, camera, renderer, scene, THREE, gallery, colourStudio,
     end: () => (isHost() ? endRound() : null),
+    finish: () => finishPicture(),
+    pot: (bits) => choosePot(bits),
     /** Lets a bot drive this child's painter (for tests). */
     autopilot(on = true) {
       const me = game.me
@@ -1266,10 +1472,12 @@ if (DEBUG) {
       state: game.state,
       host: isHost(),
       solo: game.room?.solo,
-      shares: paint.shares().map((s) => +(s * 100).toFixed(1)),
+      mode: modeOf(),
+      coverage: +(paint.coverage() * 100).toFixed(1),
       counts: [...paint.counts],
+      found: [...game.found],
       items: [...items.values()].map((i) => `${i.kind}@${i.x.toFixed(1)},${i.z.toFixed(1)}`),
-      painters: [...game.painters.values()].map((p) => ({ seat: p.seat, animal: p.animal, local: p.local, x: +p.x.toFixed(2), z: +p.z.toFixed(2) })),
+      painters: [...game.painters.values()].map((p) => ({ seat: p.seat, animal: p.animal, local: p.local, paint: p.paint, x: +p.x.toFixed(2), z: +p.z.toFixed(2) })),
       final: game.final,
     }),
     /** Runs `seconds` of game time right away (tabs in the background get no frames). */
@@ -1279,6 +1487,7 @@ if (DEBUG) {
         last = now()
         step(1 / fps, 1 / fps, now())
       }
+      paint.now.value = gameTime() / 100
       paint.upload()
       renderer.render(scene, camera)
       return this.state()
@@ -1286,7 +1495,7 @@ if (DEBUG) {
     /** A checksum of the picture, to compare devices. */
     hash() {
       let h = 0
-      for (let i = 0; i < paint.color.length; i++) h = (h * 31 + paint.color[i]) | 0
+      for (let i = 0; i < paint.mix.length; i++) h = (h * 31 + paint.mix[i]) | 0
       return h
     },
   }

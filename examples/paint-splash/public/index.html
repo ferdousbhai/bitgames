@@ -35,7 +35,10 @@
     <div class="pick-row"><span class="pick-label">🙋</span><div id="animals" class="animal-row"></div></div>
     <div class="pick-row"><span class="pick-label">🗺️</span><div id="places" class="places"></div></div>
   </div>
-  <button id="go" class="big-go">🎨 Let's paint!</button>
+  <div class="go-row">
+    <button id="go" class="big-go">🎨 Let's paint!</button>
+    <button id="mode" class="mode-btn" aria-pressed="false" aria-label="Quick round with a clock" title="Quick round with a clock"><span class="ico">⏱️</span><span class="lbl">Quick</span></button>
+  </div>
   <div class="menu-extras">
     <button id="colour-open" class="extra-btn" aria-label="Mix my colours"><span class="ico">🔴🟡🔵</span><span class="lbl">Mix my colours</span></button>
     <button id="gallery-open" class="extra-btn" aria-label="My pictures"><span class="ico">🖼️</span><span class="lbl">My pictures</span></button>
@@ -58,9 +61,21 @@
     <button id="gallery-save" class="round-btn" title="Keep a picture" aria-label="Keep a picture in your gallery">📷</button>
   </div>
   <div class="hud-top">
-    <div id="timer" class="pill timer">⏱️ 75</div>
-    <div id="bar" class="cover-bar"></div>
+    <div id="timer" class="pill timer hidden">⏱️ 75</div>
+    <div class="together-bar" aria-hidden="true"><span class="hands">🤝</span><div id="bar" class="cover-bar"><i></i></div><span class="goal">🖼️</span></div>
+    <div id="found-row" class="found-row"></div>
   </div>
+  <button id="finish" class="finish-btn hidden" aria-label="Finished!" title="Finished!"><span class="ico">🖼️</span><span class="lbl">Finished!</span></button>
+  <div id="finish-ask" class="finish-ask hidden" role="dialog" aria-label="Is your picture finished?">
+    <button id="finish-yes" class="ask-btn yes" aria-label="Yes, finished">✅</button>
+    <button id="finish-no" class="ask-btn no" aria-label="Keep painting">🖌️</button>
+  </div>
+  <div id="pots" class="pots" role="group" aria-label="Paint pots">
+    <button class="pot" data-pot="1" aria-label="Red paint" style="--c:#eb5063"></button>
+    <button class="pot" data-pot="2" aria-label="Yellow paint" style="--c:#f8d64e"></button>
+    <button class="pot" data-pot="4" aria-label="Blue paint" style="--c:#4e8ad5"></button>
+  </div>
+  <div id="mix-note" class="mix-note hidden" aria-live="polite"></div>
   <button id="voice" class="voice-btn" title="Say hello! (Space)">📣</button>
   <div id="hint" class="drag-hint hidden"><span class="finger">👆</span></div>
 </div>
@@ -75,6 +90,7 @@
     <button id="results-save" class="round-btn keep-btn" title="My pictures" aria-label="See this picture in My pictures">🖼️</button>
   </div>
   <div class="panel">
+    <div id="found" class="found"></div>
     <div id="cards" class="cards"></div>
     <div class="row">
       <button id="again" class="big-go">🔁 Paint again</button>
