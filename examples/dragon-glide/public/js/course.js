@@ -81,6 +81,7 @@ export class Course {
     this.powerGiven = new Set()
     this.slots = new Map() // world -> the goal places still to lay out
     this.ringNext = new Map() // world -> the number the next numbered ring shows
+    this.holdWorld = -1 // the world whose spare treasures are floating in
   }
 
   // --- Each world's goal ------------------------------------------------------------
@@ -185,6 +186,26 @@ export class Course {
       this.treasure(kind, x, y + dy, z + 4)
     })
     return 10
+  }
+
+  /**
+   * Before the nest, while a gathering goal is still open, Ember waits and spare groups float in
+   * one after another, so a missed treasure always comes round again. `z` is Ember's distance.
+   * The first call clears what was laid out ahead, so nothing else stands in the way.
+   */
+  spare(z, lane, wi) {
+    const want = WORLDS[wi].goal.want
+    if (this.holdWorld !== wi) {
+      this.holdWorld = wi
+      for (const it of this.items) if (it.z < -z && it.z > -(wi + 1) * WORLD_LENGTH) it.gone = true
+    }
+    if (this.items.some((it) => it.type === 'treasure' && it.drift && !it.gone && it.kind === want && it.z < -z - 1)) return
+    this.w = WORLDS[wi]
+    this.wi = wi
+    this.lane = lane
+    const before = this.items.length
+    this.treasures(z + 44)
+    for (let i = before; i < this.items.length; i++) this.items[i].drift = 9
   }
 
   treasure(kind, x, y, z) {
@@ -607,6 +628,11 @@ export class Course {
           o.visible = it.wi === this.world
           if (!o.visible) break
           o.position.y = it.y + Math.sin(it.t * 1.6) * 0.18
+          // spare treasures float toward Ember while Ember waits before the nest
+          if (it.drift) {
+            it.z += it.drift * dt
+            o.position.z = it.z
+          }
           if (playing && o.position.distanceTo(p) < it.r + R) {
             it.gone = true
             events.push({ type: 'treasure', kind: it.kind, pos: o.position.clone() })

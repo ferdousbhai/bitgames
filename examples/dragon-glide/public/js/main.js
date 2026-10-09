@@ -350,7 +350,7 @@ function goalPicture(g, mode = 'hud') {
     return `${h}</span>`
   }
   if (mode === 'end') {
-    return sortedRows(goal, g.got).map(([k, n]) => `<span class="kind">${treasureSVG(k).repeat(n)}</span>`).join('')
+    return sortedRows(goal, g.got).map(([k, n]) => `<span class="kind">${treasureSVG(k).repeat(Math.min(5, n))}${n > 5 ? `<b class="more">+${n - 5}</b>` : ''}</span>`).join('')
   }
   const have = mode === 'start' ? goal.count : g.got[goal.want] || 0
   let h = '<span class="want">'
@@ -409,15 +409,17 @@ function sortAtNest(g) {
     const rows = sortedRows(goal, g.got)
     if (!rows.length) return
     plan.push({ at: t, run: () => tray.classList.remove('hidden') })
-    for (const [kind, n] of rows) {
+    // the wanted kind is counted one by one, aloud
+    const [[first, firstN], ...others] = rows[0][0] === goal.want ? rows : [[goal.want, 0], ...rows]
+    if (firstN) {
       const row = document.createElement('div')
       row.className = 'sort-row'
       plan.push({ at: t, run: () => tray.append(row) })
-      for (let i = 1; i <= n; i++) {
+      for (let i = 1; i <= firstN; i++) {
         t += 0.75
         plan.push({ at: t, run: () => {
           const item = document.createElement('span')
-          item.innerHTML = treasureSVG(kind)
+          item.innerHTML = treasureSVG(first)
           row.append(item)
           flyFromEmber(item)
           sound.treasure(i)
@@ -425,8 +427,35 @@ function sortAtNest(g) {
         } })
       }
       t += 0.6
-      plan.push({ at: t, run: () => say(`${countOf(kind, n)}!`, true) })
+      plan.push({ at: t, run: () => say(`${countOf(first, firstN)}!`, true) })
       t += 1.2
+    }
+    // every other kind lands in its own row in one quick step (up to 5 shown, then a small +N)
+    if (others.length) {
+      const total = others.reduce((sum, [, n]) => sum + n, 0)
+      const words = others.length === 1 && others[0][1] <= 5 ? countOf(...others[0]) : `${total} other ${total === 1 ? 'treasure' : 'treasures'}`
+      plan.push({ at: t, run: () => {
+        for (const [kind, n] of others) {
+          const row = document.createElement('div')
+          row.className = 'sort-row'
+          for (let i = 0; i < Math.min(5, n); i++) {
+            const item = document.createElement('span')
+            item.innerHTML = treasureSVG(kind)
+            row.append(item)
+            flyFromEmber(item)
+          }
+          if (n > 5) {
+            const more = document.createElement('b')
+            more.className = 'more'
+            more.textContent = `+${n - 5}`
+            row.append(more)
+          }
+          tray.append(row)
+        }
+        sound.treasure(0)
+        say(`${firstN ? 'And ' : ''}${words}!`, true)
+      } })
+      t += 2
     }
     game.sortEnd = t
   }
@@ -972,6 +1001,17 @@ function updatePlay(dt) {
   const cruise = w.speed * game.slow * adventure.pace
   game.speed = damp(game.speed, cruise, 1.5, dt)
   game.z += game.speed * dt
+  // A gathering goal is never missed: short of the nest, Ember waits while spare groups float in
+  const g = game.goal
+  const holdZ = (game.world + 1) * WORLD_LENGTH - 100
+  if (g?.goal.type === 'gather' && (g.got[g.goal.want] || 0) < g.goal.count && game.z > holdZ) {
+    game.z = holdZ
+    if (!g.holding) {
+      g.holding = true
+      say(`More ${TREASURES[g.goal.want].many} are coming!`)
+    }
+    course.spare(game.z, lane, game.world)
+  }
 
   // Steering: keys nudge the target, mouse points at it, fingers drag it
   const kx = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0)
