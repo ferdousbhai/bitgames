@@ -7,6 +7,7 @@ import { COLORS, DESTS, PARTS, SLOTS, isUnlocked, modelName, part, reach, saniti
 import { Rocket } from './rocket.js'
 import { Thumbs } from './thumbs.js'
 import { createWorkshop } from './workshop.js'
+import { addNote, createNotebook, createPredict, fairTest, flightRace, guessPicture, noteFrom, partsOf, runRace, sanitizeNotes, validBuild, verdict } from './fairtest.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -41,9 +42,14 @@ const save = {
   stars: Number.isFinite(saved.stars) ? saved.stars : 0,
   flights: Number.isFinite(saved.flights) ? saved.flights : 0,
   picked: !!saved.picked,
+  // The parts of the rocket that flew last, so the next launch can ask "farther, same or less far?"
+  last: validBuild(saved.last),
+  // The "what I found out" notebook, and whether it has a page the child has not seen yet
+  notes: sanitizeNotes(saved.notes),
+  notesNew: !!saved.notesNew,
 }
 function persist() {
-  store.set(SAVE, { visited: save.visited, rocket: save.rocket, fresh: [...save.fresh], stars: save.stars, flights: save.flights, picked: save.picked })
+  store.set(SAVE, { visited: save.visited, rocket: save.rocket, fresh: [...save.fresh], stars: save.stars, flights: save.flights, picked: save.picked, last: save.last, notes: save.notes, notesNew: save.notesNew })
 }
 
 // --- Renderer, scene, camera --------------------------------------------------------
@@ -149,7 +155,8 @@ const popups = new Popups($('popups'), camera)
 
 // --- Game state ----------------------------------------------------------------------
 
-const TURBO = 14
+// Turbo needs three groups of five stars (stars are counted in fives)
+const TURBO = 15
 const LAND = new THREE.Vector3(0, -2000, 0)
 const PLANET_R = 4
 const game = {
@@ -807,7 +814,7 @@ const idle = () => (performance.now() - lastInput) / 1000
 
 function hintTarget() {
   if (game.state === 'party') return !$('reward').classList.contains('hidden') && idle() > 30 ? $('again') : null
-  if (game.state !== 'garage' || $('workshop')?.open) return null
+  if (game.state !== 'garage' || $('workshop')?.open || $('predict')?.open || $('notebook')?.open) return null
   if (!save.picked) {
     const items = [...$('items').children]
     return items.find((b) => !b.classList.contains('on') && !b.classList.contains('locked')) ?? null
@@ -876,6 +883,35 @@ function renderExperiment() {
 }
 
 const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf, rocketThumb, speak, sound: workshopSound, onChange: () => renderExperiment() })
+const predictor = createPredict({
+  thumbOf,
+  rocketThumb,
+  speak,
+  sound: workshopSound,
+  onGuess: (test) => {
+    pendingTest = test
+    launch({ asked: true })
+  },
+  onBack: () => hintStep(),
+})
+const notebook = createNotebook({ notes: () => save.notes, thumbOf, speak, sound: workshopSound })
+/** The 📓 button wears a ✨ while there is a page the child has not looked at yet. */
+function renderNotebookButton() {
+  $('notebook-btn').classList.toggle('fresh', save.notesNew)
+}
+$('notebook-btn').onclick = () => {
+  if (game.state !== 'garage' || predictor.open) return
+  audio.unlock()
+  audio.click()
+  keys.clear()
+  workshop.close()
+  save.notesNew = false
+  persist()
+  renderNotebookButton()
+  notebook.show()
+}
+let pendingTest = null
+
 $('experiment').onclick = () => {
   if (game.state !== 'garage') return
   audio.unlock()
@@ -886,6 +922,9 @@ $('experiment').onclick = () => {
 
 function toTitle() {
   workshop.close()
+  predictor.close()
+  notebook.close()
+  show('notebook-btn', false)
   game.state = 'title'
   show('title')
   show('topbar', false)
@@ -915,6 +954,8 @@ function toGarage({ snap = false } = {}) {
   show('flightbar', false)
   show('tray')
   show('actions')
+  show('notebook-btn')
+  renderNotebookButton()
   show('reward', false)
   show('journey', false)
   $('tray').classList.remove('away')
@@ -937,9 +978,24 @@ $('play').addEventListener('click', () => {
 
 // --- Countdown and lift-off ------------------------------------------------------------
 
-function launch() {
-  if (game.state !== 'garage' || game.busy) return
+/**
+ * GO. If a part changed since the last flight, the robot first asks for a guess
+ * (farther, the same, or less far); with nothing changed it is straight to the countdown.
+ */
+function launch({ asked = false } = {}) {
+  if (game.state !== 'garage' || game.busy || (!asked && predictor.open)) return
   workshop.close()
+  notebook.close()
+  if (!asked) {
+    pendingTest = null
+    const test = fairTest(save.last, save.rocket)
+    if (test) {
+      $('finger').classList.add('hidden')
+      keys.clear()
+      return predictor.ask(test)
+    }
+  }
+  show('notebook-btn', false)
   game.state = 'countdown'
   game.t = 0
   game.count = 3
@@ -1027,6 +1083,10 @@ function liftoff() {
   audio.playSong('flight')
   rocket.wobbler.position.set(0, 0, 0)
   const base = reach(save.rocket)
+  // A fair test changes one thing: the stars' turbo waits for a flight with no part changed
+  flight.test = pendingTest
+  pendingTest = null
+  save.last = partsOf(save.rocket)
   Object.assign(flight, {
     base,
     target: base,
@@ -1056,18 +1116,27 @@ function liftoff() {
   show('journey')
   // Turbo carries you one stop further, but only past places you have already visited: a first
   // trip always lands at the boosters' own destination, so no planet (or its new parts) gets skipped.
-  flight.canTurbo = base < DESTS.length - 1 && save.visited[base]
+  flight.canTurbo = !flight.test && base < DESTS.length - 1 && save.visited[base]
+  startGhost()
   $('turbo').classList.toggle('hidden', !flight.canTurbo)
   $('turbo').classList.remove('full')
+  // The guess rides along in the top bar while the two rockets are compared
+  $('guess').replaceChildren(...(flight.test ? [guessPicture(flight.test.guess, rocketThumb(flight.test.before), rocketThumb(flight.test.now))] : []))
+  show('guess', !!flight.test)
   renderStars()
   renderJourney()
   save.flights++
   persist()
 }
 
+/** Stars are counted in fives: a frame of five fills up, and the number beside it goes 5, 10, 15… */
 function renderStars() {
-  const el = $('stars')
-  el.textContent = `⭐ ${flight.stars}`
+  const fives = Math.floor(flight.stars / 5) * 5
+  const left = flight.stars - fives
+  $('stars-fives').textContent = fives ? String(fives) : '⭐'
+  $('stars-fives').classList.toggle('some', fives > 0)
+  ;[...$('stars-frame').children].forEach((dot, i) => dot.classList.toggle('on', i < left))
+  $('stars').setAttribute('aria-label', `${flight.stars} stars`)
   $('turbo-fill').style.width = `${Math.min(1, flight.stars / TURBO) * 100}%`
 }
 
@@ -1075,29 +1144,76 @@ function passAlt(i) {
   return flight.start + flight.dist * (0.3 + (0.6 * (i + 1)) / (flight.target + 1))
 }
 
+/**
+ * Last time's rocket flies again as a faded ghost on the journey track, at its own pace, and
+ * parks at the planet it reached: the child watches the comparison happen.
+ */
+const ghost = { on: false, base: 0, cruise: 0, dist: 0, alt: 0, speed: 0, t: 0, park: 1, el: null, parked: false }
+function startGhost() {
+  ghost.on = !!flight.test
+  if (!ghost.on) return
+  ghost.base = flight.test.result.a.reach
+  ghost.cruise = 10 + ghost.base * 1.3
+  ghost.dist = ghost.cruise * (12 + ghost.base * 3.2)
+  ghost.alt = 0
+  ghost.speed = 0
+  ghost.t = 0
+  ghost.parked = false
+}
+/** The track's top is whichever trip is longer. */
+const trackLength = () => (ghost.on ? Math.max(flight.dist, ghost.dist) : flight.dist)
+
 let journeyMe = null
 function renderJourney() {
   const track = $('journey')
-  track.querySelectorAll('.stop, .me').forEach((e) => e.remove())
+  track.querySelectorAll('.stop, .me, .ghost-me, .ghost-line').forEach((e) => e.remove())
   const t = $('journey-track')
   const pct = (f) => `calc(18px + (100% - 36px) * ${f})`
-  const home = document.createElement('span')
-  home.className = 'stop'
-  home.textContent = '🏠'
-  home.style.bottom = pct(0)
-  track.append(home)
-  for (let i = 0; i <= flight.target; i++) {
+  const scale = flight.dist / trackLength()
+  const stopAt = (i) => (i === flight.target ? 1 : (passAlt(i) - flight.start) / flight.dist) * scale
+  const add = (className, text, f) => {
     const s = document.createElement('span')
-    s.className = 'stop' + (i === flight.target ? ' goal' : '')
-    s.textContent = DESTS[i].emoji
-    s.style.bottom = pct(i === flight.target ? 1 : (passAlt(i) - flight.start) / flight.dist)
+    s.className = className
+    s.textContent = text
+    s.style.bottom = pct(f)
     track.append(s)
+    return s
+  }
+  add('stop', '🏠', 0)
+  for (let i = 0; i <= flight.target; i++) add('stop' + (i === flight.target ? ' goal' : ''), DESTS[i].emoji, stopAt(i))
+  if (ghost.on) {
+    // Planets only the ghost reaches sit faded above this flight's goal
+    const g = ghost.base
+    const ghostStop = (i) => (i === g ? 1 : 0.3 + (0.6 * (i + 1)) / (g + 1)) * (ghost.dist / trackLength())
+    for (let i = flight.target + 1; i <= g; i++) add('stop ghost-stop', DESTS[i].emoji, ghostStop(i))
+    ghost.park = g <= flight.target ? stopAt(g) : ghostStop(g)
+    add('ghost-line', '', ghost.park)
+    ghost.el = add('ghost-me', '', 0)
+    const img = document.createElement('img')
+    img.src = rocketThumb(flight.test.before)
+    img.alt = ''
+    ghost.el.append(img)
+    ghost.el.classList.toggle('parked', ghost.parked)
   }
   journeyMe = document.createElement('span')
   journeyMe.className = 'me'
   journeyMe.textContent = '🚀'
   track.append(journeyMe)
   t.dataset.ok = '1'
+}
+
+function updateGhost(dt) {
+  if (!ghost.on || ghost.parked) return
+  // The same take-off and cruise as a real flight, so the ghost is a fair rival
+  ghost.t += dt
+  ghost.speed = damp(ghost.speed, ghost.cruise * smoothstep(ghost.t, 0, 2.6), 3, dt)
+  ghost.alt = Math.min(ghost.dist, ghost.alt + ghost.speed * dt)
+  const u = ghost.alt / ghost.dist
+  ghost.el.style.bottom = `calc(18px + (100% - 36px) * ${u * ghost.park})`
+  if (u >= 1) {
+    ghost.parked = true
+    ghost.el.classList.add('parked')
+  }
 }
 
 function spawn(kind, x, y, z = 0, extra = {}) {
@@ -1177,6 +1293,8 @@ function catchStar(it) {
   audio.catch(Math.round(clamp((it.obj.position.x - cam.x) / (view.hw * 2) + 0.5, 0, 1) * 5))
   sparks.burst(it.obj.position, ['#fff3a0', '#ffd23f', '#ffffff'], 6, 2.5, 0.5)
   renderStars()
+  // Every full group of five is counted aloud: five, ten, fifteen…
+  if (flight.stars % 5 === 0) speak(String(flight.stars))
   if (!flight.turbo && flight.canTurbo && flight.stars >= TURBO && flight.target < DESTS.length - 1) {
     flight.turbo = true
     flight.target++
@@ -1298,8 +1416,10 @@ function updateFlight(dt) {
 
   // Journey marker
   const prog = clamp((f.alt - f.start) / f.dist, 0, 1)
-  if (journeyMe) journeyMe.style.bottom = `calc(18px + (100% - 36px) * ${prog})`
-  $('journey-fill').style.height = `${prog * 100}%`
+  const shown = prog * (f.dist / trackLength())
+  if (journeyMe) journeyMe.style.bottom = `calc(18px + (100% - 36px) * ${shown})`
+  $('journey-fill').style.height = `${shown * 100}%`
+  updateGhost(dt)
   if (prog >= 1) arrive()
 }
 const nozzleList = []
@@ -1377,6 +1497,7 @@ function updateArrive(dt) {
   rocket.wobbler.rotation.z = damp(rocket.wobbler.rotation.z, 0, 4, dt)
   goalPlanet.rotation.y += dt * 0.3
   goalPlanet.position.y -= dt * 4
+  updateGhost(dt)
   updateItems(dt)
   if (game.t > 1.4 && !game.busy) {
     game.busy = true
@@ -1566,6 +1687,9 @@ function startParty() {
   party.news = [...flight.flyby, ...(first ? unlocksAt(d).map((n) => ({ ...n, from: d })) : [])]
   flight.flyby = []
   for (const n of party.news) save.fresh.add(`${n.slot}:${n.id}`)
+  // A fair test (one part changed) adds a page to the "what I found out" notebook
+  party.found = !!flight.test && addNote(save.notes, noteFrom(flight.test))
+  if (party.found) save.notesNew = true
   persist()
   audio.fanfare()
   audio.playSong('dance')
@@ -1588,7 +1712,7 @@ function confetti() {
 function showReward() {
   const d = DESTS[party.dest]
   $('reward-head').textContent = `${d.emoji} 🚩`
-  $('reward-stars').textContent = flight.stars ? `⭐ × ${flight.stars}` : ''
+  renderRewardStars()
   const el = $('reward-new')
   el.innerHTML = ''
   el.classList.toggle('many', party.news.length > 6)
@@ -1602,10 +1726,61 @@ function showReward() {
     el.append(g)
     setTimeout(() => audio.unlock1(i), 300 + i * 180)
   })
+  renderTest()
   show('reward')
   rewardAt = performance.now()
 }
+
+/** The fair-test result on the reward card: the two rockets race again, then the robot names the cause. */
+let raceTimer = 0
+function renderTest() {
+  const box = $('reward-test')
+  clearTimeout(raceTimer)
+  box.replaceChildren()
+  show('reward-test', !!flight.test)
+  if (!flight.test) return
+  const test = flight.test
+  const v = verdict(test)
+  const race = flightRace(test, rocketThumb)
+  const row = document.createElement('div')
+  row.className = 'ft-verdict'
+  row.append(guessPicture(test.guess, rocketThumb(test.before), rocketThumb(test.now)))
+  const mark = document.createElement('b')
+  mark.className = 'ft-mark-result'
+  row.append(mark)
+  const why = document.createElement('p')
+  why.className = 'ft-why'
+  why.setAttribute('role', 'status')
+  row.append(why)
+  box.append(race, row)
+  raceTimer = runRace(race, test.result, () => {
+    mark.textContent = v.matched ? '✔' : '💡'
+    why.textContent = v.why
+    if (party.found) {
+      const page = document.createElement('span')
+      page.className = 'ft-new-page'
+      page.textContent = '📓✨'
+      row.append(page)
+    }
+    speak(`${v.say}${party.found ? ' I put it in your notebook!' : ''}`)
+  })
+}
 let rewardAt = 0
+
+/** The stars caught, counted in fives: a gold 5, 10, 15… then the stars left over. */
+function renderRewardStars() {
+  const el = $('reward-stars')
+  el.replaceChildren()
+  const fives = Math.floor(flight.stars / 5) * 5
+  if (fives) {
+    const chip = document.createElement('span')
+    chip.className = 'five-chip'
+    chip.textContent = String(fives)
+    el.append(chip)
+  }
+  if (flight.stars - fives) el.append(document.createTextNode('⭐'.repeat(flight.stars - fives)))
+  el.setAttribute('aria-label', `${flight.stars} stars`)
+}
 
 function animateDancers(dt, dancing) {
   const t = game.time
@@ -1659,6 +1834,8 @@ function updateParty(dt) {
 function backToGarage(thenLaunch = false) {
   if (game.busy) return
   game.busy = true
+  clearTimeout(raceTimer)
+  ghost.on = false
   audio.click()
   $('finger').classList.add('hidden')
   // Head to the tab with something new, so it is easy to find
@@ -1677,6 +1854,8 @@ function backToGarage(thenLaunch = false) {
 }
 $('to-garage').addEventListener('click', () => backToGarage(false))
 $('again').addEventListener('click', () => backToGarage(true))
+// Coming home mid-countdown slides the tray back in: the GO column settles above it once it has arrived
+$('tray').addEventListener('transitionend', () => { if (game.state === 'garage') layoutActions() })
 
 // --- Input ----------------------------------------------------------------------------
 
@@ -1898,4 +2077,4 @@ load()
   })
 
 // Handy for testing: ?debug exposes the game state in the console
-if (new URLSearchParams(location.search).has('debug')) window.rg = { probe(x, y) { ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.intersectObjects(scene.children, true).slice(0, 5).map((h) => `${h.object.type}:${h.object.name}:${h.object.material?.name}:${h.object.visible}`) }, land(d) { clearFlight(); flight.target = d; flight.stars = 7; setupLanding() }, debug, step(sec = 1) { for (let i = 0; i < sec * 30; i++) tick(1 / 30) }, keys, game, save, flight, party, choose, launch, surprise, toGarage, backToGarage, get rocket() { return rocket } }
+if (new URLSearchParams(location.search).has('debug')) window.rg = { probe(x, y) { ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.intersectObjects(scene.children, true).slice(0, 5).map((h) => `${h.object.type}:${h.object.name}:${h.object.material?.name}:${h.object.visible}`) }, land(d) { clearFlight(); flight.target = d; flight.stars = 7; setupLanding() }, debug, predictor, notebook, ghost, get pendingTest() { return pendingTest }, step(sec = 1) { for (let i = 0; i < sec * 30; i++) tick(1 / 30) }, keys, game, save, flight, party, choose, launch, surprise, toGarage, backToGarage, get rocket() { return rocket } }

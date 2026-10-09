@@ -1,0 +1,182 @@
+/* The fair test in every launch: the guess, the ghost of last time's rocket, and the notebook. */
+
+/* --- The 📓 button sits under 🏠 in the garage --- */
+#notebook-btn {
+  position: fixed; left: calc(10px + env(safe-area-inset-left)); top: calc(76px + env(safe-area-inset-top));
+}
+#notebook-btn.fresh::after { content: "✨"; position: absolute; right: -8px; top: -8px; font-size: 18px; }
+@media (max-height: 500px) { #notebook-btn { top: calc(58px + env(safe-area-inset-top)); } }
+
+/* --- Dialogs: warm card, big pictures, few words (like the workshop) --- */
+.ft-dialog {
+  position: fixed; box-sizing: border-box; width: min(640px, calc(100vw - 20px)); max-height: calc(100dvh - 16px); overflow: auto;
+  border: 4px solid #fff; border-radius: 26px; padding: 12px 14px 16px; background: #fff8e9; color: #3d365a;
+  box-shadow: 0 10px 0 #d9c9ef, 0 24px 80px #1e164d66; font-size: 16px; display: none; flex-direction: column; gap: 10px;
+}
+.ft-dialog[open] { display: flex; }
+.ft-dialog:focus { outline: none; }
+.ft-dialog::backdrop { background: #24204c88; backdrop-filter: blur(4px); }
+.ft-dialog button {
+  min-height: 48px; min-width: 48px; background: #e5dcf2; border-radius: 16px; padding: 6px 10px; font-weight: 900; color: #3d365a;
+  box-shadow: 0 4px 0 #c3b4dc; font-size: 22px; touch-action: manipulation;
+}
+.ft-dialog button:active { transform: translateY(3px); box-shadow: 0 1px 0 #c3b4dc; }
+.ft-dialog button:focus-visible { outline: 4px solid #3bb5ff; outline-offset: 2px; }
+.ft-head { display: flex; gap: 8px; align-items: center; }
+.ft-head h2 { font-size: 21px; margin: 0; flex: 1; line-height: 1.1; }
+.ft-dialog .ft-round { border-radius: 50%; padding: 0; width: 48px; font-size: 22px; flex: none; }
+
+/* "Last time": the faded rocket and the planet it reached */
+.ft-last { display: flex; align-items: center; gap: 2px; background: #efe8fb; border-radius: 16px; padding: 2px 8px 2px 2px; flex: none; }
+.ft-last-rocket { width: 48px; height: 48px; object-fit: contain; opacity: .5; filter: grayscale(.5); }
+.ft-last-planet { font-size: 30px; line-height: 1; }
+.ft-swap { flex: 1; display: flex; gap: 6px; align-items: center; justify-content: center; min-width: 0; flex-wrap: wrap; }
+.ft-pair { display: flex; align-items: center; gap: 2px; background: #fff; border-radius: 14px; padding: 2px 6px; }
+.ft-pair i { font-style: normal; font-size: 18px; color: #9b5de5; }
+.ft-part { width: 44px; height: 44px; display: grid; place-items: center; font-size: 26px; }
+.ft-part img { width: 100%; height: 100%; object-fit: contain; }
+.ft-more { font-size: 26px; font-weight: 900; }
+#predict-q { margin: 0; text-align: center; font-weight: 900; font-size: 19px; line-height: 1.2; }
+
+/* --- The three guesses, as pictures --- */
+.ft-guesses { display: flex; gap: 12px; justify-content: center; }
+.ft-dialog .ft-guess {
+  flex: 1 1 0; max-width: 190px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 10px;
+  background: #fff; box-shadow: 0 5px 0 #d3c6ea; border-radius: 22px; --s: clamp(76px, 22vw, 140px);
+}
+.ft-dialog .ft-guess[aria-pressed=true] { background: #fff3c4; box-shadow: 0 0 0 5px #ffd23f, 0 5px 0 #d9a600; }
+/* The three answers glow one after another, so none of them looks like the right one */
+.ft-guesses:not(:has([aria-pressed=true])) .ft-guess { animation: ft-glow 3s ease-in-out infinite; }
+.ft-guesses .ft-guess:nth-child(2) { animation-delay: 1s; }
+.ft-guesses .ft-guess:nth-child(3) { animation-delay: 2s; }
+@keyframes ft-glow { 0%, 40%, 100% { box-shadow: 0 5px 0 #d3c6ea; } 20% { box-shadow: 0 0 0 5px #ffe58a, 0 5px 0 #d3c6ea; } }
+.ft-label { font-size: 18px; line-height: 1.1; }
+
+/* One picture: last time's rocket faded on the left with a dashed line at its height; this rocket on the right */
+.ft-pic { position: relative; display: block; width: var(--s, 80px); height: var(--s, 80px); flex: none; }
+.ft-pic img { position: absolute; width: 44%; height: 68%; object-fit: contain; }
+.ft-pic .ft-before { left: -4%; bottom: 14%; opacity: .42; filter: grayscale(.6); }
+.ft-pic .ft-now { right: -4%; bottom: 14%; }
+.ft-farther .ft-now { bottom: 32%; }
+.ft-less .ft-now { bottom: -4%; }
+.ft-pic .ft-mark { position: absolute; left: 0; right: 0; bottom: 82%; border-top: 3px dashed #9b8cc4; }
+.ft-pic .ft-arrow {
+  position: absolute; left: 50%; top: 52%; translate: -50% -50%; font-size: calc(var(--s, 80px) * .2); line-height: 1; color: #9b5de5;
+  font-family: system-ui, sans-serif; font-weight: 900;
+}
+
+/* --- Flight: the guess rides along, stars are counted in fives, the turbo bar is three fives --- */
+.guess { display: grid; place-items: center; background: rgba(255, 255, 255, .8); border-radius: 16px; padding: 2px; --s: 46px; flex: none; }
+.stars { display: flex; align-items: center; gap: 8px; padding: 4px 12px; }
+.stars .fives { font-size: 26px; min-width: 1.2em; text-align: center; }
+.stars .fives.some { color: #3a2a7a; background: #ffd23f; border-radius: 999px; padding: 0 10px; text-shadow: none; box-shadow: 0 2px 0 #d9a600; }
+.stars .frame { display: grid; grid-template-columns: repeat(5, 16px); gap: 4px; padding: 4px 6px; border-radius: 10px; background: rgba(255, 255, 255, .18); }
+.stars .frame i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .6); transition: background .2s; }
+.stars .frame i.on { background: #ffd23f; border-color: #ffd23f; box-shadow: 0 0 6px #ffd23f; }
+.turbo i { position: relative; }
+.turbo i::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent calc(33.3% - 1px), #1b1446aa 0 calc(33.3% + 1px), transparent 0 calc(66.6% - 1px), #1b1446aa 0 calc(66.6% + 1px), transparent 0);
+}
+@media (max-width: 520px), (max-height: 500px) {
+  .stars { gap: 5px; padding: 3px 9px; }
+  .stars .fives { font-size: 20px; }
+  .stars .frame { grid-template-columns: repeat(5, 11px); gap: 3px; padding: 3px 4px; }
+  .stars .frame i { width: 11px; height: 11px; }
+  .guess { --s: 36px; }
+}
+
+/* Last time's rocket on the journey track */
+.journey .ghost-me { position: absolute; left: calc(50% - 24px); width: 40px; height: 40px; transform: translate(-50%, 50%); opacity: .55; filter: grayscale(.5); }
+.journey .ghost-me img { width: 100%; height: 100%; object-fit: contain; }
+.journey .ghost-me.parked { opacity: .7; }
+.journey .ghost-line { position: absolute; left: -26px; right: -6px; height: 0; border-top: 3px dashed rgba(255, 255, 255, .85); }
+.journey .ghost-stop { opacity: .45; }
+@media (max-width: 520px), (max-height: 500px) { .journey .ghost-me { width: 30px; height: 30px; } }
+
+/* --- After landing: the two rockets race again on the reward card --- */
+.reward-test { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.reward-test .workshop-race { --badge: 26px; --lane: 38px; }
+.ft-lane-badge { font-size: 18px; text-align: center; }
+.lane-a .workshop-ship { opacity: .5; filter: grayscale(.5) drop-shadow(0 2px 1px rgba(30, 22, 77, .35)); }
+.lane-a .workshop-rail { box-shadow: inset 0 0 0 2px #9b8cc488; }
+.ft-verdict { display: flex; align-items: center; gap: 8px; --s: 52px; }
+.ft-verdict .ft-pic { background: #fff; border-radius: 12px; }
+.ft-mark-result { font-size: 30px; color: #1f9c6b; min-width: 1em; text-align: center; }
+.ft-why { margin: 0; flex: 1; font-weight: 800; font-size: 15px; line-height: 1.25; }
+.ft-new-page { font-size: 24px; }
+.reward-stars .five-chip { display: inline-block; margin-right: 6px; padding: 0 12px; border-radius: 999px; background: #ffd23f; color: #3a2a7a; box-shadow: 0 2px 0 #d9a600; }
+body.portrait #reward .card { grid-template-areas: "head btns" "stars btns" "test test" "new new"; }
+body.portrait .reward-test { grid-area: test; margin-top: 6px; }
+@media (max-height: 500px) {
+  .reward-test .workshop-race { --badge: 20px; --lane: 28px; padding: 3px 5px 5px; gap: 1px; }
+  .reward-test .workshop-stop { font-size: 16px; }
+  .ft-verdict { --s: 38px; gap: 6px; }
+  .ft-mark-result { font-size: 22px; }
+  .ft-why { font-size: 12px; }
+  .ft-new-page { font-size: 18px; }
+}
+@media (orientation: portrait) and (min-width: 700px) and (min-height: 900px) {
+  .reward-test .workshop-race { --badge: 36px; --lane: 54px; }
+  .reward-test .workshop-stop { font-size: 30px; }
+  .ft-verdict { --s: 72px; gap: 12px; }
+  .ft-why { font-size: 20px; }
+  .ft-mark-result { font-size: 40px; }
+}
+
+/* --- The notebook: one page per part --- */
+.ft-pages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.ft-dialog .ft-page {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; background: #f1edf8; box-shadow: 0 4px 0 #d8d0ea;
+}
+.ft-dialog .ft-page.found { background: #fff; box-shadow: 0 4px 0 #d3c6ea, 0 0 0 3px #ffd23f; }
+.ft-dialog .ft-page.on { background: #fff3c4; }
+.ft-page-part { width: 64px; height: 64px; display: grid; place-items: center; font-size: 34px; }
+.ft-page-part img { width: 100%; height: 100%; object-fit: contain; }
+.ft-page:not(.found) .ft-page-part img { filter: brightness(0) invert(.7); opacity: .6; }
+.ft-page-icons { display: flex; gap: 4px; align-items: center; font-size: 22px; line-height: 1.1; min-height: 1.2em; }
+.ft-page:not(.found) .ft-page-icons { color: #9b8cc4; }
+#notebook-line { margin: 0; min-height: 2.6em; text-align: center; font-weight: 800; font-size: 17px; line-height: 1.3; }
+
+/* Short sideways phones */
+@media (orientation: landscape) and (max-height: 500px) {
+  .ft-dialog { padding: 8px 10px 10px; gap: 6px; width: min(720px, calc(100vw - 16px)); }
+  .ft-dialog button { min-height: 44px; min-width: 44px; }
+  .ft-dialog .ft-round { width: 44px; }
+  .ft-head h2 { font-size: 17px; }
+  #predict-q { font-size: 16px; }
+  .ft-dialog .ft-guess { --s: clamp(64px, calc(100dvh - 210px), 120px); padding: 4px 6px 6px; }
+  .ft-label { font-size: 15px; }
+  .ft-last-rocket { width: 40px; height: 40px; }
+  .ft-part { width: 38px; height: 38px; }
+  .ft-pages { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .ft-page-part { width: 48px; height: 48px; }
+  .ft-page-icons { font-size: 17px; }
+  #notebook-line { font-size: 14px; min-height: 2.4em; }
+}
+/* Tablets: everything bigger */
+@media (min-width: 740px) and (min-height: 700px) {
+  .ft-dialog { width: min(820px, calc(100vw - 48px)); padding: 18px 22px 22px; gap: 16px; }
+  .ft-dialog button { min-height: 60px; min-width: 60px; font-size: 28px; border-radius: 20px; }
+  .ft-dialog .ft-round { width: 60px; font-size: 28px; }
+  .ft-head h2 { font-size: 28px; }
+  #predict-q { font-size: 26px; }
+  .ft-dialog .ft-guess { --s: clamp(120px, 20vw, 180px); max-width: 230px; }
+  .ft-label { font-size: 24px; }
+  .ft-last-rocket { width: 64px; height: 64px; }
+  .ft-last-planet { font-size: 40px; }
+  .ft-part { width: 60px; height: 60px; }
+  .ft-page-part { width: 96px; height: 96px; }
+  .ft-page-icons { font-size: 30px; }
+  #notebook-line { font-size: 22px; }
+}
+@media (max-width: 380px) {
+  .ft-guesses { gap: 6px; }
+  .ft-label { font-size: 15px; }
+  .ft-pages { gap: 6px; }
+  .ft-page-part { width: 52px; height: 52px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ft-guesses .ft-guess { animation: none !important; }
+  .stars .frame i { transition: none; }
+}

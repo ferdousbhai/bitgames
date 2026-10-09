@@ -43,7 +43,7 @@ export class Audio {
 
   unlock() {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') this.ctx.resume()
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}) // WebKit can refuse the audio device; play on silently
       return
     }
     try {
@@ -91,7 +91,7 @@ export class Audio {
   }
 
   suspend() {
-    this.ctx?.suspend()
+    this.ctx?.suspend().catch(() => {})
   }
 
   tone(freq, { when = 0, dur = 0.35, type = 'sine', vol = 0.18, echo = true, slide = 0, attack = 0.012, out = this.sfx } = {}) {

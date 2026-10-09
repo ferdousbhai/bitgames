@@ -17,9 +17,11 @@ export function compareBuilds(a, b) {
   }
 }
 
-const BOOSTER_WORDS = { none: 'no boosters', small: 'small boosters', big: 'big boosters', mega: 'mega boosters', rainbow: 'rainbow boosters' }
-const SLOT_WORDS = { nose: 'nose', cabin: 'window', pilot: 'pilot', tank: 'tank', sticker: 'sticker', fins: 'fins', booster: 'boosters' }
-const WOBBLY = new Set(['nose', 'tank', 'fins'])
+export const BOOSTER_WORDS = { none: 'no boosters', small: 'small boosters', big: 'big boosters', mega: 'mega boosters', rainbow: 'rainbow boosters' }
+export const SLOT_WORDS = { nose: 'nose', cabin: 'window', pilot: 'pilot', tank: 'tank', sticker: 'sticker', fins: 'fins', booster: 'boosters' }
+export const WOBBLY = new Set(['nose', 'tank', 'fins'])
+/** "the Moon", but "Mars". */
+export const placeName = (i) => (DESTS[i].id === 'mars' ? '' : 'the ') + DESTS[i].name
 
 /** One or two short, honest sentences: what changed, and why the rockets flew the way they did. */
 export function explain(a, b, result = compareBuilds(a, b)) {
@@ -27,7 +29,7 @@ export function explain(a, b, result = compareBuilds(a, b)) {
   if (changed.length === 0) return 'Same parts, so they fly the same.'
   const many = changed.length > 1 ? ' You changed more than one part, so it is hard to tell which one did it.' : ''
   if (changed.includes('booster')) {
-    if (result.answer === 'same') return `Both rockets still reach the ${DESTS[result.a.reach].name}.${many}`
+    if (result.answer === 'same') return `Both rockets still reach ${placeName(result.a.reach)}.${many}`
     const far = result.answer === 'a' ? a : b
     const near = result.answer === 'a' ? b : a
     const push = near.booster === 'none' ? 'give an extra push' : `push harder than ${BOOSTER_WORDS[near.booster]}`
@@ -45,7 +47,34 @@ export function explain(a, b, result = compareBuilds(a, b)) {
 }
 const capital = (s) => s[0].toUpperCase() + s.slice(1)
 
-const isBuild = (value) => value && Object.keys(PARTS).every((slot) => PARTS[slot].some((p) => p.id === value[slot]))
+/**
+ * The same rules told about one rocket against its last flight ("before" against "now"), for the
+ * question asked at every launch after a part change. One spoken sentence that names the cause.
+ */
+export function explainFlight(before, now, result = compareBuilds(before, now)) {
+  const { changed } = result
+  if (changed.length === 0) return 'Same parts, so it flies the same.'
+  if (changed.includes('booster')) {
+    const many = changed.length > 1 ? ' You changed more than one part, so it is hard to tell which one did it.' : ''
+    const was = BOOSTER_WORDS[before.booster]
+    const is = BOOSTER_WORDS[now.booster]
+    if (result.answer === 'same') return `Both still reach ${placeName(result.b.reach)}.${many}`
+    if (result.answer === 'b') return `${capital(is)} ${before.booster === 'none' ? 'gave it a push' : `push harder than ${was}`}, so it went farther!${many}`
+    return `${now.booster === 'none' ? 'With no boosters there was no extra push' : `${capital(is)} push less than ${was}`}, so it did not go as far.${many}`
+  }
+  const wobbly = changed.filter((slot) => WOBBLY.has(slot))
+  const shook = result.a.wobble !== result.b.wobble
+  if (wobbly.length && shook) {
+    const names = wobbly.map((s) => SLOT_WORDS[s])
+    const many = changed.length > 1 ? ' You changed more than one part, so it is hard to tell which one did it.' : ''
+    return `The ${names.join(' and ')} changed the wobble, not the distance.${many}`
+  }
+  const names = changed.map((s) => SLOT_WORDS[s])
+  if (wobbly.length) return `The ${names.join(' and ')} did not change the distance.`
+  return `The ${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} just for fun. Same distance!`
+}
+
+export const isBuild = (value) => value && Object.keys(PARTS).every((slot) => PARTS[slot].some((p) => p.id === value[slot]))
 
 /** Rocket A from an earlier visit, if one was saved. */
 export function readStoredReference() {

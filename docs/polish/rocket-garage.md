@@ -67,3 +67,66 @@ All references are to `examples/rocket-garage/public/`.
 - Ask "farther, same or shorter?" before each launch after a part change, and show a ghost of the last distance.
 - Count stars aloud in groups, and give them a meaningful use rather than a tally.
 - The reward screen's dance loop still plays until the child leaves; consider ending it after one phrase.
+
+# Phase 2: the fair test inside every launch (2026-10-09)
+
+The 🧪 workshop's fair test now happens on every launch after a part change. The workshop, unlocks, building, painting, steering, landing and dance are unchanged.
+
+## Design
+
+- **Before launch.** GO compares the rocket's parts (paint is ignored) with the parts of the rocket that flew last. If nothing changed, it goes straight to the countdown. If something changed, the robot shows last time's rocket faded beside the planet it reached, and the changed part as old ➜ new. It asks aloud: "You changed the fins. Last time, it reached the Moon. Will it go farther, the same, or less far?" Three big picture buttons follow. Each shows last time's faded rocket under a dashed line, with this rocket higher, level or lower. The three glow in turn, so none looks like the right answer. Picking one says "You think farther. Let's find out!" and the countdown starts. 🔧 (or Esc) goes back to the garage. Keys 1–3 and ←/→ with Enter also work.
+- **During flight.** The guess rides along in the top bar. On the journey track, last time's rocket appears as a faded ghost beside the 🚀. It flies at its own real speed (same take-off and cruise rules) and parks at the planet it reached, which is marked by a dashed line. Planets that only the ghost reached sit faded above this flight's goal. **Test flights have no turbo**, because a fair test changes one thing. Turbo still works on every flight where nothing changed (for example 🚀 "fly again").
+- **After landing.** The reward card replays both rockets on the workshop's two-lane track: the 👻 lane for last time and this flight's lane, each wobbling by its real wobble. The card then shows the guess picture with ✔ (matched) or 💡 (a new discovery), never "wrong". The robot says one sentence from `explainFlight()` (`js/workshop.js`), which uses the workshop's own words and rules:
+  - boosters → distance ("Small boosters gave it a push, so it went farther!")
+  - nose/tank/fins → wobble only when the wobble really changed ("The tank changed the wobble, not the distance."), otherwise "The nose did not change the distance."
+  - window/pilot/sticker → "just for fun. Same distance!"
+  - several changes at once → "…hard to tell which one did it."
+- **Over time: the 📓 notebook** (under 🏠 in the garage). It has one page per part: boosters, fins, tank, nose, window, pilot and sticker. Only fair tests (exactly one part changed) fill a page, which teaches changing one thing at a time. A page shows the tested part and a pictured finding (🪐⬆ distance, 〰️ wobble, 🪐= same distance, 🎨 just for fun) and reads it aloud when tapped. An empty page shows a grey silhouette and "?". Tapping it says "Change only the fins, then fly, to find out what they do." The 📓 wears a ✨ until a new page is seen. A test that finds a new page adds "I put it in your notebook!" and 📓✨ on the card.
+- **Stars in fives.** Turbo now needs 15 stars (three fives; it was 14). The star pill shows a five-frame that fills, beside a gold 5 / 10 / 15… number, and each full five is said aloud ("five", "ten"…). The turbo bar is drawn in three segments. The reward card shows the stars as the gold fives number plus the stars left over (17 = [15] ⭐⭐).
+
+## Changes (`examples/rocket-garage/public/`)
+
+- `js/fairtest.js` (new): `fairTest`, `verdict`, guess pictures, the two-lane result race, notebook notes and sentences, and the `#predict` and `#notebook` dialogs.
+- `fairtest.css` (new; linked in `index.html`): the dialogs, guess pictures, five-frame, turbo segments, journey ghost, reward test row, 📓 button, phone, tablet and reduced-motion rules.
+- `js/workshop.js`:
+  - `:20-24` exports the word tables and adds `placeName` ("Mars", not "the Mars")
+  - `:54` adds `explainFlight(before, now)`, sharing `compareBuilds` and the wording
+  - `isBuild` is exported
+  - the workshop itself is unchanged
+- `js/main.js`:
+  - `:46` saves `last`, `notes` and `notesNew`
+  - `:159` sets `TURBO = 15`
+  - `:817` stops hints while the dialogs are open
+  - `:886` sets up the predictor and notebook
+  - `:985` makes `launch()` ask first
+  - `:1087`/`:1119` handle the test flight, last build and no turbo
+  - `:1133` draws the stars in fives
+  - `:1151-1215` adds the ghost and the journey track
+  - `:1297` counts fives aloud
+  - `:1691` adds notebook notes
+  - `:1736` adds the reward test
+  - `:1771` shows reward stars in fives
+  - `:1858` re-lays-out the GO column after the tray slides back. This fixes an existing bug: after going 🏠 mid-countdown, 🧪/🎲 used to sit over the tray in portrait.
+- `index.html`: adds the `#notebook-btn`, `#guess`, five-frame star pill and `#reward-test` elements.
+- `js/audio.js:46,94`: `resume()`/`suspend()` now catch rejections, as Crash Racers already does. WebKit raised an uncaught `Failed to start the audio device` during the longer playthrough.
+
+## Evidence
+
+- Own playthrough (`scratchpad/p2/rocket-garage/play.mjs`) in Chromium at 834×1194, 1194×834, 667×375 and 375×667, and in WebKit at 834×1194. The script runs:
+  - first flight (no question)
+  - boosters only (guess "same" → 💡 farther, notebook page)
+  - tank only (guess "farther" → 💡 wobble, notebook page)
+  - booster and sticker (guess "less" → ✔ with "hard to tell")
+  - unchanged GO (no question)
+  - the notebook
+  It had 0 page errors and 0 console errors. Screenshots are `scratchpad/p2/rocket-garage/<engine>-<p|l|s|sp>-*.png`.
+- Every single-part change from the default rocket was checked against `explainFlight` and the notebook sentence (`explain.mjs`). All match the real `reach`/`wobble` rules.
+- `browser.mjs --ids rocket-garage --run p2`: Chromium and WebKit both pass with 0 errors.
+- `node --test`: 10/11. Only the manifest-hash test fails, pending the coordinator's rebuild (two new files: `fairtest.css` and `js/fairtest.js`).
+
+## Remaining
+
+- Owner's call: test flights skip turbo, for a clean comparison. If the children miss turbo, an alternative is to keep it and add "then your stars gave a turbo push" to the result.
+- Counting every five aloud is calm but frequent on long flights (up to about 10 times). It could stop after 15 if it feels chatty.
+- The reward screen's dance loop still plays until the child leaves (from Phase 1).
+- Booster thumbnails are drawn at a shared scale, so the small booster looks tiny on its notebook page.

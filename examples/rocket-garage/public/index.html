@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="./style.css" />
 <link rel="stylesheet" href="./ipad.css" />
 <link rel="stylesheet" href="./workshop.css" />
+<link rel="stylesheet" href="./fairtest.css" />
 </head>
 <body class="landscape">
 <canvas id="view"></canvas>
@@ -42,7 +43,8 @@
   <button id="home" class="round-btn" title="Home (Esc)" aria-label="Home">🏠</button>
   <div id="reach" class="reach"></div>
   <div id="flightbar" class="flightbar hidden">
-    <div id="stars" class="pill stars">⭐ 0</div>
+    <div id="guess" class="guess hidden" aria-label="Your guess"></div>
+    <div id="stars" class="pill stars" role="img" aria-label="0 stars"><b id="stars-fives" class="fives">⭐</b><span id="stars-frame" class="frame"><i></i><i></i><i></i><i></i><i></i></span></div>
     <div id="turbo" class="turbo"><b>⚡</b><i><span id="turbo-fill"></span></i></div>
   </div>
   <div class="right">
@@ -56,6 +58,8 @@
   <div id="items" class="items"></div>
   <div id="paints" class="paints"></div>
 </div>
+
+<button id="notebook-btn" class="round-btn hidden" title="What I found out" aria-label="What I found out notebook">📓</button>
 
 <div id="actions" class="hidden">
   <button id="experiment" class="dice" title="Compare two builds" aria-label="Robot’s test workshop">🧪</button>
@@ -71,6 +75,7 @@
   <div class="card">
     <div id="reward-head" class="reward-head"></div>
     <div id="reward-stars" class="reward-stars"></div>
+    <div id="reward-test" class="reward-test hidden"></div>
     <div id="reward-new" class="reward-new"></div>
     <div class="btns">
       <button id="to-garage" class="btn garage" title="Back to the garage" aria-label="Back to the garage">🔧</button>
