@@ -52,7 +52,8 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
   let recipeIndex = 0
   let layers = []
   let sharing = false
-  // One pending check at a time; closing, switching tabs or undoing cancels it
+  // One pending check at a time: any tap in the studio (or closing it) cancels it, and a tap that
+  // completes a recipe or share books it again
   let checkTimer = 0
   const checkSoon = (check, ms) => { clearTimeout(checkTimer); checkTimer = setTimeout(check, ms) }
   const cancelCheck = () => clearTimeout(checkTimer)
@@ -84,6 +85,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
     sound?.[name]?.(...args)
   }
   // Each tap's answer replaces the last one, so a quick child never hears a backlog
+  studio.dialog.addEventListener('click', cancelCheck, true)
   const speak = voice.sayNow
   const stillMotion = matchMedia('(prefers-reduced-motion: reduce)')
   let hop = 0
@@ -302,14 +304,12 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
   }
 
   $('#recipe-undo').onclick = () => {
-    cancelCheck()
     layers.pop()
     play('click')
     say('Try a different layer.')
     draw()
   }
   function checkRecipe() {
-    if (sharing) return
     const matches = layers.length === recipe().length && layers.every((f, i) => f === recipe()[i])
     if (matches) {
       say('🎉 The cake matches every picture, from bottom to top!')
@@ -335,14 +335,12 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
   }
 
   $('#recipe-tab').onclick = () => {
-    cancelCheck()
     sharing = false
     play('click')
     say('Build from bottom to top.')
     draw()
   }
   $('#share-tab').onclick = () => {
-    cancelCheck()
     sharing = true
     play('click')
     resetShares()
@@ -362,7 +360,6 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
     draw()
   }
   $('#share-undo').onclick = () => {
-    cancelCheck()
     if (history.length) owners[history.pop()] = null
     selected = null
     play('click')
@@ -370,7 +367,6 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
     draw()
   }
   $('#share-reset').onclick = () => {
-    cancelCheck()
     resetShares()
     play('click')
     say('Try another way to share equally.')

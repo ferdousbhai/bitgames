@@ -588,12 +588,17 @@ function setBumpers(on) {
   $('bumpers-state').textContent = on ? 'ON' : 'OFF'
 }
 
-function toTitle() {
+/** The one cleanup every exit and fresh start shares: words stop and the counting cards clear. */
+function stopPlay() {
   voice.hush()
   prediction.reset()
   counter.clear()
   $('bond').hidden = true
   $('where').hidden = true
+}
+
+function toTitle() {
+  stopPlay()
   game.state = 'title'
   game.dance = false
   $('last').textContent = game.lastScore !== null ? `🎳 ${game.lastScore}` : ''
@@ -606,12 +611,8 @@ function toTitle() {
 }
 
 function start() {
-  voice.hush()
-  prediction.reset()
-  counter.clear()
+  stopPlay()
   game.bonds.clear()
-  $('bond').hidden = true
-  $('where').hidden = true
   audio.unlock()
   audio.click()
   card.reset()

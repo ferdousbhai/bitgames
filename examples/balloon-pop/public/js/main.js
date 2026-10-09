@@ -485,11 +485,12 @@ function later(fn, ms) {
     fn()
   }, ms)
   playTimers.add(id)
+  return id
 }
 /** The one cleanup every exit and fresh start shares: words stop and no timer fires afterwards. */
 function stopPlay() {
   voice.hush()
-  playTimers.forEach(clearTimeout)
+  for (const id of playTimers) clearTimeout(id)
   playTimers.clear()
   clearTimeout(rewardTimer)
   $('mission-reward').classList.remove('show')

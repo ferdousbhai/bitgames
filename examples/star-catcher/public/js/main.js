@@ -650,7 +650,6 @@ $('sound').addEventListener('pointerdown', (e) => {
   toggleSound()
 })
 
-let titleTimer = 0
 function start() {
   if (game.state !== 'title') return
   clearMissionTimers()
@@ -659,7 +658,7 @@ function start() {
   audio.click()
   game.state = 'play'
   $('start').classList.add('fade')
-  titleTimer = setTimeout(() => $('start').classList.add('hidden'), 400)
+  missionTimers.push(setTimeout(() => $('start').classList.add('hidden'), 400))
   $('hud').classList.remove('hidden')
   rocket.target.set(0, view.yMin + 1.2)
   game.spawnTimer = 0.8
@@ -714,7 +713,6 @@ function clearPlayfield() {
 function resetTrip() {
   audio.click()
   clearMissionTimers()
-  clearTimeout(titleTimer)
   voice.hush()
   game.state = 'title'
   clearPlayfield()

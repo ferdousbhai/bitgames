@@ -95,6 +95,12 @@ export function createPrediction({ button, hud, getStanding, getLayout, onOpen, 
   }
   less.onclick = () => { value = Math.max(0, value - 1); sound?.('tap'); draw() }
   more.onclick = () => { value = Math.min(max, value + 1); sound?.('tap'); draw() }
+  // Every way out but Keep (Just play, Escape, a roll) stops the question
+  let kept = false
+  dialog.addEventListener('close', () => {
+    if (!kept) voice.hush()
+    kept = false
+  })
   $('#pin-confirm').onclick = () => {
     guess = value
     say(`My prediction: ${pins(guess)} will fall.`, `💭 ${guess}`)
@@ -104,12 +110,6 @@ export function createPrediction({ button, hud, getStanding, getLayout, onOpen, 
     dialog.close()
   }
   $('#pin-close').onclick = () => dialog.close()
-  // Every way out but Keep (Just play, Escape, a roll) stops the question
-  let kept = false
-  dialog.addEventListener('close', () => {
-    if (!kept) voice.hush()
-    kept = false
-  })
   // Keep the bowling game's keyboard controls out of the open dialog.
   addEventListener('keydown', (e) => { if (dialog.open) e.stopImmediatePropagation() }, true)
 
