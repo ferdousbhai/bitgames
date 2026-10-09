@@ -13,6 +13,27 @@ The owner wants all twelve originals brought to 10/10 rather than any new games.
 
 Work one game at a time and record each pass in `docs/polish/<game-id>.md`. The scorecard and three-phase plan are in [docs/polish/AUDIT_2026-10-09.md](polish/AUDIT_2026-10-09.md). Polish notes for the retired games are archived in `docs/archive/retired-polish-2026-10-07/`. Blender 5.2 runs on the owner's machine. The CLI is preferred because jobs can run in parallel; the Blender MCP server works but runs jobs one at a time.
 
+## Phase 2 complete (2026-10-09, not yet deployed)
+
+Every original now has its learning inside the core action, with calm untimed play as the default and lively modes kept as menu choices:
+
+| Game | Core learning loop |
+| --- | --- |
+| Balloon Pop | Spoken, pictured counting requests (colour, shape, adding on, dots to quantity) filling ten-frame slots; Free popping kept |
+| Bumper Ducks | Untimed Pond helpers round filling a shared ten-frame (place value, colour sorting); Race kept |
+| Bunny Hop | Announced carrot rows counted into a tray, obstacle patterns with "What comes next?", 🐢 pace, pantry sums |
+| Cake Stack | A friend's pictured order and AB/ABC patterns, then fair sharing among guests; Free stacking kept |
+| Crash Racers | Delivery Town: match picture parcels to houses placed out of road order using the map; Race and Smash kept |
+| Dragon Glide | One goal per world: numbered rings in order, or gathering by colour or shape, sorted at the nest |
+| Fish Pond | True habitats across five places (new Blender Coral Reef, Arctic seals) and look-closer facts |
+| Memory Match | Spoken names; twins, animal↔sound and animal↔baby modes |
+| Paint Splash | Untimed colour mixing by overlapping wet primaries, painted together; Quick round kept |
+| Penguin Bowling | Earned strikes, fallen + standing = 10 on every roll, find-the-pins before spares |
+| Rocket Garage | Predict-then-test fair test on every launch with a ghost rocket and a findings notebook |
+| Star Catcher | Real constellations built star by star, named with a fact, ending in a night sky |
+
+Each game's `docs/polish/<game-id>.md` has the design, file:line changes, evidence and remaining ideas. Release still needs family play, then publishing each game's Worker and refreshing the store listings. The Fish Pond builder keeps shipped GLBs unchanged when a fresh export has the same geometry; other builders may want the same guard.
+
 ## Phase 2 design decisions (2026-10-09)
 
 The owner delegated the open Phase 2 questions ("use your judgement"). These defaults hold until family play says otherwise.

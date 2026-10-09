@@ -4,7 +4,7 @@ The twelve original games, preserved after the generated batch was retired. Qual
 
 | Game | Ages | Learning |
 | --- | --- | --- |
-| [🎈 Balloon Pop](./balloon-pop/public/index.html) | 2–6 | Counting, colours and shape recognition |
+| [🎈 Balloon Pop](./balloon-pop/public/index.html) | 2–6 | Counting to 10, colours, shapes, adding on and matching dots to quantities |
 | [🦆 Bumper Ducks](./bumper-ducks/public/index.html) | 3–8 | Counting in tens (place value), sorting by colour, cooperation and spatial awareness |
 | [🐰 Bunny Hop](./bunny-hop/public/index.html) | 3–8 | Counting, adding rows, patterns and timing |
 | [🎂 Cake Stack](./cake-stack/public/index.html) | 3–8 | Sequencing, patterns, counting and equal sharing |

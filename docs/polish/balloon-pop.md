@@ -61,3 +61,51 @@ All paths are under `examples/balloon-pop/public/`.
 - A spoken "pop the 4 blue ones" sky with picture slots, counting up to 10, built into the levels rather than only as optional missions.
 - Deeper missions: colour mixing with the rainbow babies, and number-to-quantity matching.
 - Consider starting with music off, or a quieter music box with rests.
+
+# Phase 2: the counting sky (2026-10-09)
+
+## Design
+
+Each level is now one calm, spoken and pictured request instead of "pop everything". The child looks across the sky, finds the right balloons and counts them.
+
+- **Requests** (`js/sky.js`), each spoken through speechSynthesis (respecting mute) and shown as a card at the bottom of the screen, with the colour word printed in its colour:
+  - colour and count: "Pop 4 blue balloons." A red heart counts as a red balloon, because that is what a child would call it.
+  - shape: "Pop the hearts! 3 hearts." Bunnies join from level 4.
+  - adding: "Pop 3 green balloons, then 2 more." The first group is always the bigger one, so the child counts on from it. Two groups of slots with a + between them; it is named "3 and 2 more make 5 green balloons!"
+  - dots (older play, from level 8): a gold balloon on the card carries 1–10 dots (dice faces, then two rows like a ten-frame). Every balloon popped lights one dot and appears beside it, numbered, in its own colour: one balloon for each dot. Named "6 dots, 6 balloons!"
+- **Picture slots** are empty dashed balloons in the target colour (or grey hearts or bunnies) in rows of five. Each matching pop fills the next one and numbers it, and the count is said aloud and played as a climbing bell note. Speech is queued, so a quick double pop or a star chain is counted "1, 2, 3" without cutting words off.
+- **Other balloons** still pop for fun with a softer pop (55 % gain) and are not counted. There is no timer and no failure; the score pill still shows every balloon popped.
+- **Counts grow gently**: up to 3 at levels 1–2, then 4, 5, 5, 6, 7, 7, 8, 9, 9 and 10 from level 12. The opening order is colour, heart, colour, bunny, colour, adding, shape, dots; later levels mix all four kinds without repeating a kind, colour or count twice in a row. About two in five new balloons match the request, so one is always on its way.
+- **Completion**: the card glows softly, the request is named aloud ("4 blue balloons!"), one soft chord and the Phase 1 petal drift play, and the next request comes after a 4.5 s pause. Popping during the pause counts for nothing and costs nothing.
+- **Kept from Phase 1**: the countryside surprises, every balloon kind and its intro card (hearts at level 2, crowns 3, bunnies 4, star 5, rainbow 6), the constant pace and the nine-balloon cap. The star's chain-pop counts the matching balloons it pops; rainbow babies count for colour requests.
+- **Ending**: going home shows and says what was learned: "You counted 5 skies, up to 7 balloons!"
+- **Menu**: the existing pictured choice button now cycles 🔢 Counting sky (default, shown as two filled slots and one waiting) → Count three → Hearts → Red → 🎈 Free popping. Free popping is the Phase 1 sky (level bar, parade) for the youngest. The three missions (shared `adventure.js`) still run on the Phase 1 sky with their own picture strip, unchanged. Saved choices 1–3 keep their meaning; a saved 0 (old "Free play") now opens the counting sky.
+
+## Changes (all under `examples/balloon-pop/public/`)
+
+- `js/sky.js` (new): colour names, request generator `makeRequest(level, last)`, count ranges and the dot layout.
+- `js/main.js:79-90`: menu options and pictures (`Counting sky`, `Free popping`); `picture()` draws a balloon in any request colour.
+- `js/main.js:181-307`: `say()`, `newRequest()`, `renderSky()` (slots, + groups, gold dots and tally), `countPop()`, `nextSky()`.
+- `js/main.js:341`: spawn bias toward the requested colour or shape.
+- `js/main.js:434,466`: counted pops versus soft uncounted pops; the counting sky skips the level bar and parade.
+- `js/main.js:535-543`: home summary, and the menu choice keeps its pictures after a round (it used to fall back to plain text); `:559` start; `:697` the hint finger points at a matching balloon; `:742` the calm pause.
+- `js/audio.js:87-97`: `pop()` takes a softness; new `count(n)` bell.
+- `index.html`: the `#sky` card; title tag "Look, count and pop!".
+- `style.css:134-256`: the request card, colour slots, numbers, + sign, gold dot balloon, done glow, phone, short-screen and tablet sizes and reduced motion.
+
+## Evidence
+
+- `node examples/_studio/tests/browser.mjs --browser chromium --ids balloon-pop --run p2`: ready, 0 errors. The same with `--browser webkit`: ready, 0 errors.
+- `EXAMPLES_ORIGIN=http://localhost:4173 node examples/_studio/tests/original-quality.mjs`: all pass, including "balloon-pop: native mission choice persists and starts at zero" and "Three directly touched balloons complete the raw-count mission".
+- `node --test examples/_studio/tests/*.test.mjs`: 10 of 11 pass. The failure is the expected stale `public/bitgames.json` manifest (a new `js/sky.js` and changed files) until the coordinator rebuilds.
+- Playwright playthroughs with real touches on matching balloons (`scratchpad/p2/balloon-pop/play.mjs`): the first colour request, an adding request, a dots request and a level-12 request (up to 10), then home. Run in portrait 834×1194, landscape 1194×834 and phone 667×375 in Chromium, and portrait in WebKit. All finished their requests with 0 console errors. Home read "🎈 You counted 4 skies, up to 10 balloons!"
+- `other.mjs`: tapping a non-matching balloon pops it (score 0 → 1) and leaves the count at 0.
+- Screenshots: `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/183efacb-62c2-4cf6-9680-a97f4bb0fb5f/scratchpad/p2/balloon-pop/`.
+- The shared machine rendered at only a few frames per second during testing. Game time is clamped per frame, so the 4.5 s pause took much longer in real time; the playthrough script shortens that pause once a request is complete.
+
+## Left for later
+
+- `game.json` (coordinator): `howToPlay` should describe the counting sky. Suggested text: "Listen and look at the card: pop the balloons it asks for (4 blue ones, the hearts, 3 then 2 more, or one for each dot on the gold balloon) and watch the slots fill as you count. Other balloons still pop for fun. Tap the sun, a sheep, a house, a tree, the windmill or the hot-air balloon for a surprise. Choose Free popping on the menu to pop everything." `learning` could become "Counting to 10, colours, shapes, adding on and matching dots to quantities".
+- Colour mixing with the rainbow babies (from the audit) is still open.
+- Music still starts on, as in Phase 1.
+- Have the owner's children try it, especially the 4.5 s pause and whether a 2-year-old prefers Free popping.

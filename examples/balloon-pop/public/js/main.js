@@ -5,6 +5,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
 import { Balloons, COLORS, KINDS, PALETTE } from './balloons.js'
 import { Effects } from './effects.js'
+import { SKY_COLOURS, dotLayout, makeRequest } from './sky.js'
 import { World, halfSize as viewSize } from './world.js'
 
 const $ = (id) => document.getElementById(id)
@@ -65,21 +66,33 @@ const game = {
   forced: null,
   firstPop: false,
   lastLane: 0,
+  // Counting sky: the current request, how many are counted, and the calm pause after it is named.
+  sky: null,
+  skyWait: 0,
+  skies: 0, // requests finished this visit
+  biggest: 0, // the largest count finished this visit
 }
 
 // Optional learning missions. Hunts also make their balloons more common (see spawn).
 const RED = '#ff595e'
 const COOL_COLORS = ['#8ac926', '#2ec4b6', '#4d96ff', '#9b5de5']
+const SKY = 'Counting sky'
+const FREE = 'Free popping'
 const missionPictures = {
+  [SKY]: ['blue', 'blue', 'blue'],
+  [FREE]: ['🎈'],
   'Count three balloons': ['🎈', '🎈', '🎈'],
   'Heart shape hunt': ['💖', '💖', '💖'],
   'Red colour hunt': ['red', 'red', 'red'],
 }
 
+/** A small picture: an emoji, or a drawn balloon when `type` is a colour name. */
 function picture(type, filled = true) {
   const slot = document.createElement('span')
-  slot.className = `mission-picture${filled ? ' filled' : ''}${type === 'red' ? ' red-balloon' : ''}`
-  slot.textContent = type === 'red' ? '' : type
+  const colour = SKY_COLOURS[type]
+  slot.className = `mission-picture${filled ? ' filled' : ''}${colour ? ' colour-balloon' : ''}${type === 'red' ? ' red-balloon' : ''}`
+  if (colour) slot.style.setProperty('--c', colour)
+  else slot.textContent = type
   slot.setAttribute('aria-hidden', 'true')
   return slot
 }
@@ -125,10 +138,13 @@ const adventure = createAdventure({
   celebrate: celebrateMission,
   renderProgress: renderMissionProgress,
   options: [
-    { emoji: '🎈', label: 'Free play' },
+    // The calm default: every level is one spoken, pictured counting request (js/sky.js).
+    { emoji: '🔢', label: SKY },
     { emoji: '🐢', label: 'Count three balloons', pace: 0.6, goal: 'Pop three balloons', target: 3, reward: 'Three! You counted three balloons!' },
     { emoji: '❤️', label: 'Heart shape hunt', pace: 0.6, goal: 'Pop three heart balloons', target: 3, huntKind: 'heart', accept: (b) => b.kindName === 'heart', reward: 'Three! You found three hearts!' },
     { emoji: '🎨', label: 'Red colour hunt', pace: 0.6, goal: 'Pop three red balloons', target: 3, huntColor: RED, accept: (b) => ['round', 'smile', 'heart', 'mini'].includes(b.kindName) && b.color === RED, reward: 'Three! You found three red balloons!' },
+    // For the youngest: the Phase 1 sky where every balloon pops and fills the level bar.
+    { emoji: '🎈', label: FREE },
   ],
 })
 
@@ -138,9 +154,11 @@ function renderMissionChoice() {
   button.replaceChildren()
   const pictures = document.createElement('span')
   pictures.className = 'mission-choice-pictures'
-  for (const type of missionPictures[option.label] || ['🎈']) pictures.append(picture(type))
+  const types = missionPictures[option.label] || ['🎈']
+  // The counting sky's picture is a row of slots, two filled and one waiting.
+  types.forEach((type, i) => pictures.append(picture(type, option.label !== SKY || i < types.length - 1)))
   const label = document.createElement('span')
-  label.textContent = option.label === 'Free play' ? 'Free play' : option.label.replace(' three balloons', '').replace(' shape hunt', 's').replace(' colour hunt', '')
+  label.textContent = option.goal ? option.label.replace(' three balloons', '').replace(' shape hunt', 's').replace(' colour hunt', '') : option.label
   const next = document.createElement('span')
   next.className = 'mission-next'
   next.textContent = '↻'
@@ -157,6 +175,136 @@ function announceMission() {
   words.lang = 'en-US'
   words.rate = 0.82
   speechSynthesis.speak(words)
+}
+
+/** Speak aloud (respecting mute). `queue` lets a count finish before the next word instead of cutting it off. */
+function say(text, { queue = false } = {}) {
+  if (audio.muted || !('speechSynthesis' in window)) return
+  if (!queue) speechSynthesis.cancel()
+  const words = new SpeechSynthesisUtterance(text)
+  words.lang = 'en-US'
+  words.rate = 0.82
+  speechSynthesis.speak(words)
+}
+
+// --- Counting sky -------------------------------------------------------------------
+// One calm request per level: picture slots fill with each matching pop and are counted aloud.
+
+const counting = () => game.state === 'play' && adventure.option.label === SKY
+
+function newRequest() {
+  game.recent = [...(game.recent ?? []), game.sky?.req].filter(Boolean).slice(-3)
+  game.sky = { req: makeRequest(game.level, game.recent), count: 0, done: false, colours: [] }
+  renderSky()
+  say(game.sky.req.say)
+}
+
+/** A slot for one balloon of the request: its colour or shape, numbered once it is filled. */
+function skySlot(req, n, filled) {
+  const slot = picture(req.colour ?? req.picture, filled)
+  slot.classList.add('sky-slot')
+  if (filled) {
+    const num = document.createElement('b')
+    num.className = 'sky-num'
+    num.textContent = n
+    slot.append(num)
+    if (n === game.sky.count) slot.classList.add('new')
+  }
+  return slot
+}
+
+function renderSky() {
+  const card = $('sky')
+  const { req, count, done } = game.sky
+  card.classList.toggle('done', done)
+  // The colour word is printed in its colour, so the caption also works as a picture.
+  const caption = $('sky-caption')
+  const text = done ? req.named : req.say.replace('Look at the gold balloon. ', '')
+  if (req.colour) {
+    const [before, ...after] = text.split(req.colour)
+    const word = Object.assign(document.createElement('span'), { className: 'sky-word', textContent: req.colour })
+    word.style.setProperty('--c', SKY_COLOURS[req.colour])
+    caption.replaceChildren(before, word, after.join(req.colour))
+  } else caption.textContent = text
+  card.setAttribute('aria-label', `${done ? req.named : req.say} ${count} of ${req.total}.`)
+  const slots = $('sky-slots')
+  slots.replaceChildren()
+  if (req.type === 'dots') {
+    // A gold balloon carrying dots: each pop lights one dot (one balloon for each dot).
+    const gold = document.createElement('span')
+    gold.className = 'sky-gold'
+    dotLayout(req.total).forEach(([x, y], i) => {
+      const dot = document.createElement('i')
+      dot.className = i < count ? 'lit' : ''
+      dot.style.left = `${x}%`
+      dot.style.top = `${y}%`
+      gold.append(dot)
+    })
+    // Beside it, the balloons popped so far, each in its own colour and numbered, in rows of five.
+    const tally = document.createElement('span')
+    tally.className = 'sky-group'
+    game.sky.colours.forEach((hex, i) => {
+      if (i % 5 === 0) tally.append(Object.assign(document.createElement('span'), { className: 'sky-row' }))
+      const slot = skySlot({ picture: '' }, i + 1, true)
+      slot.classList.add('colour-balloon')
+      slot.style.setProperty('--c', hex)
+      tally.lastChild.append(slot)
+    })
+    slots.append(gold, tally)
+    return
+  }
+  // Rows of at most five, like a ten-frame; an adding request shows its two groups apart.
+  let n = 0
+  req.parts.forEach((part, g) => {
+    if (g) {
+      const plus = document.createElement('span')
+      plus.className = 'sky-plus'
+      plus.textContent = '+'
+      slots.append(plus)
+    }
+    const group = document.createElement('span')
+    group.className = 'sky-group'
+    for (let r = 0; r < part; r += 5) {
+      const row = document.createElement('span')
+      row.className = 'sky-row'
+      for (let i = r; i < Math.min(part, r + 5); i++, n++) row.append(skySlot(req, n + 1, n < count))
+      group.append(row)
+    }
+    slots.append(group)
+  })
+}
+
+/** A pop in the counting sky. Returns true when the balloon filled a slot. */
+function countPop(b) {
+  const sky = game.sky
+  if (!sky || sky.done || !sky.req.accept(b)) return false
+  sky.count += 1
+  sky.colours.push(b.color)
+  audio.count(sky.count)
+  if (sky.count === sky.req.total) {
+    sky.done = true
+    game.skies += 1
+    game.biggest = Math.max(game.biggest, sky.req.total)
+    say(String(sky.count), { queue: true })
+    say(sky.req.named, { queue: true })
+    const { w, h } = halfSize(0)
+    effects.drift(w, h)
+    setTimeout(() => audio.chord(), 500)
+    game.skyWait = 4.5 // a calm pause before the next request
+  } else say(String(sky.count), { queue: true })
+  renderSky()
+  return true
+}
+
+function nextSky() {
+  game.level += 1
+  const lv = level(game.level)
+  // A new balloon friend is still introduced (and sent up first), as in free popping.
+  if (lv.intro && game.level <= LEVELS.length) {
+    showIntro(...lv.intro)
+    game.forced = lv.show
+  }
+  newRequest()
 }
 
 // --- View helpers -------------------------------------------------------------------
@@ -190,6 +338,12 @@ function spawn(kindName, opts = {}) {
   const mission = game.state === 'play' ? adventure.option : {}
   const targetSpawn = Math.random() < 0.55
   if (targetSpawn && mission.huntKind) kindName = mission.huntKind
+  // Counting sky: about two in five new balloons match the request, so there is always one to find.
+  const req = counting() && game.sky && !game.sky.done ? game.sky.req : null
+  if (req && !opts.color && Math.random() < 0.4) {
+    if (req.kind) kindName = req.kind
+    else if (req.colour && ['round', 'smile'].includes(kindName)) opts = { ...opts, color: SKY_COLOURS[req.colour] }
+  }
   if (mission.huntColor && ['round', 'smile', 'heart'].includes(kindName)) {
     opts = { ...opts, color: targetSpawn ? mission.huntColor : COOL_COLORS[(Math.random() * COOL_COLORS.length) | 0] }
   }
@@ -275,11 +429,14 @@ function pop(b, { chain = false } = {}) {
   const playing = game.state === 'play'
   const big = !!b.kind.power
   effects.pop(pos, b.color, { big, gold: b.kind.gold })
+  // Counting sky: a matching balloon fills a slot; any other one still pops, just more softly.
+  const sky = counting()
+  const counted = sky && countPop(b)
   // Each colour sings its own note, so pops make a little tune instead of a climbing combo.
   const colourNote = Math.max(0, PALETTE.indexOf(b.color))
-  audio.pop(chain ? 3 + ((Math.random() * 6) | 0) : colourNote, b.scale < 0.6 ? 0.7 : b.kindName === 'bunny' ? 1.2 : 1)
+  audio.pop(chain ? 3 + ((Math.random() * 6) | 0) : colourNote, b.scale < 0.6 ? 0.7 : b.kindName === 'bunny' ? 1.2 : 1, sky && !counted ? 0.55 : 1)
   if (b.kind.gold) audio.sparkle()
-  if (!game.firstPop) {
+  if (!game.firstPop && (!sky || counted)) {
     game.firstPop = true
     $('hint').classList.add('hidden')
   }
@@ -306,6 +463,7 @@ function pop(b, { chain = false } = {}) {
     }
   }
 
+  if (sky) return updateHud()
   game.progress += 1
   if (game.party <= 0 && game.progress >= level(game.level).goal) levelUp()
   updateHud()
@@ -372,9 +530,17 @@ function toTitle() {
   clearTimeout(rewardTimer)
   $('mission-reward').classList.remove('show')
   // Say what the child did, not how it ranks.
-  $('last').textContent = game.score ? `🎈 You popped ${game.score} balloon${game.score === 1 ? '' : 's'}!` : ''
-  $('last').classList.toggle('hidden', !game.score)
+  let last = game.score ? `🎈 You popped ${game.score} balloon${game.score === 1 ? '' : 's'}!` : ''
+  if (game.skies) {
+    last = `🎈 You counted ${game.skies} sk${game.skies === 1 ? 'y' : 'ies'}, up to ${game.biggest} balloon${game.biggest === 1 ? '' : 's'}!`
+    say(`You counted up to ${game.biggest}!`)
+  }
+  $('last').textContent = last
+  $('last').classList.toggle('hidden', !last)
+  $('sky').hidden = true
+  game.sky = null
   show('title')
+  renderMissionChoice() // adventure.begin() rewrote the choice as text; bring its pictures back
 }
 
 function start() {
@@ -384,11 +550,19 @@ function start() {
   audio.unlock()
   audio.click()
   balloons.clear()
-  Object.assign(game, { state: 'play', level: 1, score: 0, progress: 0, spawnIn: 0.4, pause: 0, party: 0, forced: null })
+  Object.assign(game, { state: 'play', level: 1, score: 0, progress: 0, spawnIn: 0.4, pause: 0, party: 0, forced: null, sky: null, recent: [], skyWait: 0, skies: 0, biggest: 0 })
   show('play')
+  const sky = counting()
+  $('hud').classList.toggle('counting', sky)
+  $('sky').hidden = !sky
   updateHud()
-  showIntro('🎈', 'Pop the balloons!', 'Tap them before they fly away')
-  announceMission()
+  if (sky) {
+    game.firstPop = false // the finger points at the first balloon to count
+    newRequest()
+  } else {
+    showIntro('🎈', 'Pop the balloons!', 'Tap them before they fly away')
+    announceMission()
+  }
   if (!game.firstPop || adventure.option.goal) $('hint').classList.remove('hidden')
 }
 
@@ -520,7 +694,8 @@ function updatePin(dt) {
 function updateHint() {
   const el = $('hint')
   if (game.state !== 'play' || (adventure.option.goal ? adventure.progress > 0 : game.firstPop)) return el.classList.add('hidden')
-  const b = balloons.list.find((x) => x.group.position.y > -halfSize().h * 0.6 && (!adventure.option.accept || adventure.option.accept(x)))
+  const accept = counting() ? game.sky && !game.sky.done && game.sky.req.accept : adventure.option.accept
+  const b = balloons.list.find((x) => x.group.position.y > -halfSize().h * 0.6 && (!accept || accept(x)))
   if (!b) return el.classList.add('hidden')
   el.classList.remove('hidden')
   v3.copy(b.group.position).project(camera)
@@ -564,6 +739,10 @@ renderer.setAnimationLoop(() => {
     spawnTick(dt)
     if (game.state === 'play') {
       game.pause = Math.max(0, game.pause - dt)
+      if (game.skyWait > 0 && (game.skyWait -= dt) <= 0) {
+        game.skyWait = 0
+        if (counting()) nextSky()
+      }
       if (game.party > 0) {
         game.party -= dt
         if (game.party <= 0) {

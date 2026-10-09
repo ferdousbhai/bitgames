@@ -93,12 +93,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .mission-choice-pictures, .mission-slots, .mission-reward-pictures { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
 .mission-picture { display: inline-flex; position: relative; align-items: center; justify-content: center; width: 29px; height: 32px; font-size: 25px; line-height: 1; opacity: .3; filter: grayscale(.65); }
 .mission-picture.filled { opacity: 1; filter: none; }
-.mission-picture.red-balloon::before {
+/* A drawn balloon in any colour (--c): mission pictures, the menu choice and the counting-sky slots. */
+.mission-picture.colour-balloon::before {
   content: ''; width: 20px; height: 24px; border-radius: 50% 50% 46% 46%;
-  background: radial-gradient(circle at 32% 25%, #ffb0ac, #ff595e 43%, #e33248 85%);
-  box-shadow: inset -2px -2px 2px #b92438, 0 2px 2px #5b3fa033;
+  background: radial-gradient(circle at 32% 25%, #ffffffa0, #fff0 32%), var(--c, #ff595e);
+  box-shadow: inset -2px -2px 3px #0003, 0 2px 2px #5b3fa033;
 }
-.mission-picture.red-balloon::after {
+.mission-picture.colour-balloon::after {
   content: ''; position: absolute; top: 25px; left: 14px; width: 1px; height: 7px; background: #9f6076;
 }
 .mission-next { font-size: 24px; color: #e4598d; line-height: 1; }
@@ -130,6 +131,52 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   100% { transform: translate(-50%, -16px) scale(.9); opacity: 0; }
 }
 
+/* Counting sky (Phase 2): the request card replaces the level bar at the bottom of the screen. */
+#hud.counting .level-wrap { display: none; }
+.sky {
+  /* Centred with auto margins (not left: 50%), so the card may use the full width before it wraps. */
+  position: absolute; left: 0; right: 0; margin-inline: auto; width: max-content; bottom: calc(10px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  max-width: calc(100vw - 20px); padding: 6px 14px 8px;
+  border: 2px solid #fff; border-radius: 20px; background: #fff9e6f2; box-shadow: 0 4px 0 #5b3fa055;
+  color: #5b3fa0; transition: box-shadow .8s, background-color .8s;
+}
+.sky[hidden] { display: none; }
+.sky.done { background: #fffbe0f8; box-shadow: 0 4px 0 #5b3fa055, 0 0 0 5px #ffe58a99, 0 0 26px #ffd23f88; }
+.sky-caption { font-size: 15px; font-weight: 900; line-height: 1.15; text-align: center; text-wrap: balance; }
+.sky-slots { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.sky-group { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.sky-row { display: flex; gap: 3px; }
+.sky-plus { font-size: 26px; font-weight: 900; color: #e4598d; }
+.sky .mission-picture { width: 34px; height: 39px; font-size: 28px; }
+.sky .colour-balloon::before { width: 25px; height: 30px; }
+.sky .colour-balloon::after { top: 32px; left: 17px; height: 7px; }
+/* A waiting colour slot is an empty dashed outline in its colour; a filled one is the balloon. */
+.sky-slot.colour-balloon:not(.filled) { opacity: 1; filter: none; }
+.sky-slot.colour-balloon:not(.filled)::before { background: color-mix(in srgb, var(--c) 28%, #fff); box-shadow: none; outline: 3px dashed var(--c); outline-offset: -3px; }
+.sky-word { color: var(--c); text-shadow: 0 1px 0 #5b3fa040; }
+.sky-slot.colour-balloon:not(.filled)::after { opacity: .4; }
+.sky-num {
+  position: absolute; left: 0; right: 0; top: 7px; text-align: center; font-size: 14px; line-height: 1;
+  color: #fff; text-shadow: 0 1px 2px #0009, 0 0 3px #0006;
+}
+.sky-slot:not(.colour-balloon) .sky-num { top: auto; bottom: -1px; }
+.sky-slot.new { animation: slot-in .6s ease-out; }
+@keyframes slot-in { from { transform: scale(.6); opacity: .3; } }
+/* The gold balloon of the dots request: one dot lights for each balloon popped. */
+.sky-gold {
+  position: relative; flex: none; width: 64px; height: 74px; margin-bottom: 8px; border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(circle at 32% 24%, #fff6c8, #ffd54a 40%, #e6a800 90%);
+  box-shadow: inset -3px -4px 5px #b07a0055, 0 3px 3px #5b3fa033;
+}
+.sky-gold::after { content: ''; position: absolute; left: 50%; bottom: -9px; width: 1px; height: 9px; background: #9f6076; }
+.sky-gold i {
+  /* Sized with the balloon, so five dots fit across even on a phone. */
+  position: absolute; width: 13.5%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
+  border: 2px solid #b8860b; background: #fffdf0; transition: background-color .4s, border-color .4s;
+}
+.sky-gold i.lit { background: #5b3fa0; border-color: #fff; }
+
 @media (max-height: 500px) {
   .card { padding: 14px 22px; gap: 8px; }
   .logo { font-size: clamp(34px, 8vw, 60px); }
@@ -139,6 +186,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #intro-emoji { font-size: 40px; }
   #intro-title { font-size: 28px; }
   #intro-sub { font-size: 16px; }
+  .sky { padding: 4px 12px 6px; gap: 2px; }
+  .sky-caption { font-size: 14px; }
+  .sky .mission-picture { width: 28px; height: 32px; }
+  .sky .colour-balloon::before { width: 20px; height: 24px; }
+  .sky .colour-balloon::after { top: 26px; left: 14px; height: 6px; }
+  .sky-num { top: 5px; font-size: 12px; }
+  .sky-gold { width: 58px; height: 66px; }
 }
 
 @media (max-height: 330px) {
@@ -156,6 +210,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #intro-emoji { font-size: 30px; }
   #intro-title { font-size: 21px; }
   #intro-sub { font-size: 12px; }
+  .sky { padding: 3px 10px 5px; gap: 2px; border-radius: 16px; }
+  .sky-caption { font-size: 13px; }
+  .sky .mission-picture { width: 24px; height: 28px; }
+  .sky .colour-balloon::before { width: 17px; height: 20px; }
+  .sky .colour-balloon::after { top: 21px; left: 12px; height: 6px; }
+  .sky-num { top: 3px; font-size: 11px; }
+  .sky-gold { width: 46px; height: 54px; }
   .mission-reward { top: calc(59px + env(safe-area-inset-top)); padding: 6px 12px; font-size: 17px; }
 }
 
@@ -163,6 +224,19 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #hud .adventure-goal { bottom: calc(91px + env(safe-area-inset-bottom)); padding: 8px 18px 10px; }
   .mission-caption { font-size: 18px; }
   .mission-slots .mission-picture { width: 38px; height: 39px; font-size: 31px; }
+}
+
+@media (min-width: 700px) and (min-height: 700px) {
+  .sky { bottom: calc(18px + env(safe-area-inset-bottom)); padding: 10px 22px 12px; border-radius: 26px; gap: 6px; }
+  .sky-caption { font-size: 23px; }
+  .sky .mission-picture { width: 52px; height: 60px; font-size: 44px; }
+  .sky .colour-balloon::before { width: 39px; height: 47px; }
+  .sky .colour-balloon::after { top: 49px; left: 26px; height: 11px; }
+  .sky-num { top: 13px; font-size: 20px; }
+  .sky-row { gap: 5px; }
+  .sky-group { gap: 4px; }
+  .sky-plus { font-size: 36px; }
+  .sky-gold { width: 92px; height: 106px; }
 }
 
 /* Tablets: a bigger level label and bar that read from arm's length */
@@ -175,7 +249,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 /* Calm pass: honour reduced motion for the animations that remain (cards fade in place). */
 @media (prefers-reduced-motion: reduce) {
-  .card, .spinner, .hint-finger { animation: none; }
+  .card, .spinner, .hint-finger, .sky-slot.new { animation: none; }
+  .sky, .sky-gold i { transition: none; }
   .intro.show, .mission-reward.show { animation-timing-function: linear; }
   @keyframes intro { 0%, 100% { opacity: 0; transform: translate(-50%, -50%); } 10%, 85% { opacity: 1; transform: translate(-50%, -50%); } }
   @keyframes mission-party { 0%, 100% { opacity: 0; transform: translate(-50%, 0); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); } }

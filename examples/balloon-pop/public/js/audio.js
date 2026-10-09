@@ -84,11 +84,16 @@ export class Audio {
    * The pop: a soft snap, a rubbery thump and a note. `step` picks the note (each balloon
    * colour has its own). Calm pass: the bright highpass snap is much quieter.
    */
-  pop(step = 0, size = 1) {
-    this.burst({ freq: 1600, q: 0.7, gain: 0.16, decay: 0.06, type: 'bandpass' })
-    this.burst({ freq: 800, q: 1.2, gain: 0.22 * size, decay: 0.12 })
-    this.tone({ freq: 180 / size, type: 'sine', gain: 0.28, decay: 0.12, slide: -110 })
-    this.tone({ freq: note(Math.min(step, 14)), type: 'triangle', gain: 0.14, decay: 0.3, delay: 0.02 })
+  pop(step = 0, size = 1, soft = 1) {
+    this.burst({ freq: 1600, q: 0.7, gain: 0.16 * soft, decay: 0.06, type: 'bandpass' })
+    this.burst({ freq: 800, q: 1.2, gain: 0.22 * size * soft, decay: 0.12 })
+    this.tone({ freq: 180 / size, type: 'sine', gain: 0.28 * soft, decay: 0.12, slide: -110 })
+    this.tone({ freq: note(Math.min(step, 14)), type: 'triangle', gain: 0.14 * soft, decay: 0.3, delay: 0.02 })
+  }
+
+  /** A counted balloon in the counting sky: one soft bell note that climbs with the count. */
+  count(n) {
+    this.tone({ freq: note(Math.min(n - 1, 14), 392), type: 'sine', gain: 0.1, decay: 0.7, delay: 0.08, attack: 0.02 })
   }
 
   sparkle() {
