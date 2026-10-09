@@ -198,6 +198,10 @@ function renderDeliveryProgress(goal, option, count) {
   goal.append(caption, steps)
 }
 
+// The sound switch is remembered on this device; read it before anything that speaks is made.
+try {
+  if (localStorage.getItem('crash-racers-sound') === '0') audio.setMuted(true)
+} catch {}
 // One voice for the game. Directions queue; feedback on what the child just did replaces older words.
 const voice = createVoice({ muted: audio.muted, rate: 0.82, pitch: 1 })
 
@@ -539,12 +543,6 @@ function setMuted(muted) {
   } catch {}
   renderSound()
 }
-try {
-  if (localStorage.getItem('crash-racers-sound') === '0') {
-    audio.setMuted(true)
-    voice.setMuted(true)
-  }
-} catch {}
 
 function setWaitingText(text) {
   $('waiting-text').textContent = text

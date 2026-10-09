@@ -173,7 +173,7 @@ $('pace').onclick = () => {
     localStorage.setItem('bunny-hop:gentle', game.gentle ? '1' : '0')
   } catch {}
   renderPace()
-  voice.say(game.gentle ? 'Slow and gentle, like a tortoise.' : 'Hopping along like a bunny.', { interrupt: true })
+  voice.sayNow(game.gentle ? 'Slow and gentle, like a tortoise.' : 'Hopping along like a bunny.')
 }
 
 let bunny, world, course, effects, weather, glints, popups, cue
@@ -271,7 +271,7 @@ function start() {
   show(null)
   fitPopups()
   banner(`${BIOMES[game.biome].emoji} ${BIOMES[game.biome].name}`)
-  if (adventure.option.goal) voice.say(adventure.option.goal, { interrupt: true })
+  if (adventure.option.goal) voice.sayNow(adventure.option.goal)
 }
 
 // Floating words start a little below the score and the trip bar, so a word
@@ -425,7 +425,7 @@ function answer(seg, name) {
   sound.step(OBSTACLE_NOTES[real])
   if (at) effects.sparkle(tmp.set(at.x, 1, 0), 10, ['#ffffff', '#ffd23f'], 2.5)
   const said = OBSTACLE_NAMES[real]
-  voice.say(name === real ? `Yes! A ${said} comes next.` : `Look, a ${said}! ${patternWords(seg.unit)}.`, { interrupt: true })
+  voice.sayNow(name === real ? `Yes! A ${said} comes next.` : `Look, a ${said}! ${patternWords(seg.unit)}.`)
 }
 
 function lessonCarrot(ev) {

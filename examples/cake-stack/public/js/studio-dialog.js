@@ -2,7 +2,7 @@ import * as THREE from 'three'
 
 // A native modal owns focus and pauses only the original game's drawing. Each
 // preview draws on change; it does not start a second animation loop.
-export function createStudioDialog({ id, title, html, openButton, onOpen, onClose }) {
+export function createStudioDialog({ id, title, html, openButton, onOpen, onClose, voice }) {
   const dialog = document.createElement('dialog')
   dialog.id = id
   dialog.className = 'learning-studio panel'
@@ -11,7 +11,11 @@ export function createStudioDialog({ id, title, html, openButton, onOpen, onClos
   document.body.append(dialog)
 
   dialog.querySelector('.studio-close').onclick = () => dialog.close()
-  dialog.addEventListener('close', () => onClose?.())
+  // A closed studio stops talking
+  dialog.addEventListener('close', () => {
+    voice?.hush()
+    onClose?.()
+  })
   openButton.addEventListener('click', () => {
     dialog.showModal()
     onOpen?.()

@@ -63,6 +63,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
     title: '🎂 Birthday recipe studio',
     openButton,
     onOpen: draw,
+    voice,
     html: `
     <div class="studio-row"><button id="recipe-tab" aria-pressed="true">Build a recipe</button><button id="share-tab" aria-pressed="false">Share the cake</button></div>
     <canvas class="studio-preview" role="img" aria-label="Your cake and equal portions"></canvas>
@@ -79,7 +80,6 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
   }
   // Each tap's answer replaces the last one, so a quick child never hears a backlog
   const speak = voice.sayNow
-  studio.dialog.addEventListener('close', () => voice.hush())
   const stillMotion = matchMedia('(prefers-reduced-motion: reduce)')
   let hop = 0
   /** A happy bounce of the preview cake, drawn for a moment and then the view rests again. */

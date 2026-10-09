@@ -364,17 +364,17 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
     } })
   }
 
-  function close() {
-    stop()
-    point(null)
-    voice.hush()
-    if (dialog.open) dialog.close()
-  }
+  const close = () => { if (dialog.open) dialog.close() }
   $('workshop-close').onclick = close
   garageButton.onclick = close
   $('workshop-say').onclick = () => { if (said) voice.sayNow(said) }
-  dialog.addEventListener('cancel', stop)
-  dialog.addEventListener('close', () => { point(null); onChange() })
+  // Every way out (✕, 🔧, Escape) ends here, so the race and the robot's words stop together
+  dialog.addEventListener('close', () => {
+    stop()
+    point(null)
+    voice.hush()
+    onChange()
+  })
 
   return {
     open() {

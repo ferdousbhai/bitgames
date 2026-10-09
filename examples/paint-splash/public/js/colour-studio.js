@@ -83,8 +83,8 @@ export function createColourStudio({ openButton, onOpen, onClose, voice, sound =
       greeted = true
       nudgeLater()
     },
+    voice,
     onClose: () => {
-      voice.hush()
       clearTimeout(hintTimer)
       onClose?.()
     },

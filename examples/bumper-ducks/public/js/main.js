@@ -441,7 +441,7 @@ function renderModes() {
       save('mode', game.mode)
       audio.plop()
       renderModes()
-      voice.say(game.mode === 'calm' ? goalWords(GOALS[game.goalIndex]) : 'Bumper race! Grab bubbles before the clock runs out.', { interrupt: true })
+      voice.sayNow(game.mode === 'calm' ? goalWords(GOALS[game.goalIndex]) : 'Bumper race! Grab bubbles before the clock runs out.')
     }
   }
 }
