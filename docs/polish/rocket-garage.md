@@ -128,5 +128,5 @@ The 🧪 workshop's fair test now happens on every launch after a part change. T
 
 - Owner's call: test flights skip turbo, for a clean comparison. If the children miss turbo, an alternative is to keep it and add "then your stars gave a turbo push" to the result.
 - Counting every five aloud is calm but frequent on long flights (up to about 10 times). It could stop after 15 if it feels chatty.
-- The reward screen's dance loop still plays until the child leaves (from Phase 1).
 - Booster thumbnails are drawn at a shared scale, so the small booster looks tiny on its notebook page.
+- Follow-up (owner): the reward screen's dance song now plays one phrase, about 10 s ending on the home note, and then goes silent instead of looping until the child leaves (`js/audio.js` `SONGS.dance.once`, checked in `updateMusic`). The pilot keeps dancing silently. Turbo skipped on test flights, counting fives aloud and the booster thumbnail scale stay as they are for family play. Chromium and WebKit `browser.mjs --run p2` pass with 0 errors.

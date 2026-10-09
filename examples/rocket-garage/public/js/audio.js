@@ -27,6 +27,8 @@ const SONGS = {
     bass: [0, 3, 4, 3],
     vol: 0.05,
     type: 'triangle',
+    // Played once (one phrase, about ten seconds), then the landing goes quiet: no loop until the child leaves
+    once: true,
   },
 }
 const BASS_ROOTS = [130.81, 174.61, 110, 196, 146.83]
@@ -284,6 +286,7 @@ export class Audio {
     const beat = 60 / song.bpm / 2
     if (this.next < ctx.currentTime) this.next = ctx.currentTime + 0.05
     while (this.next < ctx.currentTime + 0.3) {
+      if (song.once && this.step >= song.melody.length) return
       const s = this.step++
       const t = this.next - ctx.currentTime
       const m = song.melody[s % song.melody.length]
