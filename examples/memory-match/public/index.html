@@ -26,10 +26,17 @@
 <div id="menu" class="overlay hidden">
   <div class="menu-top">
     <div class="logo"><span>M</span><span>e</span><span>m</span><span>o</span><span>r</span><span>y</span> <span>M</span><span>a</span><span>t</span><span>c</span><span>h</span></div>
-    <p class="hint">Find the animal twins! Tap an animal to say hello.</p>
+    <p id="menu-hint" class="hint">Find the animal twins! Tap an animal to say hello.</p>
   </div>
   <div class="menu-bottom">
-    <button id="play" class="big-go">▶ Play</button>
+    <div class="go-row">
+      <div class="modes" role="group" aria-label="What makes a pair">
+        <button class="mode" data-mode="twins" aria-label="Twins: two of the same animal"><span class="pic">🐶🐶</span><span class="word">Twins</span></button>
+        <button class="mode" data-mode="sound" aria-label="Sounds: an animal and its sound"><span class="pic">🐮<b>🔊</b></span><span class="word">Sounds</span></button>
+        <button class="mode" data-mode="baby" aria-label="Babies: an animal and its baby"><span class="pic">🐮<small>🐮</small></span><span class="word">Babies</span></button>
+      </div>
+      <button id="play" class="big-go">▶ Play</button>
+    </div>
     <div id="levels" class="levels"></div>
   </div>
 </div>

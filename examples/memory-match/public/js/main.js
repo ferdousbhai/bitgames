@@ -2,7 +2,8 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { Sound } from './audio.js'
+import { Sound, VOICE_LENGTH } from './audio.js'
+import { Talk } from './talk.js'
 import { Effects } from './effects.js'
 import { tween, wait, clearTweens, updateTweens, ease } from './tween.js'
 
@@ -24,6 +25,42 @@ const ANIMALS = {
   cow: { emoji: '🐮', color: '#bff2cf' },
 }
 const NAMES = Object.keys(ANIMALS)
+
+/** Words for each animal: the plural, what its call is called, and its baby. */
+const WORDS = {
+  dog: { many: 'dogs', says: 'barks', baby: 'puppy' },
+  cat: { many: 'cats', says: 'meows', baby: 'kitten' },
+  frog: { many: 'frogs', says: 'croaks' }, // a tadpole looks nothing like a small frog
+  lion: { many: 'lions', says: 'roars', baby: 'cub' },
+  panda: { many: 'pandas', says: 'squeaks', baby: 'cub' },
+  pig: { many: 'pigs', says: 'oinks', baby: 'piglet' },
+  bunny: { many: 'bunnies', says: 'squeaks', baby: 'kit' },
+  chick: { many: 'chicks', says: 'cheeps' }, // already a baby
+  elephant: { many: 'elephants', says: 'trumpets', baby: 'calf' },
+  fox: { many: 'foxes', says: 'yips', baby: 'kit' },
+  penguin: { many: 'penguins', says: 'honks', baby: 'chick' },
+  cow: { many: 'cows', says: 'moos', baby: 'calf' },
+}
+const WITH_BABIES = NAMES.filter((name) => WORDS[name].baby)
+const cap = (word) => word[0].toUpperCase() + word.slice(1)
+/** "a", "a and b", "a, b and c" */
+const list = (words) => (words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`)
+
+/**
+ * What a pair is. twins: two of the same animal (the default). sound: an animal and a card that
+ * only plays its call. baby: an animal and its baby, the same model made small and round.
+ */
+const MODES = {
+  twins: { goal: 'Find the animal twins!', banner: 'Find the twins!', hint: 'Find the animal twins! Tap an animal to say hello.' },
+  sound: { goal: 'Listen! Find the animal that makes each sound.', banner: 'Who says that?', hint: 'Listen, then find the animal that makes the sound!' },
+  baby: { goal: 'Find each animal’s baby!', banner: 'Find the babies!', hint: 'Find each animal’s baby!' },
+}
+/** Phrases said when a pair is found. */
+const MATCH_WORDS = {
+  twins: (name) => `Two ${WORDS[name].many}!`,
+  sound: (name) => `The ${name} ${WORDS[name].says}!`,
+  baby: (name) => `${/^[aeiou]/.test(name) ? 'An' : 'A'} ${name}’s baby is a ${WORDS[name].baby}!`,
+}
 /** Pairs per level: gentle for 3-year-olds, a real puzzle by the end. */
 const LEVELS = [2, 3, 4, 6, 8, 10]
 /** Seconds between each animal's hello when a board is finished, so only one voice plays at a time. */
@@ -52,10 +89,14 @@ const shuffle = (list) => {
 // --- Saved progress (best stars per level) ------------------------------------------
 
 const SAVE_KEY = 'memory-match:v2'
-const progress = { stars: {}, best: {}, muted: false }
+const progress = { stars: {}, best: {}, muted: false, mode: 'twins', modeDone: { sound: {}, baby: {} } }
 try {
   Object.assign(progress, JSON.parse(localStorage.getItem(SAVE_KEY)) ?? {})
 } catch {}
+if (!MODES[progress.mode]) progress.mode = 'twins'
+progress.modeDone = { sound: {}, baby: {}, ...progress.modeDone }
+/** Finished levels for the chosen kind of matching (twins keep the old save's stars). */
+const doneLevels = () => (progress.mode === 'twins' ? progress.stars : progress.modeDone[progress.mode])
 function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(progress))
@@ -96,6 +137,7 @@ const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 120)
 const fitCam = camera.clone()
 const sound = new Sound()
 sound.setMuted(progress.muted)
+const talk = new Talk(sound)
 const effects = new Effects(scene)
 
 const assets = { animals: {}, card: null, setting: {}, felt: null }
@@ -114,6 +156,8 @@ const game = {
   matched: 0,
   turns: 0,
   peekUsed: false,
+  round: 0,
+  mode: 'twins', // twins | sound | baby (see MODES)
   busy: false,
   mismatch: null,
   layout: null,
@@ -314,7 +358,7 @@ function settleProps(view, w, d) {
   // The HTML on top of the scene, in NDC: a toy may not hide behind it.
   const range = document.createRange()
   const blockers = []
-  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) #play, #menu:not(.hidden) .level, #win:not(.hidden) .win-card')) {
+  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) #play, #menu:not(.hidden) .level, #menu:not(.hidden) .mode, #win:not(.hidden) .win-card')) {
     range.selectNodeContents(el) // the text itself, not the full-width paragraph around it
     const r = el.matches('.hint, .logo')
       ? range.getBoundingClientRect()
@@ -376,10 +420,27 @@ function makeAnimal(name) {
     name, holder, head,
     phase: Math.random() * 10,
     pop: 1, hop: 0, spin: 0, yaw: 0, squash: 0, nod: 0, shake: 0, tilt: 0, excited: false, baseY: 0, size: ANIMAL_SIZE,
+    wide: 1, // a baby is a little rounder
+    baby: false,
     busy: false,
   }
   holder.userData.animal = a // lets a tap find its animal (see tagged())
   return a
+}
+
+/** The same animal as a baby: much smaller, a little rounder, with a big head. */
+function babyfy(a) {
+  a.baby = true
+  a.size = ANIMAL_SIZE * 0.6
+  a.wide = 1.1
+  a.head?.scale.setScalar(1.3)
+  return a
+}
+
+/** Says an animal's name after its call: "Cow!", or for a baby "Calf!". */
+function callAndName(a, { droppable = true } = {}) {
+  talk.call(a.name, { baby: a.baby, droppable })
+  talk.say(`${cap(a.baby ? WORDS[a.name].baby : a.name)}!`, { droppable })
 }
 
 function poseAnimal(a, time) {
@@ -389,7 +450,8 @@ function poseAnimal(a, time) {
   a.holder.rotation.y = a.yaw + a.spin
   const s = a.pop * a.size
   const breathe = Math.sin(t * 3) * 0.02
-  a.holder.scale.set(s * (1 + a.squash * 0.5), s * (1 - a.squash + breathe), s * (1 + a.squash * 0.5))
+  const w = s * a.wide * (1 + a.squash * 0.5)
+  a.holder.scale.set(w, s * (1 - a.squash + breathe), w)
   if (a.head) a.head.rotation.set(a.nod + Math.sin(t * 2.3) * 0.05, a.shake + Math.sin(t * 0.9) * 0.12, a.tilt + Math.sin(t * 1.7) * 0.07)
 }
 
@@ -423,10 +485,52 @@ const ringGeometry = new THREE.TorusGeometry(0.37, 0.03, 8, 48)
 const ringMaterial = new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.4 })
 /** One tinted card-spot material per animal, shared by every card that shows it. */
 const spotMaterials = {}
+/** A sound card's spot stays plain until it is matched: its colour would give the animal away. */
+let soundSpot = null
+
+// The sound card's loudspeaker, made at runtime: a box, a cone and three sound waves, standing up
+// and facing the child like the 🔊 picture on the menu.
+const speakerParts = {
+  box: new THREE.BoxGeometry(0.14, 0.2, 0.14),
+  cone: new THREE.CylinderGeometry(0.07, 0.19, 0.16, 28, 1, true).rotateZ(Math.PI / 2),
+  cap: new THREE.CircleGeometry(0.19, 28).rotateY(Math.PI / 2),
+  wave: (r) => new THREE.TorusGeometry(r, 0.028, 8, 24, Math.PI / 2).rotateZ(-Math.PI / 4),
+  body: new THREE.MeshStandardMaterial({ color: '#8c7cf0', roughness: 0.45 }),
+  inside: new THREE.MeshStandardMaterial({ color: '#5a3d7a', roughness: 0.7, side: THREE.DoubleSide }),
+}
+const waveGeometries = [0.13, 0.23, 0.33].map((r) => speakerParts.wave(r))
+
+function makeSpeaker() {
+  const group = new THREE.Group()
+  const lean = new THREE.Group() // leans back a little towards the camera
+  lean.position.y = 0.32
+  lean.rotation.x = -0.35
+  group.add(lean)
+  const box = new THREE.Mesh(speakerParts.box, speakerParts.body)
+  box.position.x = -0.2
+  const cone = new THREE.Mesh(speakerParts.cone, speakerParts.body)
+  cone.position.x = -0.06
+  const cap = new THREE.Mesh(speakerParts.cap, speakerParts.inside)
+  cap.position.x = 0.02
+  lean.add(box, cone, cap)
+  const waves = waveGeometries.map((geo) => {
+    const mat = new THREE.MeshStandardMaterial({ color: '#ffbe0b', emissive: '#ff9f1c', emissiveIntensity: 0.15, roughness: 0.4 })
+    const wave = new THREE.Mesh(geo, mat)
+    wave.position.x = 0.04
+    lean.add(wave)
+    return wave
+  })
+  group.traverse((o) => {
+    if (o.isMesh) o.castShadow = true
+  })
+  return { group, waves, pop: 0, yaw: 0 }
+}
 
 class Card {
-  constructor(animal) {
+  /** kind: 'animal', 'sound' (plays the call, shows a loudspeaker) or 'baby'. */
+  constructor(animal, kind = 'animal') {
     this.animal = animal
+    this.kind = kind
     this.state = 'down' // down | opening | open | closing | matched
     this.group = new THREE.Group()
     this.group.userData.card = this // a tap anywhere on the card, its animal or its ring finds the card
@@ -435,17 +539,28 @@ class Card {
     const mesh = assets.card.clone(true)
     mesh.traverse((o) => {
       if (o.isMesh && o.material.name === 'card_spot') {
-        o.material = spotMaterials[animal] ??= o.material.clone()
-        o.material.color.set(ANIMALS[animal].color)
+        this.spot = o
+        this.base = o.material
+        if (kind === 'sound') {
+          o.material = soundSpot ??= o.material.clone()
+          soundSpot.color.set('#efe9ff')
+        } else this.tint()
       }
     })
     this.pivot.add(mesh)
     this.critter = makeAnimal(animal)
+    if (kind === 'baby') babyfy(this.critter)
     this.critter.baseY = FACE_TOP
     this.critter.holder.position.z = 0.1
     this.critter.holder.visible = false
     this.critter.pop = 0
     this.group.add(this.critter.holder)
+    if (kind === 'sound') {
+      this.speaker = makeSpeaker()
+      this.speaker.group.position.y = FACE_TOP
+      this.speaker.group.visible = false
+      this.group.add(this.speaker.group)
+    }
     this.ring = new THREE.Mesh(ringGeometry, ringMaterial)
     this.ring.rotation.x = -Math.PI / 2
     this.ring.position.y = FACE_TOP + 0.01
@@ -456,7 +571,15 @@ class Card {
     this.lift = 0
     this.wiggle = 0
     this.bob = 0
+    this.waveUntil = 0
     this.revealed = null
+  }
+
+  /** Colours the spot in the animal's own colour. */
+  tint() {
+    if (!this.spot) return
+    this.spot.material = spotMaterials[this.animal] ??= this.base.clone()
+    this.spot.material.color.set(ANIMALS[this.animal].color)
   }
 
   /** Flips the card over with a little hop, then (face up) pops the animal out. */
@@ -478,17 +601,44 @@ class Card {
   }
 
   async popOut() {
+    sound.pop()
+    effects.sparkle(this.worldTop(), { count: 10, speed: 1.4, up: 1.6, size: 0.06 })
+    if (this.kind === 'sound') {
+      // Only the call: the child must remember the sound and find the animal that makes it.
+      const sp = this.speaker
+      sp.group.visible = true
+      this.playCall()
+      await tween(0.42, (t) => (sp.pop = ease.outBack(t)))
+    } else {
+      callAndName(this.critter, { droppable: false })
+      await this.showAnimal()
+    }
+    if (this.state === 'opening') this.state = 'open'
+  }
+
+  /** The sound card's call, with its waves pulsing while it plays. */
+  playCall() {
+    talk.call(this.animal, { onStart: () => (this.waveUntil = game.time + (VOICE_LENGTH[this.animal] ?? 0.6) + 0.2) })
+  }
+
+  async showAnimal() {
     const a = this.critter
     a.holder.visible = true
-    sound.pop()
-    sound.voice(this.animal, 0.1)
-    effects.sparkle(this.worldTop(), { count: 10, speed: 1.4, up: 1.6, size: 0.06 })
     await tween(0.42, (t) => {
       a.pop = ease.outBack(t)
       a.hop = Math.sin(t * Math.PI) * 0.35
     })
     a.hop = 0
-    if (this.state === 'opening') this.state = 'open'
+  }
+
+  /** A matched sound card: the loudspeaker shrinks away and the animal that made the sound pops out. */
+  async becomeAnimal() {
+    const sp = this.speaker
+    await tween(0.25, (t) => (sp.pop = 1 - ease.inCubic(t)))
+    sp.group.visible = false
+    this.tint()
+    effects.sparkle(this.worldTop(), { count: 8, speed: 1.2, up: 1.4, size: 0.06 })
+    await this.showAnimal()
   }
 
   /** Animal ducks back into the card, which flips face down. */
@@ -500,9 +650,14 @@ class Card {
   async shut(fast) {
     this.state = 'closing'
     const a = this.critter
+    const sp = this.speaker
     a.excited = false
-    await tween(fast ? 0.12 : 0.22, (t) => (a.pop = 1 - ease.inCubic(t)))
+    await tween(fast ? 0.12 : 0.22, (t) => {
+      a.pop = 1 - ease.inCubic(t)
+      if (sp) sp.pop = a.pop
+    })
     a.holder.visible = false
+    if (sp) sp.group.visible = false
     sound.flip()
     await tween(fast ? 0.28 : 0.38, (u) => {
       this.pivot.rotation.z = Math.PI * (1 - ease.inOutCubic(u))
@@ -533,7 +688,22 @@ class Card {
     this.pivot.position.y = this.lift + this.hover * 0.08 + this.bob
     this.pivot.rotation.y = this.wiggle
     if (this.critter.holder.visible) poseAnimal(this.critter, time)
+    if (this.speaker?.group.visible) this.poseSpeaker(time)
     if (this.ring.visible) this.ring.rotation.z += dt * 0.6
+  }
+
+  /** The loudspeaker sways a little; its waves glow outwards one after another while it plays. */
+  poseSpeaker(time) {
+    const sp = this.speaker
+    const playing = time < this.waveUntil
+    sp.group.scale.setScalar(Math.max(0.001, sp.pop))
+    sp.group.rotation.y = this.critter.yaw + Math.sin(time * 1.3) * 0.08
+    sp.group.position.y = FACE_TOP + Math.sin(time * 2) * 0.015
+    sp.waves.forEach((wave, i) => {
+      const k = playing ? (Math.sin(time * 7 - i * 1.1) + 1) / 2 : 0
+      wave.material.emissiveIntensity = 0.15 + k * 0.9
+      wave.scale.setScalar(1 + k * 0.12)
+    })
   }
 }
 
@@ -721,15 +891,17 @@ function show(screen) {
 }
 
 function nextLevel() {
-  const i = LEVELS.findIndex((_, k) => !progress.stars[k])
+  const done = doneLevels()
+  const i = LEVELS.findIndex((_, k) => !done[k])
   return i < 0 ? LEVELS.length - 1 : i
 }
 
 function renderLevels() {
   const next = nextLevel()
+  const done = doneLevels()
   $('levels').innerHTML = LEVELS.map((pairs, i) => {
     // A finished level gets a paw print: no grading by turns
-    const row = progress.stars[i] ? '<span aria-label="Done">🐾</span>' : ''
+    const row = done[i] ? '<span aria-label="Done">🐾</span>' : ''
     return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}"><span class="num">${i + 1}</span><span class="cards"><i class="mini"></i>${pairs * 2}</span><span class="lstars">${row}</span></button>`
   }).join('')
   for (const el of document.querySelectorAll('[data-level]')) {
@@ -738,6 +910,26 @@ function renderLevels() {
       startLevel(Number(el.dataset.level))
     })
   }
+}
+
+/** The pictured choice of what makes a pair: twins, animal and sound, or animal and baby. */
+function renderModes() {
+  for (const el of document.querySelectorAll('[data-mode]')) {
+    const on = el.dataset.mode === progress.mode
+    el.classList.toggle('on', on)
+    el.setAttribute('aria-pressed', on)
+  }
+  $('menu-hint').textContent = MODES[progress.mode].hint
+}
+
+function chooseMode(mode) {
+  if (!MODES[mode]) return
+  progress.mode = mode
+  save()
+  renderModes()
+  renderLevels()
+  talk.clear()
+  talk.say(MODES[mode].goal)
 }
 
 function renderPairs() {
@@ -797,6 +989,7 @@ function enterMenu() {
   resetScene()
   game.state = 'menu'
   show('menu')
+  renderModes()
   renderLevels()
   const count = innerWidth / innerHeight < 0.8 ? 3 : 5
   game.paradeAnimals = shuffle([...NAMES]).slice(0, count).map((name, i) => {
@@ -816,6 +1009,7 @@ function enterMenu() {
 
 /** Empties the table: cards, menu animals, particles and every running tween. */
 function resetScene() {
+  game.round++ // anything still waiting for the old board checks this and gives up
   stopPeekSpeech()
   clearTweens() // also strands any pending waits from the old board, so they never resume
   effects.clear()
@@ -840,11 +1034,14 @@ function startLevel(level) {
   $('peek').setAttribute('aria-label', 'Peek at one matching pair')
   game.idle = 0
   game.state = 'dealing'
+  game.mode = progress.mode
   show('play')
   const pairs = LEVELS[level]
-  const picks = shuffle([...NAMES]).slice(0, pairs)
-  const deck = shuffle([...picks, ...picks])
-  game.cards = deck.map((animal) => new Card(animal))
+  const picks = shuffle([...(game.mode === 'baby' ? WITH_BABIES : NAMES)]).slice(0, pairs)
+  // Each pair: an animal and its twin, its sound card or its baby.
+  const partner = { twins: 'animal', sound: 'sound', baby: 'baby' }[game.mode]
+  const deck = shuffle(picks.flatMap((animal) => [[animal, 'animal'], [animal, partner]]))
+  game.cards = deck.map(([animal, kind]) => new Card(animal, kind))
   for (const card of game.cards) board.add(card.group)
   renderPairs()
   relayout(true)
@@ -869,16 +1066,20 @@ function startLevel(level) {
   })
   wait(0.35 + game.cards.length * 0.06 + 0.5).then(() => {
     game.state = 'play'
-    banner(level === 0 ? 'Find the twins!' : `Level ${level + 1}`, 1100)
+    banner(MODES[game.mode].banner, 1400)
+    talk.say(MODES[game.mode].goal) // pre-readers hear the goal of every round
   })
 }
 
 async function tapCard(card) {
   if (game.state !== 'play') return
   if (card.state === 'matched' || card.state === 'open') {
-    // Matched animals love attention.
-    hopOnce(card.critter)
-    sound.voice(card.animal)
+    // Matched animals love attention; an open sound card plays its sound again.
+    if (card.state === 'open' && card.kind === 'sound') card.playCall()
+    else {
+      hopOnce(card.critter)
+      callAndName(card.critter)
+    }
     return
   }
   if (card.state === 'closing') {
@@ -914,15 +1115,21 @@ function onMatch(a, b) {
   a.state = b.state = 'matched'
   game.matched++
   sound.match()
-  sound.voice(a.animal, 0.35)
+  // Name what was learned: "Two cows!", "The cow moos!", "A cow's baby is a calf!"
+  talk.say(MATCH_WORDS[game.mode](a.animal))
   for (const card of [a, b]) {
-    dance(card.critter, { delay: 0.05 })
+    if (card.kind === 'sound') card.becomeAnimal().then(() => dance(card.critter, { dur: 1.0, hops: 2, height: 0.35 }))
+    else dance(card.critter, { delay: 0.05 })
     card.showRing()
     effects.sparkle(card.worldTop(), { count: 8, speed: 1.2, up: 1.2 })
   }
   // The pair joins the row of found animals at the top (no praise banner).
   renderPairs()
-  if (game.matched === LEVELS[game.level]) wait(1.1).then(winLevel)
+  if (game.matched === LEVELS[game.level]) {
+    // The party waits until the last pair has been named.
+    const round = game.round
+    Promise.all([wait(1.1), Promise.race([talk.idle(), wait(4)])]).then(() => round === game.round && winLevel())
+  }
 }
 
 function onMismatch(a, b) {
@@ -936,8 +1143,10 @@ function onMismatch(a, b) {
     })
   }
   game.mismatch = { a, b }
-  wait(1.25).then(() => {
-    if (game.mismatch?.a === a) closeMismatch(false)
+  // The cards stay open until their names (or sounds) have been heard, then turn back over.
+  const round = game.round
+  Promise.all([wait(1.25), Promise.race([talk.idle(), wait(4)])]).then(() => {
+    if (round === game.round && game.mismatch?.a === a) closeMismatch(false)
   })
 }
 
@@ -954,7 +1163,8 @@ function winLevel() {
   game.state = 'won'
   const pairs = LEVELS[game.level]
   // A finished level is remembered as done (1). Saves from before the calm pass may hold 2 or 3.
-  progress.stars[game.level] = Math.max(progress.stars[game.level] ?? 0, 1)
+  const done = doneLevels()
+  done[game.level] = Math.max(done[game.level] ?? 0, 1)
   save()
 
   // One soft moment: a gentle chord, a few slow pieces drifting down, then each
@@ -966,22 +1176,43 @@ function winLevel() {
   for (const card of [...game.cards].sort((a, b) => a.slot.z - b.slot.z || a.slot.x - b.slot.x)) {
     if (!found.includes(card.animal)) found.push(card.animal)
   }
+  talk.clear()
   found.forEach((animal, i) => {
     const delay = 0.6 + i * WIN_CALL_GAP
     for (const card of game.cards) if (card.animal === animal) dance(card.critter, { delay, dur: 1.0, hops: 2, height: 0.35 })
     sound.voice(animal, delay)
   })
+  // After the last hello, name everything that was found.
+  const recap = {
+    twins: `${cap(list(found))}. You found all the twins!`,
+    sound: `${cap(list(found))}. You know all their sounds!`,
+    baby: `${cap(list(found.map((name) => WORDS[name].baby)))}. You found every baby!`,
+  }[game.mode]
+  wait(0.6 + found.length * WIN_CALL_GAP + 0.5).then(() => talk.say(recap))
 
   wait(1.6).then(() => {
     const last = game.level === LEVELS.length - 1
     $('win-title').textContent = 'You found them all!'
-    $('win-text').textContent = `${pairs} pairs of animal twins`
+    $('win-text').textContent = {
+      twins: `${pairs} pairs of animal twins`,
+      sound: `${pairs} animals and their sounds`,
+      baby: `${pairs} animals and their babies`,
+    }[game.mode]
     $('next').classList.toggle('hidden', last)
     // Show what the child found: the animals, in the order they say hello
+    // Each one can be tapped to hear it again.
     $('win-stars').replaceChildren(...found.map((animal, i) => {
-      const el = document.createElement('span')
-      el.textContent = ANIMALS[animal].emoji
+      const el = document.createElement('button')
+      const emoji = ANIMALS[animal].emoji
+      el.className = 'found'
+      el.innerHTML = game.mode === 'baby' ? `${emoji}<small>${emoji}</small>` : emoji
+      el.setAttribute('aria-label', game.mode === 'baby' ? `${animal} and ${WORDS[animal].baby}` : animal)
       el.style.animationDelay = `${(0.6 + i * WIN_CALL_GAP - 1.6).toFixed(2)}s`
+      el.addEventListener('click', () => {
+        for (const card of game.cards) if (card.animal === animal) hopOnce(card.critter, 0.35)
+        talk.call(animal, { droppable: true })
+        talk.say(game.mode === 'baby' ? MATCH_WORDS.baby(animal) : `${cap(animal)}!`, { droppable: true })
+      })
       return el
     }))
     $('win-stars').setAttribute('aria-label', found.join(', '))
@@ -1104,7 +1335,7 @@ canvas.addEventListener('pointerdown', (e) => {
     if (a) {
       if (!a.busy) {
         dance(a, { dur: 0.9, hops: 2, height: 0.4 })
-        sound.voice(a.name)
+        callAndName(a)
         effects.sparkle(a.holder.position.clone().setY(1.0), { count: 14 })
       }
       return
@@ -1118,7 +1349,7 @@ canvas.addEventListener('pointerdown', (e) => {
     const card = pickCard(e)
     if (card) {
       hopOnce(card.critter, 0.35)
-      sound.voice(card.animal)
+      callAndName(card.critter)
     } else tapToy(e)
     return
   }
@@ -1162,6 +1393,12 @@ $('next').addEventListener('click', () => {
   sound.tap()
   startLevel(Math.min(LEVELS.length - 1, game.level + 1))
 })
+for (const el of document.querySelectorAll('[data-mode]')) {
+  el.addEventListener('click', () => {
+    sound.tap()
+    chooseMode(el.dataset.mode)
+  })
+}
 $('mute').addEventListener('click', () => {
   progress.muted = !progress.muted
   sound.setMuted(progress.muted)
@@ -1232,16 +1469,7 @@ async function main() {
 main()
 
 function stopPeekSpeech() {
-  if ('speechSynthesis' in window) speechSynthesis.cancel()
-}
-
-function speakPeek() {
-  if (sound.muted || !('speechSynthesis' in window)) return
-  stopPeekSpeech()
-  const words = new SpeechSynthesisUtterance('These two match. Remember where they are.')
-  words.lang = 'en-US'
-  words.rate = 0.85
-  speechSynthesis.speak(words)
+  talk.clear()
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -1258,12 +1486,15 @@ $('peek').onclick = async () => {
   $('peek').disabled = true
   $('peek').setAttribute('aria-label', 'Pair peek used for this round')
   game.busy = true
-  speakPeek()
-  await Promise.all([first.flipUp(), second.flipUp()])
-  banner('Look! Twins!', 2200, [first, second])
-  await wait(2.4)
-  if (game.state !== 'play') return
+  const round = game.round
+  talk.clear()
+  const revealing = Promise.all([first.flipUp(), second.flipUp()])
+  talk.say('These two match. Remember where they are.')
+  await revealing
+  banner(game.mode === 'twins' ? 'Look! Twins!' : 'Look! A pair!', 2200, [first, second])
+  await Promise.all([wait(2.4), Promise.race([talk.idle(), wait(6)])])
+  if (game.state !== 'play' || round !== game.round) return
   await Promise.all([first.close(), second.close()])
   game.busy = false
 }
-if (new URLSearchParams(location.search).has('debug')) window.__memory = { game, camera }
+if (new URLSearchParams(location.search).has('debug')) window.__memory = { game, camera, talk, chooseMode }

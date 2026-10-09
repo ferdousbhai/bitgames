@@ -34,3 +34,70 @@ The audit is in [AUDIT_2026-10-09.md](AUDIT_2026-10-09.md). The core memory loop
 - Speak the animal's name on reveal and on the win card.
 - Add animal↔sound and animal↔baby matching modes.
 - Add a quiet ambient bed. Soften the sawtooth and square animal voices with lowpass filtering (left as they are in this pass: they are character sounds, not fanfares).
+
+## Phase 2: vocabulary and deeper matching (2026-10-09)
+
+### Design
+
+There are now three kinds of pair, each chosen with a picture button on the menu. Twins (🐶🐶) stays the default.
+
+- **Twins:** two of the same animal, as before.
+- **Sounds (🐮🔊):** each animal has a partner card that shows only a purple loudspeaker. Flipping it plays the call, and its three waves glow while the call sounds. The child has to remember the sound and find the animal that makes it, which trains auditory memory. The speaker card's spot stays plain lavender until it is matched, because its colour would give the animal away. On a match the speaker shrinks away, the animal that made the sound pops out, and the spot takes on the animal's colour.
+- **Babies (🐮 + small 🐮):** each animal is paired with its baby. The baby is the same model, made at runtime: 0.6× size, 1.1× wider, with a 1.3× head (the head's origin is at the neck). Its call is the same voice pitched up 1.45× and a little softer. No new Blender model was needed; the calf, cub and piglet read clearly as babies next to their parents. Frog (a tadpole looks nothing like a small frog) and chick (already a baby) are left out of this mode, which leaves exactly 10 animals for the 10-pair level.
+
+**Names are spoken** through a new one-voice-at-a-time queue (`public/js/talk.js`). An animal's call always plays first, then its name ("Cow!", or "Calf!" for a baby), so speech never talks over a moo. The queue is silent and instant while muted, and when taps pile up it drops the oldest names first.
+
+- **Round goal:** the goal is spoken at the start of every round, and again when a mode is chosen: "Find the animal twins!", "Listen! Find the animal that makes each sound.", "Find each animal's baby!".
+- **On a match**, one small phrase names what was learned: "Two cows!", "The cow moos!", "A cow's baby is a calf!" (or "An elephant's…").
+- **On a mismatch**, the two cards stay open until their names or sounds have been heard (at least 1.25 s, at most 4 s), then turn back. A third tap still closes them at once.
+- **At the win**, the Phase 1 calm party is unchanged: one soft chord, then one call at a time. After the last call the game names everything that was found: "Bunny, chick and penguin. You found all the twins!", "Lion, pig and frog. You know all their sounds!" or "Calf, kit and piglet. You found every baby!". Each emoji on the win card is now a button, so tapping it makes those animals hop and say their name again. In Babies the emoji are shown as a parent and a small baby.
+- Tapping animals on the menu or on a finished board also says their names.
+
+**Softer voices.** dog, cat, pig, elephant and penguin now use triangle waves. The squeaky toy bear does too. frog, lion and cow keep their growl, but behind a lower lowpass filter (≤ 850 Hz) and at lower gain.
+
+Progress is kept per mode: Twins keeps the existing `progress.stars`, and Sounds and Babies use `progress.modeDone`. The 🐾 marks, the six levels, the 👀 peek and the calm win are all unchanged. The peek now speaks after the two cards' names, and turns them back once that speech has finished.
+
+### Where
+
+| Change | Where |
+| --- | --- |
+| Words (plurals, call verbs, baby names), `MODES`, `MATCH_WORDS` | `public/js/main.js:30-63` |
+| Progress for each mode | `main.js:99` (`doneLevels`) |
+| Baby transform and spoken name | `main.js:432` (`babyfy`), `:441` (`callAndName`) |
+| Runtime loudspeaker | `main.js:503` (`makeSpeaker`) |
+| Card kinds, plain sound spot, `popOut`/`playCall`/`becomeAnimal`/`poseSpeaker` | `main.js:529-710` |
+| Mode menu | `main.js:916-933`; buttons in `public/index.html:33-37`; styles in `public/style.css:50-64` (beside Play in landscape and on short phones) |
+| Mixed deck | `main.js:1042`; the goal is spoken at `:1070` |
+| Match phrase, mismatch waits for speech, win waits for the last phrase | `main.js:1114-1150` |
+| Win recap and tappable found animals | `main.js:1186-1215` |
+| Peek goes through the speech queue | `main.js` `$('peek').onclick` |
+| Speech queue | `public/js/talk.js` (new) |
+| Softer voices, `VOICE_LENGTH`, baby pitch | `public/js/audio.js:1-51`, `:164` |
+
+### Evidence
+
+- `browser.mjs --ids memory-match --run p2`: chromium and webkit both reported BOOT + PLAY ready, 0 errors.
+- `node --test examples/_studio/tests/*.test.mjs`: 10 of 11 pass. The one failure is the manifest-hash test, which is expected until the coordinator rebuilds: `public/js/talk.js` is new and other files changed.
+- `original-quality.mjs`: every check passes, including "The pair hint reveals two matching cards, returns them, and consumes no turn."
+- Full play-through script (`scratchpad/p2/memory-match/play.mjs`). Each round makes one deliberate mismatch, then solves the board and waits for the win.
+  - Chromium portrait 834×1194: all three modes.
+  - Chromium landscape 1194×834: all three modes.
+  - Chromium phone 667×375: Sounds.
+  - WebKit landscape: all three modes.
+  - 0 console errors throughout.
+- The recorded speech shows the order working. For example, in Sounds: "Pig!", "Lion!" (the sound card is not named), "The lion roars!", …, "Lion, pig and frog. You know all their sounds!".
+- WebKit headless has no speech, and the game still completes because of the fallback timers.
+- Screenshots are in `scratchpad/p2/memory-match/`:
+  - `chromium-portrait-sound-mismatch.png`: the loudspeaker card next to the pig.
+  - `chromium-portrait-sound-match.png`: the sound card turned into the lion.
+  - `chromium-portrait-baby-match.png`: cow and calf.
+  - `chromium-portrait-baby-win.png`
+  - `menu-chromium-{portrait,landscape,phone,phone-portrait}.png`
+- The test machine was very loaded (load average 25, about 5 fps), so the scripts wait on game time rather than wall-clock time.
+
+### Left
+
+- A quiet ambient bed, which Phase 1 listed, is still not done. It is outside this core-loop change.
+- Speech uses the device voice. On iPad that is the system en-US voice, so it is worth a listen on a real device.
+- The 10-pair level in Sounds has 10 identical loudspeakers, which is hard for young children. Levels 1–3 are the sweet spot; consider capping Sounds at 8 pairs if it proves too hard.
+- `public/bitgames.json` is stale until the coordinator rebuilds.

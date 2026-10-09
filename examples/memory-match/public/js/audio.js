@@ -1,47 +1,54 @@
 /** Every sound is synthesized with Web Audio: nothing to download. */
 
+// Each animal says hello in its own little voice. Phase 2: the buzzy sawtooth and square waves
+// are now triangle waves or sit behind a soft lowpass, so a child can flip cards all morning.
 const VOICES = {
-  // Each animal says hello in its own little voice.
   dog: (s, t) => {
     for (const d of [0, 0.2]) {
-      s.tone({ at: t + d, type: 'square', dur: 0.14, gain: 0.22, freq: [[0, 520], [0.03, 430], [0.14, 210]], filter: { type: 'bandpass', freq: 1000, Q: 1.2 } })
-      s.noise({ at: t + d, dur: 0.07, gain: 0.12, filter: { type: 'bandpass', freq: 1400, Q: 1 } })
+      s.tone({ at: t + d, type: 'triangle', dur: 0.14, gain: 0.26, freq: [[0, 520], [0.03, 430], [0.14, 210]], filter: { type: 'lowpass', freq: 1400 } })
+      s.noise({ at: t + d, dur: 0.06, gain: 0.07, filter: { type: 'bandpass', freq: 1200, Q: 1 } })
     }
   },
   cat: (s, t) =>
-    s.tone({ at: t, type: 'sawtooth', dur: 0.62, gain: 0.16, freq: [[0, 560], [0.18, 820], [0.62, 520]],
-      filter: { type: 'bandpass', freq: [[0, 900], [0.2, 2200], [0.62, 1100]], Q: 3 }, vibrato: { rate: 7, depth: 12 } }),
+    s.tone({ at: t, type: 'triangle', dur: 0.62, gain: 0.22, freq: [[0, 560], [0.18, 820], [0.62, 520]],
+      filter: { type: 'lowpass', freq: [[0, 1200], [0.2, 2000], [0.62, 1100]] }, vibrato: { rate: 7, depth: 12 } }),
   frog: (s, t) => {
-    s.tone({ at: t, type: 'square', dur: 0.13, gain: 0.2, freq: [[0, 190], [0.13, 160]], am: { rate: 45, depth: 0.9 }, filter: { type: 'lowpass', freq: 900 } })
-    s.tone({ at: t + 0.19, type: 'square', dur: 0.16, gain: 0.2, freq: [[0, 240], [0.16, 200]], am: { rate: 50, depth: 0.9 }, filter: { type: 'lowpass', freq: 1000 } })
+    s.tone({ at: t, type: 'square', dur: 0.13, gain: 0.15, freq: [[0, 190], [0.13, 160]], am: { rate: 45, depth: 0.9 }, filter: { type: 'lowpass', freq: 650 } })
+    s.tone({ at: t + 0.19, type: 'square', dur: 0.16, gain: 0.15, freq: [[0, 240], [0.16, 200]], am: { rate: 50, depth: 0.9 }, filter: { type: 'lowpass', freq: 700 } })
   },
   lion: (s, t) => {
-    s.tone({ at: t, type: 'sawtooth', dur: 0.75, gain: 0.2, freq: [[0, 150], [0.15, 190], [0.75, 95]], filter: { type: 'lowpass', freq: [[0, 500], [0.15, 1100], [0.75, 350]] }, vibrato: { rate: 9, depth: 8 } })
-    s.noise({ at: t, dur: 0.6, gain: 0.1, filter: { type: 'lowpass', freq: 700 } })
+    s.tone({ at: t, type: 'sawtooth', dur: 0.75, gain: 0.15, freq: [[0, 150], [0.15, 190], [0.75, 95]], filter: { type: 'lowpass', freq: [[0, 400], [0.15, 750], [0.75, 300]] }, vibrato: { rate: 9, depth: 8 } })
+    s.noise({ at: t, dur: 0.6, gain: 0.06, filter: { type: 'lowpass', freq: 600 } })
   },
   panda: (s, t) =>
     s.tone({ at: t, type: 'triangle', dur: 0.5, gain: 0.3, freq: [[0, 330], [0.15, 440], [0.5, 300]], vibrato: { rate: 9, depth: 14 } }),
   pig: (s, t) => {
-    for (const d of [0, 0.22]) s.tone({ at: t + d, type: 'square', dur: 0.16, gain: 0.2, freq: [[0, 300], [0.16, 190]], filter: { type: 'bandpass', freq: 750, Q: 5 } })
+    for (const d of [0, 0.22]) s.tone({ at: t + d, type: 'triangle', dur: 0.16, gain: 0.28, freq: [[0, 300], [0.16, 190]], am: { rate: 35, depth: 0.5 }, filter: { type: 'lowpass', freq: 900 } })
   },
   bunny: (s, t) => {
     s.tone({ at: t, type: 'sine', dur: 0.35, gain: 0.3, freq: [[0, 260], [0.12, 900], [0.35, 600]], vibrato: { rate: 22, depth: 40 } })
     s.tone({ at: t, type: 'sine', dur: 0.08, gain: 0.25, freq: [[0, 140], [0.08, 60]] })
   },
   chick: (s, t) => {
-    for (const d of [0, 0.13, 0.26]) s.tone({ at: t + d, type: 'sine', dur: 0.09, gain: 0.18, freq: [[0, 2300], [0.04, 3100], [0.09, 2500]] })
+    for (const d of [0, 0.13, 0.26]) s.tone({ at: t + d, type: 'sine', dur: 0.09, gain: 0.16, freq: [[0, 2300], [0.04, 3100], [0.09, 2500]] })
   },
   elephant: (s, t) =>
-    s.tone({ at: t, type: 'sawtooth', dur: 0.7, gain: 0.18, freq: [[0, 330], [0.12, 560], [0.7, 520]], filter: { type: 'bandpass', freq: 1300, Q: 2 }, vibrato: { rate: 7, depth: 18 } }),
+    s.tone({ at: t, type: 'triangle', dur: 0.7, gain: 0.24, freq: [[0, 330], [0.12, 560], [0.7, 520]], filter: { type: 'lowpass', freq: 1500 }, vibrato: { rate: 7, depth: 18 } }),
   fox: (s, t) => {
-    for (const d of [0, 0.16]) s.tone({ at: t + d, type: 'triangle', dur: 0.12, gain: 0.26, freq: [[0, 760], [0.04, 1400], [0.12, 900]] })
+    for (const d of [0, 0.16]) s.tone({ at: t + d, type: 'triangle', dur: 0.12, gain: 0.24, freq: [[0, 760], [0.04, 1400], [0.12, 900]] })
   },
   penguin: (s, t) => {
-    for (const d of [0, 0.2]) s.tone({ at: t + d, type: 'square', dur: 0.16, gain: 0.14, freq: [[0, 620], [0.16, 470]], am: { rate: 30, depth: 0.6 }, filter: { type: 'bandpass', freq: 1500, Q: 2 } })
+    for (const d of [0, 0.2]) s.tone({ at: t + d, type: 'triangle', dur: 0.16, gain: 0.2, freq: [[0, 620], [0.16, 470]], am: { rate: 30, depth: 0.6 }, filter: { type: 'lowpass', freq: 1400 } })
   },
   cow: (s, t) =>
-    s.tone({ at: t, type: 'sawtooth', dur: 0.95, gain: 0.2, freq: [[0, 165], [0.3, 215], [0.95, 150]], filter: { type: 'lowpass', freq: [[0, 400], [0.3, 1300], [0.95, 450]] }, vibrato: { rate: 5, depth: 4 } }),
+    s.tone({ at: t, type: 'sawtooth', dur: 0.95, gain: 0.16, freq: [[0, 165], [0.3, 215], [0.95, 150]], filter: { type: 'lowpass', freq: [[0, 350], [0.3, 850], [0.95, 380]] }, vibrato: { rate: 5, depth: 4 } }),
 }
+
+/** How long each call lasts (seconds), so speech can wait until the animal has finished. */
+export const VOICE_LENGTH = { dog: 0.36, cat: 0.65, frog: 0.38, lion: 0.78, panda: 0.52, pig: 0.4, bunny: 0.38, chick: 0.38, elephant: 0.72, fox: 0.3, penguin: 0.38, cow: 0.98 }
+
+/** Scales a frequency (a number or [[time, hz], ...]) by k. */
+const scaleFreq = (f, k) => (typeof f === 'number' ? f * k : f.map(([t, v]) => [t, v * k]))
 
 const NOTE = (n) => 440 * 2 ** ((n - 69) / 12)
 
@@ -153,8 +160,15 @@ export class Sound {
     src.stop(at + dur + 0.05)
   }
 
-  voice(animal, delay = 0) {
-    VOICES[animal]?.(this, this.now + delay)
+  /** An animal's call. A baby calls higher and softer: the same voice, pitched up. */
+  voice(animal, delay = 0, { baby = false } = {}) {
+    if (!baby) return VOICES[animal]?.(this, this.now + delay)
+    const k = 1.45
+    const small = {
+      tone: (o) => this.tone({ ...o, gain: o.gain * 0.75, freq: scaleFreq(o.freq, k), filter: o.filter && { ...o.filter, freq: scaleFreq(o.filter.freq, k) } }),
+      noise: (o) => this.noise({ ...o, gain: o.gain * 0.6 }),
+    }
+    VOICES[animal]?.(small, this.now + delay)
   }
 
   flip() {
@@ -189,7 +203,7 @@ export class Sound {
       }
     } else if (name === 'prop_bear') {
       // a squeaky toy: squee-squee
-      for (const d of [0, 0.22]) this.tone({ at: t + d, type: 'square', dur: 0.18, gain: 0.12, freq: [[0, 900], [0.06, 1500], [0.18, 1100]], filter: { type: 'bandpass', freq: 1600, Q: 2 } })
+      for (const d of [0, 0.22]) this.tone({ at: t + d, type: 'triangle', dur: 0.18, gain: 0.16, freq: [[0, 900], [0.06, 1500], [0.18, 1100]], filter: { type: 'bandpass', freq: 1600, Q: 2 } })
     } else if (name === 'prop_rings') {
       // the rings ring: a little xylophone run
       ;[60, 64, 67, 72, 76].forEach((n, i) => this.tone({ at: t + i * 0.07, type: 'triangle', dur: 0.35, gain: 0.18, freq: NOTE(n + 12) }))
