@@ -152,45 +152,6 @@ export class Particles {
   }
 }
 
-/** Expanding rings of light when something is caught. */
-export class Rings {
-  constructor(scene, count = 8) {
-    const geo = new THREE.RingGeometry(0.88, 1, 48)
-    this.items = Array.from({ length: count }, () => {
-      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: '#fff3a0', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false }))
-      m.visible = false
-      m.renderOrder = 4
-      scene.add(m)
-      return { m, life: 0, max: 0.5, size: 2 }
-    })
-    this.next = 0
-  }
-
-  spawn(pos, color = '#fff3a0', size = 2.2, life = 0.38) {
-    const r = this.items[this.next]
-    this.next = (this.next + 1) % this.items.length
-    r.m.position.copy(pos)
-    r.m.material.color.set(color)
-    r.m.visible = true
-    r.life = r.max = life
-    r.size = size
-  }
-
-  update(dt) {
-    for (const r of this.items) {
-      if (!r.m.visible) continue
-      r.life -= dt
-      if (r.life <= 0) {
-        r.m.visible = false
-        continue
-      }
-      const k = 1 - r.life / r.max
-      r.m.scale.setScalar(0.2 + k * r.size)
-      r.m.material.opacity = (1 - k) * (1 - k)
-    }
-  }
-}
-
 /** "+1" bubbles that float up from where a star was caught. */
 export class Popups {
   constructor(el, camera) {

@@ -45,7 +45,8 @@ function writeShipmentManifest(publicDir){
 }
 
 for(const id of originalIds){
-  const files=helpers[id] || [];
+  // Every game speaks through the shared queued voice.
+  const files=['js/speech.js',...(helpers[id] || [])];
   for(const file of files)copyFileSync(join(studio,'originals',basename(file)),join(examples,id,'public',file));
 }
 for(const id of originalIds)writeShipmentManifest(join(examples,id,'public'));

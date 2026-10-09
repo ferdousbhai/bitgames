@@ -1,7 +1,5 @@
 import * as THREE from 'three'
-import { canvasTexture } from './util.js'
-
-const stillMotion = matchMedia('(prefers-reduced-motion: reduce)')
+import { canvasTexture, reducedMotion } from './util.js'
 
 /**
  * Particles (sparks, smoke, dust, splashes, glass), skid marks and camera
@@ -220,7 +218,7 @@ export class Effects {
 
   /** A real bump shakes the camera a little (never with reduced motion, and never above 0.6). */
   addShake(amount) {
-    if (stillMotion.matches) return
+    if (reducedMotion.matches) return
     this.shake = Math.min(0.6, this.shake + amount)
   }
 

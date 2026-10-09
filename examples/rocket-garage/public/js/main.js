@@ -6,8 +6,9 @@ import { Particles, Popups, Rings, makeGlowTexture } from './effects.js'
 import { COLORS, DESTS, PARTS, SLOTS, isUnlocked, modelName, part, reach, sanitize, unlocksAt, wobble } from './parts.js'
 import { Rocket } from './rocket.js'
 import { Thumbs } from './thumbs.js'
-import { createWorkshop } from './workshop.js'
-import { addNote, createNotebook, createPredict, fairTest, flightRace, guessPicture, noteFrom, partsOf, runRace, sanitizeNotes, validBuild, verdict } from './fairtest.js'
+import { createVoice } from './speech.js'
+import { createWorkshop, flyRace } from './workshop.js'
+import { addNote, createNotebook, createPredict, fairTest, flightRace, guessPicture, noteFrom, partsOf, sanitizeNotes, validBuild, verdict } from './fairtest.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -839,17 +840,7 @@ function hintStep() {
 // --- Title & garage -------------------------------------------------------------------
 
 /** Speaks short phrases for children who are not reading yet (only when sound is on). */
-function speak(text) {
-  if (audio.muted || !text || typeof speechSynthesis === 'undefined') return
-  try {
-    speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text.replace(/[^\p{L}\p{N}\s.,!?'’-]/gu, ' '))
-    u.lang = 'en-US'
-    u.rate = 0.95
-    u.pitch = 1.15
-    speechSynthesis.speak(u)
-  } catch {}
-}
+const voice = createVoice({ isMuted: () => audio.muted, rate: 0.95, pitch: 1.15 })
 
 /** A picture of a whole rocket, for comparing builds side by side. */
 let thumbRocket = null
@@ -859,7 +850,8 @@ function rocketThumb(cfg) {
   if (!rocketThumbs.has(key)) {
     thumbRocket ??= new Rocket(models, glowTex)
     thumbRocket.build(cfg)
-    if (rocketThumbs.size > 12) rocketThumbs.clear()
+    // Forget only the oldest picture (a Map keeps insertion order)
+    if (rocketThumbs.size > 12) rocketThumbs.delete(rocketThumbs.keys().next().value)
     rocketThumbs.set(key, thumbs.shot(thumbRocket.wobbler, { turn: -0.35, tilt: 0.08, fill: 0.92, px: 256 }))
     thumbRocket.root.add(thumbRocket.wobbler)
   }
@@ -882,11 +874,11 @@ function renderExperiment() {
   b.classList.toggle('ready', status === 1)
 }
 
-const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf, rocketThumb, speak, sound: workshopSound, onChange: () => renderExperiment() })
+const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf, rocketThumb, voice, sound: workshopSound, onChange: () => renderExperiment() })
 const predictor = createPredict({
   thumbOf,
   rocketThumb,
-  speak,
+  voice,
   sound: workshopSound,
   onGuess: (test) => {
     pendingTest = test
@@ -894,7 +886,7 @@ const predictor = createPredict({
   },
   onBack: () => hintStep(),
 })
-const notebook = createNotebook({ notes: () => save.notes, thumbOf, speak, sound: workshopSound })
+const notebook = createNotebook({ notes: () => save.notes, thumbOf, voice, sound: workshopSound })
 /** The 📓 button wears a ✨ while there is a page the child has not looked at yet. */
 function renderNotebookButton() {
   $('notebook-btn').classList.toggle('fresh', save.notesNew)
@@ -1164,6 +1156,14 @@ function startGhost() {
 const trackLength = () => (ghost.on ? Math.max(flight.dist, ghost.dist) : flight.dist)
 
 let journeyMe = null
+const journeyFill = $('journey-fill')
+/** Sets a marker's height on the journey track (0 to 1), skipping writes that would not move it. */
+function setTrackAt(marker, f) {
+  const at = Math.round(f * 2000) / 2000
+  if (marker.trackAt === at) return
+  marker.trackAt = at
+  marker.style.bottom = `calc(18px + (100% - 36px) * ${at})`
+}
 function renderJourney() {
   const track = $('journey')
   track.querySelectorAll('.stop, .me, .ghost-me, .ghost-line').forEach((e) => e.remove())
@@ -1209,7 +1209,7 @@ function updateGhost(dt) {
   ghost.speed = damp(ghost.speed, ghost.cruise * smoothstep(ghost.t, 0, 2.6), 3, dt)
   ghost.alt = Math.min(ghost.dist, ghost.alt + ghost.speed * dt)
   const u = ghost.alt / ghost.dist
-  ghost.el.style.bottom = `calc(18px + (100% - 36px) * ${u * ghost.park})`
+  setTrackAt(ghost.el, u * ghost.park)
   if (u >= 1) {
     ghost.parked = true
     ghost.el.classList.add('parked')
@@ -1294,7 +1294,7 @@ function catchStar(it) {
   sparks.burst(it.obj.position, ['#fff3a0', '#ffd23f', '#ffffff'], 6, 2.5, 0.5)
   renderStars()
   // Every full group of five is counted aloud: five, ten, fifteen…
-  if (flight.stars % 5 === 0) speak(String(flight.stars))
+  if (flight.stars % 5 === 0) voice.say(String(flight.stars))
   if (!flight.turbo && flight.canTurbo && flight.stars >= TURBO && flight.target < DESTS.length - 1) {
     flight.turbo = true
     flight.target++
@@ -1417,8 +1417,12 @@ function updateFlight(dt) {
   // Journey marker
   const prog = clamp((f.alt - f.start) / f.dist, 0, 1)
   const shown = prog * (f.dist / trackLength())
-  if (journeyMe) journeyMe.style.bottom = `calc(18px + (100% - 36px) * ${shown})`
-  $('journey-fill').style.height = `${shown * 100}%`
+  if (journeyMe) setTrackAt(journeyMe, shown)
+  const filled = Math.round(shown * 2000) / 20
+  if (journeyFill.filled !== filled) {
+    journeyFill.filled = filled
+    journeyFill.style.height = `${filled}%`
+  }
   updateGhost(dt)
   if (prog >= 1) arrive()
 }
@@ -1753,7 +1757,7 @@ function renderTest() {
   why.setAttribute('role', 'status')
   row.append(why)
   box.append(race, row)
-  raceTimer = runRace(race, test.result, () => {
+  raceTimer = flyRace(race, test.result, { onDone: () => {
     mark.textContent = v.matched ? '✔' : '💡'
     why.textContent = v.why
     if (party.found) {
@@ -1762,8 +1766,8 @@ function renderTest() {
       page.textContent = '📓✨'
       row.append(page)
     }
-    speak(`${v.say}${party.found ? ' I put it in your notebook!' : ''}`)
-  })
+    voice.say(`${v.say}${party.found ? ' I put it in your notebook!' : ''}`)
+  } })
 }
 let rewardAt = 0
 

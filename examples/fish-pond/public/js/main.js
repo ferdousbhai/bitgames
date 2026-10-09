@@ -11,6 +11,7 @@ import { Effects, softDot } from './effects.js'
 import { HOLES, PLACES, RIG, World } from './world.js'
 import { Book } from './book.js'
 import { lookFor } from './look.js'
+import { createVoice } from './speech.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -50,6 +51,8 @@ const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 400)
 scene.add(camera)
 
 const audio = new Audio()
+// Says each creature's name and fact out loud, so nobody needs to read
+const voice = createVoice({ isMuted: () => audio.muted, rate: 0.95, pitch: 1.25 })
 const world = new World(scene, camera, renderer)
 const creatures = new Creatures(scene)
 const effects = new Effects(scene, camera)
@@ -240,7 +243,7 @@ const adventure = createAdventure({
   id: 'fish-pond',
   anchor: $('title-book'),
   hud: $('hud'),
-  isMuted: () => audio.muted,
+  voice,
   // The mission speaks its own reward; the screen shows a big trophy to go with it
   celebrate: () => {
     showIntro('🏆', '1, 2, 3!', '🐟 🐟 🐟', false, true)
@@ -516,6 +519,9 @@ function reel() {
 }
 
 const stageWorld = new THREE.Vector3()
+/** Scratch vectors for effects around the stage, so the show allocates nothing per frame. */
+const stageFx = new THREE.Vector3()
+const stageVel = new THREE.Vector3()
 function updateCatch(dt) {
   const k = fish.catch
   k.t += dt
@@ -541,7 +547,7 @@ const BITE_WINDOW = 4.5
 /** The one soft moment for a catch or a prize: a few slow bubbles rising behind the stage. */
 function softMoment() {
   stage.getWorldPosition(stageWorld)
-  for (let i = 0; i < 8; i++) effects.bubble(tmp.copy(stageWorld).add(new THREE.Vector3(rand(-1.4, 1.4), rand(-0.8, 0.2), -1.2)), 1, 0.3)
+  for (let i = 0; i < 8; i++) effects.bubble(stageFx.set(rand(-1.4, 1.4), rand(-0.8, 0.2), -1.2).add(stageWorld), 1, 0.3)
 }
 
 /** Boxy or round things look bigger than fish of the same length. */
@@ -575,12 +581,12 @@ function startShow() {
   $('card-new').classList.toggle('hidden', !isNew)
   $('card').className = `card-catch show stars${pick.stars}`
   audio.fanfare(pick.stars)
-  audio.say(SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${pick.name.toLowerCase()}!`)
+  voice.say(SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${pick.name.toLowerCase()}!`, { interrupt: true })
   // Look closer: one feature to notice, asked right after the name (it is optional)
   $('card-look').classList.toggle('hidden', !look)
   if (look) {
     $('card-look').textContent = `🔍 ${look.part}?`
-    audio.say(`Look closer! See its ${look.part}?`, { queue: true })
+    voice.say(`Look closer! See its ${look.part}?`)
   }
   softMoment()
   stageLight.intensity = 6
@@ -613,13 +619,13 @@ function updateShow(dt, t) {
       audio.creak()
     }
     s.c.parts.lid.rotation.z = ease(k) * 1.3
-    if (k > 0 && Math.random() < dt * 6) effects.sparkleAt(stageWorld.clone().add(new THREE.Vector3(rand(-0.6, 0.6), 0.6, 0.4)), '#ffe066', 1, 2.5, 0.35)
+    if (k > 0 && Math.random() < dt * 6) effects.sparkleAt(stageFx.set(rand(-0.6, 0.6), 0.6, 0.4).add(stageWorld), '#ffe066', 1, 2.5, 0.35)
   }
-  if (id === 'goldenfish' && Math.random() < dt * 5) effects.sparkleAt(stageWorld.clone().add(new THREE.Vector3(rand(-1, 1), rand(-0.6, 0.6), 0.5)), '#fff3a0', 1, 1, 0.3)
+  if (id === 'goldenfish' && Math.random() < dt * 5) effects.sparkleAt(stageFx.set(rand(-1, 1), rand(-0.6, 0.6), 0.5).add(stageWorld), '#fff3a0', 1, 1, 0.3)
   if (id === 'whale' && s.t > 0.4 && s.t < 2.2 && Math.random() < dt * 40) {
-    const top = new THREE.Vector3(0.2, 0.55, 0.3).multiplyScalar(base / s.c.unit)
-    const p = stageWorld.clone().add(top)
-    effects.drops.spawn(p, new THREE.Vector3(rand(-0.8, 0.8), rand(3, 5), rand(-0.3, 0.6)), { life: 1.2, size: rand(0.05, 0.1), color: '#d9f3ff' })
+    // The spout sits on top of the whale
+    const p = stageFx.set(0.2, 0.55, 0.3).multiplyScalar(base / s.c.unit).add(stageWorld)
+    effects.drops.spawn(p, stageVel.set(rand(-0.8, 0.8), rand(3, 5), rand(-0.3, 0.6)), { life: 1.2, size: rand(0.05, 0.1), color: '#d9f3ff' })
   }
   if (id === 'jellyfish') scale *= 1 + Math.sin(s.t * 5) * 0.05
   g.scale.setScalar(scale)
@@ -680,8 +686,7 @@ function lookCloser() {
   const fact = s.look.fact
   // A muted game shows the words only, so allow reading time instead of waiting for the voice
   s.factFor = 1.5 + fact.split(' ').length * 0.42
-  const spoken = audio.say(fact, { onend: () => fish.show === s && (s.factDone = s.t) })
-  if (!spoken) s.factDone = 0
+  if (!audio.muted) voice.say(fact, { interrupt: true, onend: () => fish.show === s && (s.factDone = s.t) })
   $('card-look').textContent = fact
   lookBtn.classList.remove('on')
   lookBtn.classList.add('seen')
@@ -791,6 +796,7 @@ function setupPlace(name) {
   audio.setPlace(name)
   creatures.clear()
   for (const id of AMBIENT[name]) spawnAmbient(id)
+  // Each shore downloads only when its place is first chosen
   loadShore(PLACES[name].shore)
   // Jellyfish glow brighter in the dark
   creatures.templates.jellyfish?.traverse((o) => {
@@ -973,7 +979,7 @@ function updateHint() {
 }
 
 function toTitle() {
-  audio.hush()
+  voice.hush()
   if (game.phase === 'show') finishShow()
   if (fish.show) {
     fish.show.c.group.removeFromParent()
@@ -1033,6 +1039,7 @@ $('home').addEventListener('click', (e) => {
 const soundBtn = $('sound')
 function setSound(on) {
   audio.setMuted(!on)
+  if (!on) voice.hush()
   soundBtn.textContent = on ? '🔊' : '🔇'
   store.set('fish-pond-sound', on)
 }
@@ -1062,6 +1069,7 @@ musicBtn.addEventListener('click', (e) => {
 const book = new Book({
   el: $('book'),
   audio,
+  voice,
   creatures,
   getBook: () => game.book,
   onClose: () => {},
@@ -1247,8 +1255,6 @@ async function load() {
   markPlace()
   game.state = 'title'
   show('title')
-  // The other shores download quietly in the background
-  for (const P of Object.values(PLACES)) loadShore(P.shore)
 }
 
 // --- Loop -----------------------------------------------------------------------------

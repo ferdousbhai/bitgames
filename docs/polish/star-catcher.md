@@ -168,3 +168,21 @@ Source: the audit's Phase 2 row ("Real constellations lit star by star and named
 - Phase 3 art: constellation pieces (Blender) could replace the glow sprites.
 - Rainbow and pink stars only add variety now. Consider whether they should light a coloured star.
 - Short-landscape phones: the mission card sits bottom-left, as before.
+
+# Simplify pass (2026-10-09)
+
+- One voice (`js/speech.js`) is shared with the mission helper.
+  - Star counts, the start line and finale taps interrupt what is being said; the planet fact, "Off to…", "Time to fly home!" and the welcome-home line wait in the queue.
+  - The arrive phase waits for the fact's `onend`, or until nothing is left to say after a hush, instead of polling `speechSynthesis` with a 12 s cap.
+- The mission choice button is drawn through the adventure's `renderChoice`.
+- `clearPlayfield()` holds the teardown that the finale and a new trip both need.
+- `renderJourney()` rebuilds the bar only when the trip moves to a new leg. Every other frame it changes only the widths that moved.
+- `sky.js` changes:
+  - Flight sprite materials are disposed.
+  - `Backdrop` has a `dispose()`, which `closeFinale` calls.
+  - `lit` keeps a count instead of filtering every frame.
+- Removed dead code:
+  - the `Rings` effect
+  - `TOTAL_STARS`
+  - `@keyframes bob`
+- Checks: Chromium and WebKit browser checks pass with 0 errors. A scripted trip with recorded speech reached home after 5 constellations, with the counts, facts and "Off to…" lines in order. The mission choice still cycles and survives going home.

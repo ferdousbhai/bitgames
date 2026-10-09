@@ -1,9 +1,8 @@
 import * as THREE from 'three'
 
 /**
- * Juice: snow spray behind the sliding penguin, puffs, sparkles, confetti and
- * fireworks. Particles live in pooled InstancedMeshes so a strike stays smooth
- * on a tablet.
+ * Juice: snow spray behind the sliding penguin, puffs and soft sparkles.
+ * Particles live in pooled InstancedMeshes so a strike stays smooth on a tablet.
  */
 /** A texture painted once by `draw(ctx, width, height)`. */
 export function canvasTexture(width, height, draw) {
@@ -126,22 +125,10 @@ class Pool {
   }
 }
 
-export const CONFETTI = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff6b9d', '#2ec4b6', '#ffffff']
-const FIREWORK = [['#ff595e', '#ffd6d6'], ['#ffca3a', '#fff3b0'], ['#8ac926', '#e2ffb8'], ['#4cc9f0', '#d6f6ff'], ['#c77dff', '#f0dcff'], ['#ff6b9d', '#ffe0ec']]
-const pick = (a) => a[(Math.random() * a.length) | 0]
-
 export class Effects {
   constructor(scene, camera) {
     this.scene = scene
     this.camera = camera
-    this.confetti = new Pool(scene, {
-      count: 600,
-      geometry: new THREE.PlaneGeometry(0.14, 0.09),
-      material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
-      gravity: 3.5,
-      drag: 1.6,
-      floor: 0.01,
-    })
     this.snow = new Pool(scene, {
       count: 300,
       geometry: new THREE.PlaneGeometry(1, 1),
@@ -198,26 +185,6 @@ export class Effects {
     }
   }
 
-  /** Confetti tossed up from a point (spares and big rolls). */
-  toss(pos, amount = 60) {
-    const v = this.v
-    for (let i = 0; i < amount; i++) {
-      v.set((Math.random() - 0.5) * 4, 4 + Math.random() * 4, (Math.random() - 0.5) * 3)
-      this.confetti.spawn(pos, v, { life: 2.5 + Math.random(), size: 1 + Math.random() * 0.6, color: pick(CONFETTI), spin: 8 })
-    }
-  }
-
-  /** A shower of confetti across the pin deck. */
-  shower(center, halfWidth, amount = 160) {
-    const p = this.tmp.clone()
-    const v = this.v
-    for (let i = 0; i < amount; i++) {
-      p.set(center.x + (Math.random() * 2 - 1) * halfWidth, center.y + Math.random() * 3, center.z + (Math.random() * 2 - 1) * 2.5)
-      v.set((Math.random() - 0.5) * 2, -Math.random() * 2, 0)
-      this.confetti.spawn(p, v, { life: 3 + Math.random() * 1.5, size: 1 + Math.random() * 0.5, color: pick(CONFETTI), spin: 6 })
-    }
-  }
-
   /** The one soft celebration: a few slow, pale sparkles rising over the pin deck. */
   glow(pos, n = 14, color = '#fff3c4') {
     const v = this.v
@@ -229,28 +196,7 @@ export class Effects {
 
   /** Clear celebration particles before the next aim. */
   clearCelebration() {
-    this.confetti.clear()
     this.sparkles.clear()
-    this.rockets = []
-  }
-
-  /** A rocket whooshes up from `from` and bursts into a coloured ball of sparkles. */
-  firework(from, height, onBurst) {
-    const [main, light] = pick(FIREWORK)
-    const v = this.v.set((Math.random() - 0.5) * 1.2, height * 1.35, 0)
-    const life = 0.75
-    const rocket = { p: from.clone(), v: v.clone(), age: 0, life, main, light, onBurst }
-    ;(this.rockets ??= []).push(rocket)
-  }
-
-  burst(pos, main, light) {
-    const v = this.v
-    const n = 70
-    for (let i = 0; i < n; i++) {
-      v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(3.5 + Math.random() * 1.2)
-      this.sparkles.spawn(pos, v, { life: 1.1 + Math.random() * 0.5, size: 0.35 + Math.random() * 0.3, color: i % 3 ? main : light })
-    }
-    this.puff(pos, 3, 1.4, main)
   }
 
   /** "+3" or "⭐" floating up from a point in the world. */
@@ -267,21 +213,6 @@ export class Effects {
   }
 
   update(dt) {
-    if (this.rockets) {
-      for (let i = this.rockets.length - 1; i >= 0; i--) {
-        const r = this.rockets[i]
-        r.age += dt
-        r.v.y -= 9 * dt * 0.8
-        r.p.addScaledVector(r.v, dt)
-        if (Math.random() < 0.9) this.sparkles.spawn(r.p, this.tmp.set((Math.random() - 0.5) * 0.4, -1, 0), { life: 0.35, size: 0.18, color: r.light })
-        if (r.age >= r.life) {
-          this.burst(r.p, r.main, r.light)
-          r.onBurst?.()
-          this.rockets.splice(i, 1)
-        }
-      }
-    }
-    this.confetti.update(dt, this.camera)
     this.snow.update(dt, this.camera)
     this.puffs.update(dt, this.camera)
     this.sparkles.update(dt, this.camera)

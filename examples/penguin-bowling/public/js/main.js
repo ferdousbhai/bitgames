@@ -1,4 +1,5 @@
 import { createPrediction } from './prediction.js'
+import { createVoice } from './speech.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -65,18 +66,9 @@ const effects = new Effects(scene, camera)
 const card = new ScoreCard()
 let penguinTemplate = null
 
-/** Spoken words for pre-readers, quiet when the game is muted. */
-function speak(text, { queue = false } = {}) {
-  try {
-    if (audio.muted || !('speechSynthesis' in window)) return
-    if (!queue) speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text)
-    u.rate = 0.9
-    u.pitch = 1.1
-    speechSynthesis.speak(u)
-  } catch {}
-}
-const counter = new Counter(scene, { speak })
+/** Spoken words for pre-readers, quiet when the game is muted. Words queue; taps interrupt. */
+const voice = createVoice({ isMuted: () => audio.muted, rate: 0.9, pitch: 1.1 })
+const counter = new Counter(scene, { say: voice.say })
 
 // --- Settings -------------------------------------------------------------------------
 
@@ -91,7 +83,6 @@ const game = {
   state: 'loading', // loading | title | aim | roll | settle | result | over
   theme: store.get('lane') in THEMES ? store.get('lane') : 'village',
   bumpers: store.get('bumpers') !== '0',
-  best: Number(store.get('best')) || 0,
   x: 0,
   angle: 0,
   curve: 0, // -1 left, 0 straight, 1 right
@@ -118,7 +109,7 @@ const prediction = createPrediction({
     const up = standingSet()
     return [3, 2, 1, 0].map((row) => PIN_SPOTS.flatMap((s, i) => (s.row === row ? [up[i]] : [])))
   },
-  muted: () => audio.muted,
+  voice,
   sound: (kind) => {
     audio.unlock()
     if (kind === 'tap') audio.squeak(0.9 + Math.random() * 0.4)
@@ -348,7 +339,7 @@ function finishRoll() {
     crowd.start(true)
     game.dance = r.strike
     effects.glow(deck, r.strike ? 16 : 12)
-    speak(r.strike ? 'Strike! All 10 fell.' : 'Spare! You got them all.', { queue: guessed })
+    voice.say(r.strike ? 'Strike! All 10 fell.' : 'Spare! You got them all.')
     game.resultWait = 3.4
     return
   }
@@ -359,7 +350,7 @@ function finishRoll() {
   if (knocked) effects.glow(deck, 6)
   // The pins left standing light up one at a time, counted aloud: "1, 2, 3 still standing".
   const delay = guessed ? 1.5 : 0.8
-  counter.start(up, delay, () => speak(`${fallen} fell and ${up.length} standing. ${fallen} and ${up.length} make 10.`, { queue: true }))
+  counter.start(up, delay, () => voice.say(`${fallen} fell and ${up.length} standing. ${fallen} and ${up.length} make 10.`))
   counter.onStep = (q) => {
     $(`bond-pin-${q.i}`)?.classList.add('lit')
     $(`rack-${q.i}`)?.classList.add('lit')
@@ -404,7 +395,7 @@ function askWhere() {
   counter.keepRings()
   for (const b of document.querySelectorAll('#where button')) b.className = ''
   $('where').hidden = false
-  speak(`${pinWord(up.length)} left. Where are they?`)
+  voice.say(`${pinWord(up.length)} left. Where are they?`)
 }
 
 function chooseSide(btn) {
@@ -416,12 +407,12 @@ function chooseSide(btn) {
   if (!there.length) {
     btn.className = 'no'
     audio.squeak(0.8)
-    speak(`No pins ${SIDE_WORDS[side]}. Look for the glowing rings.`)
+    voice.say(`No pins ${SIDE_WORDS[side]}. Look for the glowing rings.`, { interrupt: true })
     return
   }
   for (const b of document.querySelectorAll('#where button')) if (b.className !== 'no') b.className = b === btn ? 'yes' : ''
   audio.jingle(there.length)
-  speak(`Yes! ${pinWord(there.length)} ${SIDE_WORDS[side]}.`)
+  voice.say(`Yes! ${pinWord(there.length)} ${SIDE_WORDS[side]}.`, { interrupt: true })
   // The penguin waddles over to face them; aiming the slide is still up to the child.
   game.walkTo = clamp(there.reduce((a, p) => a + p.x, 0) / there.length, -MAX_X, MAX_X)
 }
@@ -468,11 +459,6 @@ function gameOver() {
   $('where').hidden = true
   game.state = 'over'
   const total = card.total
-  const newBest = total > game.best
-  if (newBest) {
-    game.best = total
-    store.set('best', total)
-  }
   game.lastScore = total
   $('final').textContent = total
   // What the child did, not a grade: how many strikes and spares they rolled
@@ -486,7 +472,7 @@ function gameOver() {
   const ways = [...game.bonds.keys()].sort((a, b) => parseInt(b) - parseInt(a))
   $('bonds').replaceChildren(...ways.map((w) => Object.assign(document.createElement('span'), { textContent: w.replace('+', ' + ') })))
   $('bonds-title').textContent = `${ways.length} ${ways.length === 1 ? 'way' : 'ways'} to make 10`
-  speak(`You found ${ways.length} ${ways.length === 1 ? 'way' : 'ways'} to make 10, like ${ways[0]?.replace('+', ' and ') ?? '10 and 0'}.`)
+  voice.say(`You found ${ways.length} ${ways.length === 1 ? 'way' : 'ways'} to make 10, like ${ways[0]?.replace('+', ' and ') ?? '10 and 0'}.`)
   show('results')
   audio.fanfare()
   crowd.start(true)

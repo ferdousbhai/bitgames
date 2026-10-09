@@ -231,12 +231,6 @@ export class Sound {
     this.tone({ at: t + 0.2, type: 'sine', dur: 0.28, gain: 0.16, freq: [[0, NOTE(64)], [0.28, NOTE(60)]] })
   }
 
-  star(i) {
-    const t = this.now
-    this.tone({ at: t, type: 'triangle', dur: 0.4, gain: 0.22, freq: NOTE(76 + i * 4) })
-    this.tone({ at: t, type: 'sine', dur: 0.5, gain: 0.1, freq: NOTE(88 + i * 4) })
-  }
-
   /** The board is finished: one soft, rolled chord, played once. */
   fanfare() {
     const t = this.now

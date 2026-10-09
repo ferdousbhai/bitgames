@@ -63,7 +63,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @keyframes pop { from { transform: scale(0) rotate(-40deg); } to { transform: scale(1) rotate(0); } }
 .results-top { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .tally { display: flex; align-items: center; gap: 10px; font-size: clamp(46px, 10vw, 72px); font-weight: 900; text-shadow: 0 5px 0 rgba(0,0,0,0.2); }
-.new-best { font-size: clamp(20px, 4vw, 28px); font-weight: 900; color: #fff; background: #ff6b9d; padding: 4px 14px; border-radius: 99px; box-shadow: 0 4px 0 #c94a77; text-shadow: none; margin-left: 6px; animation: pop .5s .6s cubic-bezier(.2,1.8,.4,1) both; }
 
 /* --- In play ----------------------------------------------------------------------- */
 #hud { position: fixed; inset: 0; pointer-events: none; }
@@ -241,7 +240,6 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   /* the smallest phones: the end card's title stays on one line and its buttons stay off the edges */
   #results h1 { font-size: 30px; white-space: nowrap; }
   #results .tally { font-size: 40px; gap: 6px; }
-  #results .new-best { font-size: 17px; padding: 3px 10px; margin-left: 2px; }
   #results .row { gap: 10px; }
   #results .big-go { font-size: 24px; padding: 10px 20px; }
   #results .big-go.alt { padding: 10px 16px; }
@@ -269,7 +267,6 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   #results .results-top, #results .menu-bottom { width: min(300px, 50vw); }
   #results h1 { font-size: 28px; white-space: nowrap; }
   #results .tally { font-size: 36px; gap: 6px; }
-  #results .new-best { font-size: 17px; padding: 3px 10px; margin-left: 2px; }
   #results .best { font-size: 15px; padding: 3px 12px; }
   #results .row { gap: 10px; }
   #results .big-go { font-size: 22px; padding: 9px 22px; white-space: nowrap; }

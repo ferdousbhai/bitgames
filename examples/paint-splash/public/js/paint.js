@@ -1,12 +1,12 @@
 import * as THREE from 'three'
-import { mixToyPaint } from './colour-model.js'
+import { describeMix } from './colour-studio.js'
 import { rng } from './util.js'
 
 const hexRgb = (c) => [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16))
 
 /**
  * The paint on the ground: a grid of 8 cm cells over the playground, shown
- * through one small RGBA texture the ground shader samples (bilinear filtering
+ * through one small RGBA colour texture the ground shader samples (bilinear filtering
  * plus a smoothstep in the shader turns the cells into smooth, round edges).
  *
  * Every device in a room gets the same paint events (roller strokes, bucket
@@ -35,8 +35,8 @@ const WORDS = ['red', 'yellow', 'blue']
 const bitsOf = (mask) => PRIMARIES.filter((bit) => mask & bit)
 /** Every colour the ground can show, by bits: { hex, word, recipe (bits), rgb }. */
 export const MIXES = Array.from({ length: 8 }, (_, mask) => {
-  const toy = mixToyPaint(PRIMARIES.map((bit) => (mask & bit ? 1 : 0)))
-  const word = !mask ? 'nothing' : toy.name === 'Earthy mixture' ? 'brown' : toy.name.replace(' mixture', '').toLowerCase()
+  const toy = describeMix(PRIMARIES.map((bit) => (mask & bit ? 1 : 0)))
+  const word = mask ? toy.base.toLowerCase() : 'nothing'
   return { mask, hex: toy.hex, word, recipe: bitsOf(mask), rgb: hexRgb(toy.hex) }
 })
 /** The colours made by mixing (two or three paints), in the order a child usually finds them. */
@@ -73,14 +73,14 @@ export class PaintMap {
     this.mix = new Uint8Array(n)
     this.mask = new Uint8Array(n)
     this.rgba = new Uint8Array(n * 4)
-    /** When each cell was last painted (tenths of a second, two bytes), for the wet shine. */
-    this.wetData = new Uint8Array(n * 4)
+    /** When each cell was last painted (tenths of a second, two bytes: red high, green low), for the wet shine. */
+    this.wetData = new Uint8Array(n * 2)
     this.counts = new Int32Array(8)
     /** The cell where each colour last appeared (to show where a new mix was found). */
     this.lastAt = new Int32Array(8).fill(-1)
     this.paintable = n
-    this.texture = dataTexture(this.rgba, true)
-    this.wetTexture = dataTexture(this.wetData, false)
+    this.texture = dataTexture(this.rgba, THREE.RGBAFormat, true)
+    this.wetTexture = dataTexture(this.wetData, THREE.RGFormat, false)
     this.now = { value: 0 }
     this.dirty = false
     this.reset([])
@@ -152,7 +152,7 @@ export class PaintMap {
     }
     const before = this.mix[i]
     const wet = mix ? Math.min(65535, Math.round(latest / 100)) : 0
-    const kw = i * 4
+    const kw = i * 2
     this.wetData[kw] = wet >> 8
     this.wetData[kw + 1] = wet & 255
     this.dirty = true
@@ -252,8 +252,8 @@ export class PaintMap {
   }
 }
 
-function dataTexture(data, colour) {
-  const tex = new THREE.DataTexture(data, NX, NZ, THREE.RGBAFormat, THREE.UnsignedByteType)
+function dataTexture(data, format, colour) {
+  const tex = new THREE.DataTexture(data, NX, NZ, format, THREE.UnsignedByteType)
   if (colour) tex.colorSpace = THREE.SRGBColorSpace
   // Colour blends smoothly between cells; the paint times must not be blended.
   tex.magFilter = tex.minFilter = colour ? THREE.LinearFilter : THREE.NearestFilter

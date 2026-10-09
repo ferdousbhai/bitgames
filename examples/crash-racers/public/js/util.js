@@ -1,5 +1,8 @@
 import * as THREE from 'three'
 
+/** The reduced-motion preference, read live through `.matches`. */
+export const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') ?? { matches: false }
+
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 const lerp = (a, b, t) => a + (b - a) * t
 export const damp = (a, b, rate, dt) => lerp(a, b, smoothing(rate, dt))

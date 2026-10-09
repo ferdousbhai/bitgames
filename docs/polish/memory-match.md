@@ -104,3 +104,12 @@ Progress is kept per mode: Twins keeps the existing `progress.stars`, and Sounds
 ### Follow-up: Sounds stops at 8 pairs (2026-10-09)
 
 Sounds now offers 5 levels, up to 8 pairs (16 cards); Twins and Babies keep all 6. `levelsFor(mode)` (`public/js/main.js:70`) drives the level menu, `nextLevel()`, the win card's Next button and `startLevel()`, which also clamps the level, so no path can start a 10-pair Sounds round. An old save that marks the 10-pair Sounds level done is ignored. Checked: an old Sounds save with all 6 levels done shows 5 levels with 🐾 marks, and Play starts the 8-pair level; Twins still shows 6 (`scratchpad/p2/memory-match/soundcap.mjs` and `soundcap-{portrait,phone}-menu.png`). `browser.mjs --browser chromium --ids memory-match`: BOOT + PLAY ready, 0 errors.
+
+### Simplify pass (2026-10-09)
+
+Quality cleanup only; play is unchanged.
+- `talk.js` keeps its queue (animal calls interleave with words) but speaks through the shared `speech.js` voice (`voice.say(text, { onend })`, `clear()` → `voice.hush()`). `stopPeekSpeech` also runs on `pagehide`.
+- Loudspeaker wave materials (three per sound card, animated per card) are disposed in `resetScene`.
+- Saves: `progress.stars` is moved into `modeDone.twins` once at load and `best` dropped, so `doneLevels()` is just `progress.modeDone[progress.mode]`. Checked with an old save: paw marks kept, and the next save writes the new shape.
+- Removed dead `effects.cannon()`, `audio.star()` and the always-zero `Card.wiggle`/`Card.bob`.
+- Checked: `browser.mjs --run simp` Chromium and WebKit 0 errors; a scripted Twins and Sounds round records the expected spoken order with no console errors.

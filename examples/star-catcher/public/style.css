@@ -38,7 +38,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .logo span:nth-child(6n+1) { color: #ffd23f; } .logo span:nth-child(6n+2) { color: #ff8fc7; animation-delay: .1s; }
 .logo span:nth-child(6n+3) { color: #7cc6fe; animation-delay: .2s; } .logo span:nth-child(6n+4) { color: #8ef0c8; animation-delay: .3s; }
 .logo span:nth-child(6n+5) { color: #ffb36b; animation-delay: .4s; } .logo span:nth-child(6n) { color: #c9b6ff; animation-delay: .5s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
 .tag { font-size: clamp(18px, 3.6vw, 26px); font-weight: 800; margin: 0; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
 .big-go {
   margin-top: 6px; background: #ffd23f; color: #3a2a6a; font-size: clamp(30px, 6vw, 44px); font-weight: 900; padding: 14px 48px;

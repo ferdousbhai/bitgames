@@ -110,3 +110,9 @@ Other tests:
 - Family play: is the count (up to about 8 s on a gutter ball) restful or slow for a 4-year-old? Is the "Where are the pins?" question clear?
 - The fallen-pin icons are small grey capsules. Phase 3 could draw themed pin icons (snowman and fish) for the bond card and the prediction dialog together.
 - On a second roll, the bond counts the whole rack (for example 10 + 0 = 10). If the child made a prediction, the 💭 line counts only that roll (6 fell + 0 standing = 6).
+
+# Simplify pass (2026-10-09)
+
+- One voice for the whole game (`js/speech.js`), shared with the pin prediction. Counting, results and the end-of-game sentence wait their turn in the queue. Tapping a side interrupts what is being said. The game no longer calls `speechSynthesis` directly.
+- Removed dead code: the confetti and firework system in `effects.js`, `audio.launch` and `audio.bang`, `game.best` and its stored score, and two unused CSS rules (`@keyframes bob` and the media-query `.badge`).
+- Checks: Chromium and WebKit browser checks pass with 0 errors. A scripted play with recorded speech kept every line in order (strike, then counting, then the number bond, then "Where are they?").

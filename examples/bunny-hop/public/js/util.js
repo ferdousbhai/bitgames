@@ -3,6 +3,7 @@ import * as THREE from 'three'
 /** Small helpers shared by the other modules. */
 export const clamp = THREE.MathUtils.clamp
 export const rand = THREE.MathUtils.randFloat // a random number between a and b
+export const randInt = THREE.MathUtils.randInt // a whole number from lo to hi, both included
 export const pick = (list) => list[Math.floor(Math.random() * list.length)]
 
 /**

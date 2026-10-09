@@ -70,7 +70,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .big-go.alt { background: linear-gradient(#5ee0d0, #2ec4b6); box-shadow: 0 8px 0 #1b8178; color: #fff; animation: none; }
 .big-go:active { transform: translateY(6px); box-shadow: 0 2px 0 #c78a00; }
-@keyframes pulse { 50% { transform: scale(1.06); } }
 #go { position: sticky; bottom: calc(6px + env(safe-area-inset-bottom)); z-index: 3; box-shadow: 0 8px 0 #c78a00, 0 10px 30px rgba(0,0,0,.3); }
 .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 

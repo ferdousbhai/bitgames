@@ -47,8 +47,8 @@ function numberTexture(n) {
 export const sideOf = (x) => (x < -0.2 ? 'left' : x > 0.2 ? 'right' : 'middle')
 
 export class Counter {
-  constructor(scene, { speak }) {
-    this.speak = speak
+  constructor(scene, { say }) {
+    this.say = say
     this.marks = Array.from({ length: 10 }, () => {
       const ring = new THREE.Mesh(
         new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2),
@@ -95,7 +95,7 @@ export class Counter {
         this.light(q)
         this.onStep?.(q)
         const last = q.n === this.total
-        this.speak(last ? `${q.n} still standing` : String(q.n), { queue: true })
+        this.say(last ? `${q.n} still standing` : String(q.n))
       }
       if (this.t >= this.endAt) {
         this.done = true

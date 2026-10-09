@@ -130,3 +130,12 @@ The 🧪 workshop's fair test now happens on every launch after a part change. T
 - Counting every five aloud is calm but frequent on long flights (up to about 10 times). It could stop after 15 if it feels chatty.
 - Booster thumbnails are drawn at a shared scale, so the small booster looks tiny on its notebook page.
 - Follow-up (owner): the reward screen's dance song now plays one phrase, about 10 s ending on the home note, and then goes silent instead of looping until the child leaves (`js/audio.js` `SONGS.dance.once`, checked in `updateMusic`). The pilot keeps dancing silently. Turbo skipped on test flights, counting fives aloud and the booster thumbnail scale stay as they are for family play. Chromium and WebKit `browser.mjs --run p2` pass with 0 errors.
+
+# Simplify pass (2026-10-09)
+
+- One voice (`js/speech.js`) is shared by the garage, the workshop, the launch question and the notebook. Answers to taps interrupt what is being said; star counts and the landing verdict wait in the queue. Closing the workshop calls `voice.hush()`.
+- `workshop.js` now exports `el`, `keyGuard`, `buildRace` and `flyRace`, and `fairtest.js` uses them. That removes the copies in `fairtest.js` (`el`, `keyGuard`, its race builder and `runRace`). The workshop keeps its 1.9 s landing and the reward card keeps 1.7 s.
+- `explain` and `explainFlight` now share one rule function (`ruling`). A check over 200,000 random build pairs gave the same sentences as before.
+- The journey track and the ghost rocket write their positions only when they move, and `#journey-fill` is looked up once instead of every frame. The rocket thumbnail cache now drops only its oldest picture.
+- Removed dead CSS: `@keyframes bob`, `.pill.bump` and `@keyframes bump`.
+- Checks: Chromium and WebKit browser checks pass with 0 errors. A scripted play covered a first flight, a booster change with a guess, the reward race and the workshop save, test and say-again. Speech stayed in order.

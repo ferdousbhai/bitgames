@@ -1,9 +1,10 @@
 import { createAdventure } from './adventure.js'
+import { createVoice } from './speech.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
-import { Particles, Popups, Rings, makeGlowTexture } from './effects.js'
+import { Particles, Popups, makeGlowTexture } from './effects.js'
 import { CONSTELLATIONS, Sky } from './sky.js'
 import { STOPS, World } from './world.js'
 
@@ -58,7 +59,6 @@ scene.add(rim)
 const audio = new Audio()
 audio.muted = store.get('star-catcher-muted', false)
 const particles = new Particles(scene)
-const rings = new Rings(scene)
 const popups = new Popups($('popups'), camera)
 const glowTex = makeGlowTexture(false)
 // The constellation panel and the night sky at home (runtime geometry, drawn over the scene)
@@ -86,6 +86,7 @@ const game = {
   cruise: 4,
   time: 0,
   idle: 0, // seconds since the player last steered (see the nudge in frame)
+  factSaid: false, // the planet's fact has been spoken (see arrive)
 }
 // The star-counting mission draws its progress as Cassiopeia's W (five stars, the first
 // constellation of the trip), joining each caught star to the one before it.
@@ -133,15 +134,8 @@ function renderMissionProgress(el, option, count) {
   else drawGemProgress(el, count)
 }
 
-/** Speak to pre-readers (respecting mute). `queue` waits for the words already playing. */
-function say(text, { queue = false } = {}) {
-  if (audio.muted || !('speechSynthesis' in window)) return
-  if (!queue) speechSynthesis.cancel()
-  const words = new SpeechSynthesisUtterance(text)
-  words.lang = 'en-US'
-  words.rate = 0.82
-  speechSynthesis.speak(words)
-}
+/** Speaks to pre-readers (respecting mute). Words wait their turn; taps and counts interrupt. */
+const voice = createVoice({ isMuted: () => audio.muted, rate: 0.82, pitch: 1 })
 
 let missionTimers = []
 function clearMissionTimers() {
@@ -153,7 +147,7 @@ const adventure = createAdventure({
   id: 'star-catcher',
   anchor: $('go'),
   hud: $('hud'),
-  isMuted: () => audio.muted,
+  voice,
   celebrate: (text) => {
     banner('⭐ Mission complete!', text)
     // The finished card stays a moment so the child sees it full, then gently clears away
@@ -162,6 +156,7 @@ const adventure = createAdventure({
     missionTimers.push(setTimeout(() => ($('adventure-goal').hidden = true), 4300))
   },
   renderProgress: renderMissionProgress,
+  renderChoice: renderMissionChoice,
   options: [
     { emoji: '🚀', label: 'Free space flight' },
     { emoji: '🐢', label: 'Gentle star counting', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => ['star', 'pink', 'rainbow'].includes(it.kind), reward: 'Five stars for a new constellation!' },
@@ -169,9 +164,7 @@ const adventure = createAdventure({
   ],
 })
 
-function renderMissionChoice() {
-  const option = adventure.option
-  const button = $('adventure-choice')
+function renderMissionChoice(button, option) {
   button.replaceChildren()
   const pictures = document.createElement('span')
   pictures.className = 'mission-choice-pictures'
@@ -184,8 +177,6 @@ function renderMissionChoice() {
   next.setAttribute('aria-hidden', 'true')
   button.append(pictures, caption, next)
 }
-renderMissionChoice()
-$('adventure-choice').addEventListener('click', renderMissionChoice)
 
 const items = []
 const pools = {}
@@ -403,7 +394,7 @@ function catchItem(it) {
 /** A star has landed in the panel: a soft bell, and the count spoken aloud. */
 function starLit(n, total, data) {
   audio.light(n)
-  if (!data?.quiet) say(String(n))
+  if (!data?.quiet) voice.say(String(n), { interrupt: true })
   renderJourney()
 }
 
@@ -438,7 +429,8 @@ function arrive(def) {
   name.classList.add('show')
   banner(`${stop.emoji} ${def.name}`, def.short, 5600)
   audio.constellation()
-  say(`You made ${def.spoken}! ${def.fact}`, { queue: true })
+  game.factSaid = false
+  voice.say(`You made ${def.spoken}! ${def.fact}`, { onend: () => (game.factSaid = true) })
   // One soft moment: a few slow, pale sparkles drift up around Kitty
   const p = rocket.root.position
   for (let i = 0; i < 12; i++) {
@@ -461,7 +453,7 @@ function nextLeg() {
     world.bottom.set('#1b1446')
     world.nebulae.forEach((n, i) => n.material.color.set(i % 2 ? '#3a2a8a' : '#24407a'))
     banner('🏠 Time to fly home!', `${game.stops} constellations made`)
-    say('Time to fly home!', { queue: true })
+    voice.say('Time to fly home!')
     renderJourney()
     return
   }
@@ -470,20 +462,14 @@ function nextLeg() {
   sky.begin(game.stops, $('sky-panel'))
   const next = STOPS[game.stops]
   banner(`Next stop: ${next.emoji} ${next.name}`)
-  say(`Off to the ${next.name}!`, { queue: true })
+  voice.say(`Off to the ${next.name}!`)
   renderJourney()
 }
 
 /** Home: the night sky with every constellation the child built, named and tappable. */
 function showFinale() {
   game.state = 'finale'
-  for (let i = items.length - 1; i >= 0; i--) recycle(i)
-  Object.assign(game, { magnet: 0, dizzy: 0, roll: 0 })
-  renderPowers()
-  hideUfo()
-  nudgeEl.classList.remove('show')
-  $('banner').classList.remove('show')
-  $('hud').classList.add('hidden')
+  clearPlayfield()
   const box = $('finale-sky')
   const made = sky.done
   const cells = made.map(({ def }, i) => {
@@ -495,7 +481,7 @@ function showFinale() {
       audio.unlock()
       audio.light(def.stars.length)
       sky.highlight(i)
-      say(`${def.name}. ${def.fact}`)
+      voice.say(`${def.name}. ${def.fact}`, { interrupt: true })
     })
     return cell
   })
@@ -508,7 +494,7 @@ function showFinale() {
   sky.showFinale(cells)
   audio.fanfare()
   const names = made.map((d) => d.def.spoken)
-  say(`Welcome home! You lit ${lit} stars and made ${made.length} constellations: ${names.slice(0, -1).join(', ')} and ${names.at(-1)}. Tap one to hear about it.`, { queue: true })
+  voice.say(`Welcome home! You lit ${lit} stars and made ${made.length} constellations: ${names.slice(0, -1).join(', ')} and ${names.at(-1)}. Tap one to hear about it.`)
 }
 
 // --- HUD ----------------------------------------------------------------------------
@@ -534,23 +520,43 @@ function legProgress() {
 }
 
 /** Home, the five planets, and home again: the trip has an end. */
+let journeyKey = ''
+let journeyFills = [] // { el, fill } for each track's bar
+let journeyShip = null
 function renderJourney() {
   const at = game.stops
   const homeward = game.phase === 'homeward'
   // The rocket rides the track being flown, or rests at the planet it just reached
   const ship = game.phase === 'build' ? at : homeward ? STOPS.length : at - 1
-  const track = (i, fill) => {
-    const rocketHere = i === ship ? `<span class="ship" style="left:${fill * 100}%;transform:translateX(-${fill * 100}%)">🚀</span>` : ''
-    return `<span class="track"><b style="width:${fill * 100}%"></b>${rocketHere}</span>`
+  const fills = STOPS.map((s, i) => (i < at ? 1 : i === at && game.phase === 'build' ? legProgress() : 0))
+  fills.push(homeward ? Math.min(game.phaseTime / HOME_TIME, 1) : 0)
+  // The stops and tracks are rebuilt only when the trip moves on; every frame just moves the bars
+  const key = `${at}:${homeward}:${ship}`
+  if (key !== journeyKey) {
+    journeyKey = key
+    const track = (i) => `<span class="track"><b></b>${i === ship ? '<span class="ship">🚀</span>' : ''}</span>`
+    const parts = ['<span class="stop done">🏠</span>']
+    STOPS.forEach((s, i) => {
+      parts.push(track(i))
+      parts.push(`<span class="stop ${i < at ? 'done' : i === at && !homeward ? 'next' : ''}">${s.emoji}</span>`)
+    })
+    parts.push(track(STOPS.length))
+    parts.push(`<span class="stop ${homeward ? 'next' : ''}">🏠</span>`)
+    const journey = $('journey')
+    journey.innerHTML = parts.join('')
+    journeyFills = [...journey.querySelectorAll('.track b')].map((el) => ({ el, fill: -1 }))
+    journeyShip = journey.querySelector('.ship')
   }
-  const parts = ['<span class="stop done">🏠</span>']
-  STOPS.forEach((s, i) => {
-    parts.push(track(i, i < at ? 1 : i === at && game.phase === 'build' ? legProgress() : 0))
-    parts.push(`<span class="stop ${i < at ? 'done' : i === at && !homeward ? 'next' : ''}">${s.emoji}</span>`)
+  fills.forEach((fill, i) => {
+    const bar = journeyFills[i]
+    if (bar.fill === fill) return
+    bar.fill = fill
+    bar.el.style.width = `${fill * 100}%`
+    if (i === ship && journeyShip) {
+      journeyShip.style.left = `${fill * 100}%`
+      journeyShip.style.transform = `translateX(-${fill * 100}%)`
+    }
   })
-  parts.push(track(STOPS.length, homeward ? Math.min(game.phaseTime / HOME_TIME, 1) : 0))
-  parts.push(`<span class="stop ${homeward ? 'next' : ''}">🏠</span>`)
-  $('journey').innerHTML = parts.join('')
 }
 
 // Runs every frame while a power is active, so it only touches the DOM when something shows a change
@@ -675,7 +681,7 @@ function start() {
   game.phase = 'build'
   game.phaseTime = 0
   banner(`🚀 Blast off!`, `Fly to ${STOPS[0].emoji} ${STOPS[0].name}`)
-  say(adventure.option.goal || 'Catch the stars to light up the sky!')
+  voice.say(adventure.option.goal || 'Catch the stars to light up the sky!', { interrupt: true })
   resize() // the HUD is on screen now, so the band that things fade in below can be measured
   sky.begin(0, $('sky-panel'))
   renderJourney()
@@ -686,7 +692,6 @@ $('go').addEventListener('click', start)
 function goHome() {
   if (game.state !== 'play' && game.state !== 'finale') return
   resetTrip()
-  renderMissionChoice()
   const screen = $('start')
   screen.classList.remove('hidden')
   requestAnimationFrame(() => screen.classList.remove('fade'))
@@ -708,19 +713,27 @@ function hideUfo() {
   ufo.timerLeft = 12
 }
 
+/** Clears the play: falling things, power-ups, the UFO, the nudge, the banner and the HUD. */
+function clearPlayfield() {
+  for (let i = items.length - 1; i >= 0; i--) recycle(i)
+  Object.assign(game, { magnet: 0, dizzy: 0, roll: 0 })
+  renderPowers()
+  hideUfo()
+  nudgeEl.classList.remove('show')
+  $('banner').classList.remove('show')
+  $('hud').classList.add('hidden')
+}
+
 /** Everything back to the start of a trip: items, stops, power-ups, the UFO, speech and the sky. */
 function resetTrip() {
   audio.click()
   clearMissionTimers()
-  if ('speechSynthesis' in window) speechSynthesis.cancel()
+  voice.hush()
   game.state = 'title'
-  for (let i = items.length - 1; i >= 0; i--) recycle(i)
-  Object.assign(game, { phase: 'build', phaseTime: 0, stops: 0, magnet: 0, dizzy: 0, roll: 0, idle: 0 })
+  clearPlayfield()
+  Object.assign(game, { phase: 'build', phaseTime: 0, stops: 0, idle: 0 })
   nudgeShown = false
   nudgeUsed = false
-  nudgeEl.classList.remove('show')
-  hideUfo()
-  renderPowers()
   world.setStop(0)
   sky.reset()
   $('sky-name').classList.remove('show')
@@ -728,8 +741,6 @@ function resetTrip() {
   finale.classList.add('hidden', 'fade')
   keys.clear()
   pointerDown = false
-  $('banner').classList.remove('show')
-  $('hud').classList.add('hidden')
 }
 
 // --- Layout -------------------------------------------------------------------------
@@ -1011,9 +1022,9 @@ function frame() {
         game.spawnTimer = L.interval * rand(0.8, 1.2)
       }
     } else if (game.phase === 'arrive') {
-      // Stay at the planet until its name and fact have been spoken (never longer than 12 s)
-      const talking = !audio.muted && 'speechSynthesis' in window && speechSynthesis.speaking
-      if (game.phaseTime > ARRIVE_HOLD && (!talking || game.phaseTime > 12)) nextLeg()
+      // Stay at the planet until its name and fact have been spoken. A hush (mute, home) drops
+      // the words' onend, so the trip also goes on once nothing is left to say.
+      if (game.phaseTime > ARRIVE_HOLD && (game.factSaid || !voice.speaking)) nextLeg()
     } else if (game.phase === 'homeward') {
       renderJourney()
       if (game.phaseTime > HOME_TIME) showFinale()
@@ -1030,7 +1041,6 @@ function frame() {
   updateUfo(dt)
   world.update(finale ? dt * 0.2 : dt, game.cruise, playing ? legProgress() : 0.15, view)
   particles.update(dt)
-  rings.update(dt)
   audio.updateEngine(playing, Math.hypot(rocket.vel.x, rocket.vel.y))
   audio.updateMusic()
 

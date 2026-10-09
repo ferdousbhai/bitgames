@@ -63,7 +63,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .book-big:active { transform: translateY(5px); box-shadow: 0 2px 0 #d98a1c; }
 
-.pill { background: rgba(31, 95, 153, 0.55); border-radius: 999px; padding: 6px 16px; font-size: 24px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); }
 #hud { position: fixed; inset: 0; pointer-events: none; }
 .hud-left { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); display: flex; gap: 8px; align-items: center; }
 .hud-right { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); display: flex; gap: 8px; }
@@ -77,7 +76,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   position: absolute; right: -10px; bottom: -6px; background: #ff5f8f; color: #fff; font-size: 13px; font-weight: 900; padding: 2px 6px;
   border-radius: 999px; box-shadow: 0 2px 0 rgba(0,0,0,.2); white-space: nowrap;
 }
-.score b { display: inline-block; min-width: 1.2em; }
 
 .intro {
   position: absolute; left: 50%; top: 62%; transform: translate(-50%, -50%) scale(0); opacity: 0; text-align: center;
@@ -120,13 +118,19 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   pointer-events: auto; background: radial-gradient(circle, rgba(255, 250, 210, .75) 0 22%, rgba(255, 236, 140, .45) 45%, rgba(255, 236, 140, 0) 70%);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, .85) inset; opacity: 0; transition: opacity .8s ease;
 }
-.look.on { opacity: 1; animation: look-glow 3.2s ease-in-out infinite; }
-.look.seen { opacity: 0; animation: none; transition: opacity 1.2s ease; pointer-events: none; }
+/* The brighter heart of the glow fades in and out on its own layer (compositor-only, no filter) */
+.look::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; opacity: 0; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 240, .5) 0 30%, rgba(255, 245, 190, .25) 50%, rgba(255, 245, 190, 0) 70%);
+}
+.look.on { opacity: 1; }
+.look.on::before { animation: look-glow 3.2s ease-in-out infinite; }
+.look.seen { opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
 .look-glass { position: absolute; right: -6px; bottom: -6px; font-size: 26px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.25)); }
 .look:focus-visible { outline: 4px solid #ffd23f; outline-offset: 2px; }
 /* A slow, gentle brightening (no flashing) */
-@keyframes look-glow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.18); } }
-@media (prefers-reduced-motion: reduce) { .look.on { animation: none; } }
+@keyframes look-glow { 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .look.on::before { animation: none; } }
 
 .new {
   position: absolute; top: -22px; right: -18px; background: #ff5f8f; color: #fff; font-weight: 900; font-size: 22px; padding: 6px 14px;
@@ -194,9 +198,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .tile.wiggle { animation: wiggle .5s ease-in-out; }
 @keyframes wiggle { 25% { transform: rotate(-8deg) scale(1.08); } 75% { transform: rotate(8deg) scale(1.08); } }
 
-@media (max-width: 640px) {
-  .pill { font-size: 20px; padding: 5px 12px; }
-}
 /* 320px-wide phones: the catch count stays clear of the music button */
 @media (max-width: 360px) {
   .hud-left, .hud-right { gap: 6px; }
@@ -204,14 +205,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .hud-right { right: calc(8px + env(safe-area-inset-right)); }
   .round-btn { width: 46px; height: 46px; font-size: 23px; }
   .book-btn { width: 54px; height: 54px; font-size: 27px; }
-  .pill { font-size: 18px; padding: 4px 10px; }
 }
 /* Tablets and computers: bigger buttons and a bigger fish row for small hands */
 @media (min-width: 760px) and (min-height: 640px) {
   .round-btn { width: 66px; height: 66px; font-size: 33px; }
   .book-btn { width: 76px; height: 76px; font-size: 38px; }
   .badge-count { font-size: 16px; padding: 2px 8px; }
-  .pill { font-size: 30px; padding: 8px 20px; }
 }
 @media (max-height: 520px) {
   .book-bar { display: none; }

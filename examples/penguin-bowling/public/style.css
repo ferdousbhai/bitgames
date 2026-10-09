@@ -30,7 +30,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .logo span:nth-child(6n+1) { color: #4cc9f0; } .logo span:nth-child(6n+2) { color: #ff6b9d; animation-delay: .12s; }
 .logo span:nth-child(6n+3) { color: #ffb703; animation-delay: .24s; } .logo span:nth-child(6n+4) { color: #8ac926; animation-delay: .36s; }
 .logo span:nth-child(6n+5) { color: #9b5de5; animation-delay: .48s; } .logo span:nth-child(6n) { color: #ff595e; animation-delay: .6s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(4deg); } }
 .spinner { font-size: 72px; animation: slide 2.8s ease-in-out infinite; }
 @keyframes slide { 0%, 100% { transform: translateX(-40px) rotate(-70deg); } 50% { transform: translateX(40px) rotate(-90deg); } }
 
@@ -229,7 +228,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .trophy { font-size: 36px; }
   .big-score { font-size: 50px; }
   .stars { font-size: 30px; }
-  .badge { font-size: 15px; padding: 3px 12px; }
 }
 /* Tablets: bigger aim buttons for small hands on a big screen */
 @media (pointer: coarse) and (min-width: 700px) and (min-height: 700px) {

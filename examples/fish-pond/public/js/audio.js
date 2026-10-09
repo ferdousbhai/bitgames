@@ -57,7 +57,6 @@ export class Audio {
   setMuted(muted) {
     this.muted = muted
     if (this.master) this.master.gain.setTargetAtTime(muted ? 0 : 0.8, this.ctx.currentTime, 0.05)
-    if (muted) this.hush()
   }
 
   setMusic(on) {
@@ -264,29 +263,5 @@ export class Audio {
       if (b % 8 === 6) this.tone({ freq: note(tune.melody[(b / 2 + 3) % 16] + 5, tune.base), type: 'sine', gain: 0.05, decay: 0.4, delay: t, out: this.musicBus })
       this.nextBeat += tune.beat
     }
-  }
-
-  /** Says the creature's name out loud, so nobody needs to read. */
-  say(text, { queue = false, onend = null } = {}) {
-    if (this.muted) return false
-    try {
-      const s = speechSynthesis
-      if (!queue) s.cancel()
-      const u = new SpeechSynthesisUtterance(text)
-      u.rate = 0.95
-      u.pitch = 1.25
-      u.volume = 0.9
-      if (onend) u.onend = u.onerror = onend
-      s.speak(u)
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  hush() {
-    try {
-      speechSynthesis.cancel()
-    } catch {}
   }
 }

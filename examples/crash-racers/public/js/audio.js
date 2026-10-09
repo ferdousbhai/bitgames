@@ -1,3 +1,7 @@
+// The menu music box: a pentatonic tune (semitones above G4) over a slow bass walk.
+const MUSIC_TUNE = [0, 4, 7, 9, 7, 4, 2, 4, 0, 2, 4, 7, 9, 12, 9, 7]
+const MUSIC_BASS = [0, 2, 4, 7, 9, 12]
+
 /** All sound is synthesized with Web Audio: no sound files to download. */
 export class Audio {
   constructor() {
@@ -223,14 +227,12 @@ export class Audio {
     }
     const now = this.ctx.currentTime
     if (this.nextBeat < now) this.nextBeat = now + 0.1
-    const tune = [0, 4, 7, 9, 7, 4, 2, 4, 0, 2, 4, 7, 9, 12, 9, 7]
-    const scale = [0, 2, 4, 7, 9, 12]
     while (this.nextBeat < now + 0.3) {
       const b = this.beat++
       const at = this.nextBeat - now
-      const n = tune[b % tune.length]
+      const n = MUSIC_TUNE[b % MUSIC_TUNE.length]
       this.tone({ freq: 392 * Math.pow(2, n / 12), type: 'sine', gain: 0.035, decay: 0.7, delay: at })
-      if (b % 4 === 0) this.tone({ freq: 98 * Math.pow(2, scale[(b / 4) % 4] / 12), type: 'triangle', gain: 0.04, decay: 1.6, delay: at })
+      if (b % 4 === 0) this.tone({ freq: 98 * Math.pow(2, MUSIC_BASS[(b / 4) % 4] / 12), type: 'triangle', gain: 0.04, decay: 1.6, delay: at })
       this.nextBeat += 0.42
     }
   }

@@ -167,11 +167,6 @@ export class Course {
     }
   }
 
-  /** The next number world `wi` is waiting for (1 until the first ring is flown). */
-  nextNumber(wi) {
-    return this.ringNext.get(wi) ?? 1
-  }
-
   /** A little group of treasures side by side: the child chooses which one to fly to. */
   treasures(z) {
     const goal = this.w.goal

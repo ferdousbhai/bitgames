@@ -1,7 +1,10 @@
 // Optional learning missions are driven by real game events, not weighted scores.
 // Each option is { emoji, label, pace?, goal?, target?, sequence?, accept?(data, count), reward }.
-// Without accept, every event counts.
-export function createAdventure({ id, anchor, hud, options, celebrate, renderProgress, isMuted = () => false }) {
+// Without accept, every event counts. Pass the game's own voice (speech.js) so mission words queue
+// with the game's words instead of cutting them off; renderChoice draws the choice button.
+import { createVoice } from './speech.js'
+
+export function createAdventure({ id, anchor, hud, options, celebrate, renderProgress, renderChoice, isMuted = () => false, voice = createVoice({ isMuted, rate: 0.82 }) }) {
   const storageKey = `${id}:adventure`
   let selected = 0
   let count = 0
@@ -25,22 +28,13 @@ export function createAdventure({ id, anchor, hud, options, celebrate, renderPro
   goal.setAttribute('aria-live', 'polite')
   hud.append(goal)
 
-  const canSpeak = 'speechSynthesis' in window
-  const hush = () => { if (canSpeak) speechSynthesis.cancel() }
-  function speak(text) {
-    if (isMuted() || !canSpeak) return
-    speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'en-US'
-    utterance.rate = 0.82
-    speechSynthesis.speak(utterance)
-  }
-  for (const buttonId of ['home', 'sound', 'mute']) document.getElementById(buttonId)?.addEventListener('click', hush)
-  document.addEventListener('visibilitychange', () => { if (document.hidden) hush() })
+  const speak = (text) => voice.say(text)
+  for (const buttonId of ['home', 'sound', 'mute']) document.getElementById(buttonId)?.addEventListener('click', () => voice.hush())
 
   function update() {
     const option = options[selected]
-    button.textContent = `${option.emoji} ${option.label}`
+    if (renderChoice) renderChoice(button, option)
+    else button.textContent = `${option.emoji} ${option.label}`
     button.setAttribute('aria-label', `Adventure: ${option.label}. Tap to choose another.`)
     goal.hidden = !option.goal || !enabled
     goal.textContent = option.goal ? `${done ? '★ ' : ''}${option.goal} · ${count} / ${option.target}` : ''
@@ -53,12 +47,15 @@ export function createAdventure({ id, anchor, hud, options, celebrate, renderPro
     update()
   }
 
-  button.onclick = () => {
-    selected = (selected + 1) % options.length
+  function select(index, { silent = false } = {}) {
+    selected = ((index % options.length) + options.length) % options.length
     try { localStorage.setItem(storageKey, String(selected)) } catch {}
     begin()
-    speak(options[selected].goal || options[selected].label)
+    // Choosing is tap feedback: each new choice replaces the last one's words
+    if (!silent) voice.say(options[selected].goal || options[selected].label, { interrupt: true })
   }
+
+  button.onclick = () => select(selected + 1)
   update()
 
   return {
@@ -68,6 +65,8 @@ export function createAdventure({ id, anchor, hud, options, celebrate, renderPro
       update()
     },
     get option() { return options[selected] },
+    get selected() { return selected },
+    select,
     get pace() { return options[selected].pace || 1 },
     get progress() { return count },
     get complete() { return done },

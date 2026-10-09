@@ -1,5 +1,6 @@
 import { createRecipeStudio } from './recipe-studio.js'
 import { createAdventure } from './adventure.js'
+import { createVoice } from './speech.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -50,7 +51,9 @@ const sound = new Sound()
 const effects = new Effects(scene, camera)
 const cakeKit = new CakeKit()
 const animals = new AnimalKit()
-const recipeStudio = createRecipeStudio({ cakeKit, openButton: $('recipe-open'), sound })
+// Spoken words for pre-readers: one voice for the whole game, respecting its mute.
+const voice = createVoice({ isMuted: () => sound.muted, rate: 0.85, pitch: 1 })
+const recipeStudio = createRecipeStudio({ cakeKit, openButton: $('recipe-open'), sound, voice })
 
 // --- Game state -----------------------------------------------------------------------------
 
@@ -69,17 +72,8 @@ const game = {
   misses: 0, // layers in a row that were not the next one in the order
 }
 
-// Spoken words for pre-readers. They respect the game's mute.
-const canSpeak = 'speechSynthesis' in window
-function speak(text) {
-  if (!canSpeak || sound.muted || !text) return
-  speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'en-US'
-  u.rate = 0.85
-  speechSynthesis.speak(u)
-}
-const hush = () => canSpeak && speechSynthesis.cancel()
+// Feedback on a tap replaces whatever was still being said.
+const speak = (text) => voice.say(text, { interrupt: true })
 
 // Optional learning missions: count layers as they land.
 const adventure = createAdventure({
@@ -87,6 +81,7 @@ const adventure = createAdventure({
   anchor: $('play'),
   hud: $('hud'),
   isMuted: () => sound.muted,
+  voice,
   celebrate: (text) => celebrateMission(text),
   // A row of slices to count along with the words, so non-readers can follow it too
   renderProgress: (el, option, count) => {
@@ -1189,7 +1184,7 @@ function endRun() {
   clearSlivers()
   share.hide()
   hideMoverTag()
-  hush()
+  voice.hush()
   game.order = null
   hideIntro()
   $('hint').classList.add('hidden')

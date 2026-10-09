@@ -12,6 +12,7 @@ import { copy } from './models.js'
  * Small pictures of each place's obstacles, rendered once from the real models (with that
  * place's colours), so the picture cue matches exactly what is on the path.
  * Returns { 'meadow:log': dataURL, … }; empty if a second WebGL context is not available.
+ * Call it off the startup path: it borrows a second WebGL context, released as soon as it is done.
  */
 export function obstaclePictures(templates) {
   const size = 128
@@ -56,64 +57,8 @@ export function obstaclePictures(templates) {
     }
   }
   renderer.dispose()
+  renderer.forceContextLoss()
   return pictures
-}
-
-/**
- * Spoken words that respect the game's mute. `queue` lets counting follow on without cutting words off.
- * The learning missions (shared adventure.js) speak too and always cancel what is playing, so:
- * - while a mission's words are playing, the game's words wait their turn instead of cutting them off;
- * - `interject(fn)` wraps anything that lets a mission speak: game words it cuts off are said again after it.
- */
-export function createVoice(isMuted) {
-  const canSpeak = 'speechSynthesis' in window
-  const mine = new Set() // the game's own utterances not yet finished
-  function speak(text) {
-    const words = new SpeechSynthesisUtterance(text)
-    words.lang = 'en-US'
-    words.rate = 0.82
-    words.text0 = text
-    const done = () => mine.delete(words)
-    words.onend = done
-    words.onerror = done
-    mine.add(words)
-    speechSynthesis.speak(words)
-  }
-  return {
-    say(text, queue = false) {
-      if (!canSpeak || isMuted()) return
-      const missionTalking = speechSynthesis.speaking && mine.size === 0
-      if (!queue && !missionTalking) {
-        mine.clear()
-        speechSynthesis.cancel()
-      }
-      speak(text)
-    },
-    interject(fn) {
-      if (!canSpeak || mine.size === 0) return fn()
-      // notice whether fn really cancelled the game's words (a mission only speaks on some events)
-      const before = [...mine]
-      let cancelled = false
-      const cancel = speechSynthesis.cancel
-      speechSynthesis.cancel = function () {
-        cancelled = true
-        return cancel.call(this)
-      }
-      try {
-        fn()
-      } finally {
-        delete speechSynthesis.cancel
-        if (speechSynthesis.cancel !== cancel) speechSynthesis.cancel = cancel
-      }
-      if (!cancelled) return
-      for (const w of before) mine.delete(w)
-      if (!isMuted()) before.forEach((w) => speak(w.text0))
-    },
-    hush() {
-      mine.clear()
-      if (canSpeak) speechSynthesis.cancel()
-    },
-  }
 }
 
 export const carrotWords = (n) => `${n} carrot${n === 1 ? '' : 's'}`

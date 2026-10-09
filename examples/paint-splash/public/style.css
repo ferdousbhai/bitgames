@@ -34,7 +34,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .logo span:nth-child(5n+1) { color: #ff4d8d; } .logo span:nth-child(5n+2) { color: #ff9f1c; animation-delay: .1s; }
 .logo span:nth-child(5n+3) { color: #ffd23f; animation-delay: .2s; } .logo span:nth-child(5n+4) { color: #2ec27e; animation-delay: .3s; }
 .logo span:nth-child(5n) { color: #3a86ff; animation-delay: .4s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
 .spinner { font-size: 72px; animation: wiggle 3s ease-in-out infinite; } /* a slow rock while loading only */
 @keyframes wiggle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
 
@@ -146,11 +145,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   width: 74px; height: 74px; border-radius: 50%; background: rgba(255,255,255,0.85); font-size: 38px; box-shadow: 0 5px 0 rgba(90,45,145,.3);
 }
 .voice-btn:active { transform: translateY(3px); }
-.banner {
-  position: absolute; left: 50%; top: 26%; transform: translate(-50%, -50%) scale(0); font-size: clamp(34px, 8vw, 64px); font-weight: 900;
-  white-space: nowrap; color: #fff; -webkit-text-stroke: 0.18em #9b5de5; paint-order: stroke fill; text-shadow: 0 4px 0 #5a2d91, 0 8px 18px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.2, 1.8, .4, 1), opacity .3s; opacity: 0;
-}
-.banner.show { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
 .drag-hint { position: absolute; left: 50%; top: 62%; font-size: 64px; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
 .drag-hint .finger { display: inline-block; animation: drag 1.6s ease-in-out infinite; }
 @keyframes drag { 0% { transform: translate(-30px, 20px); opacity: 0; } 15% { opacity: 1; } 70% { transform: translate(40px, -30px); opacity: 1; } 100% { transform: translate(40px, -30px); opacity: 0; } }

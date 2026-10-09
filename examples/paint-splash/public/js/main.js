@@ -13,6 +13,7 @@ import { ITEM_KINDS, Items } from './items.js'
 import { HALF_D, HALF_W, MIXED, MIXES, PRIMARIES, PaintMap, RAINBOW, SEAT_COLORS, SEAT_PAINT, mixWords } from './paint.js'
 import { ANIMALS, ANIMAL_IDS, COLLIDE_AHEAD, COLLIDE_R, MAX_SPEED, Painter, newStats } from './painter.js'
 import { clamp, damp, easeInOut, store } from './util.js'
+import { createVoice } from './speech.js'
 
 const params = new URLSearchParams(location.search)
 const DEBUG = params.has('debug')
@@ -189,16 +190,9 @@ const gallery = createGallery({
   hideInPicture: () => [effects.drops.mesh, effects.sparks.mesh, effects.confetti.mesh, meMarker],
 })
 /** Spoken words for children who can't read yet (quiet when the sound is off or there is no voice). */
-function speak(text) {
-  if (!settings.sound || !text || !('speechSynthesis' in window)) return
-  try {
-    speechSynthesis.cancel()
-    const words = new SpeechSynthesisUtterance(text)
-    words.rate = 0.95
-    words.pitch = 1.15
-    speechSynthesis.speak(words)
-  } catch {}
-}
+const voice = createVoice({ isMuted: () => !settings.sound, rate: 0.95, pitch: 1.15 })
+/** Every spoken line answers a tap or a new moment, so it replaces whatever was still being said. */
+const speak = (text) => voice.say(text, { interrupt: true })
 const colourStudio = createColourStudio({
   openButton: $('colour-open'),
   onOpen: () => {
@@ -206,7 +200,7 @@ const colourStudio = createColourStudio({
     releaseControls()
   },
   onClose: () => {
-    if ('speechSynthesis' in window) speechSynthesis.cancel()
+    voice.hush()
     releaseControls()
   },
   speak,

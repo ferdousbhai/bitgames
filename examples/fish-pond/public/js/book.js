@@ -10,9 +10,10 @@ import { fieldNote } from './field-guide.js'
  * toy-story places where they appear. Pictures are rendered once from the real models.
  */
 export class Book {
-  constructor({ el, audio, creatures, getBook }) {
+  constructor({ el, audio, voice, creatures, getBook }) {
     this.el = el
     this.audio = audio
+    this.voice = voice
     this.creatures = creatures
     this.getBook = getBook
     this.open = false
@@ -121,13 +122,13 @@ export class Book {
           const fact = fieldNote(c.id, c.name)
           this.note.textContent = `${c.name}: ${fact}`
           this.audio.newOne()
-          this.audio.say(`${c.name}! ${fact}`)
+          this.voice.say(`${c.name}! ${fact}`, { interrupt: true })
         } else {
           // A mystery stays a mystery: just where to look for it
           const where = Object.keys(c.places)
           this.note.textContent = `❓ Not found yet! Look here: ${where.map((p) => PLACES[p].emoji).join(' ')}`
           this.audio.bubbles()
-          this.audio.say(where.length === Object.keys(PLACES).length ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`)
+          this.voice.say(where.length === Object.keys(PLACES).length ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`, { interrupt: true })
         }
       })
       grid.appendChild(tile)
@@ -174,7 +175,7 @@ export class Book {
 
   hide() {
     this.open = false
-    this.audio.hush()
+    this.voice.hush()
     this.el.classList.add('hidden')
   }
 }

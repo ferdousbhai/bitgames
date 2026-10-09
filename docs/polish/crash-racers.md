@@ -127,3 +127,12 @@ Screenshots and scripts are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-
 - **True side spurs.** Houses sit beside the main loop rather than down side roads. A spur needs new road geometry and clearance through each city's scenery, which is a larger change.
 - **Turning round is an instant on-the-spot turn.** A short animated U-turn would be gentler.
 - **Wording to check with the owner:** the voice lines, and whether to read the recap stops aloud in order.
+
+### Simplify pass (2026-10-09)
+
+- One shared voice (`speech.js`, rate 0.82, pitch 1) replaces `speakDelivery` and the inline cancel. It is also passed to the adventure. Feedback on what the child did interrupts (`tellNow`): parcel tap, arriving at a house, the thanks and a wrong stop. Directions queue: the start line, "Which parcel next?", the town finish, and "Now drive to stop N", which now follows the mission count in the queue instead of after a 650 ms timer.
+- The mission chip label comes from `renderChoice`. `renderDeliveryChoice` and its click listener are gone; Race-only hiding stays in `renderModeChoice`.
+- Delivery Town's map caches its static layer (road, houses, ticks) in an offscreen canvas. The cache is keyed on track, houses, size, chosen parcel and delivered count. Each frame only blits it and draws the van arrow (`town.js` `townMapLayout` and `drawMapCar`; `drawTownMap` still draws the recap). The `filter: drop-shadow` became `box-shadow` with an 8% radius that matches the paper map's corners.
+- One cached reduced-motion `MediaQueryList` (`util.js` `reducedMotion`) now serves effects, town and the soft finish. The music box tune and bass are module constants.
+- Skipped: the town-mode strategy refactor, which was out of scope.
+- Checks: Chromium and WebKit `browser.mjs` passed with 0 errors. A Playwright Delivery Town run in both engines (choose, wrong house, deliver ×4, results) spoke every line in order, and the map was drawn. A Race delivery mission (stops 1–4) gave the count, then "Now drive to stop N", then the reward. One WebKit Race run logged a GLTFLoader blob-texture console error once; it did not reproduce on a rerun, and car loading was not touched. Tests: 11/11.

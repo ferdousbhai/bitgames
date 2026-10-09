@@ -168,17 +168,6 @@ export class Audio {
     tune.forEach((s, i) => this.tone({ freq: note(s, 392) * 2, type: 'triangle', gain: 0.04, decay: 0.8, delay: i * 0.14 }))
   }
 
-  launch(delay = 0) {
-    this.tone({ freq: 400, type: 'sine', gain: 0.06, decay: 0.6, slide: 1200, delay })
-    this.burst({ freq: 3000, q: 1, gain: 0.05, decay: 0.5, delay, type: 'highpass' })
-  }
-
-  bang(delay = 0) {
-    this.tone({ freq: 110, type: 'sine', gain: 0.12, decay: 0.5, slide: -60, delay })
-    this.burst({ freq: 500, q: 0.6, gain: 0.1, decay: 0.5, type: 'lowpass', delay })
-    for (let i = 0; i < 6; i++) this.burst({ freq: 3000 + Math.random() * 3000, q: 3, gain: 0.07, decay: 0.06, delay: delay + 0.15 + Math.random() * 0.5 })
-  }
-
   /** Fallen pins vanish in a puff of snow. */
   poof() {
     this.burst({ freq: 3000, q: 0.7, gain: 0.12, decay: 0.3, type: 'highpass' })

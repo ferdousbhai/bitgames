@@ -169,10 +169,6 @@ export class Sound {
     ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s + base, 392), { at: 0.04 + i * 0.06, len: 0.35, type: 'triangle', gain: 0.1, echo: true }))
   }
 
-  whiff() {
-    this.hiss({ len: 0.3, freq: 600, q: 0.8, gain: 0.06, sweep: 0.5 })
-  }
-
   fire() {
     this.hiss({ len: 0.35, freq: 900, q: 0.6, gain: 0.16, type: 'lowpass', sweep: 0.35 })
     this.note(330, { len: 0.25, type: 'triangle', gain: 0.04, slide: 0.5 })

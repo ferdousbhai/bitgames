@@ -2,11 +2,12 @@ import { VOICE_LENGTH } from './audio.js'
 
 /**
  * One voice at a time: animal calls and spoken words wait their turn, so a name is never said
- * over a moo. Silent (and instant) while muted; speech uses the browser's speechSynthesis.
+ * over a moo. Silent (and instant) while muted; words go through the game's one voice (speech.js).
  */
 export class Talk {
-  constructor(sound) {
+  constructor(sound, voice) {
     this.sound = sound
+    this.voice = voice
     this.queue = []
     this.running = false
     this.gen = 0
@@ -48,7 +49,7 @@ export class Talk {
   clear() {
     this.gen++
     this.queue = []
-    if ('speechSynthesis' in window) speechSynthesis.cancel()
+    this.voice.hush()
     this.wake?.()
   }
 
@@ -93,27 +94,10 @@ export class Talk {
   }
 
   speak(text) {
-    if (!('speechSynthesis' in window)) return Promise.resolve()
     return new Promise((resolve) => {
-      const words = new SpeechSynthesisUtterance(text)
-      words.lang = 'en-US'
-      words.rate = 0.85
-      words.pitch = 1.1
-      let ended = false
-      const done = () => {
-        if (ended) return
-        ended = true
-        clearTimeout(fallback)
-        setTimeout(resolve, 120) // a breath between words
-      }
-      // Some browsers never fire onend (no voices installed): never wait longer than the words need.
-      const fallback = setTimeout(done, (1.2 + text.length * 0.09) * 1000)
-      words.onend = words.onerror = done
-      this.wake = () => {
-        speechSynthesis.cancel()
-        done()
-      }
-      speechSynthesis.speak(words)
+      const done = () => setTimeout(resolve, 120) // a breath between words
+      this.wake = done // clear() hushes the voice, which then never calls onend
+      this.voice.say(text, { onend: done })
     })
   }
 }

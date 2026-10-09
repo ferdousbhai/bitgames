@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { canvasTexture, rng } from './util.js'
+import { canvasTexture, reducedMotion, rng } from './util.js'
 
 /**
  * Delivery Town: a calm, unraced drive round a city with picture parcels.
@@ -20,7 +20,6 @@ export const KINDS = [
 ]
 export const HOUSES = 4
 const EMOJI_FONT = 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
-const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const textures = new Map()
 /** A round picture: the emoji on a white disc ringed in `ring` (drawn once per emoji and colour). */
@@ -227,7 +226,7 @@ export function createTown(scene) {
 
     update(dt) {
       time += dt
-      const still = reducedMotion()
+      const still = reducedMotion.matches
       for (let i = flights.length - 1; i >= 0; i--) {
         const f = flights[i]
         f.t = Math.min(1, f.t + dt / (still ? 0.01 : 1.1))
@@ -248,12 +247,8 @@ export function createTown(scene) {
   }
 }
 
-/**
- * Draws the town as a paper map: the road, every house as its picture, and
- * optionally the child's car (with the way it is pointing), the chosen house
- * ringed in gold, the route driven, and numbered stops in delivery order.
- */
-export function drawTownMap(g, size, track, houses, { chosen = -1, player = null, heading = null, route = null, order = null } = {}) {
+/** Where the town sits on a square map `size` pixels wide: map positions for world x and z. */
+export function townMapLayout(size, track, houses) {
   const xs = track.samples.map((s) => s.p.x), zs = track.samples.map((s) => s.p.z)
   for (const h of houses) {
     xs.push(h.x)
@@ -268,7 +263,16 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, player = null
   const offZ = pad + (size - pad * 2 - (Math.max(...zs) - minZ) * scale) / 2
   const px = (x) => offX + (x - minX) * scale
   const pz = (z) => offZ + (z - minZ) * scale
+  return { px, pz }
+}
 
+/**
+ * Draws the town as a paper map: the road, every house as its picture, and
+ * optionally the child's car (with the way it is pointing), the chosen house
+ * ringed in gold, the route driven, and numbered stops in delivery order.
+ */
+export function drawTownMap(g, size, track, houses, { chosen = -1, player = null, heading = null, route = null, order = null, layout = townMapLayout(size, track, houses) } = {}) {
+  const { px, pz } = layout
   g.clearRect(0, 0, size, size)
   g.fillStyle = '#fbf3dc'
   g.beginPath()
@@ -360,24 +364,27 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, player = null
     g.fillText(String(n + 1), x, y + r * 0.04)
   })
 
-  if (player) {
-    const x = px(player.x), y = pz(player.z)
-    const s = size * 0.045
-    g.save()
-    g.translate(x, y)
-    // The way the car is pointing, so "turn round" and "keep going" can be read off the map.
-    if (heading) g.rotate(Math.atan2(heading.z, heading.x) + Math.PI / 2)
-    g.beginPath()
-    g.moveTo(0, -s * 1.25)
-    g.lineTo(s * 0.9, s * 0.8)
-    g.lineTo(0, s * 0.35)
-    g.lineTo(-s * 0.9, s * 0.8)
-    g.closePath()
-    g.fillStyle = player.colour
-    g.fill()
-    g.lineWidth = Math.max(2, size * 0.01)
-    g.strokeStyle = '#ffffff'
-    g.stroke()
-    g.restore()
-  }
+  if (player) drawMapCar(g, size, layout, player, heading)
+}
+
+/** The child's car on the town map: an arrow in its colour, pointing the way it faces. */
+export function drawMapCar(g, size, { px, pz }, player, heading = null) {
+  const x = px(player.x), y = pz(player.z)
+  const s = size * 0.045
+  g.save()
+  g.translate(x, y)
+  // The way the car is pointing, so "turn round" and "keep going" can be read off the map.
+  if (heading) g.rotate(Math.atan2(heading.z, heading.x) + Math.PI / 2)
+  g.beginPath()
+  g.moveTo(0, -s * 1.25)
+  g.lineTo(s * 0.9, s * 0.8)
+  g.lineTo(0, s * 0.35)
+  g.lineTo(-s * 0.9, s * 0.8)
+  g.closePath()
+  g.fillStyle = player.colour
+  g.fill()
+  g.lineWidth = Math.max(2, size * 0.01)
+  g.strokeStyle = '#ffffff'
+  g.stroke()
+  g.restore()
 }

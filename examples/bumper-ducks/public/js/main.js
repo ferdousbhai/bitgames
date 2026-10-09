@@ -7,6 +7,7 @@ import { Bot } from './bot.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
 import { Sim, newStats } from './sim.js'
+import { createVoice } from './speech.js'
 import { DuckView, ItemView, ObstacleView, Rain, skyTexture, cloneTinted } from './view.js'
 import { makeWater } from './water.js'
 import {
@@ -60,6 +61,8 @@ scene.add(water.mesh)
 const labels = $('labels')
 const effects = new Effects(scene, camera, labels)
 const audio = new Audio()
+// One voice for the game: words wait their turn instead of cutting each other off.
+const voice = createVoice({ isMuted: () => audio.muted, rate: 0.85, pitch: 1 })
 
 /** Frame the whole pond: steeper from above on an upright screen, lower and wider when sideways. */
 const camTarget = new THREE.Vector3()
@@ -158,15 +161,21 @@ const MISSIONS = [
   { emoji: '3️⃣', label: 'Count 3 bubbles together', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
   { emoji: '6️⃣', label: 'Count 6 bubbles together', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
 ]
-let quietMission = false
+// In Pond helpers the jar counts aloud, so the mission's own words keep quiet; its reward is said
+// after the jar counts the bubble that earned it (see jarDrop).
+let missionReward = null
+const pondHelping = () => !!game.sim?.calm && game.state === 'play'
+const missionVoice = {
+  say: (text, options) => (pondHelping() ? options?.onend?.() : voice.say(text, options)),
+  hush: voice.hush,
+}
 const adventure = createAdventure({
   id: 'bumper-ducks',
   anchor: $('go'),
   hud: $('hud'),
-  // In Pond helpers the jar counts aloud, so the mission keeps quiet and only its reward is said.
-  isMuted: () => audio.muted || quietMission || (!!game.sim?.calm && game.state === 'play'),
+  voice: missionVoice,
   celebrate: (reward) => {
-    if (game.sim?.calm) later(() => say(reward), 1200)
+    if (game.sim?.calm) missionReward = reward
     const n = adventure.option.target
     // One soft moment: the number of bubbles counted, a gentle chord and a few twinkles.
     banner(`${n} 🫧`, 2400, true)
@@ -193,22 +202,12 @@ const adventure = createAdventure({
 
 /** A friend's device plays the counting mission the host picked (the choice lives on the host's menu). */
 function useMission(i) {
-  if (!Number.isInteger(i) || i < 0 || i >= MISSIONS.length) return
-  quietMission = true
-  for (let k = 0; k < MISSIONS.length && adventure.option !== MISSIONS[i]; k++) $('adventure-choice').click()
-  quietMission = false
+  if (Number.isInteger(i) && i >= 0 && i < MISSIONS.length) adventure.select(i, { silent: true })
 }
 const isBotDuck = (id) => !!game.setup?.entries.find((e) => e.id === id)?.bot
 
-/** Speaks for children who can't read yet (quiet when the sound is off). */
-function say(text) {
-  if (audio.muted || !('speechSynthesis' in window)) return
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'en-US'
-  u.rate = 0.85
-  speechSynthesis.cancel()
-  speechSynthesis.speak(u)
-}
+/** Speaks for children who can't read yet (quiet when the sound is off); words queue in order. */
+const say = (text, options) => voice.say(text, options)
 
 const colourOf = (c) => BUBBLE_COLOURS[c]?.hex ?? '#ffffff'
 /** A Pond helpers goal in words: said aloud on the menu and when the round starts. */
@@ -463,7 +462,7 @@ function renderModes() {
       save('mode', game.mode)
       audio.plop()
       renderModes()
-      say(game.mode === 'calm' ? goalWords(GOALS[game.goalIndex]) : 'Bumper race! Grab bubbles before the clock runs out.')
+      say(game.mode === 'calm' ? goalWords(GOALS[game.goalIndex]) : 'Bumper race! Grab bubbles before the clock runs out.', { interrupt: true })
     }
   }
 }
@@ -1198,7 +1197,10 @@ function jarDrop(e, y) {
   const sim = game.sim
   const token = jar.token
   const index = jar.shown + jar.flying
-  if (index >= sim.target) return
+  // A mission this bubble completed is praised once the jar has counted it.
+  const reward = missionReward
+  missionReward = null
+  if (index >= sim.target) return reward && say(reward)
   jar.flying++
   const land = () => {
     if (token !== jar.token || game.sim !== sim) return
@@ -1206,6 +1208,7 @@ function jarDrop(e, y) {
     jar.shown = Math.min(sim.jar.length, jar.shown + 1)
     renderJar()
     countAloud()
+    if (reward) say(reward)
   }
   const cell = $('jar-frame').children[sim.goal.kind === 'tens' ? index % 10 : index]
   if (reducedMotion() || !cell || !document.body.animate) return land()

@@ -109,3 +109,9 @@ Each level is now one calm, spoken and pictured request instead of "pop everythi
 - Colour mixing with the rainbow babies (from the audit) is still open.
 - Music still starts on, as in Phase 1.
 - Have the owner's children try it, especially the 4.5 s pause and whether a 2-year-old prefers Free popping.
+
+## Simplify pass (2026-10-09)
+
+- One shared voice (`js/speech.js`, rate 0.82) for the game and its missions; the game's own speech wrappers are gone. Starting play hushes earlier words; counts and the named total queue.
+- The mission choice is drawn through the adventure's `renderChoice` (no repaint after `begin()`); `renderSky` builds its rows of five with one `rowsOfFive` helper.
+- Verified: chromium and webkit boot + play, and a stubbed-speech play of a counting sky and a mission (words in order, no errors).

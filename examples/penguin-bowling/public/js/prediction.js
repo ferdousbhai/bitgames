@@ -3,7 +3,9 @@
 // tip over in the dialog, and the line under the HUD shows 💭 guess · 💥 fell.
 // getLayout (optional) returns rows of pins, back row first, as true (standing) /
 // false (fallen), so the dialog shows the same pins the child can see on the lane.
-export function createPrediction({ button, hud, getStanding, getLayout, onOpen, sound, muted }) {
+import { createVoice } from './speech.js'
+
+export function createPrediction({ button, hud, getStanding, getLayout, onOpen, sound, muted, voice = createVoice({ isMuted: () => !!muted?.(), rate: 0.95, pitch: 1.15 }) }) {
   let guess = null
   let value = 0
   let max = 10
@@ -45,16 +47,8 @@ export function createPrediction({ button, hud, getStanding, getLayout, onOpen, 
     void readout.offsetWidth
     readout.style.animation = ''
   }
-  function speak(text) {
-    try {
-      if (muted?.() || !('speechSynthesis' in window)) return
-      speechSynthesis.cancel()
-      const u = new SpeechSynthesisUtterance(text)
-      u.rate = 0.95
-      u.pitch = 1.15
-      speechSynthesis.speak(u)
-    } catch {}
-  }
+  // Each tap's answer replaces the last one, so a quick child never hears a backlog
+  const speak = (text) => voice.say(text, { interrupt: true })
 
   // Pins in the bowling triangle (4, 3, 2, 1 from the back); tapping one picks that many.
   // With a layout, fallen spots stay as gaps so the triangle matches the lane.

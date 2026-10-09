@@ -1,9 +1,9 @@
 import * as THREE from 'three'
 
 /**
- * Party juice: confetti, icing splats, puffs of smoke and flour, sparkles,
+ * Party juice: paper petals, icing splats, puffs of smoke and flour, sparkles,
  * shock rings and floating labels. Particles live in pooled InstancedMeshes so
- * a big birthday confetti shower stays smooth on a tablet.
+ * they stay smooth on a tablet.
  */
 /** A texture painted once by `draw(ctx, width, height)`. */
 export function canvasTexture(width, height, draw) {
@@ -111,7 +111,6 @@ class Pool {
   }
 }
 
-const CONFETTI = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff6b9d', '#2ec4b6', '#ffffff']
 // Soft bakery pastels for the party petals
 const PETALS = ['#ffc2d6', '#ffe8a3', '#c9f0e1', '#d9ccff', '#ffffff']
 const pick = (a) => a[(Math.random() * a.length) | 0]
@@ -120,13 +119,6 @@ export class Effects {
   constructor(scene, camera) {
     this.scene = scene
     this.camera = camera
-    this.confetti = new Pool(scene, {
-      count: 700,
-      geometry: new THREE.PlaneGeometry(0.15, 0.09),
-      material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
-      gravity: 4.5,
-      drag: 1.6,
-    })
     // Slow paper petals for the one soft party moment: barely any gravity, lots of air
     this.petals = new Pool(scene, {
       count: 80,
@@ -231,26 +223,6 @@ export class Effects {
     }
   }
 
-  /** Confetti popping out of a point (party poppers). */
-  popper(pos, dirX = 0, amount = 60) {
-    const v = this.tmp
-    for (let i = 0; i < amount; i++) {
-      v.set(dirX * (2 + Math.random() * 4) + (Math.random() - 0.5) * 3, 4 + Math.random() * 5, (Math.random() - 0.5) * 3)
-      this.confetti.spawn(pos, v, { life: 2 + Math.random(), size: 0.7 + Math.random() * 0.5, color: pick(CONFETTI), spin: 8 })
-    }
-  }
-
-  /** A celebration shower of confetti from the top of the screen. */
-  shower(halfWidth, top, amount = 160, cx = 0) {
-    const p = this.tmp.clone()
-    const v = new THREE.Vector3()
-    for (let i = 0; i < amount; i++) {
-      p.set(cx + (Math.random() * 2 - 1) * halfWidth, top + Math.random() * 3, Math.random() * 2 - 1)
-      v.set((Math.random() - 0.5) * 2, -Math.random() * 2, 0)
-      this.confetti.spawn(p, v, { life: 3 + Math.random() * 1.5, size: 1 + Math.random() * 0.5, color: pick(CONFETTI), spin: 6 })
-    }
-  }
-
   /** The one soft party moment: a few paper petals that float down slowly, with no burst. */
   drift(halfWidth, top, amount = 24, cx = 0) {
     const p = this.tmp.clone()
@@ -284,7 +256,6 @@ export class Effects {
   }
 
   update(dt) {
-    this.confetti.update(dt, this.camera)
     this.petals.update(dt, this.camera)
     this.blobs.update(dt, this.camera)
     this.puffs.update(dt, this.camera)

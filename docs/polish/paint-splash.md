@@ -110,3 +110,12 @@ Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-
 - Wet paint is shown by gloss and lightness. Children may read the lighter shade as a different colour for a few seconds. Watch for this in real play.
 - Purple needs a red roller over blue. By default only the child (or a friend) is red, so purple is the child's own discovery.
 - Optional guide outlines to fill (from the Phase 1 list) were not built.
+
+### Simplify pass (2026-10-09)
+
+Quality cleanup only; play is unchanged.
+- `speak` is now the shared `speech.js` voice (rate 0.95, pitch 1.15) with `{ interrupt: true }`, as every line answers a tap or a new moment; the studio's close calls `voice.hush()`.
+- The wet-paint texture is two-channel (`RGFormat`, half the memory and upload of RGBA); the shader still reads `.r`/`.g`. Uploading only the dirty row band was skipped: three r186 `updateRanges` assume RGBA and send one row per range, so it is not a cheap fit.
+- `paint.js` names mixes with `describeMix().base` from `colour-studio.js` instead of its own copy.
+- Removed dead CSS `@keyframes bob` and `.banner`/`.banner.show`.
+- Checked: `browser.mjs --run simp` Chromium and WebKit 0 errors; a scripted round (mode toggle, pots, mixes, studio, finish) records the expected spoken order and paints correctly.

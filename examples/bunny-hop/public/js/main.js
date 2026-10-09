@@ -6,8 +6,9 @@ import { BIOME_LENGTH, BIOMES, HOME_X, OBSTACLE_NAMES, OBSTACLE_NOTES, biomeInde
 import { Bunny } from './bunny.js'
 import { BEAT, Course, speedAt } from './course.js'
 import { Effects, Glints, Popups, Weather } from './effects.js'
-import { Cue, carrotWords, createVoice, obstaclePictures, pantryWords, patternWords, renderPantry } from './learning.js'
+import { Cue, carrotWords, obstaclePictures, pantryWords, patternWords, renderPantry } from './learning.js'
 import { loadModels } from './models.js'
+import { createVoice } from './speech.js'
 import { clamp, easeStep, pick } from './util.js'
 import { World } from './world.js'
 
@@ -134,23 +135,15 @@ function renderMissionProgress(goal, option, count) {
   goal.append(caption, steps)
 }
 
-function speakMission(text) {
-  // said over any counting, which is then said again after it
-  voice.interject(() => {
-    if (sound.muted || !('speechSynthesis' in window)) return
-    speechSynthesis.cancel()
-    const words = new SpeechSynthesisUtterance(text)
-    words.lang = 'en-US'
-    words.rate = 0.82
-    speechSynthesis.speak(words)
-  })
-}
+// One voice for the game and its missions: words wait their turn, so a mission never swallows a count.
+const voice = createVoice({ isMuted: () => sound.muted, rate: 0.82, pitch: 1 })
 
 const adventure = createAdventure({
   id: 'bunny-hop',
   anchor: $('play'),
   hud: $('hud'),
-  isMuted: () => sound.muted,
+  voice,
+  renderChoice: renderMissionChoice,
   celebrate: () => {
     // One soft moment: what the child made, a gentle chord and a few slow petals.
     banner(adventure.option.sequence ? '↑ ↑ ↻ Pattern!' : '↑ ↑ ↑ ↑ Four hops!', 2600)
@@ -165,9 +158,7 @@ const adventure = createAdventure({
   ],
 })
 
-function renderMissionChoice() {
-  const option = adventure.option
-  const button = $('adventure-choice')
+function renderMissionChoice(button, option) {
   button.replaceChildren()
   const steps = document.createElement('span')
   steps.className = 'mission-steps'
@@ -180,12 +171,8 @@ function renderMissionChoice() {
   next.setAttribute('aria-hidden', 'true')
   button.append(steps, caption, next)
 }
-renderMissionChoice()
-$('adventure-choice').addEventListener('click', renderMissionChoice)
 // The mission choice and the 🐢 pace share one row on the menu.
 $('menu-options').prepend($('adventure-choice'))
-
-const voice = createVoice(() => sound.muted)
 function renderPace() {
   $('pace').setAttribute('aria-pressed', String(game.gentle))
   $('pace').classList.toggle('gentle', game.gentle)
@@ -199,7 +186,7 @@ $('pace').onclick = () => {
     localStorage.setItem('bunny-hop:gentle', game.gentle ? '1' : '0')
   } catch {}
   renderPace()
-  voice.say(game.gentle ? 'Slow and gentle, like a tortoise.' : 'Hopping along like a bunny.')
+  voice.say(game.gentle ? 'Slow and gentle, like a tortoise.' : 'Hopping along like a bunny.', { interrupt: true })
 }
 
 let bunny, world, course, effects, weather, glints, popups, cue
@@ -229,7 +216,10 @@ async function init() {
   weather.setKind(BIOMES[0].weather)
   glints = new Glints(scene)
   popups = new Popups($('popups'), camera)
-  cue = new Cue($('cue'), $('ask'), obstaclePictures(templates))
+  // The obstacle pictures need a second WebGL context for a moment: draw them once the menu is up.
+  cue = new Cue($('cue'), $('ask'), {})
+  const idle = window.requestIdleCallback?.bind(window) ?? ((fn) => setTimeout(fn, 300))
+  idle(() => (cue.pictures = obstaclePictures(templates)), { timeout: 2000 })
   if (window.game) Object.assign(window, { course, view, camera, bunny, cue })
   applyQuality()
   toMenu()
@@ -253,7 +243,6 @@ function toMenu() {
   world.reset()
   course.reset()
   resetLessons()
-  renderMissionChoice()
   game.biome = 0
   weather.setKind(BIOMES[0].weather)
   // Coming home from a trip: cut straight to the close-up of Pip, never pan back across the whole trip.
@@ -295,7 +284,7 @@ function start() {
   show(null)
   fitPopups()
   banner(`${BIOMES[game.biome].emoji} ${BIOMES[game.biome].name}`)
-  if (adventure.option.goal) speakMission(adventure.option.goal)
+  if (adventure.option.goal) voice.say(adventure.option.goal, { interrupt: true })
 }
 
 // Floating words start a little below the score and the trip bar, so a word
@@ -330,8 +319,8 @@ function hop() {
   if (!kind) return
   if (adventure.option.sequence && adventure.progress === 2 && kind === 'hop') {
     banner('👆 Tap again!', 900)
-    speakMission('Tap again in the air to flip!')
-  } else voice.interject(() => adventure.event(kind)) // a mission count must not swallow the row's numbers
+    voice.say('Tap again in the air to flip!')
+  } else adventure.event(kind)
   sound.hop(kind === 'double')
   tmp.set(game.x, 0, 0)
   if (kind === 'hop') effects.puff(tmp, 6, dustColor(), 0.9)
@@ -375,7 +364,7 @@ function showResults() {
   show('results')
   voice.say(pantryWords(game.rows, total))
   const n = game.patterns.length
-  if (n) voice.say(n === 1 ? `And you hopped a ${patternWords(game.patterns[0].unit)} pattern!` : `And you hopped ${n} patterns!`, true)
+  if (n) voice.say(n === 1 ? `And you hopped a ${patternWords(game.patterns[0].unit)} pattern!` : `And you hopped ${n} patterns!`)
 }
 
 // --- Counted rows and obstacle rhythms ------------------------------------------------
@@ -452,7 +441,7 @@ function answer(seg, name) {
   sound.step(OBSTACLE_NOTES[real])
   if (at) effects.sparkle(tmp.set(at.x, 1, 0), 10, ['#ffffff', '#ffd23f'], 2.5)
   const said = OBSTACLE_NAMES[real]
-  voice.say(name === real ? `Yes! A ${said} comes next.` : `Look, a ${said}! ${patternWords(seg.unit)}.`)
+  voice.say(name === real ? `Yes! A ${said} comes next.` : `Look, a ${said}! ${patternWords(seg.unit)}.`, { interrupt: true })
 }
 
 function lessonCarrot(ev) {
@@ -462,9 +451,9 @@ function lessonCarrot(ev) {
   // the count, said aloud and floating above Pip in one spot
   popups.show(String(seg.got), tmp.set(game.x + 0.4, bunny.y + 1.9, 0), '', true)
   if (seg.got >= seg.n) {
-    voice.say(`${carrotWords(seg.n)}!`, true)
+    voice.say(`${carrotWords(seg.n)}!`)
     finishSegment(seg)
-  } else voice.say(String(seg.got), true)
+  } else voice.say(String(seg.got))
 }
 
 function lessonObstacle(ev) {

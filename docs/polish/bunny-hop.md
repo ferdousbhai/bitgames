@@ -145,3 +145,10 @@ Scratchpad: `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/183efacb-6
 - Family play: is one "What comes next?" per place the right amount? Are snow rows of up to 10 too long for 3-year-olds on the 🐢 pace?
 - The per-biome collection to sort in the pantry (leaves by colour, snowflakes by shape) from the audit is not built. The pantry holds only the counted rows.
 - Speech timing depends on the device's voice. On a slow voice the count can trail a carrot or two behind; it queues and never skips.
+
+## Simplify pass (2026-10-09)
+
+- One shared voice (`js/speech.js`, rate 0.82) for the game and its missions. The `interject` monkey-patch and `speakMission` are gone: everything queues, so a mission never swallows a count. Taps on the pace button and on an answer interrupt, as does the mission goal at start.
+- The mission choice is drawn through `renderChoice`. `randInt` is `THREE.MathUtils.randInt` in `util.js`.
+- The obstacle pictures are drawn when the browser is idle after the menu appears, and their second WebGL context is released with `forceContextLoss()`. If a cue is needed first, it shows the emoji fallback.
+- Verified: chromium and webkit boot + play, and stubbed-speech trips with both missions (words in order, pictures drawn, no errors).

@@ -204,3 +204,10 @@ Before this follow-up, the efficient autopilot finished 3 tens in 44 s with a 50
 - **Pacing with a real child.** See the follow-up timings below. Family play should confirm that a 3-tens round feels like a few minutes and that the shown bubbles read as help, not teasing.
 - **Catalogue text.** `game.json` `howToPlay` still describes points ("Bubbles are worth 1, stars 3"). The coordinator should update it (diff in the report).
 - **Speech overlap.** Speech uses `speechSynthesis.cancel()` before each count, so fast pickups cut the previous number short. This is acceptable at calm pace.
+
+## Simplify pass (2026-10-09)
+
+- One shared voice (`js/speech.js`, rate 0.85). The mission speaks through a thin view of it that stays quiet during Pond helpers play, so real mute is no longer overloaded. A friend's device takes the host's mission with `adventure.select(i, { silent: true })`.
+- Pond helpers: the mission reward is queued after the jar counts the bubble that earned it (no 1.2 s guess). Mode taps interrupt; other words queue.
+- Removed the dead `@keyframes pulse`.
+- Verified: chromium and webkit boot + play, and stubbed-speech solo rounds in both modes (calm: goal, 1, 2, 3, reward).

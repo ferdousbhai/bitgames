@@ -29,7 +29,6 @@ img { -webkit-user-drag: none; pointer-events: none; }
 .logo span:nth-child(6n+1) { color: #ff4f6d; } .logo span:nth-child(6n+2) { color: #ff9f43; animation-delay: .12s; }
 .logo span:nth-child(6n+3) { color: #ffd23f; animation-delay: .24s; } .logo span:nth-child(6n+4) { color: #5cd65c; animation-delay: .36s; }
 .logo span:nth-child(6n+5) { color: #3bb5ff; animation-delay: .48s; } .logo span:nth-child(6n) { color: #9b5de5; animation-delay: .6s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(4deg); } }
 
 #title { position: fixed; inset: 0; pointer-events: none; }
 .title-top, .title-bottom { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 16px; }
@@ -75,8 +74,6 @@ img { -webkit-user-drag: none; pointer-events: none; }
 
 .flightbar { display: flex; align-items: center; gap: 8px; pointer-events: none; }
 .pill { background: rgba(27, 20, 70, 0.55); border-radius: 999px; padding: 4px 16px; font-size: 28px; font-weight: 900; color: #ffd23f; text-shadow: 0 2px 0 rgba(0,0,0,.3); }
-.pill.bump { animation: bump .25s; }
-@keyframes bump { 50% { transform: scale(1.2); } }
 .turbo { display: flex; align-items: center; gap: 4px; background: rgba(27, 20, 70, 0.55); border-radius: 999px; padding: 4px 10px; font-size: 22px; }
 .turbo i { display: block; width: clamp(50px, 14vw, 110px); height: 12px; border-radius: 6px; background: rgba(255,255,255,.25); overflow: hidden; }
 .turbo i span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd23f, #ff9f43); border-radius: 6px; transition: width .25s; }

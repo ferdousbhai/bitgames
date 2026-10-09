@@ -135,20 +135,6 @@ export class Effects {
     }
   }
 
-  /** Confetti shooting up from a point. */
-  cannon(pos, count = 60) {
-    for (let i = 0; i < count; i++) {
-      const a = Math.random() * Math.PI * 2
-      const v = rand(0.5, 2.2)
-      const p = this.confetti.spawn(pick(CONFETTI), {
-        size: rand(0.06, 0.09), aspect: 1.6, life: rand(2.2, 3.2),
-        gravity: 6, drag: 1.8, rot: Math.random() * 6, spin: rand(3, 9), sway: rand(0.2, 0.6), phase: Math.random() * 6,
-      })
-      p.pos.copy(pos)
-      p.vel.set(Math.cos(a) * v, rand(3.5, 6), Math.sin(a) * v)
-    }
-  }
-
   clear() {
     this.stars.clear()
     this.puffs.clear()

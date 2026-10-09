@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
 /**
- * Splashes, ripples, bubbles, sparkles and confetti. Particles live in pooled
+ * Splashes, ripples, bubbles and sparkles. Particles live in pooled
  * InstancedMeshes, so a big splash stays smooth on a tablet.
  */
 
@@ -122,7 +122,6 @@ export class Pool {
   }
 }
 
-const CONFETTI = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff6b9d', '#2ec4b6', '#ffffff']
 const pick = (a) => a[(Math.random() * a.length) | 0]
 
 export class Effects {
@@ -161,13 +160,6 @@ export class Effects {
       drag: 1.2,
       billboard: true,
       buoyant: true,
-    })
-    this.confetti = new Pool(scene, {
-      count: 500,
-      geometry: new THREE.PlaneGeometry(0.2, 0.12),
-      material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
-      gravity: 3.5,
-      drag: 1.6,
     })
     // Ripples: flat rings lying on the water
     this.rings = []
@@ -243,19 +235,6 @@ export class Effects {
     }
   }
 
-  /** Celebration burst of confetti and sparkles around a point. */
-  party(pos, amount = 60, gold = false, scale = 1) {
-    const v = this.tmp
-    for (let i = 0; i < amount; i++) {
-      v.set(Math.random() - 0.5, Math.random() * 0.9 - 0.1, Math.random() - 0.5).normalize().multiplyScalar((3 + Math.random() * 4) * scale)
-      this.confetti.spawn(pos, v, { life: 1.6 + Math.random() * 0.8, size: (0.8 + Math.random() * 0.6) * scale, color: gold ? pick(['#ffd23f', '#fff1a8', '#ffb300', '#ffffff']) : pick(CONFETTI), spin: 8 })
-    }
-    for (let i = 0; i < amount / 3; i++) {
-      v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar((2 + Math.random() * 3) * scale)
-      this.sparkles.spawn(pos, v, { life: 0.8 + Math.random() * 0.5, size: (0.25 + Math.random() * 0.35) * scale, color: gold ? '#ffe680' : pick(CONFETTI) })
-    }
-  }
-
   /** "+1" or an emoji floating up from a point in the world. */
   label(text, pos, { color = '#ffffff', cls = '' } = {}) {
     const p = this.tmp.copy(pos).project(this.camera)
@@ -274,7 +253,6 @@ export class Effects {
     this.puffs.update(dt, this.camera, t)
     this.sparkles.update(dt, this.camera, t)
     this.bubbles.update(dt, this.camera, t)
-    this.confetti.update(dt, this.camera, t)
     for (const r of this.rings) {
       if (!r.visible) continue
       const u = r.userData

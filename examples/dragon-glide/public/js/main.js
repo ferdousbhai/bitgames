@@ -1,4 +1,5 @@
 import { createAdventure } from './adventure.js'
+import { createVoice } from './speech.js'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Sound } from './audio.js'
@@ -15,6 +16,7 @@ const rand = THREE.MathUtils.randFloat
 const { clamp, damp } = THREE.MathUtils
 const pick = (list) => list[Math.floor(Math.random() * list.length)]
 const easeStep = (rate, dt) => 1 - Math.exp(-rate * dt)
+const stillMotion = matchMedia('(prefers-reduced-motion: reduce)')
 
 // --- Saved bits (private windows may refuse storage, so everything is guarded) ---------
 
@@ -117,12 +119,20 @@ const game = {
 }
 if (new URLSearchParams(location.search).has('debug')) window.game = game
 
+// One voice for the game: words said with `queue` wait their turn, others replace what is being said.
+const voice = createVoice({ isMuted: () => sound.muted, rate: 0.85, pitch: 1 })
+
 // Optional learning missions: a slower flight, or counting rings (four in every world).
 const adventure = createAdventure({
   id: 'dragon-glide',
   anchor: $('play'),
   hud: $('hud'),
   isMuted: () => sound.muted,
+  voice,
+  renderChoice: (button, option) => {
+    button.textContent = `${option.emoji} ${option.label}`
+    document.body.classList.toggle('mission', !!option.goal)
+  },
   // The reward is spoken; the screen shows the four rings and a party, no reading needed
   celebrate: () => {
     countParty()
@@ -153,21 +163,13 @@ const adventure = createAdventure({
     { emoji: '⭕', label: 'Count 4 rings', pace: 0.75, goal: 'Fly through 4 rings', target: 4, reward: 'One, two, three, four! Four rings!' },
   ],
 })
-document.body.classList.toggle('mission', !!adventure.option.goal)
-$('adventure-choice').addEventListener('click', () => document.body.classList.toggle('mission', !!adventure.option.goal))
 
 /** Says something aloud (unless the sound is off). `queue` waits for what is being said first. */
 function say(text, queue = false) {
   if (!text) return
   game.said = text
-  if (sound.muted || !('speechSynthesis' in window)) return
-  if (!queue) speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'en-US'
-  u.rate = 0.85
-  speechSynthesis.speak(u)
+  voice.say(text, { interrupt: !queue })
 }
-const hush = () => 'speechSynthesis' in window && speechSynthesis.cancel()
 
 /** Says the world's goal (and the counting mission's) as each world starts, for children who can't read yet. */
 function sayGoal() {
@@ -175,7 +177,7 @@ function sayGoal() {
   const w = WORLDS[game.world]
   const parts = [`${w.name}!`, game.goal ? goalSentence(game.goal.goal) : '']
   if (adventure.option.goal) parts.push("And let's count four rings!")
-  say(parts.filter(Boolean).join(' '))
+  say(parts.filter(Boolean).join(' '), true)
 }
 
 let templates, dragon, world, course, sparks, dots, rings, popups
@@ -222,8 +224,7 @@ function toTitle() {
   game.goal = null
   renderGoal()
   clearSort()
-  clearTimeout(finishTimer)
-  hush()
+  voice.hush()
   game.z = 0
   game.speed = 0
   pos.set(0, 4.3, 0)
@@ -281,7 +282,7 @@ function start(from = 0) {
   game.fired = 0
   game.steered = 0
   game.learned = []
-  clearTimeout(finishTimer)
+  voice.hush() // a new trip: nothing left over from the last one
   pos.set(0, 4.3, -game.z)
   vel.set(0, 0)
   target.set(0, 4.3)
@@ -304,7 +305,7 @@ function start(from = 0) {
   worldBanner(w, 'Fly to the nest! 🪺')
   sound.play(w.music)
   tip('👆 Drag to fly!', 3.5)
-  setTimeout(sayGoal, 900)
+  sayGoal()
 }
 
 function finishTrip() {
@@ -317,8 +318,7 @@ function finishTrip() {
   const words = flown.map(([, e]) => (e ? learnedSentence(e) : '')).filter(Boolean)
   $('learned').setAttribute('aria-label', words.join(' ') || 'The worlds you flew through')
   clearSort()
-  clearTimeout(finishTimer)
-  finishTimer = setTimeout(() => game.state === 'results' && say(words.length ? words.join(' ') : 'Home sweet nest!'), 1300)
+  say(words.length ? words.join(' ') : 'Home sweet nest!', true)
   $('final').textContent = game.score
   $('final-rings').textContent = game.rings
   $('final-lit').textContent = game.lit
@@ -327,7 +327,6 @@ function finishTrip() {
   show('results')
 }
 
-let finishTimer
 
 // --- Each world's goal ------------------------------------------------------------------
 
@@ -472,7 +471,7 @@ function flyFromEmber(el) {
   tmp.copy(pos).project(camera)
   const x = (tmp.x * 0.5 + 0.5) * innerWidth
   const y = (-tmp.y * 0.5 + 0.5) * innerHeight
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const still = stillMotion.matches
   const from = still ? 'none' : `translate(${x - (to.left + to.width / 2)}px, ${y - (to.top + to.height / 2)}px) scale(0.5)`
   el.animate?.([{ transform: from, opacity: 0.2 }, { transform: 'none', opacity: 1 }], { duration: still ? 300 : 650, easing: 'cubic-bezier(.3,.7,.4,1)' })
 }
@@ -825,7 +824,7 @@ function handle(events) {
       game.slow = 0.4
       game.invuln = 1.4
       // a small physical wobble from the bump, nothing more (none with reduced motion)
-      game.shake = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 0.2
+      game.shake = stillMotion.matches ? 0 : 0.2
       game.hoops = 0
       // bounce away from whatever we bumped
       tmp2.set(pos.x - ev.pos.x, pos.y - ev.pos.y, 0)
@@ -911,7 +910,7 @@ function leaveNest() {
   adventure.begin()
   startGoal(game.world)
   worldBanner(w, 'Off we go! 🐉')
-  setTimeout(sayGoal, 900)
+  sayGoal()
   sound.play(w.music)
   target.set(0, 4.5)
 }
@@ -1008,9 +1007,15 @@ function updatePlay(dt) {
     game.z = holdZ
     if (!g.holding) {
       g.holding = true
+      g.spareT = 0
       say(`More ${TREASURES[g.goal.want].many} are coming!`)
     }
-    course.spare(game.z, lane, game.world)
+    // Spare groups only need checking now and then, not every frame
+    g.spareT -= dt
+    if (g.spareT <= 0) {
+      g.spareT = 0.5
+      course.spare(game.z, lane, game.world)
+    }
   }
 
   // Steering: keys nudge the target, mouse points at it, fingers drag it

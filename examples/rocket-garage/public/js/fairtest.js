@@ -1,5 +1,5 @@
 import { DESTS, PARTS } from './parts.js'
-import { SLOT_WORDS, WOBBLY, compareBuilds, explainFlight, isBuild, placeName } from './workshop.js'
+import { SLOT_WORDS, WOBBLY, buildRace, compareBuilds, el, explainFlight, isBuild, keyGuard, placeName } from './workshop.js'
 
 /**
  * The fair test inside every launch: after a part change the robot asks "farther, the same, or
@@ -86,12 +86,6 @@ export function addNote(notes, note) {
 
 const ICONS = { distance: ['🪐', '⬆'], wobble: ['〰️', '🪐='], same: ['🪐='], fun: ['🎨', '🪐='] }
 
-function el(tag, className, text) {
-  const e = document.createElement(tag)
-  if (className) e.className = className
-  if (text !== undefined) e.textContent = text
-  return e
-}
 function img(src, className = '') {
   const i = el('img', className)
   i.src = src || ''
@@ -107,53 +101,17 @@ export function guessPicture(id, beforeSrc, nowSrc) {
   return pic
 }
 
-/** Two lanes along the planets, like the workshop's track: last time above, this flight below. */
-export function flightRace(test, rocketThumb, landed) {
-  const race = el('div', 'workshop-race ft-race')
-  const stops = el('div', 'workshop-stops')
-  stops.append(el('span'), el('span', 'workshop-stop workshop-home', '🏠'))
-  for (const d of DESTS) stops.append(el('span', 'workshop-stop', d.emoji))
-  race.append(stops)
-  const lanes = [['a', test.before, test.result.a], ['b', test.now, { ...test.result.b, reach: landed ?? test.result.b.reach }]]
-  for (const [slot, build, r] of lanes) {
-    const lane = el('div', `workshop-lane lane-${slot}`)
-    lane.append(el('span', 'ft-lane-badge', slot === 'a' ? '👻' : ''))
-    const rail = el('div', 'workshop-rail')
-    rail.dataset.at = String(r.reach + 1)
-    const ship = el('span', 'workshop-ship')
-    ship.style.setProperty('--wobble', `${4 + r.wobble * 14}deg`)
-    ship.append(img(rocketThumb(build)))
-    rail.append(ship)
-    lane.append(rail)
-    race.append(lane)
-  }
-  return race
-}
-
-/** Fly both little ships to their planets (call once the race is in the page). */
-export function runRace(race, result, onDone = () => {}) {
-  const ships = [...race.querySelectorAll('.workshop-ship')]
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    for (const rail of race.querySelectorAll('.workshop-rail')) rail.style.setProperty('--at', rail.dataset.at)
-    for (const ship of ships) ship.classList.add('flying')
-  }))
-  return setTimeout(() => {
-    for (const ship of ships) ship.classList.remove('flying')
-    const stops = race.querySelectorAll('.workshop-stops .workshop-stop')
-    for (const rail of race.querySelectorAll('.workshop-rail')) stops[Number(rail.dataset.at)]?.classList.add('reached')
-    for (const [slot, won] of [['a', result.answer !== 'b'], ['b', result.answer !== 'a']]) race.querySelector(`.lane-${slot}`).classList.toggle('winner', won)
-    onDone()
-  }, 1700)
-}
-
-function keyGuard(dialog) {
-  const guard = (e) => { if (dialog.open) e.stopPropagation() }
-  addEventListener('keydown', guard, true)
-  addEventListener('keyup', guard, true)
+/** Two lanes along the planets, like the workshop's track: last time (the ghost) above, this flight below. */
+export function flightRace(test, rocketThumb) {
+  return buildRace([
+    { slot: 'a', build: test.before, badge: el('span', 'ft-lane-badge', '👻') },
+    { slot: 'b', build: test.now, badge: el('span', 'ft-lane-badge', '') },
+  ], rocketThumb, 'ft-race')
 }
 
 /** "Will it go farther, the same, or less far?" before a launch with a changed part. */
-export function createPredict({ thumbOf, rocketThumb, speak, sound = () => {}, onGuess, onBack }) {
+export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, onGuess, onBack }) {
+  const speak = (text) => voice.say(text, { interrupt: true })
   const dialog = el('dialog', 'ft-dialog')
   dialog.id = 'predict'
   dialog.setAttribute('aria-labelledby', 'predict-q')
@@ -249,7 +207,8 @@ export function createPredict({ thumbOf, rocketThumb, speak, sound = () => {}, o
 }
 
 /** The pictured "what I found out" notebook: one page per part, filled by fair tests. */
-export function createNotebook({ notes, thumbOf, speak, sound = () => {} }) {
+export function createNotebook({ notes, thumbOf, voice, sound = () => {} }) {
+  const speak = (text) => voice.say(text, { interrupt: true })
   const dialog = el('dialog', 'ft-dialog ft-notebook')
   dialog.id = 'notebook'
   dialog.setAttribute('aria-labelledby', 'notebook-title')

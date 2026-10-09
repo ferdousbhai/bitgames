@@ -6,6 +6,7 @@ import { Audio } from './audio.js'
 import { Balloons, COLORS, KINDS, PALETTE } from './balloons.js'
 import { Effects } from './effects.js'
 import { SKY_COLOURS, dotLayout, makeRequest } from './sky.js'
+import { createVoice } from './speech.js'
 import { World, halfSize as viewSize } from './world.js'
 
 const $ = (id) => document.getElementById(id)
@@ -29,6 +30,8 @@ sun.position.set(-6, 9, 10)
 scene.add(sun)
 
 const audio = new Audio()
+// One voice for the game: counts queue after each other instead of cutting each other off.
+const voice = createVoice({ isMuted: () => audio.muted, rate: 0.82, pitch: 1 })
 const world = new World(scene, camera)
 const balloons = new Balloons(scene)
 const effects = new Effects(scene, camera)
@@ -134,9 +137,10 @@ const adventure = createAdventure({
   id: 'balloon-pop',
   anchor: $('play'),
   hud: $('hud'),
-  isMuted: () => audio.muted,
+  voice,
   celebrate: celebrateMission,
   renderProgress: renderMissionProgress,
+  renderChoice: renderMissionChoice,
   options: [
     // The calm default: every level is one spoken, pictured counting request (js/sky.js).
     { emoji: '🔢', label: SKY },
@@ -148,9 +152,7 @@ const adventure = createAdventure({
   ],
 })
 
-function renderMissionChoice() {
-  const option = adventure.option
-  const button = $('adventure-choice')
+function renderMissionChoice(button, option) {
   button.replaceChildren()
   const pictures = document.createElement('span')
   pictures.className = 'mission-choice-pictures'
@@ -165,27 +167,8 @@ function renderMissionChoice() {
   next.setAttribute('aria-hidden', 'true')
   button.append(pictures, label, next)
 }
-renderMissionChoice()
-$('adventure-choice').addEventListener('click', renderMissionChoice)
 
-function announceMission() {
-  if (!adventure.option.goal || audio.muted || !('speechSynthesis' in window)) return
-  speechSynthesis.cancel()
-  const words = new SpeechSynthesisUtterance(adventure.option.goal)
-  words.lang = 'en-US'
-  words.rate = 0.82
-  speechSynthesis.speak(words)
-}
-
-/** Speak aloud (respecting mute). `queue` lets a count finish before the next word instead of cutting it off. */
-function say(text, { queue = false } = {}) {
-  if (audio.muted || !('speechSynthesis' in window)) return
-  if (!queue) speechSynthesis.cancel()
-  const words = new SpeechSynthesisUtterance(text)
-  words.lang = 'en-US'
-  words.rate = 0.82
-  speechSynthesis.speak(words)
-}
+const say = (text) => voice.say(text)
 
 // --- Counting sky -------------------------------------------------------------------
 // One calm request per level: picture slots fill with each matching pop and are counted aloud.
@@ -241,19 +224,16 @@ function renderSky() {
       gold.append(dot)
     })
     // Beside it, the balloons popped so far, each in its own colour and numbered, in rows of five.
-    const tally = document.createElement('span')
-    tally.className = 'sky-group'
-    game.sky.colours.forEach((hex, i) => {
-      if (i % 5 === 0) tally.append(Object.assign(document.createElement('span'), { className: 'sky-row' }))
+    const tally = game.sky.colours.map((hex, i) => {
       const slot = skySlot({ picture: '' }, i + 1, true)
       slot.classList.add('colour-balloon')
       slot.style.setProperty('--c', hex)
-      tally.lastChild.append(slot)
+      return slot
     })
-    slots.append(gold, tally)
+    slots.append(gold, rowsOfFive(tally))
     return
   }
-  // Rows of at most five, like a ten-frame; an adding request shows its two groups apart.
+  // An adding request shows its two groups apart.
   let n = 0
   req.parts.forEach((part, g) => {
     if (g) {
@@ -262,16 +242,23 @@ function renderSky() {
       plus.textContent = '+'
       slots.append(plus)
     }
-    const group = document.createElement('span')
-    group.className = 'sky-group'
-    for (let r = 0; r < part; r += 5) {
-      const row = document.createElement('span')
-      row.className = 'sky-row'
-      for (let i = r; i < Math.min(part, r + 5); i++, n++) row.append(skySlot(req, n + 1, n < count))
-      group.append(row)
-    }
-    slots.append(group)
+    const group = []
+    for (let i = 0; i < part; i++, n++) group.push(skySlot(req, n + 1, n < count))
+    slots.append(rowsOfFive(group))
   })
+}
+
+/** A group of slots in rows of at most five, like a ten-frame. */
+function rowsOfFive(items) {
+  const group = document.createElement('span')
+  group.className = 'sky-group'
+  for (let r = 0; r < items.length; r += 5) {
+    const row = document.createElement('span')
+    row.className = 'sky-row'
+    row.append(...items.slice(r, r + 5))
+    group.append(row)
+  }
+  return group
 }
 
 /** A pop in the counting sky. Returns true when the balloon filled a slot. */
@@ -285,13 +272,13 @@ function countPop(b) {
     sky.done = true
     game.skies += 1
     game.biggest = Math.max(game.biggest, sky.req.total)
-    say(String(sky.count), { queue: true })
-    say(sky.req.named, { queue: true })
+    say(String(sky.count))
+    say(sky.req.named)
     const { w, h } = halfSize(0)
     effects.drift(w, h)
     setTimeout(() => audio.chord(), 500)
     game.skyWait = 4.5 // a calm pause before the next request
-  } else say(String(sky.count), { queue: true })
+  } else say(String(sky.count))
   renderSky()
   return true
 }
@@ -540,10 +527,10 @@ function toTitle() {
   $('sky').hidden = true
   game.sky = null
   show('title')
-  renderMissionChoice() // adventure.begin() rewrote the choice as text; bring its pictures back
 }
 
 function start() {
+  voice.hush() // the tap starts afresh: earlier words give way to the new request
   adventure.begin()
   clearTimeout(rewardTimer)
   $('mission-reward').classList.remove('show')
@@ -561,7 +548,7 @@ function start() {
     newRequest()
   } else {
     showIntro('🎈', 'Pop the balloons!', 'Tap them before they fly away')
-    announceMission()
+    if (adventure.option.goal) say(adventure.option.goal)
   }
   if (!game.firstPop || adventure.option.goal) $('hint').classList.remove('hidden')
 }

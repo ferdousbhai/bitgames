@@ -1,6 +1,7 @@
 import { createDelivery } from './delivery.js'
 import { createAdventure } from './adventure.js'
-import { createTown, drawTownMap } from './town.js'
+import { createVoice } from './speech.js'
+import { createTown, drawMapCar, drawTownMap, townMapLayout } from './town.js'
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
@@ -15,7 +16,7 @@ import { Effects } from './effects.js'
 import { Input } from './input.js'
 import { Pickups } from './pickups.js'
 import { carPortraits } from './portraits.js'
-import { GROUP_CAR, GROUP_PROP, GROUP_STATIC, STATIC_MASK, canvasTexture, clamp, damp, escapeHtml, harmless, rng, smoothing } from './util.js'
+import { GROUP_CAR, GROUP_PROP, GROUP_STATIC, STATIC_MASK, canvasTexture, clamp, damp, escapeHtml, harmless, reducedMotion, rng, smoothing } from './util.js'
 
 const params = new URLSearchParams(location.search)
 const DEBUG = params.has('debug')
@@ -197,22 +198,21 @@ function renderDeliveryProgress(goal, option, count) {
   goal.append(caption, steps)
 }
 
-function speakDelivery(text) {
-  if (audio.muted || !('speechSynthesis' in window)) return
-  speechSynthesis.cancel()
-  const words = new SpeechSynthesisUtterance(text)
-  words.lang = 'en-US'
-  words.rate = 0.82
-  speechSynthesis.speak(words)
-}
+// One voice for the game. Directions queue; feedback on what the child just did replaces older words.
+const voice = createVoice({ isMuted: () => audio.muted, rate: 0.82, pitch: 1 })
+const tellNow = (text) => voice.say(text, { interrupt: true })
 
 const adventure = createAdventure({
   id: 'crash-racers',
   anchor: document.querySelector('[data-mode="race"]'),
   hud: $('hud'),
   isMuted: () => audio.muted,
+  voice,
   celebrate: (text) => banner(text),
   renderProgress: renderDeliveryProgress,
+  renderChoice: (button, option) => {
+    button.textContent = option.goal ? '🎁 1 → 2 → 3 → 4  ↻' : '🏎️ Free driving  ↻'
+  },
   options: [
     { emoji: '🏎️', label: 'Free driving' },
     { emoji: '🎁', label: 'Follow the delivery map', goal: 'Deliver to stops 1 → 2 → 3 → 4', target: 4, reward: 'Four deliveries in map order!' },
@@ -226,19 +226,12 @@ function renderModeChoice() {
   document.querySelector('.laps').classList.toggle('hidden', game.mode !== 'race')
 }
 renderModeChoice()
-function renderDeliveryChoice() {
-  const button = $('adventure-choice')
-  button.textContent = adventure.option.goal ? '🎁 1 → 2 → 3 → 4  ↻' : '🏎️ Free driving  ↻'
-}
-renderDeliveryChoice()
-$('adventure-choice').addEventListener('click', renderDeliveryChoice)
 const delivery = createDelivery(scene, () => {
   adventure.event()
-  if (delivery.next < 4) later(() => {
-    if (game.raceOn && deliveryOn()) speakDelivery(`Now drive to stop ${delivery.next + 1}!`)
-  }, 650)
+  // Said after the mission's count, in the voice's queue
+  if (delivery.next < 4 && game.raceOn && deliveryOn()) voice.say(`Now drive to stop ${delivery.next + 1}!`)
 }, (next) => {
-  if (game.raceOn && deliveryOn()) speakDelivery(`Find stop ${next} on the map!`)
+  if (game.raceOn && deliveryOn()) tellNow(`Find stop ${next} on the map!`)
 })
 const deliveryOn = () => game.mode === 'race' && !!adventure.option.goal
 
@@ -287,7 +280,7 @@ function chooseParcel(i) {
   town.choose(i, game.player)
   renderParcels()
   const { kind } = town.houses[i]
-  speakDelivery(`${kind.parcel} goes to ${kind.house}. Can you find it on the map?`)
+  tellNow(`${kind.parcel} goes to ${kind.house}. Can you find it on the map?`)
 }
 
 /** The car reached a house's doorstep (once per visit). */
@@ -299,13 +292,13 @@ function townArrive(i) {
     // The wrong house: say kindly whose house it is and where the parcel goes.
     const wanted = town.houses[town.chosen].kind
     banner(`🏠 ${here.emoji}  ·  📦 ${wanted.emoji}`, 2000)
-    speakDelivery(`This is ${here.house}. ${wanted.parcel} goes to ${wanted.house}.`)
+    tellNow(`This is ${here.house}. ${wanted.parcel} goes to ${wanted.house}.`)
     return
   }
   // No parcel chosen yet: the car rests here a moment so the child can find the matching parcel.
   game.townHold = game.raceTime + HANDOVER_SECONDS
   banner(`🏠 ${here.emoji}`, 2000)
-  speakDelivery(`This is ${here.house}. Which parcel goes here?`)
+  tellNow(`This is ${here.house}. Which parcel goes here?`)
 }
 
 /** A calm handover: the car rests, the parcel hops to the doorstep, a doorbell, and the resident waves. */
@@ -316,11 +309,11 @@ function deliverTo(i) {
   audio.doorbell()
   renderParcels()
   banner(`${kind.resident} 👋 ${kind.emoji}`, 2400)
-  speakDelivery(kind.thanks)
+  tellNow(kind.thanks)
   later(() => {
     if (!game.raceOn || !townOn()) return
     if (town.done) finishTown()
-    else if (town.chosen < 0) speakDelivery('Which parcel next? Tap a parcel, then find its house on the map.')
+    else if (town.chosen < 0) voice.say('Which parcel next? Tap a parcel, then find its house on the map.')
   }, 3400)
 }
 
@@ -359,7 +352,7 @@ function finishTown() {
   game.state = 'results'
   renderResults()
   show('results')
-  speakDelivery(`You delivered ${town.order.length} parcels! You read the map to find every house.`)
+  voice.say(`You delivered ${town.order.length} parcels! You read the map to find every house.`)
   onCarFinished(car.id)
 }
 
@@ -513,7 +506,6 @@ function buildMenu() {
     el.onclick = () => {
       game.mode = el.dataset.mode
       renderModeChoice()
-      renderDeliveryChoice()
       document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b === el))
       audio.beep()
     }
@@ -548,7 +540,7 @@ function renderSound() {
 function setMuted(muted) {
   audio.unlock()
   audio.setMuted(muted)
-  if (muted && 'speechSynthesis' in window) speechSynthesis.cancel()
+  if (muted) voice.hush()
   try {
     localStorage.setItem('crash-racers-sound', muted ? '0' : '1')
   } catch {}
@@ -570,7 +562,6 @@ function enterLobbyScreen() {
   $('countdown').classList.add('hidden')
   if (isHost()) {
     game.state = 'menu'
-    renderDeliveryChoice()
     show('menu')
   } else {
     game.state = 'waiting'
@@ -994,7 +985,7 @@ function runCountdown() {
     show(null)
     renderParcels()
     banner(`📦 × ${town.houses.length}`, 2400)
-    speakDelivery(`${town.houses.length} parcels to deliver! Tap a parcel, then find its house on the map.`)
+    voice.say(`${town.houses.length} parcels to deliver! Tap a parcel, then find its house on the map.`)
     return
   }
   if (game.player) banner(`You drive ${game.player.spec.emoji} ${game.player.spec.name}!`, 2600)
@@ -1007,7 +998,7 @@ function runCountdown() {
         game.state = 'race'
         game.raceOn = true
         show(null)
-        if (deliveryOn()) speakDelivery('Drive to stop 1!')
+        if (deliveryOn()) voice.say('Drive to stop 1!')
         later(() => el.classList.add('hidden'), 700)
       }
     }, i * 900),
@@ -1546,7 +1537,7 @@ function endSmash() {
  */
 function softFinish() {
   document.querySelector('.party')?.remove()
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (reducedMotion.matches) return
   const party = document.createElement('div')
   party.className = 'party'
   for (let i = 0; i < 12; i++) {
@@ -1950,20 +1941,29 @@ function updateHud(now) {
 
 /** The track outline is drawn once per city; each frame only the car dots are drawn on top. */
 let minimap = null
+/** Delivery Town's paper map (road, houses, ticks) is redrawn only when a parcel is chosen or delivered. */
+let townMap = null
 const headingScratch = new CANNON.Vec3()
 function drawMinimap() {
   const t = game.track
   if (townOn()) {
     // Delivery Town: a big paper map with every house as its picture and the van as an arrow.
     const canvas = $('minimap')
+    const size = canvas.width
+    const { houses, chosen, order } = town
+    if (townMap?.track !== t || townMap.houses !== houses || townMap.size !== size || townMap.chosen !== chosen || townMap.delivered !== order.length) {
+      const background = document.createElement('canvas')
+      background.width = background.height = size
+      const layout = townMapLayout(size, t, houses)
+      drawTownMap(background.getContext('2d'), size, t, houses, { chosen, order, layout })
+      townMap = { track: t, houses, size, chosen, delivered: order.length, layout, background, g: canvas.getContext('2d') }
+    }
+    const { g, layout } = townMap
     const p = game.player
     const nose = p.body.quaternion.vmult(NOSE_AXIS, headingScratch)
-    drawTownMap(canvas.getContext('2d'), canvas.width, t, town.houses, {
-      chosen: town.chosen,
-      order: town.order,
-      player: { x: p.body.position.x, z: p.body.position.z, colour: p.colour },
-      heading: { x: nose.x, z: nose.z },
-    })
+    g.clearRect(0, 0, size, size)
+    g.drawImage(townMap.background, 0, 0)
+    drawMapCar(g, size, layout, { x: p.body.position.x, z: p.body.position.z, colour: p.colour }, { x: nose.x, z: nose.z })
     return
   }
   if (minimap?.track !== t) {

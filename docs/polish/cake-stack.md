@@ -85,3 +85,10 @@ The recipe studio still passes each layer's position to `perfect(step)`, so a co
 - In order mode the child cannot finish early except through 🏠 (orders are 4–6 layers).
 - The studio's text buttons could become picture-only (unchanged from Phase 1).
 - Slivers in landscape (unchanged from Phase 1).
+
+### Simplify pass (2026-10-09)
+
+- One shared voice (`speech.js`, rate 0.85, pitch 1) replaces the game's own `speak`/`hush`. It is passed to the adventure and the recipe studio. Game lines still interrupt, as before: they are tap feedback. The party share keeps its `speak` callback.
+- Removed dead code: `effects.js` `shower()`, `popper()`, `CONFETTI` and the 700-instance confetti pool, which was still being updated every frame. The header comment now describes the petals. `drift()` is the one soft moment.
+- Dead CSS removed: `.pill`, `.scores`, `.score b`, `#best-badge`, `.badge`, `.pill.score.pop` with `@keyframes score-pop`, and the `.banner.low` block (no code adds `low`).
+- Checks: Chromium and WebKit `browser.mjs` passed with 0 errors. A Playwright play from order to wrong taps, cake, candles, share and card spoke every line in order, with 0 console errors in both engines. Tests: 11/11.

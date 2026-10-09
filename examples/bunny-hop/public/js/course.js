@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { BIOME_LENGTH, BIOMES, JOURNEY, OBSTACLES, START_X, biomeIndexAt } from './biomes.js'
 import { copy } from './models.js'
-import { keepWhere, pick, rand } from './util.js'
+import { keepWhere, pick, rand, randInt } from './util.js'
 
 const CARROT_Y = 0.6
 const PICKUP = 1.05 // generous: a carrot this close to the bunny's middle is caught
@@ -54,8 +54,6 @@ export const ROW_STEP = 4.4
 export const BEAT = 8
 const GAP = 20 // quiet path between one row or rhythm and the next
 const UNITS = 3 // a rhythm plays its pattern three times; the third time may stop to ask what comes next
-
-const randInt = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1))
 
 /** A soft "?" bubble that stands where the next obstacle of a pattern is hidden. */
 let askMaterial

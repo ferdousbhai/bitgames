@@ -318,7 +318,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .parcel.chosen { border-color: #ffbe0b; box-shadow: 0 0 0 4px #fff, 0 4px 0 rgba(0,0,0,.28); transform: translateY(-3px); }
 .parcel.delivered { opacity: .45; box-shadow: none; }
 .parcel .tick { position: absolute; right: -8px; top: -8px; width: 26px; height: 26px; border-radius: 50%; background: #5fae1e; color: #fff; font-size: 17px; font-weight: 900; display: grid; place-items: center; }
-#hud.town #minimap { width: var(--map); height: var(--map); top: calc(64px + env(safe-area-inset-top)); background: none; border-radius: 0; filter: drop-shadow(0 4px 0 rgba(0,0,0,.25)); }
+#hud.town #minimap { width: var(--map); height: var(--map); top: calc(64px + env(safe-area-inset-top)); background: none; border-radius: 8%; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
 #hud.town .banner { font-size: clamp(30px, 6vw, 56px); color: #fff; text-shadow: 0 3px 0 rgba(43,45,66,.55), 0 6px 18px rgba(0,0,0,.3); transition: opacity .4s; transform: none; }
 .recap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 #recap-map { width: min(72vmin, 440px); height: min(72vmin, 440px); filter: drop-shadow(0 6px 0 rgba(0,0,0,.25)); }

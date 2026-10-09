@@ -30,18 +30,21 @@ async function assertTouchableInViewport(selector) {
   }
 }
 
+// Games whose menu opens on a mode without missions pick the mission mode first.
+const missionMode = {
+  'crash-racers': () => tap('[data-mode="race"]'),
+}
+const menuReady = () => window.__adventure && document.getElementById('adventure-choice')
+const choiceReady = () => document.getElementById('adventure-choice')?.getBoundingClientRect().width > 0
+async function openMissions(id) {
+  await open(id, menuReady)
+  await missionMode[id]?.()
+  await page.waitForFunction(choiceReady, null, { timeout: 40000 })
+}
+
 await runChecks(session, async (pass) => {
   for (const id of ['balloon-pop', 'bumper-ducks', 'bunny-hop', 'cake-stack', 'crash-racers', 'dragon-glide', 'fish-pond', 'star-catcher']) {
-    const choiceReady = () => window.__adventure && document.getElementById('adventure-choice')?.getBoundingClientRect().width > 0
-    // Crash Racers opens on Delivery Town; its racing mission chip shows once Race is picked.
-    const pickRace = async () => {
-      if (id !== 'crash-racers') return
-      await page.waitForFunction(() => window.__adventure?.game.state === 'menu', null, { timeout: 40000 })
-      await tap('[data-mode="race"]')
-    }
-    await open(id, id === 'crash-racers' ? () => window.__adventure?.game.state === 'menu' : choiceReady)
-    await pickRace()
-    await page.waitForFunction(choiceReady)
+    await openMissions(id)
     await page.evaluate(() => localStorage.removeItem(`${location.pathname.split('/')[1]}:adventure`))
     // Advance to the first mission through the real native control.
     for (let attempt = 0; !(await mission()).goal; attempt++) {
@@ -50,9 +53,7 @@ await runChecks(session, async (pass) => {
       await page.waitForTimeout(100)
     }
     const selected = (await mission()).label
-    await page.reload()
-    await pickRace()
-    await page.waitForFunction(choiceReady, null, { timeout: 40000 })
+    await openMissions(id) // a fresh load must remember the choice
     assert.equal((await mission()).label, selected)
     await tap(originalStartButton(id))
     await page.waitForFunction(() => !document.getElementById('hud').classList.contains('hidden'), null, { timeout: 40000 })
@@ -63,8 +64,7 @@ await runChecks(session, async (pass) => {
   }
 
   // Moving the car onto each delivery marker, out of order first.
-  await open('crash-racers', () => window.__adventure?.game.state === 'menu')
-  await tap('[data-mode="race"]')
+  await openMissions('crash-racers')
   await tap('#go')
   await page.waitForFunction(() => window.__adventure.game.raceOn)
   async function visit(index) {

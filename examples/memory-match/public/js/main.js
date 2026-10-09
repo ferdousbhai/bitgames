@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { Sound, VOICE_LENGTH } from './audio.js'
 import { Talk } from './talk.js'
+import { createVoice } from './speech.js'
 import { Effects } from './effects.js'
 import { tween, wait, clearTweens, updateTweens, ease } from './tween.js'
 
@@ -91,17 +92,21 @@ const shuffle = (list) => {
   return list
 }
 
-// --- Saved progress (best stars per level) ------------------------------------------
+// --- Saved progress (finished levels per mode) ---------------------------------------
 
 const SAVE_KEY = 'memory-match:v2'
-const progress = { stars: {}, best: {}, muted: false, mode: 'twins', modeDone: { sound: {}, baby: {} } }
+const progress = { muted: false, mode: 'twins', modeDone: {} }
 try {
   Object.assign(progress, JSON.parse(localStorage.getItem(SAVE_KEY)) ?? {})
 } catch {}
 if (!MODES[progress.mode]) progress.mode = 'twins'
-progress.modeDone = { sound: {}, baby: {}, ...progress.modeDone }
-/** Finished levels for the chosen kind of matching (twins keep the old save's stars). */
-const doneLevels = () => (progress.mode === 'twins' ? progress.stars : progress.modeDone[progress.mode])
+progress.modeDone = { twins: {}, sound: {}, baby: {}, ...progress.modeDone }
+// Older saves kept twins' finished levels in `stars` (and an unused `best`): move them over once
+Object.assign(progress.modeDone.twins, progress.stars)
+delete progress.stars
+delete progress.best
+/** Finished levels for the chosen kind of matching. */
+const doneLevels = () => progress.modeDone[progress.mode]
 function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(progress))
@@ -142,7 +147,7 @@ const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 120)
 const fitCam = camera.clone()
 const sound = new Sound()
 sound.setMuted(progress.muted)
-const talk = new Talk(sound)
+const talk = new Talk(sound, createVoice({ isMuted: () => sound.muted, rate: 0.85, pitch: 1.1 }))
 const effects = new Effects(scene)
 
 const assets = { animals: {}, card: null, setting: {}, felt: null }
@@ -574,8 +579,6 @@ class Card {
     this.hover = 0
     this.hoverTarget = 0
     this.lift = 0
-    this.wiggle = 0
-    this.bob = 0
     this.waveUntil = 0
     this.revealed = null
   }
@@ -690,8 +693,7 @@ class Card {
   update(dt, time) {
     const hoverTarget = this.state === 'down' ? this.hoverTarget : 0
     this.hover = THREE.MathUtils.damp(this.hover, hoverTarget, 14, dt)
-    this.pivot.position.y = this.lift + this.hover * 0.08 + this.bob
-    this.pivot.rotation.y = this.wiggle
+    this.pivot.position.y = this.lift + this.hover * 0.08
     if (this.critter.holder.visible) poseAnimal(this.critter, time)
     if (this.speaker?.group.visible) this.poseSpeaker(time)
     if (this.ring.visible) this.ring.rotation.z += dt * 0.6
@@ -1021,6 +1023,8 @@ function resetScene() {
   effects.clear()
   parade.clear()
   game.paradeAnimals = []
+  // Each loudspeaker's waves glow on their own, so their materials go with the board
+  for (const card of game.cards) card.speaker?.waves.forEach((wave) => wave.material.dispose())
   board.clear()
   game.cards = []
   game.open = []
@@ -1481,6 +1485,7 @@ function stopPeekSpeech() {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) stopPeekSpeech()
 })
+addEventListener('pagehide', stopPeekSpeech)
 
 // One demonstration per round supports memory without solving the whole board.
 $('peek').onclick = async () => {

@@ -64,8 +64,6 @@ export const CONSTELLATIONS = [
   },
 ]
 
-export const TOTAL_STARS = CONSTELLATIONS.reduce((n, c) => n + c.stars.length, 0)
-
 // Rotate (if asked) and renormalise each shape once, keeping its true proportions.
 for (const c of CONSTELLATIONS) {
   const a = c.turn || 0
@@ -127,6 +125,14 @@ class Backdrop {
   set visible(v) {
     this.fill.visible = this.edge.visible = v
   }
+
+  dispose() {
+    for (const mesh of [this.fill, this.edge]) {
+      mesh.parent?.remove(mesh)
+      mesh.geometry.dispose()
+      mesh.material.dispose()
+    }
+  }
 }
 
 const unitLine = new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0)
@@ -141,6 +147,7 @@ class ConstellationView {
     this.pts = def.shape.map(() => new THREE.Vector2())
     this.size = 10
     this.litAt = def.stars.map(() => -1) // time each star was lit (-1: not yet)
+    this.litCount = 0
     this.twinkles = [] // { u, v, at } bonus sparkles from gems
     this.stars = def.shape.map((_, i) => {
       const color = new THREE.Color(def.colors?.[i] || LIT_COLOR)
@@ -182,9 +189,15 @@ class ConstellationView {
     this.box = r
   }
 
-  /** The next star waiting to be lit. */
+  /** Stars lit so far, which is also the next star waiting to be lit. */
   get lit() {
-    return this.litAt.filter((t) => t >= 0).length
+    return this.litCount
+  }
+
+  /** Light star `i` at time `at`. */
+  light(i, at) {
+    if (this.litAt[i] < 0) this.litCount++
+    this.litAt[i] = at
   }
 
   addTwinkle(now) {
@@ -366,8 +379,13 @@ export class Sky {
   clearPanel() {
     this.view?.dispose()
     this.view = null
-    for (const f of this.flights) this.scene.remove(f.sprite)
+    for (const f of this.flights) this.dropFlight(f)
     this.flights = []
+  }
+
+  dropFlight(f) {
+    this.scene.remove(f.sprite)
+    f.sprite.material.dispose()
   }
 
   /** Everything back to the start of a trip. */
@@ -411,7 +429,7 @@ export class Sky {
 
   land(i, data) {
     const view = this.view
-    view.litAt[i] = this.time
+    view.light(i, this.time)
     this.onLit?.(i + 1, this.total, data)
     if (view.lit === this.total) {
       // Let the last line finish drawing before the name is spoken
@@ -429,7 +447,7 @@ export class Sky {
     for (let k = this.flights.length - 1; k >= 0; k--) {
       const f = this.flights[k]
       if (f.view !== this.view) {
-        this.scene.remove(f.sprite)
+        this.dropFlight(f)
         this.flights.splice(k, 1)
         continue
       }
@@ -444,8 +462,7 @@ export class Sky {
       const s = (this.view?.size || 10) * (2.6 - e)
       f.sprite.scale.setScalar(s)
       if (f.t >= 1) {
-        this.scene.remove(f.sprite)
-        f.sprite.material.dispose()
+        this.dropFlight(f)
         this.flights.splice(k, 1)
         f.land()
       }
@@ -471,7 +488,7 @@ export class Sky {
     const views = this.done.map((d, i) => {
       const v = new ConstellationView(d.def, this.finaleRoot, this.glow)
       // The stars light again one constellation after another, in the order they were made
-      v.litAt = d.def.stars.map((_, k) => this.time + 0.4 + i * 0.5 + k * 0.08)
+      d.def.stars.forEach((_, k) => v.light(k, this.time + 0.4 + i * 0.5 + k * 0.08))
       d.twinkles.forEach((t) => v.pushTwinkle({ ...t, at: this.time + 0.6 + i * 0.5 }))
       return v
     })
@@ -488,6 +505,7 @@ export class Sky {
   closeFinale() {
     if (!this.finale) return
     this.finale.views.forEach((v) => v.dispose())
+    this.finale.backdrop.dispose()
     this.finaleRoot.clear()
     this.finale = null
   }

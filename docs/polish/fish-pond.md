@@ -144,3 +144,12 @@ Blender's glTF export is not byte-repeatable: two runs of the unchanged builder 
 Icy Sea is an Arctic scene, because narwhals live in the Arctic and penguins live in the far south. The three penguins on `shore_ice` are now three resting seals (`blender/models.py` `build_shore_ice`, "Seal pals"), and the title tile shows 🦭 instead of 🐧. A `world.js` comment names the place Arctic. The field notes already agree: narwhal "icy Arctic Ocean", snow crabs and jellyfish in icy seas. The whale stays Icy Sea only, and pufferfish and crab keep the fresh-water/sea split.
 
 The rebuild with `assets.mjs` changed only `shore_ice.glb` (306,788 bytes, 7,239 faces; was 296,736 bytes and 6,903 faces). The other five GLBs kept their SHA-256 (`models-before-seal.sha256` and `models-after-seal.sha256`). Chromium and WebKit `--run p2`: BOOT + PLAY 0 errors. Screenshot: `shots/place-ice.png`.
+
+### Simplify pass (2026-10-09)
+
+Quality cleanup only; play is unchanged.
+- One voice: `main.js` creates the shared `speech.js` voice (rate 0.95, pitch 1.25) and passes it to the adventure and the book. `Audio.say`/`hush` are gone. Tap feedback (catch name, book tiles, the fact) interrupts; "Look closer!" queues after the name. A muted fact still allows reading time (the `onend` only runs when the fact is actually spoken).
+- Removed the dead `party()`, the confetti pool and `CONFETTI` in `effects.js`; `updateShow`/`softMoment` use scratch vectors instead of allocating every frame.
+- The look glow animates the opacity of a `::before` layer instead of `filter: brightness()`. Removed dead `.pill` (and overrides) and `.score b`.
+- Shores: only the chosen place's shore downloads; the background prefetch of all five is gone (about 800 KB saved for a one-place visit). A newly chosen place can show its shore a moment after the water.
+- Checked: `browser.mjs --run simp` Chromium and WebKit 0 errors; a scripted catch → look → fact → book run records the expected spoken order with no console errors.
