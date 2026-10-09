@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
 import { Particles, Popups, Rings, makeGlowTexture } from './effects.js'
+import { CONSTELLATIONS, Sky } from './sky.js'
 import { STOPS, World } from './world.js'
 
 const $ = (id) => document.getElementById(id)
@@ -37,6 +38,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPrefere
 renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2))
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.toneMappingExposure = 1.05
+renderer.autoClear = false // the constellation panel is drawn as a second, flat pass (see frame)
 const scene = new THREE.Scene()
 scene.fog = new THREE.Fog('#2a1f66', 26, 85)
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200)
@@ -59,6 +61,8 @@ const particles = new Particles(scene)
 const rings = new Rings(scene)
 const popups = new Popups($('popups'), camera)
 const glowTex = makeGlowTexture(false)
+// The constellation panel and the night sky at home (runtime geometry, drawn over the scene)
+const sky = new Sky({ reducedMotion, onLit: (n, total, data) => starLit(n, total, data), onComplete: (def) => arrive(def) })
 
 // --- Game state ----------------------------------------------------------------------
 
@@ -68,13 +72,14 @@ const FULL_H = Math.tan((50 * Math.PI) / 360) * 16
 // hudY: the lowest edge of the top HUD in world units; falling things appear below it, never through it
 const view = { w: 10, h: 7.5, k: 1, xMin: -9, xMax: 9, yMin: -6, yMax: 1, hudY: 5 }
 const game = {
-  state: 'loading', // loading | title | play
-  score: 0,
-  stops: 0, // planets reached
-  legPoints: 0,
+  state: 'loading', // loading | title | play | finale
+  // On each leg: 'build' (catching stars to light the constellation), 'arrive' (Kitty at the
+  // planet while the constellation is named) or 'homeward' (the last flight home)
+  phase: 'build',
+  phaseTime: 0,
+  stops: 0, // planets reached, one finished constellation each
   spawnTimer: 1,
   magnet: 0,
-  double: 0,
   dizzy: 0,
   roll: 0,
   joy: 0,
@@ -82,9 +87,10 @@ const game = {
   time: 0,
   idle: 0, // seconds since the player last steered (see the nudge in frame)
 }
-// The star-counting mission draws its progress as a five-star constellation,
-// joining each caught star to the one before it.
-const CONSTELLATION = [[10, 28], [42, 8], [74, 24], [106, 7], [140, 28]]
+// The star-counting mission draws its progress as Cassiopeia's W (five stars, the first
+// constellation of the trip), joining each caught star to the one before it.
+const W_DEPTH = Math.max(...CONSTELLATIONS[0].shape.map(([, v]) => v))
+const CONSTELLATION = CONSTELLATIONS[0].shape.map(([u, v]) => [Math.round(10 + u * 130), Math.round(7 + (v / W_DEPTH) * 21)])
 function drawConstellation(el, count) {
   const ns = 'http://www.w3.org/2000/svg'
   const svgEl = (tag, attrs) => {
@@ -127,9 +133,10 @@ function renderMissionProgress(el, option, count) {
   else drawGemProgress(el, count)
 }
 
-function speakMission(text) {
+/** Speak to pre-readers (respecting mute). `queue` waits for the words already playing. */
+function say(text, { queue = false } = {}) {
   if (audio.muted || !('speechSynthesis' in window)) return
-  speechSynthesis.cancel()
+  if (!queue) speechSynthesis.cancel()
   const words = new SpeechSynthesisUtterance(text)
   words.lang = 'en-US'
   words.rate = 0.82
@@ -190,9 +197,7 @@ let rocket = null
 
 /** How the trip feels on the way to stop `i`: a gentle ramp for little hands. */
 function leg(i) {
-  const d = Math.min(i, 6)
   return {
-    need: 12 + 5 * Math.min(i, 5),
     // A constant gentle pace: later planets add variety, never speed
     speed: 2.3,
     interval: 1.0,
@@ -206,14 +211,15 @@ function leg(i) {
   }
 }
 
+// Every star (plain, pink or lilac) lights exactly one star of the constellation, so counting
+// stays one-to-one; a gem adds a small blue twinkle beside it. There are no points.
 const KINDS = {
-  star: { model: 'star', points: 1, scale: 0.55, r: 0.55, glow: '#ffd23f', colors: ['#fff3a0', '#ffd23f', '#ffffff'] },
-  pink: { model: 'star', points: 2, scale: 0.6, r: 0.6, glow: '#ff6bb5', colors: ['#ff8fc7', '#ffd1e8', '#ffffff'] },
-  rainbow: { model: 'star', points: 5, scale: 0.7, r: 0.7, glow: '#ffffff', colors: ['#ff6b6b', '#ffd23f', '#8ef0c8', '#7cc6fe', '#c9b6ff'] },
-  gem: { model: 'gem', points: 3, scale: 0.65, r: 0.55, glow: '#4cc9f0', colors: ['#7cc6fe', '#bdeaff', '#ffffff'] },
-  magnet: { model: 'magnet', points: 0, scale: 0.62, r: 0.6, glow: '#ff5c7a', colors: ['#ff5c7a', '#ffffff', '#ffd23f'] },
-  heart: { model: 'heart', points: 0, scale: 0.62, r: 0.6, glow: '#ff5c8a', colors: ['#ff8fab', '#ffd1e8', '#ffffff'] },
-  rock: { model: 'rock', points: 0, scale: 0.8, r: 0.6, glow: null, colors: ['#c9b6ff', '#ffffff'] },
+  star: { model: 'star', scale: 0.55, r: 0.55, glow: '#ffd23f', colors: ['#fff3a0', '#ffd23f', '#ffffff'] },
+  pink: { model: 'star', scale: 0.6, r: 0.6, glow: '#ff6bb5', colors: ['#ff8fc7', '#ffd1e8', '#ffffff'] },
+  rainbow: { model: 'star', scale: 0.7, r: 0.7, glow: '#ffffff', colors: ['#ff6b6b', '#ffd23f', '#8ef0c8', '#7cc6fe', '#c9b6ff'] },
+  gem: { model: 'gem', scale: 0.65, r: 0.55, glow: '#4cc9f0', colors: ['#7cc6fe', '#bdeaff', '#ffffff'] },
+  magnet: { model: 'magnet', scale: 0.62, r: 0.6, glow: '#ff5c7a', colors: ['#ff5c7a', '#ffffff', '#ffd23f'] },
+  rock: { model: 'rock', scale: 0.8, r: 0.6, glow: null, colors: ['#c9b6ff', '#ffffff'] },
 }
 
 
@@ -282,35 +288,8 @@ function buildRocket() {
   badge.position.set(0, 2.2, 0)
   badge.visible = false
   model.add(badge)
-  // Pink bubble while stars count double
-  const bubble = new THREE.Mesh(
-    new THREE.SphereGeometry(1.45, 32, 16),
-    new THREE.ShaderMaterial({
-      uniforms: { uColor: { value: new THREE.Color('#ff8fc7') }, uOpacity: { value: 0 } },
-      vertexShader: /* glsl */ `
-        varying vec3 vN; varying vec3 vV;
-        void main() {
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz);
-          gl_Position = projectionMatrix * mv;
-        }`,
-      fragmentShader: /* glsl */ `
-        uniform vec3 uColor; uniform float uOpacity; varying vec3 vN; varying vec3 vV;
-        void main() {
-          float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 3.5);
-          gl_FragColor = vec4(uColor * (0.015 + f * 0.9) * uOpacity, 1.0);
-          #include <colorspace_fragment>
-        }`,
-      blending: THREE.AdditiveBlending,
-      transparent: true,
-      depthWrite: false,
-    }),
-  )
-  bubble.position.y = 0.1
-  bubble.renderOrder = 6
-  root.add(bubble)
   scene.add(root)
-  rocket = { root, model, flame, pilot, pilotZ: pilot.position.z, nozzle, glow, badge, bubble, vel: new THREE.Vector2(), target: new THREE.Vector2(0, -3), nozzleWorld: new THREE.Vector3() }
+  rocket = { root, model, flame, pilot, pilotZ: pilot.position.z, nozzle, glow, badge, vel: new THREE.Vector2(), target: new THREE.Vector2(0, -3), nozzleWorld: new THREE.Vector3() }
   root.position.set(0, -view.h * 0.62, 0)
 }
 
@@ -363,10 +342,7 @@ function spawnSomething() {
   let acc = 0
   if (r < (acc += L.wave)) return spawnWave(L)
   if (r < (acc += L.rock)) return spawn('rock', x, y, vy * 0.75)
-  if (r < (acc += L.power)) {
-    const kind = game.magnet > 0 ? 'heart' : game.double > 0 ? 'magnet' : Math.random() < 0.5 ? 'magnet' : 'heart'
-    return spawn(kind, x, y, vy * 0.8)
-  }
+  if (r < (acc += L.power) && game.magnet <= 0) return spawn('magnet', x, y, vy * 0.8)
   if (r < (acc += L.rainbow)) return spawn('rainbow', x, y, vy * 0.9)
   if (r < (acc += L.gem)) return spawn('gem', x, y, vy)
   if (r < (acc += L.pink)) return spawn('pink', x, y, vy)
@@ -388,35 +364,47 @@ function spawnWave(L) {
 const tmp = new THREE.Vector3()
 const rocketCenter = new THREE.Vector3()
 
+/** A world point on the play plane as CSS pixels, where its flight up to the panel begins. */
+function toScreen(pos) {
+  tmp.copy(pos).project(camera)
+  return { x: (tmp.x * 0.5 + 0.5) * innerWidth, y: (-tmp.y * 0.5 + 0.5) * innerHeight }
+}
+
 function catchItem(it) {
   const pos = it.obj.position.clone()
-  if (it.kind === 'magnet' || it.kind === 'heart') {
-    if (it.kind === 'magnet') game.magnet = 9
-    else game.double = 9
+  if (it.kind === 'magnet') {
+    game.magnet = 9
     audio.powerUp()
     particles.burst(pos, it.k.colors, 10, 3, 0.8)
     renderPowers()
     // The cheer pops out beside its timer bar, not over Kitty: it shows what the bar means
-    const pill = $('powers').children[it.kind === 'magnet' ? 0 : game.magnet > 0 ? 1 : 0]
+    const pill = $('powers').children[0]
     if (pill) {
       const r = pill.getBoundingClientRect()
-      popups.showAt(r.right + 8, r.top + r.height / 2, it.kind === 'magnet' ? '🧲 Magnet!' : '💖 Double stars!')
+      popups.showAt(r.right + 8, r.top + r.height / 2, '🧲 Magnet!')
     }
     game.joy = 0.6
     return
   }
+  // While the star-counting mission is running, its own voice counts these stars aloud
+  const missionCounting = adventure.option.constellation && !adventure.complete
   adventure.event(it)
-  const points = it.k.points * (game.double > 0 ? 2 : 1)
-  game.score += points
-  game.legPoints += points
   // The note follows where the star was caught (left is low, right is high), so it never climbs into a frenzy
   const across = clamp((pos.x - view.xMin) / Math.max(view.xMax - view.xMin, 1), 0, 1)
   audio.catch(Math.round(across * 5), it.kind === 'gem' ? 'gem' : it.kind === 'rainbow' ? 'rainbow' : 'star')
   particles.burst(pos, it.k.colors, it.kind === 'star' ? 6 : 10, 2.5, 0.6)
   game.joy = 0.35
-  updateScore()
-  if (game.legPoints >= leg(game.stops).need) arrive()
-  else renderJourney()
+  if (game.phase !== 'build') return
+  const at = toScreen(pos)
+  if (it.kind === 'gem') sky.twinkle(at.x, at.y)
+  else sky.claim(at.x, at.y, { quiet: missionCounting })
+}
+
+/** A star has landed in the panel: a soft bell, and the count spoken aloud. */
+function starLit(n, total, data) {
+  audio.light(n)
+  if (!data?.quiet) say(String(n))
+  renderJourney()
 }
 
 function bumpRock(it) {
@@ -435,17 +423,22 @@ function bumpRock(it) {
   }
 }
 
-function arrive() {
-  const stop = STOPS[game.stops % STOPS.length]
+const ARRIVE_HOLD = 6 // seconds at least at each planet while its constellation is named
+const HOME_TIME = 4.5 // the last calm flight home
+
+/** The constellation is whole: Kitty reaches the planet and the shape is named with one true fact. */
+function arrive(def) {
+  const stop = STOPS[game.stops]
   game.stops++
-  game.legPoints = 0
+  game.phase = 'arrive'
+  game.phaseTime = 0
   game.roll = reducedMotion ? 0 : 1
-  const lap = Math.floor(game.stops / STOPS.length)
-  const next = STOPS[game.stops % STOPS.length]
-  const done = game.stops % STOPS.length === 0
-  banner(done ? `🎉 You visited every planet!` : `${stop.emoji} Hello, ${stop.name}!`, done ? `Let's fly again! Trip ${lap + 1}` : `Next stop: ${next.emoji} ${next.name}`)
-  audio.fanfare()
-  world.setStop(game.stops)
+  const name = $('sky-name')
+  name.textContent = def.name
+  name.classList.add('show')
+  banner(`${stop.emoji} ${def.name}`, def.short, 5600)
+  audio.constellation()
+  say(`You made ${def.spoken}! ${def.fact}`, { queue: true })
   // One soft moment: a few slow, pale sparkles drift up around Kitty
   const p = rocket.root.position
   for (let i = 0; i < 12; i++) {
@@ -455,10 +448,73 @@ function arrive() {
   renderJourney()
 }
 
+/** After the name and fact: on to the next planet, or home after the last constellation. */
+function nextLeg() {
+  game.phaseTime = 0
+  $('sky-name').classList.remove('show')
+  const planet = world.current()
+  if (game.stops >= CONSTELLATIONS.length) {
+    game.phase = 'homeward'
+    if (planet) planet.userData.leaving = 0
+    // Home is under a deep, quiet night sky (the world eases toward these colours)
+    world.top.set('#060824')
+    world.bottom.set('#1b1446')
+    world.nebulae.forEach((n, i) => n.material.color.set(i % 2 ? '#3a2a8a' : '#24407a'))
+    banner('🏠 Time to fly home!', `${game.stops} constellations made`)
+    say('Time to fly home!', { queue: true })
+    renderJourney()
+    return
+  }
+  game.phase = 'build'
+  world.setStop(game.stops)
+  sky.begin(game.stops, $('sky-panel'))
+  const next = STOPS[game.stops]
+  banner(`Next stop: ${next.emoji} ${next.name}`)
+  say(`Off to the ${next.name}!`, { queue: true })
+  renderJourney()
+}
+
+/** Home: the night sky with every constellation the child built, named and tappable. */
+function showFinale() {
+  game.state = 'finale'
+  for (let i = items.length - 1; i >= 0; i--) recycle(i)
+  Object.assign(game, { magnet: 0, dizzy: 0, roll: 0 })
+  renderPowers()
+  hideUfo()
+  nudgeEl.classList.remove('show')
+  $('banner').classList.remove('show')
+  $('hud').classList.add('hidden')
+  const box = $('finale-sky')
+  const made = sky.done
+  const cells = made.map(({ def }, i) => {
+    const cell = document.createElement('button')
+    cell.className = 'finale-cell'
+    cell.textContent = def.name
+    cell.setAttribute('aria-label', `${def.name}: ${def.fact}`)
+    cell.addEventListener('click', () => {
+      audio.unlock()
+      audio.light(def.stars.length)
+      sky.highlight(i)
+      say(`${def.name}. ${def.fact}`)
+    })
+    return cell
+  })
+  box.replaceChildren(...cells)
+  const lit = made.reduce((n, d) => n + d.def.stars.length, 0)
+  $('finale-count').textContent = `⭐ ${lit} stars · ${made.length} constellations`
+  const screen = $('finale')
+  screen.classList.remove('hidden')
+  requestAnimationFrame(() => screen.classList.remove('fade'))
+  sky.showFinale(cells)
+  audio.fanfare()
+  const names = made.map((d) => d.def.spoken)
+  say(`Welcome home! You lit ${lit} stars and made ${made.length} constellations: ${names.slice(0, -1).join(', ')} and ${names.at(-1)}. Tap one to hear about it.`, { queue: true })
+}
+
 // --- HUD ----------------------------------------------------------------------------
 
 let bannerTimer = 0
-function banner(text, small) {
+function banner(text, small, ms = 2600) {
   const el = $('banner')
   el.innerHTML = ''
   el.append(text)
@@ -469,26 +525,31 @@ function banner(text, small) {
   }
   el.classList.add('show')
   clearTimeout(bannerTimer)
-  bannerTimer = setTimeout(() => el.classList.remove('show'), 2600)
+  bannerTimer = setTimeout(() => el.classList.remove('show'), ms)
 }
 
-function updateScore() {
-  const el = $('score')
-  el.textContent = `⭐ ${game.score}`
+/** Progress toward the current planet: the share of its constellation already lit. */
+function legProgress() {
+  return game.phase === 'build' ? (sky.total ? sky.lit / sky.total : 0) : 1
 }
 
+/** Home, the five planets, and home again: the trip has an end. */
 function renderJourney() {
-  const lap = Math.floor(game.stops / STOPS.length)
-  const at = game.stops % STOPS.length
-  const progress = Math.min(game.legPoints / leg(game.stops).need, 1)
-  const parts = [`<span class="stop done">${lap ? `🔁${lap + 1}` : '🏠'}</span>`]
+  const at = game.stops
+  const homeward = game.phase === 'homeward'
+  // The rocket rides the track being flown, or rests at the planet it just reached
+  const ship = game.phase === 'build' ? at : homeward ? STOPS.length : at - 1
+  const track = (i, fill) => {
+    const rocketHere = i === ship ? `<span class="ship" style="left:${fill * 100}%;transform:translateX(-${fill * 100}%)">🚀</span>` : ''
+    return `<span class="track"><b style="width:${fill * 100}%"></b>${rocketHere}</span>`
+  }
+  const parts = ['<span class="stop done">🏠</span>']
   STOPS.forEach((s, i) => {
-    const fill = i < at ? 1 : i === at ? progress : 0
-    // The ship stays inside its track so it never sits on top of the stop before it
-    const ship = i === at ? `<span class="ship" style="left:${fill * 100}%;transform:translateX(-${fill * 100}%)">🚀</span>` : ''
-    parts.push(`<span class="track"><b style="width:${fill * 100}%"></b>${ship}</span>`)
-    parts.push(`<span class="stop ${i < at ? 'done' : i === at ? 'next' : ''}">${s.emoji}</span>`)
+    parts.push(track(i, i < at ? 1 : i === at && game.phase === 'build' ? legProgress() : 0))
+    parts.push(`<span class="stop ${i < at ? 'done' : i === at && !homeward ? 'next' : ''}">${s.emoji}</span>`)
   })
+  parts.push(track(STOPS.length, homeward ? Math.min(game.phaseTime / HOME_TIME, 1) : 0))
+  parts.push(`<span class="stop ${homeward ? 'next' : ''}">🏠</span>`)
   $('journey').innerHTML = parts.join('')
 }
 
@@ -498,7 +559,6 @@ let powerBars = [] // { el, shown } for each timer bar on screen
 function renderPowers() {
   const list = []
   if (game.magnet > 0) list.push(['🧲', game.magnet])
-  if (game.double > 0) list.push(['💖', game.double])
   const keyNow = list.map((p) => p[0]).join('')
   if (keyNow !== powersKey) {
     powersKey = keyNow
@@ -578,6 +638,7 @@ addEventListener('keydown', (e) => {
   audio.unlock()
   if (e.key === 'm' || e.key === 'M') return toggleSound()
   if (e.key === 'Escape') return goHome()
+  if (game.state === 'finale' && e.key === 'Enter') return flyAgain()
   if (game.state === 'title' && (e.key === 'Enter' || e.key === ' ')) return start()
   keys.add(e.key)
   game.idle = 0
@@ -611,41 +672,65 @@ function start() {
   rocket.target.set(0, view.yMin + 1.2)
   game.spawnTimer = 0.8
   game.idle = 0
+  game.phase = 'build'
+  game.phaseTime = 0
   banner(`🚀 Blast off!`, `Fly to ${STOPS[0].emoji} ${STOPS[0].name}`)
-  if (adventure.option.goal) speakMission(adventure.option.goal)
-  renderJourney()
-  updateScore()
+  say(adventure.option.goal || 'Catch the stars to light up the sky!')
   resize() // the HUD is on screen now, so the band that things fade in below can be measured
+  sky.begin(0, $('sky-panel'))
+  renderJourney()
 }
 $('go').addEventListener('click', start)
 
 /** Back to the title, where the child can choose another mission or just fly again. */
 function goHome() {
-  if (game.state !== 'play') return
-  audio.click()
-  clearMissionTimers()
-  if ('speechSynthesis' in window) speechSynthesis.cancel()
-  game.state = 'title'
-  for (let i = items.length - 1; i >= 0; i--) recycle(i)
-  Object.assign(game, { score: 0, stops: 0, legPoints: 0, magnet: 0, double: 0, dizzy: 0, roll: 0, idle: 0 })
-  nudgeShown = false
-  nudgeUsed = false
-  nudgeEl.classList.remove('show')
-  ufo.active = false
-  ufo.obj.visible = false
-  ufo.timerLeft = 12
-  renderPowers()
-  world.setStop(0)
-  keys.clear()
-  pointerDown = false
-  $('banner').classList.remove('show')
-  $('hud').classList.add('hidden')
+  if (game.state !== 'play' && game.state !== 'finale') return
+  resetTrip()
   renderMissionChoice()
   const screen = $('start')
   screen.classList.remove('hidden')
   requestAnimationFrame(() => screen.classList.remove('fade'))
 }
 $('home').addEventListener('click', goHome)
+$('finale-home').addEventListener('click', goHome)
+
+/** From the night sky at home straight into a new trip. */
+function flyAgain() {
+  if (game.state !== 'finale') return
+  resetTrip()
+  start()
+}
+$('again').addEventListener('click', flyAgain)
+
+function hideUfo() {
+  ufo.active = false
+  ufo.obj.visible = false
+  ufo.timerLeft = 12
+}
+
+/** Everything back to the start of a trip: items, stops, power-ups, the UFO, speech and the sky. */
+function resetTrip() {
+  audio.click()
+  clearMissionTimers()
+  if ('speechSynthesis' in window) speechSynthesis.cancel()
+  game.state = 'title'
+  for (let i = items.length - 1; i >= 0; i--) recycle(i)
+  Object.assign(game, { phase: 'build', phaseTime: 0, stops: 0, magnet: 0, dizzy: 0, roll: 0, idle: 0 })
+  nudgeShown = false
+  nudgeUsed = false
+  nudgeEl.classList.remove('show')
+  hideUfo()
+  renderPowers()
+  world.setStop(0)
+  sky.reset()
+  $('sky-name').classList.remove('show')
+  const finale = $('finale')
+  finale.classList.add('hidden', 'fade')
+  keys.clear()
+  pointerDown = false
+  $('banner').classList.remove('show')
+  $('hud').classList.add('hidden')
+}
 
 // --- Layout -------------------------------------------------------------------------
 
@@ -670,8 +755,8 @@ function resize() {
   view.xMax = view.w - inset('paddingRight') - 0.8
   view.yMin = -view.h + inset('paddingBottom') + 1.5
   view.yMax = Math.min(view.h * 0.2, view.h - 3)
-  // Falling things fade in below the score, journey and mission card, not through them
-  const hudBottom = Math.max(...['journey', 'score', 'adventure-goal'].map((id) => {
+  // Falling things fade in below the constellation panel, journey and mission card, not through them
+  const hudBottom = Math.max(...['journey', 'sky-panel', 'adventure-goal'].map((id) => {
     const el = $(id)
     const r = el && !el.hidden ? el.getBoundingClientRect() : null
     return r && r.top < h / 2 ? r.bottom : 0 // a card moved to the bottom on short screens does not count
@@ -680,6 +765,7 @@ function resize() {
   const hpx = h * renderer.getPixelRatio()
   particles.setScale(hpx, camera.fov)
   world?.setScale(hpx, camera.fov)
+  sky.resize(w, h)
 }
 addEventListener('resize', resize)
 
@@ -701,7 +787,9 @@ function updateRocket(dt) {
   } else {
     // On wide screens Kitty waits beside the title instead of hiding behind the Fly button
     const side = camera.aspect > 1.3 ? view.w * 0.68 : 0
-    r.target.set(side + Math.sin(game.time * 0.7) * Math.min(side ? 0.8 : 2, view.w * 0.3), -view.h * 0.62 + Math.sin(game.time * 1.3) * 0.3)
+    // At home Kitty rests low in the corner, clear of the night sky cards
+    if (game.state === 'finale') r.target.set(view.w * 0.78, -view.h + (camera.aspect > 1.3 ? 1.3 : 0.2) + Math.sin(game.time * 1.3) * 0.15)
+    else r.target.set(side + Math.sin(game.time * 0.7) * Math.min(side ? 0.8 : 2, view.w * 0.3), -view.h * 0.62 + Math.sin(game.time * 1.3) * 0.3)
   }
   r.target.x = clamp(r.target.x, view.xMin, view.xMax)
   r.target.y = clamp(r.target.y, playing ? view.yMin : -view.h, playing ? view.yMax : 3)
@@ -763,11 +851,6 @@ function updateRocket(dt) {
     r.badge.position.y = 2.25 + Math.sin(game.time * 2) * 0.08
     r.badge.rotation.z = Math.sin(game.time * 1.5) * 0.15
   }
-  const bubbleTarget = game.double > 0 ? 0.55 + 0.05 * Math.sin(game.time * 2) : 0
-  const u = r.bubble.material.uniforms.uOpacity
-  u.value = damp(u.value, bubbleTarget, 6, dt)
-  r.bubble.visible = u.value > 0.01
-  r.bubble.scale.setScalar(1 + Math.sin(game.time * 1.5) * 0.02)
 
   rocketCenter.set(p.x, p.y + 0.3, 0)
 }
@@ -804,7 +887,7 @@ function updateItems(dt) {
     if (it.kind === 'gem') model.rotation.y += dt * 2.2
     else if (it.kind === 'rock') {
       if (!it.bounced) o.rotation.z = Math.sin(it.t * 0.9) * 0.25
-    } else if (it.kind === 'magnet' || it.kind === 'heart') {
+    } else if (it.kind === 'magnet') {
       model.rotation.y = Math.sin(it.t * 2) * 0.4
     } else {
       model.rotation.y = Math.sin(it.t * 2.2) * 0.55
@@ -819,7 +902,7 @@ function updateItems(dt) {
       }
     }
 
-    // Things grow in just below the HUD band instead of sliding through the score and mission card
+    // Things grow in just below the HUD band instead of sliding through the panel and mission card
     const grow = it.bounced ? 1 : clamp((view.hudY - o.position.y) / 0.8 + 0.001, 0, 1)
     o.visible = grow > 0
     if (!it.bounced) o.scale.setScalar(it.k.scale * grow)
@@ -846,7 +929,7 @@ function updateUfo(dt) {
   // Slow, soft glow in turn: never a blink
   ufo.lightMats.forEach((m, i) => (m.emissiveIntensity = 0.8 + 0.3 * Math.sin(game.time * 1.2 + i * 2)))
   if (!ufo.active) {
-    if (game.state !== 'play' || !leg(game.stops).ufo) return
+    if (game.state !== 'play' || game.phase !== 'build' || !leg(game.stops).ufo) return
     ufo.timerLeft -= dt
     if (ufo.timerLeft > 0) return
     ufo.active = true
@@ -867,7 +950,7 @@ function updateUfo(dt) {
   o.rotation.z = -ufo.dir * 0.15 + Math.sin(ufo.t * 3) * 0.05
   o.rotation.y += dt * 0.8
   ufo.dropTimer -= dt
-  if (ufo.dropTimer <= 0 && o.position.x > view.xMin && o.position.x < view.xMax) {
+  if (ufo.dropTimer <= 0 && game.phase === 'build' && o.position.x > view.xMin && o.position.x < view.xMax) {
     ufo.dropTimer = 0.75
     spawn(Math.random() < 0.2 ? 'gem' : 'star', o.position.x, o.position.y - 0.8, -leg(game.stops).speed * view.k * 0.9, { sway: 0.2 })
     audio.tone(900 + Math.random() * 200, { dur: 0.2, vol: 0.03, slide: 0.7, echo: false })
@@ -906,6 +989,7 @@ function frame() {
   const dt = Math.min(timer.getDelta(), 1 / 20)
   game.time += dt
   if (game.state === 'loading') {
+    renderer.clear()
     renderer.render(scene, camera)
     return
   }
@@ -914,15 +998,25 @@ function frame() {
   game.cruise = damp(game.cruise, playing ? 3 + L.speed : 2.5, 1, dt)
 
   if (playing) {
-    game.spawnTimer -= dt
-    if (game.spawnTimer <= 0) {
-      spawnSomething()
-      game.spawnTimer = L.interval * rand(0.8, 1.2)
+    game.phaseTime += dt
+    // Stars fall only while a constellation is being built: arriving and flying home are calm
+    if (game.phase === 'build') {
+      game.spawnTimer -= dt
+      if (game.spawnTimer <= 0) {
+        spawnSomething()
+        game.spawnTimer = L.interval * rand(0.8, 1.2)
+      }
+    } else if (game.phase === 'arrive') {
+      // Stay at the planet until its name and fact have been spoken (never longer than 12 s)
+      const talking = !audio.muted && 'speechSynthesis' in window && speechSynthesis.speaking
+      if (game.phaseTime > ARRIVE_HOLD && (!talking || game.phaseTime > 12)) nextLeg()
+    } else if (game.phase === 'homeward') {
+      renderJourney()
+      if (game.phaseTime > HOME_TIME) showFinale()
     }
     game.dizzy = Math.max(0, game.dizzy - dt)
-    const hadPower = game.magnet > 0 || game.double > 0
+    const hadPower = game.magnet > 0
     if (game.magnet > 0 && (game.magnet -= dt) <= 0) audio.powerDown()
-    if (game.double > 0 && (game.double -= dt) <= 0) audio.powerDown()
     if (hadPower) renderPowers()
     updateNudge(dt)
   }
@@ -930,15 +1024,15 @@ function frame() {
   updateRocket(dt)
   updateItems(dt)
   updateUfo(dt)
-  world.update(dt, game.cruise, playing ? Math.min(game.legPoints / L.need, 1) : 0.15, view)
+  world.update(dt, game.cruise, playing ? legProgress() : 0.15, view)
   particles.update(dt)
   rings.update(dt)
   audio.updateEngine(playing, Math.hypot(rocket.vel.x, rocket.vel.y))
   audio.updateMusic()
 
   // Fog follows the sky so distant things melt into it
-  const sky = world.skyMat.uniforms
-  fogMix.copy(sky.uTop.value).lerp(sky.uBottom.value, 0.55)
+  const skyColors = world.skyMat.uniforms
+  fogMix.copy(skyColors.uTop.value).lerp(skyColors.uBottom.value, 0.55)
   scene.fog.color.copy(fogMix)
 
   // A gentle camera drift adds depth
@@ -946,7 +1040,10 @@ function frame() {
   camera.position.y = damp(camera.position.y, rocket.root.position.y * 0.04, 3, dt)
   camera.lookAt(camera.position.x * 0.5, camera.position.y * 0.5, 0)
 
+  renderer.clear()
   renderer.render(scene, camera)
+  sky.update(dt)
+  sky.render(renderer)
 }
 
 resize()
@@ -967,4 +1064,4 @@ load()
     $('go').disabled = false
     $('go').onclick = () => location.reload()
   })
-if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game }
+if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game, sky, items, camera }

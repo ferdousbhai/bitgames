@@ -40,9 +40,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .logo span:nth-child(6n+5) { color: #ffb36b; animation-delay: .4s; } .logo span:nth-child(6n) { color: #c9b6ff; animation-delay: .5s; }
 @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
 .tag { font-size: clamp(18px, 3.6vw, 26px); font-weight: 800; margin: 0; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
-.legend { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.legend span { background: rgba(255,255,255,0.16); border-radius: 999px; padding: 4px 12px; font-weight: 900; font-size: 18px; }
-.legend b { margin-right: 4px; }
 .big-go {
   margin-top: 6px; background: #ffd23f; color: #3a2a6a; font-size: clamp(30px, 6vw, 44px); font-weight: 900; padding: 14px 48px;
   border-radius: 999px; box-shadow: 0 7px 0 #c79300, 0 0 40px rgba(255,210,63,0.5); transition: transform .1s;
@@ -66,10 +63,19 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .pill { background: rgba(20, 12, 60, 0.6); border-radius: 18px; padding: 4px 14px; font-size: 20px; font-weight: 900; }
 .pill.big { font-size: 30px; color: #ffd23f; text-shadow: 0 3px 0 rgba(0,0,0,.35); }
 .round { pointer-events: auto; width: 46px; height: 46px; border-radius: 50%; background: rgba(20, 12, 60, 0.5); font-size: 22px; }
-.powers {
-  position: absolute; top: calc(108px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
-  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+.powers { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+
+/* The constellation panel: a layout box only. Its calm backdrop, stars and lines are drawn by
+   three.js (js/sky.js) underneath, so this box stays transparent and holds just the name. */
+#sky-panel {
+  position: relative; width: 132px; height: 104px;
+  display: flex; align-items: flex-end; justify-content: center;
 }
+.sky-name {
+  font-size: 13px; font-weight: 900; color: #ffe9a8; padding-bottom: 5px; white-space: nowrap;
+  text-shadow: 0 2px 0 rgba(0,0,0,.45); opacity: 0; transition: opacity .8s;
+}
+.sky-name.show { opacity: 1; }
 .power { background: rgba(20, 12, 60, 0.5); border-radius: 999px; padding: 2px 10px 2px 6px; font-size: 22px; font-weight: 900; display: flex; align-items: center; gap: 4px; }
 .power i { display: block; width: 44px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
 .power i b { display: block; height: 100%; background: #ffd23f; border-radius: 4px; transform-origin: left; }
@@ -115,8 +121,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @keyframes rise { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); } 20% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -200%) scale(1); } }
 
 @media (max-width: 520px) {
-  .pill.big { font-size: 24px; }
-  .journey { font-size: 16px; top: calc(58px + env(safe-area-inset-top)); }
+  .journey { font-size: 16px; top: calc(122px + env(safe-area-inset-top)); }
+  #adventure-goal { top: calc(160px + env(safe-area-inset-top)); }
 }
 
 @media (max-width: 400px) {
@@ -127,8 +133,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .screen { gap: 3px; padding: 4px 12px; }
   .logo { font-size: 30px; letter-spacing: 1px; }
   .tag { font-size: 14px; }
-  .legend { gap: 4px; }
-  .legend span { font-size: 13px; padding: 2px 6px; }
   #adventure-choice { min-height: 44px; padding: 5px 9px; margin: 1px auto; }
   .big-go { font-size: 24px; padding: 7px 26px; margin-top: 0; }
   .hint { font-size: 12px; }
@@ -143,7 +147,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* Sideways phones: one slim HUD row, so the short screen is all sky */
 @media (max-height: 500px) and (orientation: landscape) {
   .journey { top: calc(10px + env(safe-area-inset-top)); font-size: 18px; max-width: calc(100vw - 300px); }
-  .powers { top: calc(62px + env(safe-area-inset-top)); }
+  #sky-panel { width: 124px; height: 92px; }
+  .sky-name { font-size: 12px; padding-bottom: 3px; }
   .banner { top: 26%; font-size: clamp(28px, 9vh, 44px); }
 }
 
@@ -155,13 +160,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .journey { font-size: 28px; top: calc(80px + env(safe-area-inset-top)); padding: 6px 14px; }
   .journey .track { height: 8px; }
   .journey .track .ship { font-size: 22px; top: -16px; }
-  .powers { top: calc(140px + env(safe-area-inset-top)); }
+  #sky-panel { width: 172px; height: 132px; }
+  .journey .track { width: 26px; }
+  .sky-name { font-size: 18px; padding-bottom: 7px; }
   .power { font-size: 30px; }
   .power i { width: 64px; height: 10px; }
   .pop { font-size: 38px; }
   .pop.big { font-size: 50px; }
   .pop.side { font-size: 40px; }
-  .legend span { font-size: 24px; padding: 6px 16px; }
   .hint.small { font-size: 18px; }
 }
 
@@ -181,5 +187,35 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   #nudge span, .pop, .pop.side { animation: none; }
-  .banner, .screen, #adventure-goal { transition: none; }
+  .banner, .screen, #adventure-goal, .sky-name { transition: none; }
+}
+
+/* --- Home: the night sky of every constellation built on the trip --- */
+#finale { background: none; gap: 10px; }
+.finale-title { margin: 0; font-size: clamp(24px, 5vw, 40px); font-weight: 900; text-shadow: 0 3px 0 rgba(0,0,0,.4); }
+.finale-sky {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+  width: min(100%, 760px);
+}
+.finale-cell {
+  pointer-events: auto; background: none; border-radius: 18px;
+  width: min(44vw, 230px); height: min(24vh, 190px);
+  display: flex; align-items: flex-end; justify-content: center; padding: 0 4px 8px;
+  font-size: clamp(14px, 2.6vw, 20px); font-weight: 900; color: #ffe9a8; text-shadow: 0 2px 0 rgba(0,0,0,.5);
+  border: 2px solid rgba(201, 182, 255, .28);
+}
+.finale-cell:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+.finale-actions { display: flex; align-items: center; gap: 16px; }
+.big-go.small-go { font-size: clamp(22px, 4vw, 32px); padding: 10px 32px; }
+.finale-actions .round { pointer-events: auto; background: rgba(255, 255, 255, .2); }
+@media (orientation: landscape) {
+  .finale-sky { width: min(100%, 820px); }
+  .finale-cell { width: min(30vw, 250px); height: min(28vh, 200px); }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  #finale { gap: 4px; }
+  .finale-title { font-size: 20px; }
+  .finale-sky { gap: 6px; flex-wrap: nowrap; }
+  .finale-cell { width: 18vw; height: 52vh; font-size: 12px; padding-bottom: 4px; }
+  .big-go.small-go { font-size: 20px; padding: 6px 22px; }
 }

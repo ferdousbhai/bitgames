@@ -98,6 +98,20 @@ export class Audio {
     }
   }
 
+  /** A star lighting in the constellation: one soft bell per star, a step up the scale each time. */
+  light(n) {
+    if (!this.ctx) return
+    const f = SCALE[Math.min(n - 1, SCALE.length - 1)]
+    this.tone(f, { dur: 0.7, vol: 0.09, attack: 0.03 })
+    this.tone(f * 1.5, { dur: 0.5, vol: 0.03, type: 'triangle', when: 0.04, echo: false })
+  }
+
+  /** A constellation is whole: a slow, quiet chord. */
+  constellation() {
+    if (!this.ctx) return
+    ;[392, 523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, { when: i * 0.12, dur: 1.6, vol: 0.05, attack: 0.08 }))
+  }
+
   powerUp() {
     if (!this.ctx) return
     ;[523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, { when: i * 0.1, dur: 0.4, vol: 0.07 }))

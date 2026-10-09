@@ -15,4 +15,4 @@ The twelve original games, preserved after the generated batch was retired. Qual
 | [🎨 Paint Splash](./paint-splash/public/index.html) | 2–8 | Colour exploration, creative patterns and cooperation |
 | [🐧 Penguin Bowling](./penguin-bowling/public/index.html) | 4–8 | Predictions, counting and cause and effect |
 | [🚀 Rocket Garage](./rocket-garage/public/index.html) | 4–8 | Design comparisons, predictions and experimentation |
-| [⭐ Star Catcher](./star-catcher/public/index.html) | 3–8 | Counting, spatial awareness and star patterns |
+| [⭐ Star Catcher](./star-catcher/public/index.html) | 3–8 | Counting, real constellations and star patterns |

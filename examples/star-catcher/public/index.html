@@ -22,9 +22,10 @@
 
 <div id="hud" class="hidden">
   <div class="hud-top">
-    <div id="score" class="pill big">⭐ 0</div>
+    <!-- The constellation being built: drawn by three.js (js/sky.js) inside this box -->
+    <div id="sky-panel" aria-live="polite"><span id="sky-name" class="sky-name"></span></div>
+    <div id="powers" class="powers"></div>
   </div>
-  <div id="powers" class="powers"></div>
   <div id="journey" class="journey"></div>
   <div class="hud-right">
     <button id="home" class="round" title="Home (Esc)" aria-label="Home">🏠</button>
@@ -37,12 +38,20 @@
 
 <div id="start" class="screen">
   <div class="logo"><span>S</span><span>T</span><span>A</span><span>R</span> <span>C</span><span>A</span><span>T</span><span>C</span><span>H</span><span>E</span><span>R</span></div>
-  <p class="tag">Fly with Kitty and catch the falling stars! ✨</p>
-  <div class="legend">
-    <span><b>⭐</b>1</span><span><b>💎</b>3</span><span><b>🌈</b>5</span><span><b>🧲</b>pull</span><span><b>💖</b>×2</span>
-  </div>
+  <p class="tag">Fly with Kitty and light up the stars in the sky ✨</p>
   <button id="go" class="big-go" disabled>Loading…</button>
   <p class="hint small">Drag your finger or mouse, or use the arrow keys.</p>
+</div>
+
+<!-- Home at the end of the trip: the night sky of every constellation the child built -->
+<div id="finale" class="screen hidden" aria-live="polite">
+  <p class="finale-title">🏠 Home! Your night sky</p>
+  <p id="finale-count" class="finale-count"></p>
+  <div id="finale-sky" class="finale-sky"></div>
+  <div class="finale-actions">
+    <button id="again" class="big-go small-go">🚀 Fly again</button>
+    <button id="finale-home" class="round" aria-label="Home">🏠</button>
+  </div>
 </div>
 
 <script type="module" src="./js/main.js"></script>

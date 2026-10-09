@@ -2,7 +2,7 @@
   "id": "star-catcher",
   "title": "Star Catcher",
   "tagline": "Fly Kitty’s rocket past friendly planets and catch the falling stars!",
-  "howToPlay": "Drag your finger or mouse, or use the arrow keys, to fly the rocket. Catch stars to travel from planet to planet. Gems are worth 3 and rainbow stars 5; grab a magnet to pull stars in or a heart for double stars. Sleepy space rocks just make you dizzy.",
+  "howToPlay": "Drag your finger or mouse, or use the arrow keys, to fly Kitty's rocket. Every star you catch lights one star of a real constellation: build Cassiopeia, the Southern Cross, Orion, the Little Dipper and the Big Dipper, one at each planet, and hear each one's name and a true fact. Gems add a little twinkle and a magnet pulls stars in. Sleepy space rocks just make you dizzy. After five constellations, fly home to see your whole night sky.",
   "emoji": "⭐",
   "color": "#6c63ff",
   "category": "space",
@@ -13,5 +13,5 @@
     3,
     8
   ],
-  "learning": "Counting, spatial awareness and star patterns"
+  "learning": "Counting, real constellations and star patterns"
 }
