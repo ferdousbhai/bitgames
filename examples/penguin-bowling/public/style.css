@@ -297,3 +297,75 @@ body #pin-prediction .pin.fall:not(.gap)::before { transform: translate(-50%, -3
   .intro.show { transform: translate(var(--ix, -50%), 0); opacity: 1; }
   .banner, .controls, .rack i { transition: none; }
 }
+
+/* Phase 2: the number bond after every roll. Fallen pins lie down in one group,
+   the pins still standing light up one by one in the other: fallen + standing = 10. */
+.bond {
+  position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px; max-width: calc(100vw - 24px);
+  background: rgba(255,251,232,.94); color: #2b4a8a; border-radius: 22px; box-shadow: 0 5px 0 rgba(43,74,138,.3);
+  transition: opacity .4s;
+}
+.bond[hidden] { display: none; }
+.bond-group, .bond-whole { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bond b { font-size: 30px; font-weight: 900; line-height: 1; min-width: 1.2em; text-align: center; }
+.bond-whole b { font-size: 38px; background: #ffe066; border-radius: 14px; padding: 6px 10px; }
+.bond-op { font-size: 30px; font-weight: 900; }
+.bond-pins { display: grid; grid-template-columns: repeat(5, 18px); grid-auto-rows: 26px; gap: 3px; min-width: 18px; min-height: 26px; justify-content: center; align-items: end; }
+.bond-group.standing .bond-pins { grid-template-columns: repeat(var(--cols, 5), 18px); }
+.pin-ic { position: relative; width: 14px; height: 22px; margin: 0 auto; border-radius: 7px 7px 6px 6px; background: var(--c, #4cc9f0);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); transition: transform .35s, box-shadow .35s, opacity .35s; }
+.pin-ic::before { content: ''; position: absolute; left: 3px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--c, #4cc9f0); }
+.fallen .pin-ic { transform: rotate(80deg) scale(.85); opacity: .5; filter: grayscale(.5); }
+.standing .pin-ic { opacity: .45; }
+.standing .pin-ic.lit { opacity: 1; transform: translateY(-3px); box-shadow: inset 0 -3px 0 rgba(0,0,0,.15), 0 0 0 3px #fff3b0, 0 0 10px 3px #ffe066; }
+.rack i.lit { box-shadow: 0 0 0 2px #fff, 0 0 8px 2px #ffe066; }
+
+/* Before a second roll: "Where are the pins?" with three pictured sides. */
+.where {
+  position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 12px 10px;
+  background: rgba(255,251,232,.92); color: #2b4a8a; border-radius: 20px; box-shadow: 0 4px 0 rgba(43,74,138,.3);
+  font-weight: 900; font-size: 17px; white-space: nowrap;
+}
+.where[hidden] { display: none; }
+.where-row { display: flex; gap: 10px; }
+.where button { pointer-events: auto; width: 56px; height: 56px; border-radius: 50%; background: #fff; font-size: 28px; box-shadow: 0 4px 0 rgba(43,74,138,.3); }
+.where button:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(43,74,138,.3); }
+.where button.yes { background: #b9f6ca; box-shadow: 0 4px 0 #2e9d5b; }
+.where button.no { opacity: .5; }
+/* Each choice pictures the lane in thirds, with its side filled in. */
+.third { display: flex; gap: 2px; width: 32px; height: 30px; margin: auto; padding: 2px; border-radius: 6px; background: #8fd0f2; }
+.third i { flex: 1; border-radius: 3px; background: #e6f7ff; }
+.third i.on { background: #ffca3a; box-shadow: inset 0 0 0 2px #e09a00; }
+/* Upright phones: a column at the left edge, over the snow bank, clear of the penguin. */
+@media (max-width: 699px) and (orientation: portrait) {
+  .where { left: calc(8px + env(safe-area-inset-left)); bottom: auto; top: 40%; transform: none; padding: 8px 6px; }
+  .where-ask { display: none; }
+  .where-row { flex-direction: column; }
+}
+body.bond-only #pin-discovery { display: none; }
+@media (max-width: 760px) {
+  .bond { gap: 6px; padding: 8px 10px; }
+  .bond b, .bond-op { font-size: 24px; }
+  .bond-whole b { font-size: 30px; }
+  .bond-pins, .bond-group.standing .bond-pins { grid-template-columns: repeat(var(--cols, 5), 14px); grid-auto-rows: 22px; gap: 2px; }
+  .pin-ic { width: 11px; height: 18px; }
+  .pin-ic::before { left: 2px; top: -4px; width: 7px; height: 7px; }
+}
+/* Short sideways phones: the picker sits between the two button groups. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .bond { bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .where { bottom: calc(10px + env(safe-area-inset-bottom)); flex-direction: row; padding: 6px 10px; font-size: 14px; }
+  .where-ask { display: none; } /* spoken aloud; the three pictured sides fit between the buttons */
+  .where button { width: 48px; height: 48px; font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pin-ic, .bond { transition: none; }
+}
+/* Results: every way of making 10 counted this game. */
+.bonds-box { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #2b4a8a; }
+.bonds-title { font-weight: 900; font-size: 18px; }
+.bonds { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 340px; }
+.bonds span { background: #fff5d6; border-radius: 12px; padding: 4px 10px; font-weight: 900; font-size: 18px; box-shadow: 0 3px 0 rgba(43,74,138,.2); white-space: nowrap; }
+@media (max-height: 520px) { .bonds-title { font-size: 14px; } .bonds span { font-size: 14px; padding: 2px 8px; } .bonds { max-width: 420px; } }

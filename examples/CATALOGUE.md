@@ -13,6 +13,6 @@ The twelve original games, preserved after the generated batch was retired. Qual
 | [🎣 Fish Pond](./fish-pond/public/index.html) | 2–8 | Observation, animal habitats and counting |
 | [🧩 Memory Match](./memory-match/public/index.html) | 2–8 | Visual memory, matching and spatial recall |
 | [🎨 Paint Splash](./paint-splash/public/index.html) | 2–8 | Colour exploration, creative patterns and cooperation |
-| [🐧 Penguin Bowling](./penguin-bowling/public/index.html) | 4–8 | Predictions, counting and cause and effect |
+| [🐧 Penguin Bowling](./penguin-bowling/public/index.html) | 4–8 | Number bonds to 10, counting, predictions and spatial reasoning |
 | [🚀 Rocket Garage](./rocket-garage/public/index.html) | 4–8 | Design comparisons, predictions and experimentation |
 | [⭐ Star Catcher](./star-catcher/public/index.html) | 3–8 | Counting, real constellations and star patterns |

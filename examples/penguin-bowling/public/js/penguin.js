@@ -72,7 +72,9 @@ export class Penguin {
     this.spin = 0
     this.glance = 0
     this.hook = 0
-    this.body = new CANNON.Body({ mass: 10, material: lane.penguinMat, fixedRotation: true, linearDamping: 0.03, allowSleep: false })
+    // Mass 6 (was 10): heavy enough to knock pins over easily, light enough that the pins
+    // push back, so a strike needs a good line (Phase 2, measured with a scripted thrower).
+    this.body = new CANNON.Body({ mass: 6, material: lane.penguinMat, fixedRotation: true, linearDamping: 0.03, allowSleep: false })
     this.body.addShape(new CANNON.Sphere(PENGUIN_R))
     this.onHit = null
     this.body.addEventListener('collide', (e) => this.onHit?.(e))

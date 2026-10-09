@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
+import { Counter, sideOf } from './count.js'
 import { Effects } from './effects.js'
 import { LANE, Lane, PENGUIN_R, PIN_H, PIN_SPOTS, Pins } from './lane.js'
 import { Crowd, Penguin } from './penguin.js'
@@ -64,6 +65,19 @@ const effects = new Effects(scene, camera)
 const card = new ScoreCard()
 let penguinTemplate = null
 
+/** Spoken words for pre-readers, quiet when the game is muted. */
+function speak(text, { queue = false } = {}) {
+  try {
+    if (audio.muted || !('speechSynthesis' in window)) return
+    if (!queue) speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    u.rate = 0.9
+    u.pitch = 1.1
+    speechSynthesis.speak(u)
+  } catch {}
+}
+const counter = new Counter(scene, { speak })
+
 // --- Settings -------------------------------------------------------------------------
 
 const MIN_SPEED = 7.5
@@ -71,6 +85,7 @@ const MAX_SPEED = 13.5
 const MAX_ANGLE = 0.15
 const HOOK = 2.6 // sideways pull of a full curve, units/s²
 const MAX_X = LANE.half - 0.45
+const WOBBLE = 0.012 // radians of random wobble on every slide (about ±7 cm at the pins)
 
 const game = {
   state: 'loading', // loading | title | aim | roll | settle | result | over
@@ -89,7 +104,9 @@ const game = {
   hitSoundAt: 0,
   lastScore: null,
   idle: 0, // seconds without a touch while aiming
-  walkTo: null, // with bumpers on, the penguin waddles to line up with the pins left
+  walkTo: null, // after the child says where the pins are, the penguin waddles over
+  resultWait: 2,
+  bonds: new Map(), // the ways to make 10 the child has seen this game: "7+3" -> count
 }
 
 const prediction = createPrediction({
@@ -249,8 +266,13 @@ function throwPenguin({ angle, power, hook }) {
   store.set('thrown', game.thrown)
   $('hint').classList.add('hidden')
   $('controls').classList.add('away')
+  $('where').hidden = true
+  counter.fade()
   lane.hideAim()
-  penguin.launch(angle, MIN_SPEED + (MAX_SPEED - MIN_SPEED) * power, hook)
+  // A real penguin never slides exactly the same way twice: a tiny wobble, so the
+  // same throw from the same spot doesn't always give the same pins.
+  const wobble = (Math.random() - 0.5) * WOBBLE
+  penguin.launch(angle + wobble, MIN_SPEED + (MAX_SPEED - MIN_SPEED) * power, hook)
   audio.whoosh()
   audio.squeak(1.2)
   effects.puff(penguin.group.position, 6, 0.5)
@@ -263,10 +285,48 @@ function standingSet() {
   return pins.list.map((p) => !p.removed && !pins.isDown(p))
 }
 
+/** The pins still up, in counting order: front row first, left to right. */
+function standingPins() {
+  return pins.list
+    .filter((p) => !p.removed && !pins.isDown(p))
+    .map((p) => ({ i: p.i, x: p.body.position.x, z: p.body.position.z, color: p.color, row: p.spot.row }))
+    .sort((a, b) => a.row - b.row || a.x - b.x)
+}
+
+const pinIcon = (color, id) => {
+  const i = document.createElement('i')
+  i.className = 'pin-ic'
+  i.style.setProperty('--c', color)
+  if (id) i.id = id
+  return i
+}
+
+/** The number bond for the whole rack: fallen + standing = 10, as two groups of pins. */
+function showBond(up) {
+  const fallen = pins.list.filter((p) => p.removed || pins.isDown(p))
+  const f = $('bond-fallen')
+  const s = $('bond-standing')
+  f.replaceChildren(...fallen.map((p) => pinIcon(p.color)))
+  s.replaceChildren(...up.map((p) => pinIcon(p.color, `bond-pin-${p.i}`)))
+  f.style.setProperty('--cols', Math.max(1, Math.min(5, fallen.length)))
+  s.style.setProperty('--cols', Math.max(1, Math.min(5, up.length)))
+  $('bond-fallen-n').textContent = fallen.length
+  // The standing number grows as the pins are counted.
+  $('bond-standing-n').textContent = up.length ? '' : '0'
+  $('bond').setAttribute('aria-label', `${fallen.length} fell and ${up.length} standing make 10`)
+  $('bond').hidden = false
+  const key = `${fallen.length}+${up.length}`
+  game.bonds.set(key, (game.bonds.get(key) ?? 0) + 1)
+  return fallen.length
+}
+
 function finishRoll() {
   const standing = pins.countStanding()
   const knocked = game.standingBefore - standing
+  const guessed = prediction.guess !== null
   prediction.result(knocked, standing, game.standingBefore)
+  // Without a prediction the number bond below says it all; the 💭 line is for comparing.
+  document.body.classList.toggle('bond-only', !guessed)
   const r = card.add(knocked)
   game.outcome = { ...r, knocked }
   game.state = 'result'
@@ -278,6 +338,9 @@ function finishRoll() {
   // Every roll gets the same calm reply: what happened, in pictures and one number.
   // Strikes and spares are named (they change the score), with one soft glow and chord, played once.
   const deck = new THREE.Vector3(0, 1.6, LANE.headPin - 0.8)
+  // Every roll ends with the number bond: the fallen pins and the pins still standing make 10.
+  const up = standingPins()
+  const fallen = showBond(up)
   if (r.strike || r.spare) {
     banner(r.strike ? 'Strike!' : 'Spare!', { kind: r.strike ? 'strike' : 'spare' })
     audio.fanfare()
@@ -285,19 +348,33 @@ function finishRoll() {
     crowd.start(true)
     game.dance = r.strike
     effects.glow(deck, r.strike ? 16 : 12)
-  } else {
-    banner(knocked === 0 ? 'Wheee! 🐧' : `💥 ${knocked}`, { plus: 0 })
-    audio.jingle(knocked)
-    crowd.start(false)
-    // A few pale sparkles above the deck, never a cloud over the pins left to count
-    if (knocked) effects.glow(deck, 6)
+    speak(r.strike ? 'Strike! All 10 fell.' : 'Spare! You got them all.', { queue: guessed })
+    game.resultWait = 3.4
+    return
   }
+  if (knocked === 0) banner('Wheee! 🐧', { plus: 0 })
+  audio.jingle(knocked)
+  crowd.start(false)
+  // A few pale sparkles above the deck, never a cloud over the pins left to count
+  if (knocked) effects.glow(deck, 6)
+  // The pins left standing light up one at a time, counted aloud: "1, 2, 3 still standing".
+  const delay = guessed ? 1.5 : 0.8
+  counter.start(up, delay, () => speak(`${fallen} fell and ${up.length} standing. ${fallen} and ${up.length} make 10.`, { queue: true }))
+  counter.onStep = (q) => {
+    $(`bond-pin-${q.i}`)?.classList.add('lit')
+    $(`rack-${q.i}`)?.classList.add('lit')
+    $('bond-standing-n').textContent = q.n
+    audio.squeak(0.9 + q.n * 0.05)
+  }
+  game.resultWait = Counter.duration(up.length, delay) + 2.6
 }
 
 /** After the cheering: tidy the pins and get the penguin ready for the next roll. */
 function nextRoll() {
   const r = game.outcome
   game.dance = false
+  $('bond').hidden = true
+  for (const d of document.querySelectorAll('.rack i.lit')) d.classList.remove('lit')
   if (card.over) return gameOver()
   if (r.resetPins) {
     // A fresh rack: the last frame's "fell + standing" line no longer matches.
@@ -311,22 +388,51 @@ function nextRoll() {
   }
   updateRack(standingSet())
   toAim()
-  // Bumpers are the helping mode: the penguin waddles over to face the pins
-  // that are left (or back to the middle for a fresh rack). Any touch takes over.
-  if (game.bumpers) game.walkTo = r.resetPins ? 0 : lineUpX()
+  // Bumpers only guard the gutters; aiming is the child's job. Before a second
+  // roll the rings stay under the pins left, and the child says where they are.
+  if (r.resetPins) counter.clear()
+  else askWhere()
 }
 
-/** Where to stand for a straight slide: in front of the nearest standing pin. */
-function lineUpX() {
-  const up = pins.list.filter((p) => !p.removed && !pins.isDown(p))
-  if (!up.length) return game.x
-  const mid = up.reduce((a, p) => a + p.body.position.x, 0) / up.length
-  const row = Math.min(...up.map((p) => p.spot.row))
-  const front = up.filter((p) => p.spot.row === row).sort((a, b) => Math.abs(a.body.position.x - mid) - Math.abs(b.body.position.x - mid))[0]
-  return clamp(front.body.position.x, -MAX_X, MAX_X)
+const SIDE_WORDS = { left: 'on the left', middle: 'in the middle', right: 'on the right' }
+const pinWord = (n) => `${n} ${n === 1 ? 'pin' : 'pins'}`
+
+/** Spare time: look at the pins left and say where they are. */
+function askWhere() {
+  const up = standingPins()
+  if (!up.length) return counter.clear()
+  counter.keepRings()
+  for (const b of document.querySelectorAll('#where button')) b.className = ''
+  $('where').hidden = false
+  speak(`${pinWord(up.length)} left. Where are they?`)
 }
 
-/** The helper waddle: small hops sideways until the penguin is lined up. */
+function chooseSide(btn) {
+  if (game.state !== 'aim') return
+  audio.unlock()
+  game.idle = 0
+  const side = btn.dataset.side
+  const there = standingPins().filter((p) => sideOf(p.x) === side)
+  if (!there.length) {
+    btn.className = 'no'
+    audio.squeak(0.8)
+    speak(`No pins ${SIDE_WORDS[side]}. Look for the glowing rings.`)
+    return
+  }
+  for (const b of document.querySelectorAll('#where button')) if (b.className !== 'no') b.className = b === btn ? 'yes' : ''
+  audio.jingle(there.length)
+  speak(`Yes! ${pinWord(there.length)} ${SIDE_WORDS[side]}.`)
+  // The penguin waddles over to face them; aiming the slide is still up to the child.
+  game.walkTo = clamp(there.reduce((a, p) => a + p.x, 0) / there.length, -MAX_X, MAX_X)
+}
+for (const b of document.querySelectorAll('#where button')) {
+  b.addEventListener('click', (e) => {
+    e.stopPropagation()
+    chooseSide(b)
+  })
+}
+
+/** The waddle: small hops sideways until the penguin stands where the child chose. */
 function walk(dt) {
   if (game.walkTo === null) return
   const d = game.walkTo - game.x
@@ -358,6 +464,8 @@ function toAim() {
 
 function gameOver() {
   prediction.reset() // the results card gets the stage to itself
+  counter.clear()
+  $('where').hidden = true
   game.state = 'over'
   const total = card.total
   const newBest = total > game.best
@@ -374,6 +482,11 @@ function gameOver() {
   $('stars').innerHTML = `<span>🎳 ${card.frames.flat().reduce((a, n) => a + n, 0)}</span>` +
     (strikes ? ` <span class="mark x">X ${strikes}</span>` : '') + (spares ? ` <span class="mark s">/ ${spares}</span>` : '')
   $('stars').setAttribute('aria-label', `${strikes} strikes and ${spares} spares`)
+  // What was learned: every way of making 10 the child counted this game.
+  const ways = [...game.bonds.keys()].sort((a, b) => parseInt(b) - parseInt(a))
+  $('bonds').replaceChildren(...ways.map((w) => Object.assign(document.createElement('span'), { textContent: w.replace('+', ' + ') })))
+  $('bonds-title').textContent = `${ways.length} ${ways.length === 1 ? 'way' : 'ways'} to make 10`
+  speak(`You found ${ways.length} ${ways.length === 1 ? 'way' : 'ways'} to make 10, like ${ways[0]?.replace('+', ' and ') ?? '10 and 0'}.`)
   show('results')
   audio.fanfare()
   crowd.start(true)
@@ -492,6 +605,9 @@ function setBumpers(on) {
 
 function toTitle() {
   prediction.reset()
+  counter.clear()
+  $('bond').hidden = true
+  $('where').hidden = true
   game.state = 'title'
   game.dance = false
   $('last').textContent = game.lastScore !== null ? `🎳 ${game.lastScore}` : ''
@@ -505,6 +621,10 @@ function toTitle() {
 
 function start() {
   prediction.reset()
+  counter.clear()
+  game.bonds.clear()
+  $('bond').hidden = true
+  $('where').hidden = true
   audio.unlock()
   audio.click()
   card.reset()
@@ -842,8 +962,7 @@ function frame(fixedDt) {
       $('hint').classList.remove('hidden')
     }
   } else if (game.state === 'result') {
-    const wait = game.dance ? 3.4 : 2.0
-    if (game.timer > wait) nextRoll()
+    if (game.timer > game.resultWait) nextRoll()
   }
 
   if (game.state === 'result' && game.dance && game.timer > 0.7) {
@@ -857,6 +976,7 @@ function frame(fixedDt) {
   penguin.update(dt, t)
   crowd.update(dt, t)
   scenery.update(dt, t)
+  counter.update(dt, t)
   effects.update(dt)
   updateAimPreview()
   updateCamera(dt, t)
@@ -867,4 +987,4 @@ renderer.setAnimationLoop(() => frame())
 
 show('loading')
 load()
-if (new URLSearchParams(location.search).has('debug')) window.__pb = { prediction, CAM, frame, scene, camera, effects, game, lane, pins, penguin, card, throwPenguin, renderer }
+if (new URLSearchParams(location.search).has('debug')) window.__pb = { counter, standingPins, chooseSide, prediction, CAM, frame, scene, camera, effects, game, lane, pins, penguin, card, throwPenguin, renderer }

@@ -66,6 +66,21 @@
       <button id="go" class="go" title="Slide! (Space)">🐧💨</button>
     </div>
   </div>
+  <div id="bond" class="bond" role="status" aria-live="polite" hidden>
+    <div class="bond-group fallen"><div id="bond-fallen" class="bond-pins"></div><b id="bond-fallen-n">0</b></div>
+    <span class="bond-op">+</span>
+    <div class="bond-group standing"><div id="bond-standing" class="bond-pins"></div><b id="bond-standing-n">0</b></div>
+    <span class="bond-op">=</span>
+    <div class="bond-whole"><b>10</b></div>
+  </div>
+  <div id="where" class="where" hidden>
+    <div class="where-ask"><span aria-hidden="true">👀</span> Where are the pins?</div>
+    <div class="where-row">
+      <button data-side="left" aria-label="On the left"><span class="third"><i class="on"></i><i></i><i></i></span></button>
+      <button data-side="middle" aria-label="In the middle"><span class="third"><i></i><i class="on"></i><i></i></span></button>
+      <button data-side="right" aria-label="On the right"><span class="third"><i></i><i></i><i class="on"></i></span></button>
+    </div>
+  </div>
   <div id="hint" class="hint-swipe hidden">👆</div>
 </div>
 
@@ -74,6 +89,7 @@
     <div class="trophy">🐧</div>
     <div class="big-score"><span id="final">0</span></div>
     <div id="stars" class="stars"></div>
+    <div class="bonds-box"><div id="bonds-title" class="bonds-title"></div><div id="bonds" class="bonds"></div></div>
     <div class="row">
       <button id="again" class="big-go">🔁</button>
       <button id="to-home" class="big-go alt">🏠</button>

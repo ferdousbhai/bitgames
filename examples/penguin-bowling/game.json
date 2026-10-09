@@ -2,7 +2,7 @@
   "id": "penguin-bowling",
   "title": "Penguin Bowling",
   "tagline": "Belly-slide a chubby penguin down the ice and knock over snowmen and fish!",
-  "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides. ◀ ▶ move the penguin. Turn on bumpers 🛟 so every slide reaches the pins. Every roll gets a cheer, and a strike gets fireworks!",
+  "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides; ◀ ▶ move the penguin. Bumpers 🛟 keep the penguin out of the gutters. After every roll, count the pins still standing: fallen and standing always make 10. Before a second roll, find where the pins are left, then aim for them. Tap 💭 to guess how many will fall first.",
   "emoji": "🐧",
   "color": "#4cc9f0",
   "category": "pop",
@@ -13,5 +13,5 @@
     4,
     8
   ],
-  "learning": "Predictions, counting and cause and effect"
+  "learning": "Number bonds to 10, counting, predictions and spatial reasoning"
 }
