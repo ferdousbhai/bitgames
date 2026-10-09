@@ -44,7 +44,7 @@ const colorOf = (css) => colors.get(css) ?? colors.set(css, new THREE.Color(css)
 const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0)
 
 class Pool {
-  constructor(scene, { count, geometry, material, gravity = 0, drag = 0, grow = 0, billboard = false, floor = null }) {
+  constructor(scene, { count, geometry, material, gravity = 0, drag = 0, grow = 0, billboard = false }) {
     this.mesh = new THREE.InstancedMesh(geometry, material, count)
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
     this.mesh.frustumCulled = false
@@ -57,7 +57,7 @@ class Pool {
       life: 1, age: 0, size: 1, spin: 0, onDie: null,
     }))
     this.next = 0
-    Object.assign(this, { gravity, drag, grow, billboard, floor })
+    Object.assign(this, { gravity, drag, grow, billboard })
     this.dummy = new THREE.Object3D()
   }
 
@@ -93,10 +93,6 @@ class Pool {
       it.v.y -= this.gravity * dt
       it.v.multiplyScalar(Math.max(0, 1 - this.drag * dt))
       it.p.addScaledVector(it.v, dt)
-      if (this.floor !== null && it.p.y < this.floor) {
-        it.p.y = this.floor
-        it.v.set(it.v.x * 0.3, 0, it.v.z * 0.3)
-      }
       const t = it.age / it.life
       d.position.copy(it.p)
       if (this.billboard) d.quaternion.copy(camera.quaternion)
@@ -146,7 +142,7 @@ export class Effects {
       billboard: true,
     })
     this.sparkles = new Pool(scene, {
-      count: 900,
+      count: 96,
       geometry: new THREE.PlaneGeometry(1, 1),
       material: new THREE.MeshBasicMaterial({ map: starTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
       gravity: 1.2,

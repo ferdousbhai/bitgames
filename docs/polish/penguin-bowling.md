@@ -116,3 +116,9 @@ Other tests:
 - One voice for the whole game (`js/speech.js`), shared with the pin prediction. Counting, results and the end-of-game sentence wait their turn in the queue. Tapping a side interrupts what is being said. The game no longer calls `speechSynthesis` directly.
 - Removed dead code: the confetti and firework system in `effects.js`, `audio.launch` and `audio.bang`, `game.best` and its stored score, and two unused CSS rules (`@keyframes bob` and the media-query `.badge`).
 - Checks: Chromium and WebKit browser checks pass with 0 errors. A scripted play with recorded speech kept every line in order (strike, then counting, then the number bond, then "Where are they?").
+- Second pass:
+  - The sparkles pool is 96 instead of 900; it only carries small sparkle and glow bursts now. The unused `floor` option of `Pool` is gone.
+  - `count.js` shares one ring geometry and one tint colour, and uses one `STEP` (0.7 s); `start` takes its end time from `Counter.duration`.
+  - Tapping a side uses `voice.sayNow`. Muting and going Home call `voice.hush()`.
+  - Removed the leftover `animation-delay` on the `.logo span` colour rules.
+  - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. A scripted roll with recorded speech kept the order (guess, "9 fell.", count, number bond, "Where are they?", side answer). Mute and Home each cancel speech. No console errors.

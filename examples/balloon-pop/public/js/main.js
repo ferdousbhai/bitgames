@@ -79,15 +79,6 @@ const game = {
 // Optional learning missions. Hunts also make their balloons more common (see spawn).
 const RED = '#ff595e'
 const COOL_COLORS = ['#8ac926', '#2ec4b6', '#4d96ff', '#9b5de5']
-const SKY = 'Counting sky'
-const FREE = 'Free popping'
-const missionPictures = {
-  [SKY]: ['blue', 'blue', 'blue'],
-  [FREE]: ['🎈'],
-  'Count three balloons': ['🎈', '🎈', '🎈'],
-  'Heart shape hunt': ['💖', '💖', '💖'],
-  'Red colour hunt': ['red', 'red', 'red'],
-}
 
 /** A small picture: an emoji, or a drawn balloon when `type` is a colour name. */
 function picture(type, filled = true) {
@@ -100,6 +91,14 @@ function picture(type, filled = true) {
   return slot
 }
 
+/** A row of mission pictures; the first `filled` are bright, the rest wait. */
+function pictureRow(types, filled = types.length) {
+  const row = document.createElement('span')
+  row.className = 'mission-choice-pictures'
+  types.forEach((type, i) => row.append(picture(type, i < filled)))
+  return row
+}
+
 function renderMissionProgress(goal, option, count) {
   if (!option.goal) return
   goal.textContent = ''
@@ -109,7 +108,7 @@ function renderMissionProgress(goal, option, count) {
   caption.textContent = `${option.goal} · ${count} / ${option.target}`
   const slots = document.createElement('span')
   slots.className = 'mission-slots'
-  missionPictures[option.label].forEach((type, i) => slots.append(picture(type, i < count)))
+  option.balloons.forEach((type, i) => slots.append(picture(type, i < count)))
   goal.append(caption, slots)
 }
 
@@ -119,7 +118,7 @@ function celebrateMission(text) {
   reward.replaceChildren()
   const pictures = document.createElement('span')
   pictures.className = 'mission-reward-pictures'
-  missionPictures[adventure.option.label].forEach((type) => pictures.append(picture(type)))
+  adventure.option.balloons.forEach((type) => pictures.append(picture(type)))
   const words = document.createElement('span')
   words.textContent = `⭐ ${text} ⭐`
   reward.append(pictures, words)
@@ -140,46 +139,29 @@ const adventure = createAdventure({
   voice,
   celebrate: celebrateMission,
   renderProgress: renderMissionProgress,
-  renderChoice: renderMissionChoice,
   options: [
     // The calm default: every level is one spoken, pictured counting request (js/sky.js).
-    { emoji: '🔢', label: SKY },
-    { emoji: '🐢', label: 'Count three balloons', pace: 0.6, goal: 'Pop three balloons', target: 3, reward: 'Three! You counted three balloons!' },
-    { emoji: '❤️', label: 'Heart shape hunt', pace: 0.6, goal: 'Pop three heart balloons', target: 3, huntKind: 'heart', accept: (b) => b.kindName === 'heart', reward: 'Three! You found three hearts!' },
-    { emoji: '🎨', label: 'Red colour hunt', pace: 0.6, goal: 'Pop three red balloons', target: 3, huntColor: RED, accept: (b) => ['round', 'smile', 'heart', 'mini'].includes(b.kindName) && b.color === RED, reward: 'Three! You found three red balloons!' },
+    // Its picture is a row of slots, two filled and one waiting.
+    { emoji: '🔢', label: 'Counting sky', sky: true, balloons: ['blue', 'blue', 'blue'], pictures: pictureRow(['blue', 'blue', 'blue'], 2) },
+    { emoji: '🐢', label: 'Count three balloons', caption: 'Count', balloons: ['🎈', '🎈', '🎈'], pictures: pictureRow(['🎈', '🎈', '🎈']), pace: 0.6, goal: 'Pop three balloons', target: 3, reward: 'Three! You counted three balloons!' },
+    { emoji: '❤️', label: 'Heart shape hunt', caption: 'Hearts', balloons: ['💖', '💖', '💖'], pictures: pictureRow(['💖', '💖', '💖']), pace: 0.6, goal: 'Pop three heart balloons', target: 3, huntKind: 'heart', accept: (b) => b.kindName === 'heart', reward: 'Three! You found three hearts!' },
+    { emoji: '🎨', label: 'Red colour hunt', caption: 'Red', balloons: ['red', 'red', 'red'], pictures: pictureRow(['red', 'red', 'red']), pace: 0.6, goal: 'Pop three red balloons', target: 3, huntColor: RED, accept: (b) => ['round', 'smile', 'heart', 'mini'].includes(b.kindName) && b.color === RED, reward: 'Three! You found three red balloons!' },
     // For the youngest: the Phase 1 sky where every balloon pops and fills the level bar.
-    { emoji: '🎈', label: FREE },
+    { emoji: '🎈', label: 'Free popping', balloons: ['🎈'], pictures: pictureRow(['🎈']) },
   ],
 })
 
-function renderMissionChoice(button, option) {
-  button.replaceChildren()
-  const pictures = document.createElement('span')
-  pictures.className = 'mission-choice-pictures'
-  const types = missionPictures[option.label] || ['🎈']
-  // The counting sky's picture is a row of slots, two filled and one waiting.
-  types.forEach((type, i) => pictures.append(picture(type, option.label !== SKY || i < types.length - 1)))
-  const label = document.createElement('span')
-  label.textContent = option.goal ? option.label.replace(' three balloons', '').replace(' shape hunt', 's').replace(' colour hunt', '') : option.label
-  const next = document.createElement('span')
-  next.className = 'mission-next'
-  next.textContent = '↻'
-  next.setAttribute('aria-hidden', 'true')
-  button.append(pictures, label, next)
-}
-
-const say = (text) => voice.say(text)
 
 // --- Counting sky -------------------------------------------------------------------
 // One calm request per level: picture slots fill with each matching pop and are counted aloud.
 
-const counting = () => game.state === 'play' && adventure.option.label === SKY
+const counting = () => game.state === 'play' && adventure.option.sky
 
 function newRequest() {
   game.recent = [...(game.recent ?? []), game.sky?.req].filter(Boolean).slice(-3)
   game.sky = { req: makeRequest(game.level, game.recent), count: 0, done: false, colours: [] }
   renderSky()
-  say(game.sky.req.say)
+  voice.say(game.sky.req.say)
 }
 
 /** A slot for one balloon of the request: its colour or shape, numbered once it is filled. */
@@ -272,13 +254,13 @@ function countPop(b) {
     sky.done = true
     game.skies += 1
     game.biggest = Math.max(game.biggest, sky.req.total)
-    say(String(sky.count))
-    say(sky.req.named)
+    voice.say(String(sky.count))
+    voice.say(sky.req.named)
     const { w, h } = halfSize(0)
     effects.drift(w, h)
     setTimeout(() => audio.chord(), 500)
     game.skyWait = 4.5 // a calm pause before the next request
-  } else say(String(sky.count))
+  } else voice.say(String(sky.count))
   renderSky()
   return true
 }
@@ -520,7 +502,7 @@ function toTitle() {
   let last = game.score ? `🎈 You popped ${game.score} balloon${game.score === 1 ? '' : 's'}!` : ''
   if (game.skies) {
     last = `🎈 You counted ${game.skies} sk${game.skies === 1 ? 'y' : 'ies'}, up to ${game.biggest} balloon${game.biggest === 1 ? '' : 's'}!`
-    say(`You counted up to ${game.biggest}!`)
+    voice.say(`You counted up to ${game.biggest}!`)
   }
   $('last').textContent = last
   $('last').classList.toggle('hidden', !last)
@@ -548,7 +530,7 @@ function start() {
     newRequest()
   } else {
     showIntro('🎈', 'Pop the balloons!', 'Tap them before they fly away')
-    if (adventure.option.goal) say(adventure.option.goal)
+    if (adventure.option.goal) voice.say(adventure.option.goal)
   }
   if (!game.firstPop || adventure.option.goal) $('hint').classList.remove('hidden')
 }
@@ -557,6 +539,7 @@ $('play').addEventListener('click', start)
 $('home').addEventListener('click', (e) => {
   e.stopPropagation()
   audio.click()
+  voice.hush()
   toTitle()
 })
 const soundBtn = $('sound')
@@ -572,6 +555,7 @@ try {
 } catch {}
 soundBtn.addEventListener('click', (e) => {
   e.stopPropagation()
+  voice.hush()
   audio.unlock()
   setSound(audio.muted)
   audio.click()

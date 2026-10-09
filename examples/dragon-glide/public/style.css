@@ -23,13 +23,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .row { display: flex; gap: 12px; align-items: center; }
 
 .logo { font-size: clamp(44px, 11vw, 100px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1.05; }
-.logo span { display: inline-block; text-shadow: 0 5px 0 rgba(0,0,0,0.22), 0 10px 18px rgba(0,0,0,0.15); animation: bob 1.6s ease-in-out infinite; -webkit-text-stroke: 2px rgba(255,255,255,0.9); }
+.logo span { display: inline-block; text-shadow: 0 5px 0 rgba(0,0,0,0.22), 0 10px 18px rgba(0,0,0,0.15); -webkit-text-stroke: 2px rgba(255,255,255,0.9); }
 .logo span:nth-child(5n+1) { color: #3fcf8c; }
-.logo span:nth-child(5n+2) { color: #ff9f1c; animation-delay: .1s; }
-.logo span:nth-child(5n+3) { color: #ff6b9d; animation-delay: .2s; }
-.logo span:nth-child(5n+4) { color: #9b5de5; animation-delay: .3s; }
-.logo span:nth-child(5n) { color: #36a8ff; animation-delay: .4s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
+.logo span:nth-child(5n+2) { color: #ff9f1c; }
+.logo span:nth-child(5n+3) { color: #ff6b9d; }
+.logo span:nth-child(5n+4) { color: #9b5de5; }
+.logo span:nth-child(5n) { color: #36a8ff; }
 .sub { margin: 0; font-size: clamp(20px, 4vw, 28px); font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.3); }
 .hint { margin: 0; font-size: 18px; font-weight: 700; opacity: 0.95; text-shadow: 0 2px 4px rgba(0,0,0,0.35); }
 .flyer { font-size: 72px; animation: fly 1.2s ease-in-out infinite; }
@@ -39,11 +38,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 .big-go {
   background: #ffcf1a; color: #6b3d00; font-size: clamp(30px, 6vw, 44px); font-weight: 900; padding: 14px 46px; border-radius: 999px;
-  box-shadow: 0 7px 0 #c98f00, 0 14px 24px rgba(0,0,0,0.2); transition: transform .1s; animation: pulse 1.6s ease-in-out infinite;
+  box-shadow: 0 7px 0 #c98f00, 0 14px 24px rgba(0,0,0,0.2); transition: transform .1s;
 }
 .big-go:active { transform: translateY(5px); box-shadow: 0 2px 0 #c98f00; }
-.big-go.alt { background: #ffffff; color: #36a8ff; box-shadow: 0 7px 0 #a9c9e8, 0 14px 24px rgba(0,0,0,0.2); padding: 14px 26px; animation: none; }
-@keyframes pulse { 0%, 100% { scale: 1; } 50% { scale: 1.06; } }
+.big-go.alt { background: #ffffff; color: #36a8ff; box-shadow: 0 7px 0 #a9c9e8, 0 14px 24px rgba(0,0,0,0.2); padding: 14px 26px; }
 .best { font-size: 22px; font-weight: 900; background: rgba(0,0,0,0.25); padding: 6px 16px; border-radius: 99px; }
 
 /* Pick a world to start from */
@@ -90,7 +88,7 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 .combo { position: absolute; top: calc(124px + env(safe-area-inset-top)); left: 50%; translate: -50% 0; font-size: 30px; font-weight: 900; color: #fff; text-shadow: 2px 2px 0 #6a3aa8, -2px 2px 0 #6a3aa8, 2px -2px 0 #6a3aa8, -2px -2px 0 #6a3aa8, 0 2px 0 #6a3aa8, 0 -2px 0 #6a3aa8, 2px 0 0 #6a3aa8, -2px 0 0 #6a3aa8, 0 4px 0 #6a3aa8; opacity: 0; transition: opacity .3s; white-space: nowrap; }
 .combo.show { opacity: 1; animation: pop .35s cubic-bezier(.2,1.8,.4,1); }
 
-.power { position: absolute; top: calc(72px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); display: flex; align-items: center; gap: 6px; font-size: 34px; background: rgba(0,0,0,0.25); border-radius: 99px; padding: 2px 12px 2px 6px; animation: pulse 0.8s ease-in-out infinite; transition: opacity .3s; }
+.power { position: absolute; top: calc(72px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); display: flex; align-items: center; gap: 6px; font-size: 34px; background: rgba(0,0,0,0.25); border-radius: 99px; padding: 2px 12px 2px 6px; transition: opacity .3s; }
 .power i { display: block; width: 70px; height: 10px; border-radius: 99px; background: rgba(255,255,255,0.35); overflow: hidden; }
 .power b { display: block; height: 100%; background: linear-gradient(90deg, #ff6b6b, #ffd23f, #8ef0c8, #7cc6fe, #c9b6ff); transform-origin: left; }
 
@@ -110,10 +108,9 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
 .banner.show { opacity: 1; transform: scale(1); }
 .tip {
   position: absolute; bottom: calc(26px + env(safe-area-inset-bottom)); left: 50%; translate: -50% 0; white-space: nowrap; font-size: clamp(22px, 4.5vw, 34px); font-weight: 900;
-  background: rgba(0,0,0,0.28); padding: 6px 24px; border-radius: 99px; text-shadow: 0 3px 0 rgba(0,0,0,0.25); animation: nudge 1s ease-in-out infinite; transition: opacity .4s; opacity: 0;
+  background: rgba(0,0,0,0.28); padding: 6px 24px; border-radius: 99px; text-shadow: 0 3px 0 rgba(0,0,0,0.25); transition: opacity .4s; opacity: 0;
 }
 .tip.show { opacity: 1; }
-@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
 .fire {
   pointer-events: auto; position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom));
@@ -189,14 +186,15 @@ body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38
   font: 900 22px/1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
 #hud .adventure-goal[hidden] { display: none; }
-#hud .adventure-goal.done { background: linear-gradient(#fff3a0, #ffcf1a); color: #6b3d00; text-shadow: none; }
+#hud .adventure-goal.adventure-done { background: linear-gradient(#fff3a0, #ffcf1a); color: #6b3d00; text-shadow: none; }
 /* the done star gets a dark outline so it stands out on the gold chip */
-#hud .adventure-goal.done b { font-size: 1.2em; filter: drop-shadow(1px 0 0 #b35400) drop-shadow(-1px 0 0 #b35400) drop-shadow(0 1px 0 #b35400) drop-shadow(0 -1px 0 #b35400); }
-.goal-rings { display: inline-flex; gap: 5px; }
-.goal-rings i { width: 26px; height: 26px; border-radius: 50%; border: 5px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; }
-.goal-rings i.got { border-color: #fff; background: radial-gradient(circle, transparent 42%, rgba(255, 207, 26, 0.9) 45%); box-shadow: 0 0 8px #fff3a0; }
-.goal-rings i.new { animation: pop .45s cubic-bezier(.2, 1.8, .4, 1); }
-.done .goal-rings i.got { border-color: #ff9f1c; background: none; box-shadow: none; }
+#hud .adventure-goal.adventure-done b { font-size: 1.2em; filter: drop-shadow(1px 0 0 #b35400) drop-shadow(-1px 0 0 #b35400) drop-shadow(0 1px 0 #b35400) drop-shadow(0 -1px 0 #b35400); }
+/* the rings show "not yet" with their pale border, so the shared grey-out stays off */
+#hud .adventure-steps { gap: 5px; }
+#hud .adventure-step { filter: none; opacity: 1; }
+.adventure-step i { display: block; width: 26px; height: 26px; border-radius: 50%; border: 5px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; }
+.adventure-step.adventure-got i { border-color: #fff; background: radial-gradient(circle, transparent 42%, rgba(255, 207, 26, 0.9) 45%); box-shadow: 0 0 8px #fff3a0; }
+.adventure-done .adventure-step.adventure-got i { border-color: #ff9f1c; background: none; box-shadow: none; }
 /* the hints go up a little so they never sit on the rings */
 body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
 /* the counting party: big and golden */
@@ -219,8 +217,8 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   .big-go { white-space: nowrap; }
   #results .big-go { font-size: 28px; padding: 12px 28px; }
   #hud .adventure-goal { font-size: 18px; gap: 6px; padding: 4px 12px 4px 8px; }
-  .goal-rings { gap: 4px; }
-  .goal-rings i { width: 22px; height: 22px; border-width: 4px; }
+  #hud .adventure-steps { gap: 4px; }
+  .adventure-step i { width: 22px; height: 22px; border-width: 4px; }
   body.mission .tip { bottom: calc(118px + env(safe-area-inset-bottom)); }
 }
 /* Upright phones: the place name waits below the sound buttons and above Ember */
@@ -230,7 +228,7 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
 /* Big screens: a bigger mission chip */
 @media (min-width: 760px) and (min-height: 640px) {
   #hud .adventure-goal { font-size: 28px; padding: 8px 18px 8px 12px; gap: 10px; }
-  .goal-rings i { width: 34px; height: 34px; border-width: 6px; }
+  .adventure-step i { width: 34px; height: 34px; border-width: 6px; }
   #title .adventure-choice { font-size: 24px; min-height: 60px; }
   .worlds { gap: 14px; }
   .worlds button { width: 78px; height: 78px; font-size: 42px; }
@@ -255,8 +253,8 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   .banner { top: calc(54px + env(safe-area-inset-top)); font-size: clamp(30px, 7vw, 48px); }
   .banner small { margin-top: 2px; }
   #hud .adventure-goal { bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 17px; padding: 3px 10px 3px 6px; gap: 5px; border-width: 2px; }
-  .goal-rings { gap: 3px; }
-  .goal-rings i { width: 20px; height: 20px; border-width: 4px; }
+  #hud .adventure-steps { gap: 3px; }
+  .adventure-step i { width: 20px; height: 20px; border-width: 4px; }
   /* hints sit low, between the rings and 🔥, so they never cover Ember */
   .tip, body.mission .tip { bottom: calc(10px + env(safe-area-inset-bottom)); left: calc(50% + 30px); font-size: 20px; padding: 5px 16px; }
   .banner.mission { font-size: clamp(30px, 6vw, 40px); top: calc(62px + env(safe-area-inset-top)); }
@@ -280,8 +278,7 @@ body.mission .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
   .banner small { display: none; }
 }
 
-/* --- Calm pass (2026-10-09): no endless pulses or nudges; the end card shows what Ember found --- */
-.logo span, .big-go, .power, .tip { animation: none; }
+/* --- Calm pass (2026-10-09): no endless pulses or nudges (gone at their source); the end card shows what Ember found --- */
 #results .tally { gap: clamp(10px, 3vw, 26px); }
 #results .found { display: inline-flex; align-items: center; gap: 4px; }
 #results .found.hidden { display: none; }

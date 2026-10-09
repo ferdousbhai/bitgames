@@ -207,7 +207,8 @@ Before this follow-up, the efficient autopilot finished 3 tens in 44 s with a 50
 
 ## Simplify pass (2026-10-09)
 
-- One shared voice (`js/speech.js`, rate 0.85). The mission speaks through a thin view of it that stays quiet during Pond helpers play, so real mute is no longer overloaded. A friend's device takes the host's mission with `adventure.select(i, { silent: true })`.
+- One shared voice (`js/speech.js`, rate 0.85). The mission stays quiet during Pond helpers play (now through `announce`), so real mute is no longer overloaded. A friend's device takes the host's mission with `adventure.select(i, { silent: true })`.
 - Pond helpers: the mission reward is queued after the jar counts the bubble that earned it (no 1.2 s guess). Mode taps interrupt; other words queue.
 - Removed the dead `@keyframes pulse`.
 - Verified: chromium and webkit boot + play, and stubbed-speech solo rounds in both modes (calm: goal, 1, 2, 3, reward).
+- Iteration 2: the `missionVoice` view and `missionReward` stash are replaced by an `announce` that stays quiet during Pond helpers play, and `event()`'s `'done'` return hands the reward to `jarDrop`. The `say` alias is gone. Progress is the shared row (`icon: '🫧'`); the `.goal-bubble` CSS became `#hud .adventure-steps` sizes. Home and the sound button now hush the voice themselves.

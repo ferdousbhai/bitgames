@@ -174,7 +174,6 @@ Source: the audit's Phase 2 row ("Real constellations lit star by star and named
 - One voice (`js/speech.js`) is shared with the mission helper.
   - Star counts, the start line and finale taps interrupt what is being said; the planet fact, "Off to…", "Time to fly home!" and the welcome-home line wait in the queue.
   - The arrive phase waits for the fact's `onend`, or until nothing is left to say after a hush, instead of polling `speechSynthesis` with a 12 s cap.
-- The mission choice button is drawn through the adventure's `renderChoice`.
 - `clearPlayfield()` holds the teardown that the finale and a new trip both need.
 - `renderJourney()` rebuilds the bar only when the trip moves to a new leg. Every other frame it changes only the widths that moved.
 - `sky.js` changes:
@@ -186,3 +185,11 @@ Source: the audit's Phase 2 row ("Real constellations lit star by star and named
   - `TOTAL_STARS`
   - `@keyframes bob`
 - Checks: Chromium and WebKit browser checks pass with 0 errors. A scripted trip with recorded speech reached home after 5 constellations, with the counts, facts and "Off to…" lines in order. The mission choice still cycles and survives going home.
+- Second pass:
+  - The mission options carry their own `pictures` and `caption`, and the shared helper draws the button. `renderMissionChoice` and the `.mission-choice-*` CSS are gone; the ↻ size and no-wrap pictures are kept on `#adventure-choice .adventure-*`.
+  - The gem mission is marked `gems: true` instead of being matched by its label.
+  - The `missionCounting` guess is replaced by `adventure.event()`'s return. The sky stays quiet for a star the mission counted (`'counted'` or `'done'`).
+  - `renderJourney` rounds the homeward fill to 1/500 and moves the bars with `transform: scaleX`.
+  - Taps use `voice.sayNow`. Muting calls `voice.hush()`.
+  - Removed the leftover `animation-delay` on the `.logo span` colour rules.
+  - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. In a scripted 5-star mission, the mission counted 1–4 and then said the reward. After that the sky counted aloud, as before. Mute cancels speech. No page errors; headless WebKit logs one "Failed to start the audio device" console error from its audio device.

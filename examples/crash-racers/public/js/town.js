@@ -268,10 +268,10 @@ export function townMapLayout(size, track, houses) {
 
 /**
  * Draws the town as a paper map: the road, every house as its picture, and
- * optionally the child's car (with the way it is pointing), the chosen house
- * ringed in gold, the route driven, and numbered stops in delivery order.
+ * optionally the chosen house ringed in gold, the route driven, and numbered
+ * stops in delivery order. The child's car goes on top with drawMapCar.
  */
-export function drawTownMap(g, size, track, houses, { chosen = -1, player = null, heading = null, route = null, order = null, layout = townMapLayout(size, track, houses) } = {}) {
+export function drawTownMap(g, size, track, houses, { chosen = -1, route = null, order = null, layout = townMapLayout(size, track, houses) } = {}) {
   const { px, pz } = layout
   g.clearRect(0, 0, size, size)
   g.fillStyle = '#fbf3dc'
@@ -363,18 +363,16 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, player = null
     g.font = `900 ${Math.round(r * 0.75)}px system-ui, sans-serif`
     g.fillText(String(n + 1), x, y + r * 0.04)
   })
-
-  if (player) drawMapCar(g, size, layout, player, heading)
 }
 
 /** The child's car on the town map: an arrow in its colour, pointing the way it faces. */
-export function drawMapCar(g, size, { px, pz }, player, heading = null) {
+export function drawMapCar(g, size, { px, pz }, player, heading) {
   const x = px(player.x), y = pz(player.z)
   const s = size * 0.045
   g.save()
   g.translate(x, y)
   // The way the car is pointing, so "turn round" and "keep going" can be read off the map.
-  if (heading) g.rotate(Math.atan2(heading.z, heading.x) + Math.PI / 2)
+  g.rotate(Math.atan2(heading.z, heading.x) + Math.PI / 2)
   g.beginPath()
   g.moveTo(0, -s * 1.25)
   g.lineTo(s * 0.9, s * 0.8)

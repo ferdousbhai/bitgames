@@ -153,3 +153,4 @@ Quality cleanup only; play is unchanged.
 - The look glow animates the opacity of a `::before` layer instead of `filter: brightness()`. Removed dead `.pill` (and overrides) and `.score b`.
 - Shores: only the chosen place's shore downloads; the background prefetch of all five is gone (about 800 KB saved for a one-place visit). A newly chosen place can show its shore a moment after the water.
 - Checked: `browser.mjs --run simp` Chromium and WebKit 0 errors; a scripted catch → look → fact → book run records the expected spoken order with no console errors.
+- Iteration 2: the mission's fish row is the shared adventure progress (`icon: '🐟'`, a ⭐ tally when done); `.goal-fish` and its `bump` are gone (the shared pop replaces it), with the sizes kept on `#hud .adventure-steps`. The catch card's NEW! badge rule is now `#card-new` (a bare `.new` pulled the shared `.adventure-step.new` up to the corner). Interrupting lines use `voice.sayNow`.

@@ -132,7 +132,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @keyframes look-glow { 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .look.on::before { animation: none; } }
 
-.new {
+#card-new {
   position: absolute; top: -22px; right: -18px; background: #ff5f8f; color: #fff; font-weight: 900; font-size: 22px; padding: 6px 14px;
   border-radius: 16px; transform: rotate(12deg); box-shadow: 0 4px 0 rgba(0,0,0,.18);
 }
@@ -218,7 +218,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .card-catch { padding: 4px 20px 8px; bottom: calc(8px + env(safe-area-inset-bottom)); }
   .cname { font-size: 26px; }
   .cstars { font-size: 18px; }
-  .new { font-size: 16px; top: -16px; }
+  #card-new { font-size: 16px; top: -16px; }
   .clook { font-size: 15px; margin-top: 0; }
 }
 
@@ -231,14 +231,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   color: #1f5f99; font: 900 18px/1.2 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; box-shadow: 0 4px 0 rgba(31, 95, 153, .3);
 }
 #hud .adventure-goal[hidden] { display: none; }
-#hud .adventure-goal.done { background: linear-gradient(#fff8d6, #ffe58a); color: #8a5a00; }
-.goal-fish { display: inline-flex; gap: 2px; font-size: 24px; }
-.goal-fish span { filter: grayscale(1); opacity: .4; }
-.goal-fish span.got { filter: none; opacity: 1; animation: bump .5s cubic-bezier(.2, 1.8, .4, 1); }
-@media (max-height: 420px) { #hud .adventure-goal { top: calc(68px + env(safe-area-inset-top)); font-size: 15px; } .goal-fish { font-size: 20px; } }
+#hud .adventure-goal.adventure-done { background: linear-gradient(#fff8d6, #ffe58a); color: #8a5a00; }
+#hud .adventure-steps { font-size: 24px; }
+@media (max-height: 420px) { #hud .adventure-goal { top: calc(68px + env(safe-area-inset-top)); font-size: 15px; } #hud .adventure-steps { font-size: 20px; } }
 @media (min-width: 760px) and (min-height: 640px) {
   #hud .adventure-goal { top: calc(90px + env(safe-area-inset-top)); font-size: 24px; padding: 6px 18px 6px 14px; }
-  .goal-fish { font-size: 32px; }
+  #hud .adventure-steps { font-size: 32px; }
 }
 
 /* Calm pass: honour reduced motion everywhere */

@@ -250,26 +250,11 @@ const adventure = createAdventure({
     softMoment()
     audio.chord()
   },
-  // Fish to fill in as you count, so a child who can't read can follow along
-  renderProgress: (el, option, count) => {
-    el.classList.toggle('done', el.textContent.startsWith('★'))
-    if (!option.goal) return
-    const row = document.createElement('span')
-    row.className = 'goal-fish'
-    row.setAttribute('aria-hidden', 'true')
-    for (let i = 0; i < option.target; i++) {
-      const f = document.createElement('span')
-      f.textContent = '🐟'
-      if (i < count) f.className = 'got'
-      row.append(f)
-    }
-    el.replaceChildren(row, `${count} / ${option.target}`)
-    el.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
-  },
+  // The counting mission fills in a fish per catch, so a child who can't read can follow along
   options: [
     { emoji: '🎣', label: 'Free fishing' },
     { emoji: '🐢', label: 'Extra time to reel', pace: 0.6 },
-    { emoji: '🐟', label: 'Count to 3', pace: 0.6, goal: 'Count 3 catches', target: 3, reward: 'One, two, three! You counted three catches!' },
+    { emoji: '🐟', label: 'Count to 3', icon: '🐟', pace: 0.6, goal: 'Count 3 catches', target: 3, reward: 'One, two, three! You counted three catches!' },
   ],
 })
 
@@ -581,7 +566,7 @@ function startShow() {
   $('card-new').classList.toggle('hidden', !isNew)
   $('card').className = `card-catch show stars${pick.stars}`
   audio.fanfare(pick.stars)
-  voice.say(SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${pick.name.toLowerCase()}!`, { interrupt: true })
+  voice.sayNow(SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${pick.name.toLowerCase()}!`)
   // Look closer: one feature to notice, asked right after the name (it is optional)
   $('card-look').classList.toggle('hidden', !look)
   if (look) {
@@ -686,7 +671,7 @@ function lookCloser() {
   const fact = s.look.fact
   // A muted game shows the words only, so allow reading time instead of waiting for the voice
   s.factFor = 1.5 + fact.split(' ').length * 0.42
-  if (!audio.muted) voice.say(fact, { interrupt: true, onend: () => fish.show === s && (s.factDone = s.t) })
+  if (!audio.muted) voice.sayNow(fact, { onend: () => fish.show === s && (s.factDone = s.t) })
   $('card-look').textContent = fact
   lookBtn.classList.remove('on')
   lookBtn.classList.add('seen')

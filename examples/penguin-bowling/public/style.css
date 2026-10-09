@@ -27,9 +27,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .logo { font-size: clamp(38px, 10vw, 74px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1.02; }
 .logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.08); text-shadow: 0 5px 0 rgba(43, 74, 138, 0.3); transform: rotate(-3deg); }
 .logo span:nth-child(even) { transform: translateY(-4px) rotate(3deg); }
-.logo span:nth-child(6n+1) { color: #4cc9f0; } .logo span:nth-child(6n+2) { color: #ff6b9d; animation-delay: .12s; }
-.logo span:nth-child(6n+3) { color: #ffb703; animation-delay: .24s; } .logo span:nth-child(6n+4) { color: #8ac926; animation-delay: .36s; }
-.logo span:nth-child(6n+5) { color: #9b5de5; animation-delay: .48s; } .logo span:nth-child(6n) { color: #ff595e; animation-delay: .6s; }
+.logo span:nth-child(6n+1) { color: #4cc9f0; } .logo span:nth-child(6n+2) { color: #ff6b9d; }
+.logo span:nth-child(6n+3) { color: #ffb703; } .logo span:nth-child(6n+4) { color: #8ac926; }
+.logo span:nth-child(6n+5) { color: #9b5de5; } .logo span:nth-child(6n) { color: #ff595e; }
 .spinner { font-size: 72px; animation: slide 2.8s ease-in-out infinite; }
 @keyframes slide { 0%, 100% { transform: translateX(-40px) rotate(-70deg); } 50% { transform: translateX(40px) rotate(-90deg); } }
 

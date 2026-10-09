@@ -16,11 +16,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 #loading { background: radial-gradient(circle at 50% 35%, #fffaf0, #ffd6e4 70%); color: #b04a7a; font-size: 22px; font-weight: 800; }
 
 .logo { font-size: clamp(40px, 11vw, 84px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1; }
-.logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.06); text-shadow: 0 5px 0 rgba(150, 60, 110, 0.3); animation: bob 1.8s ease-in-out infinite; }
-.logo span:nth-child(5n+1) { color: #ff6fae; } .logo span:nth-child(5n+2) { color: #ffb347; animation-delay: .12s; }
-.logo span:nth-child(5n+3) { color: #ffd23f; animation-delay: .24s; } .logo span:nth-child(5n+4) { color: #4fd1b5; animation-delay: .36s; }
-.logo span:nth-child(5n) { color: #9b7cf7; animation-delay: .48s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-9px) rotate(4deg); } }
+.logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.06); text-shadow: 0 5px 0 rgba(150, 60, 110, 0.3); }
+.logo span:nth-child(5n+1) { color: #ff6fae; } .logo span:nth-child(5n+2) { color: #ffb347; }
+.logo span:nth-child(5n+3) { color: #ffd23f; } .logo span:nth-child(5n+4) { color: #4fd1b5; }
+.logo span:nth-child(5n) { color: #9b7cf7; }
 .spinner { font-size: 72px; animation: rise 1.4s ease-in-out infinite; }
 @keyframes rise { 0%, 100% { transform: translateY(10px) rotate(-6deg); } 50% { transform: translateY(-14px) rotate(6deg); } }
 
@@ -36,12 +35,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .big-go {
   pointer-events: auto; background: linear-gradient(#ff8cc0, #ff4d8d); color: #fff; font-size: clamp(32px, 7vw, 46px); font-weight: 900; padding: 14px 56px;
   border-radius: 999px; box-shadow: 0 8px 0 #c2185b, 0 14px 30px rgba(0,0,0,.18); white-space: nowrap; transition: transform .1s; text-shadow: 0 2px 0 rgba(0,0,0,.15);
-  animation: pulse 1.6s ease-in-out infinite;
 }
 .big-go:active { transform: translateY(6px); box-shadow: 0 2px 0 #c2185b; }
-.big-go.alt { background: linear-gradient(#7fe0cf, #2ec4b6); box-shadow: 0 8px 0 #1a8c82; padding: 14px 26px; animation: none; }
+.big-go.alt { background: linear-gradient(#7fe0cf, #2ec4b6); box-shadow: 0 8px 0 #1a8c82; padding: 14px 26px; }
 .big-go.alt:active { box-shadow: 0 2px 0 #1a8c82; }
-@keyframes pulse { 50% { transform: scale(1.06); } }
 #last { background: rgba(255,255,255,.85); color: #b04a7a; border-radius: 999px; padding: 4px 14px; }
 #last:empty { display: none; }
 
@@ -59,7 +56,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   display: grid; place-items: center; font: 900 12px/1 ui-rounded, system-ui, sans-serif; color: rgba(176, 74, 122, .65); text-shadow: none; }
 .pip.on { border-width: 4px; transform: scale(1.18); box-shadow: 0 2px 0 rgba(0,0,0,.18); color: rgba(90, 40, 60, .7); }
 .pip-goal { font-size: 28px; line-height: 1; margin-left: 2px; }
-.pips.full .pip-goal { animation: bob .8s ease-in-out infinite; }
 
 .done-btn {
   pointer-events: auto; position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom));
@@ -109,7 +105,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .card { max-width: min(440px, 48vw); }
   .card .big-go:not(.alt) { padding: 14px 30px; }
 }
-.card-emoji { font-size: 64px; line-height: 1.1; animation: bob 1.2s ease-in-out infinite; }
+.card-emoji { font-size: 64px; line-height: 1.1; }
 .card-title { font-size: clamp(30px, 7vw, 44px); font-weight: 900; }
 .card-cake { font-size: 30px; font-weight: 900; color: #b04a7a; letter-spacing: 2px; }
 .card-cake b { display: inline-block; min-width: 1.4em; margin-left: 6px; padding: 0 10px; border-radius: 999px; background: #fff1f6; letter-spacing: 0; }
@@ -129,7 +125,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   100% { transform: translate(-50%, -240%) scale(1); opacity: 0; }
 }
 
-.hint-finger { position: fixed; left: 0; top: 0; pointer-events: none; font-size: 58px; margin: 0 0 0 -24px; animation: tap 0.9s ease-in-out infinite; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
+.hint-finger { position: fixed; left: 0; top: 0; pointer-events: none; font-size: 58px; margin: 0 0 0 -24px; animation: tap 1.6s ease-in-out 3; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
 @keyframes tap { 0%, 100% { translate: 0 18px; } 50% { translate: 0 0; } }
 
 @media (max-height: 520px) {
@@ -178,14 +174,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   white-space: nowrap; display: flex; align-items: center; gap: 6px;
 }
 #hud .adventure-goal[hidden], #hud.partying .adventure-goal { display: none; }
-@media (max-width: 560px), (max-height: 420px) { .goal-words { display: none; } }
-.goal-slices { display: inline-flex; gap: 2px; font-size: 20px; }
-.goal-slices span { filter: grayscale(1) opacity(.35); transition: filter .25s, transform .3s cubic-bezier(.2, 1.8, .4, 1); }
-.goal-slices span.got { filter: none; transform: scale(1.15); }
+@media (max-width: 560px), (max-height: 420px) { .adventure-goal-words { display: none; } }
+#hud .adventure-steps { font-size: 20px; }
 @media (max-height: 420px) and (min-aspect-ratio: 1/1) {
   /* Short sideways phones: the line rides in the gap between the top buttons */
   #hud .adventure-goal { top: calc(12px + env(safe-area-inset-top)); font-size: 14px; padding: 4px 12px; }
-  .goal-slices { font-size: 17px; }
+  #hud .adventure-steps { font-size: 17px; }
 }
 
 /* --- Party card on very short sideways phones --- */
@@ -219,13 +213,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 #birthday-studio .recipe-step span { font-size: 18px; line-height: 1; }
 #birthday-studio .recipe-step small, #birthday-studio .flavour small { display: inline-block; font-size: 11px; line-height: 1.2; background: #fffffff0; color: #554462; border-radius: 6px; padding: 0 4px; }
-#birthday-studio .recipe-step.next { outline: 3px dashed #ff6fae; outline-offset: 1px; animation: step-pulse 1s ease-in-out infinite; }
+#birthday-studio .recipe-step.next { outline: 3px dashed #ff6fae; outline-offset: 1px; }
 #birthday-studio .recipe-step.done::after, #birthday-studio .recipe-step.wrong::after {
   content: '✓'; position: absolute; right: -10px; top: 50%; translate: 0 -50%; width: 20px; height: 20px; border-radius: 50%;
   display: grid; place-items: center; font: 900 13px/1 system-ui, sans-serif; color: #fff; background: #3fae6a; border: 2px solid #fff;
 }
 #birthday-studio .recipe-step.wrong::after { content: '✗'; background: #e2556f; }
-@keyframes step-pulse { 50% { scale: 1.06; } }
 
 #birthday-studio #flavour-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
 #birthday-studio .flavour {
@@ -323,7 +316,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .pip-goal { font-size: 36px; }
   .done-btn { width: 90px; height: 90px; font-size: 48px; }
   #hud .adventure-goal { top: calc(88px + env(safe-area-inset-top)); font-size: 20px; }
-  .goal-slices { font-size: 26px; }
+  #hud .adventure-steps { font-size: 26px; }
   .intro.stay { top: calc(88px + env(safe-area-inset-top)); }
   .chip, #title .adventure-choice { font-size: 21px; padding: 10px 24px; }
 }
@@ -351,7 +344,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 #birthday-studio #friend-buttons .plate b { font-size: .95em; letter-spacing: -2px; }
 #birthday-studio #friend-buttons .plate small { font: 900 .9em/1 ui-rounded, system-ui, sans-serif; background: #fff; border-radius: 999px; padding: 2px 7px; }
 #birthday-studio #friend-buttons .plate:active { transform: translateY(3px); box-shadow: 0 1px 0 #715b7a30; }
-#birthday-studio #recipe-next.ready { background: #ffd23f; box-shadow: 0 4px 0 #d89a00; animation: step-pulse 1s ease-in-out infinite; }
+#birthday-studio #recipe-next.ready { background: #ffd23f; box-shadow: 0 4px 0 #d89a00; }
 /* Sharing with three friends fits phones too: slices in one compact row, the three plates side by side */
 #birthday-studio #slice-buttons { gap: 4px; }
 #birthday-studio #slice-buttons button { min-width: 44px; padding: 4px 7px; }
@@ -412,14 +405,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #hud.carding .hud-right { visibility: hidden; }
 }
 
-/* --- Calm pass (2026-10-09): nothing pulses, bobs or wiggles forever. Helpers stay, but quiet. --- */
-.logo span, .big-go, .pips.full .pip-goal, .card-emoji { animation: none; }
-#birthday-studio .recipe-step.next, #birthday-studio #recipe-next.ready { animation: none; }
-/* The tap finger shows the way a few times, slowly, then rests where it points */
-.hint-finger { animation: tap 1.6s ease-in-out 3; }
+/* --- Calm pass (2026-10-09): nothing pulses, bobs or wiggles forever; those loops are gone at their source. The tap finger shows the way three times, then rests. --- */
 @media (prefers-reduced-motion: reduce) {
   .hint-finger, .title-top, .card, .done-btn { animation: none; }
-  .banner, .pip, .goal-slices span { transition: opacity .3s; }
+  .banner, .pip { transition: opacity .3s; }
 }
 
 /* --- Phase 2: the friend's pictured order on the layer dots, and sharing the cake at the party --- */

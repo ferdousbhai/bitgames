@@ -11,9 +11,8 @@ html, body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 button { font: inherit; cursor: pointer; border: 0; color: inherit; }
-#adventure-choice { display: flex; align-items: center; justify-content: center; gap: 8px; }
-.mission-choice-pictures { white-space: nowrap; }
-.mission-choice-next { font-size: 20px; line-height: 1; }
+#adventure-choice .adventure-pictures { white-space: nowrap; }
+#adventure-choice .adventure-next { font-size: 20px; line-height: 1; }
 #adventure-goal { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 188px; top: calc(102px + env(safe-area-inset-top)); bottom: auto; }
 #adventure-goal[hidden] { display: none; }
 #adventure-goal svg { display: block; width: 150px; height: 38px; }
@@ -35,9 +34,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .logo { font-size: clamp(40px, 11vw, 96px); font-weight: 900; letter-spacing: 2px; line-height: 1; white-space: nowrap; }
 .logo span { display: inline-block; text-shadow: 0 5px 0 rgba(0,0,0,0.35), 0 0 24px rgba(255,210,63,0.45); transform: rotate(-2deg); }
 .logo span:nth-child(even) { transform: translateY(-4px) rotate(2deg); }
-.logo span:nth-child(6n+1) { color: #ffd23f; } .logo span:nth-child(6n+2) { color: #ff8fc7; animation-delay: .1s; }
-.logo span:nth-child(6n+3) { color: #7cc6fe; animation-delay: .2s; } .logo span:nth-child(6n+4) { color: #8ef0c8; animation-delay: .3s; }
-.logo span:nth-child(6n+5) { color: #ffb36b; animation-delay: .4s; } .logo span:nth-child(6n) { color: #c9b6ff; animation-delay: .5s; }
+.logo span:nth-child(6n+1) { color: #ffd23f; } .logo span:nth-child(6n+2) { color: #ff8fc7; }
+.logo span:nth-child(6n+3) { color: #7cc6fe; } .logo span:nth-child(6n+4) { color: #8ef0c8; }
+.logo span:nth-child(6n+5) { color: #ffb36b; } .logo span:nth-child(6n) { color: #c9b6ff; }
 .tag { font-size: clamp(18px, 3.6vw, 26px); font-weight: 800; margin: 0; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
 .big-go {
   margin-top: 6px; background: #ffd23f; color: #3a2a6a; font-size: clamp(30px, 6vw, 44px); font-weight: 900; padding: 14px 48px;
@@ -88,7 +87,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .journey .stop.done { opacity: 1; }
 .journey .stop.next { opacity: 1; transform: scale(1.25); }
 .journey .track { position: relative; width: clamp(14px, 4vw, 34px); height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); }
-.journey .track b { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: #ffd23f; }
+.journey .track b { position: absolute; inset: 0; border-radius: 3px; background: #ffd23f; transform: scaleX(0); transform-origin: left; }
 .journey .track .ship { position: absolute; top: -12px; font-size: 16px; }
 
 .banner {

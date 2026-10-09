@@ -1894,6 +1894,7 @@ $('home').addEventListener('click', () => {
 })
 function goHome() {
   if (game.busy) return
+  voice.hush()
   if (game.state === 'garage') {
     audio.click()
     toTitle()
@@ -1904,6 +1905,7 @@ function toggleSound() {
   audio.unlock()
   audio.setMuted(!audio.muted)
   store.set('rocket-garage-muted', audio.muted)
+  if (audio.muted) voice.hush()
   renderSound()
 }
 $('sound').addEventListener('click', toggleSound)

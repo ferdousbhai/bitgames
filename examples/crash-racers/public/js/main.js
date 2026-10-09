@@ -200,22 +200,17 @@ function renderDeliveryProgress(goal, option, count) {
 
 // One voice for the game. Directions queue; feedback on what the child just did replaces older words.
 const voice = createVoice({ isMuted: () => audio.muted, rate: 0.82, pitch: 1 })
-const tellNow = (text) => voice.say(text, { interrupt: true })
 
 const adventure = createAdventure({
   id: 'crash-racers',
   anchor: document.querySelector('[data-mode="race"]'),
   hud: $('hud'),
-  isMuted: () => audio.muted,
   voice,
   celebrate: (text) => banner(text),
   renderProgress: renderDeliveryProgress,
-  renderChoice: (button, option) => {
-    button.textContent = option.goal ? '🎁 1 → 2 → 3 → 4  ↻' : '🏎️ Free driving  ↻'
-  },
   options: [
     { emoji: '🏎️', label: 'Free driving' },
-    { emoji: '🎁', label: 'Follow the delivery map', goal: 'Deliver to stops 1 → 2 → 3 → 4', target: 4, reward: 'Four deliveries in map order!' },
+    { emoji: '🎁', label: 'Follow the delivery map', pictures: '🎁', caption: '1 → 2 → 3 → 4', goal: 'Deliver to stops 1 → 2 → 3 → 4', target: 4, reward: 'Four deliveries in map order!' },
   ],
 })
 // The racing mission chip belongs to Race: it sits after the mode buttons and only shows for Race.
@@ -231,7 +226,7 @@ const delivery = createDelivery(scene, () => {
   // Said after the mission's count, in the voice's queue
   if (delivery.next < 4 && game.raceOn && deliveryOn()) voice.say(`Now drive to stop ${delivery.next + 1}!`)
 }, (next) => {
-  if (game.raceOn && deliveryOn()) tellNow(`Find stop ${next} on the map!`)
+  if (game.raceOn && deliveryOn()) voice.sayNow(`Find stop ${next} on the map!`)
 })
 const deliveryOn = () => game.mode === 'race' && !!adventure.option.goal
 
@@ -280,7 +275,7 @@ function chooseParcel(i) {
   town.choose(i, game.player)
   renderParcels()
   const { kind } = town.houses[i]
-  tellNow(`${kind.parcel} goes to ${kind.house}. Can you find it on the map?`)
+  voice.sayNow(`${kind.parcel} goes to ${kind.house}. Can you find it on the map?`)
 }
 
 /** The car reached a house's doorstep (once per visit). */
@@ -292,13 +287,13 @@ function townArrive(i) {
     // The wrong house: say kindly whose house it is and where the parcel goes.
     const wanted = town.houses[town.chosen].kind
     banner(`🏠 ${here.emoji}  ·  📦 ${wanted.emoji}`, 2000)
-    tellNow(`This is ${here.house}. ${wanted.parcel} goes to ${wanted.house}.`)
+    voice.sayNow(`This is ${here.house}. ${wanted.parcel} goes to ${wanted.house}.`)
     return
   }
   // No parcel chosen yet: the car rests here a moment so the child can find the matching parcel.
   game.townHold = game.raceTime + HANDOVER_SECONDS
   banner(`🏠 ${here.emoji}`, 2000)
-  tellNow(`This is ${here.house}. Which parcel goes here?`)
+  voice.sayNow(`This is ${here.house}. Which parcel goes here?`)
 }
 
 /** A calm handover: the car rests, the parcel hops to the doorstep, a doorbell, and the resident waves. */
@@ -309,7 +304,7 @@ function deliverTo(i) {
   audio.doorbell()
   renderParcels()
   banner(`${kind.resident} 👋 ${kind.emoji}`, 2400)
-  tellNow(kind.thanks)
+  voice.sayNow(kind.thanks)
   later(() => {
     if (!game.raceOn || !townOn()) return
     if (town.done) finishTown()
@@ -1921,7 +1916,7 @@ function updateHud(now) {
   } else setText('crashes', `💥 ${game.stats.get(p.id)?.crashes ?? 0}`)
   setCooldown($('turbo-btn'), (p.turboCooldown - now) / TURBO_COOLDOWN)
   setCooldown($('fix-btn'), game.fixCooldown / FIX_COOLDOWN)
-  // A battered car (or one missing a wheel): 🔧 wobbles until it's tapped.
+  // A battered car (or one missing a wheel): 🔧 stays highlighted until it's tapped.
   const broken = game.fixCooldown <= 0 && (p.damage.level > 0.45 || p.wheels.some((w) => w.state === 'gone'))
   if (shown.get('broken') !== broken) {
     shown.set('broken', broken)

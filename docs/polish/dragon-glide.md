@@ -93,9 +93,11 @@ A gathering world can no longer end short of its goal. If Ember gets within 100 
 
 ### Simplify pass (2026-10-09)
 
-- One shared voice (`speech.js`, rate 0.85, pitch 1) replaces the game's speech code. `say(text, queue)` keeps its meaning (queue, or interrupt) and still sets `game.said`. The voice is passed to the adventure. The `renderChoice` callback now sets the `mission` body class, replacing the separate click listener.
+- One shared voice (`speech.js`, rate 0.85, pitch 1) replaces the game's speech code. `say(text, queue)` keeps its meaning (queue, or interrupt). The voice is passed to the adventure. The `renderChoice` callback now sets the `mission` body class, replacing the separate click listener.
 - Magic delays removed. The world goal is queued straight away (it used to wait 900 ms). The end-card words queue after the nest sort instead of `finishTimer` (1300 ms). `start()` hushes leftovers from the last trip.
 - One module-level `stillMotion` MediaQueryList.
 - In the gather hold, `course.spare()` runs every 0.5 s instead of every frame.
 - Dead code removed: `audio.whiff()`, `course.nextNumber()`, and the `.new-best` CSS with its two media-query copies.
 - Checks: Chromium and WebKit `browser.mjs` passed with 0 errors. A Playwright autopilot run (Meadow Isles to Sunset Castles; Night Sky through the sort to results) spoke the goals, counts, hold line, sort counting and end words in order. There were 0 console errors in both engines. Tests: 11/11.
+- Iteration 2: the ring progress uses the shared step row (`icon: () => document.createElement('i')`); the ring CSS moved to `.adventure-step i`, with the shared grey-out turned off because the pale ring border already shows "not yet". `renderChoice` only toggles the `mission` body class. `isMuted` is no longer passed to the adventure. The numbered-ring path uses `adventure.event()`'s return in place of the `counting` precheck. `game.said` was never read and is gone. The sound toggle now hushes the voice when it mutes. The calm-pass overrides were folded into their sources: the logo `bob`, Play and power `pulse` and tip `nudge` loops, the redundant `.big-go.alt { animation: none }`, and their keyframes are gone.
+- Iteration 2 checks: Chromium and WebKit `browser.mjs` 0 errors; `original-quality.mjs` passed; tests 11/11. A Playwright run with stubbed speech showed the new choice button, the rings filling 1/4 to ⭐, the world goal then "1", "2", "3", reward in order, mute cancelling speech, and 0 console errors in both engines.

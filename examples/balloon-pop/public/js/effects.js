@@ -25,7 +25,6 @@ const softDot = canvasTexture(64, 64, (g, s) => {
   g.fillRect(0, 0, s, s)
 })
 
-// A cartoon smoke puff: a soft ball, shaded underneath with a fluffy rim, so it reads against the pale sky.
 // A cartoon smoke puff: a soft ball shaded lilac underneath, so it reads against the pale sky.
 const puffTex = canvasTexture(64, 64, (g, s) => {
   const grad = g.createRadialGradient(s * 0.4, s * 0.36, 0, s / 2, s / 2, s / 2)
@@ -130,8 +129,9 @@ export class Effects {
   constructor(scene, camera) {
     this.scene = scene
     this.camera = camera
-    this.confetti = new Pool(scene, {
-      count: 700,
+    // Tree-tap leaves: 22 per tap, three taps' worth in flight at once
+    this.leafBits = new Pool(scene, {
+      count: 66,
       geometry: new THREE.PlaneGeometry(0.2, 0.12),
       material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
       gravity: 4.5,
@@ -266,7 +266,7 @@ export class Effects {
     for (let i = 0; i < 22; i++) {
       v.set(Math.random() - 0.5, Math.random() * 0.7, Math.random() - 0.5).normalize().multiplyScalar(4 + Math.random() * 3)
       const color = i % 6 === 5 ? '#ff9ec4' : pick(['#3fae4a', '#6cc551', '#8bd86a'])
-      this.confetti.spawn(pos, v, { life: 1.6 + Math.random() * 0.6, size: 2.8 + Math.random() * 1.2, color, spin: 5 })
+      this.leafBits.spawn(pos, v, { life: 1.6 + Math.random() * 0.6, size: 2.8 + Math.random() * 1.2, color, spin: 5 })
     }
   }
 
@@ -281,7 +281,7 @@ export class Effects {
   }
 
   update(dt) {
-    this.confetti.update(dt, this.camera)
+    this.leafBits.update(dt, this.camera)
     this.petals.update(dt, this.camera)
     this.shreds.update(dt, this.camera)
     this.puffs.update(dt, this.camera)

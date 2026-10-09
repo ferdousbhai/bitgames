@@ -111,7 +111,6 @@ export function flightRace(test, rocketThumb) {
 
 /** "Will it go farther, the same, or less far?" before a launch with a changed part. */
 export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, onGuess, onBack }) {
-  const speak = (text) => voice.say(text, { interrupt: true })
   const dialog = el('dialog', 'ft-dialog')
   dialog.id = 'predict'
   dialog.setAttribute('aria-labelledby', 'predict-q')
@@ -147,7 +146,7 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
     test.guess = id
     sound('pick')
     for (const b of guesses.children) b.setAttribute('aria-pressed', String(b.dataset.guess === id))
-    speak(`You think ${guessOf(id).say}. Let’s find out!`)
+    voice.sayNow(`You think ${guessOf(id).say}. Let’s find out!`)
     const chosen = test
     setTimeout(() => {
       if (dialog.open) dialog.close()
@@ -155,7 +154,7 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
     }, 450)
   }
 
-  dialog.querySelector('#predict-say').onclick = () => speak(said)
+  dialog.querySelector('#predict-say').onclick = () => voice.sayNow(said)
   dialog.querySelector('#predict-back').onclick = () => {
     test = null
     dialog.close()
@@ -197,7 +196,7 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
       said = `${what} Last time, it reached ${placeName(test.result.a.reach)}. Will it go farther, the same, or less far?`
       dialog.showModal()
       dialog.focus()
-      speak(said)
+      voice.sayNow(said)
     },
     close() {
       test = null
@@ -208,7 +207,6 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
 
 /** The pictured "what I found out" notebook: one page per part, filled by fair tests. */
 export function createNotebook({ notes, thumbOf, voice, sound = () => {} }) {
-  const speak = (text) => voice.say(text, { interrupt: true })
   const dialog = el('dialog', 'ft-dialog ft-notebook')
   dialog.id = 'notebook'
   dialog.setAttribute('aria-labelledby', 'notebook-title')
@@ -223,7 +221,7 @@ export function createNotebook({ notes, thumbOf, voice, sound = () => {} }) {
   const tell = (text) => {
     line.textContent = text
     said = text
-    speak(text)
+    voice.sayNow(text)
   }
 
   function render() {
@@ -250,7 +248,7 @@ export function createNotebook({ notes, thumbOf, voice, sound = () => {} }) {
   }
 
   dialog.querySelector('#notebook-close').onclick = () => dialog.close()
-  dialog.querySelector('#notebook-say').onclick = () => speak(said)
+  dialog.querySelector('#notebook-say').onclick = () => voice.sayNow(said)
 
   return {
     get open() { return dialog.open },

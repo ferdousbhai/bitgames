@@ -115,7 +115,6 @@ const game = {
   done: new Set(store.get('dragon-glide-worlds', [])),
   goal: null, // this world's purpose: { goal, reached, got, carried } (see worlds.js and goals.js)
   learned: [], // what each world of this trip brought home, for the nest and the end card
-  said: '', // the last thing said aloud (for tests)
 }
 if (new URLSearchParams(location.search).has('debug')) window.game = game
 
@@ -127,12 +126,8 @@ const adventure = createAdventure({
   id: 'dragon-glide',
   anchor: $('play'),
   hud: $('hud'),
-  isMuted: () => sound.muted,
   voice,
-  renderChoice: (button, option) => {
-    button.textContent = `${option.emoji} ${option.label}`
-    document.body.classList.toggle('mission', !!option.goal)
-  },
+  renderChoice: (button, option) => document.body.classList.toggle('mission', !!option.goal),
   // The reward is spoken; the screen shows the four rings and a party, no reading needed
   celebrate: () => {
     countParty()
@@ -140,34 +135,16 @@ const adventure = createAdventure({
     dragon.twirl()
     for (let i = 0; i < 3; i++) sparks.burst(tmp.set(pos.x + (i - 1) * 1.6, pos.y + 1.2, pos.z - 2), RAINBOW, 22, 7, 0.8, { vz: -game.speed * 0.5 })
   },
-  // Rings to fill in as you count, so a child who can't read can follow along
-  renderProgress: (el, option, count) => {
-    if (!option.goal) return
-    const row = document.createElement('span')
-    row.className = 'goal-rings'
-    row.setAttribute('aria-hidden', 'true')
-    for (let i = 0; i < option.target; i++) {
-      const r = document.createElement('i')
-      if (i < count) r.className = i === count - 1 ? 'got new' : 'got'
-      row.append(r)
-    }
-    const n = document.createElement('b')
-    n.textContent = count >= option.target ? '⭐' : `${count} / ${option.target}`
-    el.replaceChildren(row, n)
-    el.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
-    el.classList.toggle('done', count >= option.target)
-  },
   options: [
     { emoji: '🐉', label: 'Free flight' },
     { emoji: '🐢', label: 'Gentle flight', pace: 0.6 },
-    { emoji: '⭕', label: 'Count 4 rings', pace: 0.75, goal: 'Fly through 4 rings', target: 4, reward: 'One, two, three, four! Four rings!' },
+    { emoji: '⭕', label: 'Count 4 rings', pace: 0.75, goal: 'Fly through 4 rings', target: 4, icon: () => document.createElement('i'), reward: 'One, two, three, four! Four rings!' },
   ],
 })
 
 /** Says something aloud (unless the sound is off). `queue` waits for what is being said first. */
 function say(text, queue = false) {
   if (!text) return
-  game.said = text
   voice.say(text, { interrupt: !queue })
 }
 
@@ -603,6 +580,7 @@ function renderToggles() {
 function toggleSound() {
   sound.unlock()
   sound.setMuted(!sound.muted)
+  if (sound.muted) voice.hush()
   renderToggles()
 }
 
@@ -774,8 +752,7 @@ function handle(events) {
     } else if (ev.type === 'numRing') {
       // a numbered ring, flown in order: its number is said (the counting mission says its own count instead)
       game.rings++
-      const counting = adventure.option.goal && !adventure.complete
-      adventure.event()
+      const counting = !!adventure.event() // the mission counted this ring aloud
       const target = WORLDS[game.world].goal?.target
       if (game.goal) game.goal.reached = ev.number
       sound.number(ev.number)

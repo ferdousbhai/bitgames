@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { createStudioDialog, createStudioView } from './studio-dialog.js'
-import { createVoice } from './speech.js'
 import { FLAVOURS, STEP, STAND_TOP } from './cake.js'
 
 // Each recipe lists its layers from the bottom up.
@@ -48,7 +47,7 @@ function faceSprite(emoji) {
  * sound (optional) is the game's synth: pop, perfect, cheer, click, good, wobble, muted.
  * Feedback is also spoken, so a child who cannot read yet still hears what happened.
  */
-export function createRecipeStudio({ cakeKit, openButton, sound = null, voice = createVoice({ isMuted: () => !!sound?.muted }) }) {
+export function createRecipeStudio({ cakeKit, openButton, sound = null, voice }) {
   let view = null
   let recipeIndex = 0
   let layers = []
@@ -79,7 +78,7 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice = 
     sound?.[name]?.(...args)
   }
   // Each tap's answer replaces the last one, so a quick child never hears a backlog
-  const speak = (text) => voice.say(text, { interrupt: true })
+  const speak = voice.sayNow
   studio.dialog.addEventListener('close', () => voice.hush())
   const stillMotion = matchMedia('(prefers-reduced-motion: reduce)')
   let hop = 0

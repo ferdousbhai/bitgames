@@ -407,12 +407,12 @@ function chooseSide(btn) {
   if (!there.length) {
     btn.className = 'no'
     audio.squeak(0.8)
-    voice.say(`No pins ${SIDE_WORDS[side]}. Look for the glowing rings.`, { interrupt: true })
+    voice.sayNow(`No pins ${SIDE_WORDS[side]}. Look for the glowing rings.`)
     return
   }
   for (const b of document.querySelectorAll('#where button')) if (b.className !== 'no') b.className = b === btn ? 'yes' : ''
   audio.jingle(there.length)
-  voice.say(`Yes! ${pinWord(there.length)} ${SIDE_WORDS[side]}.`, { interrupt: true })
+  voice.sayNow(`Yes! ${pinWord(there.length)} ${SIDE_WORDS[side]}.`)
   // The penguin waddles over to face them; aiming the slide is still up to the child.
   game.walkTo = clamp(there.reduce((a, p) => a + p.x, 0) / there.length, -MAX_X, MAX_X)
 }
@@ -590,6 +590,7 @@ function setBumpers(on) {
 }
 
 function toTitle() {
+  voice.hush()
   prediction.reset()
   counter.clear()
   $('bond').hidden = true
@@ -653,6 +654,7 @@ $('home').addEventListener('click', (e) => {
 const soundBtn = $('sound')
 function setSound(on) {
   audio.setMuted(!on)
+  if (!on) voice.hush()
   soundBtn.textContent = on ? '🔊' : '🔇'
   store.set('sound', on ? '1' : '0')
 }

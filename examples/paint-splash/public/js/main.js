@@ -191,8 +191,6 @@ const gallery = createGallery({
 })
 /** Spoken words for children who can't read yet (quiet when the sound is off or there is no voice). */
 const voice = createVoice({ isMuted: () => !settings.sound, rate: 0.95, pitch: 1.15 })
-/** Every spoken line answers a tap or a new moment, so it replaces whatever was still being said. */
-const speak = (text) => voice.say(text, { interrupt: true })
 const colourStudio = createColourStudio({
   openButton: $('colour-open'),
   onOpen: () => {
@@ -203,7 +201,8 @@ const colourStudio = createColourStudio({
     voice.hush()
     releaseControls()
   },
-  speak,
+  // Every spoken line answers a tap or a new moment, so it replaces whatever was still being said
+  speak: voice.sayNow,
   sound: (kind, i) => audio.studio(kind, i),
 })
 
@@ -351,7 +350,7 @@ function buildMenu() {
     audio.unlock()
     audio.click()
     setMode(game.mode === 'timed' ? 'calm' : 'timed')
-    speak(game.mode === 'timed' ? 'A quick round, with a clock.' : 'No clock. Paint until you are finished.')
+    voice.sayNow(game.mode === 'timed' ? 'A quick round, with a clock.' : 'No clock. Paint until you are finished.')
   }
   setMode('calm')
   for (const el of document.querySelectorAll('[data-pot]')) el.onclick = () => choosePot(Number(el.dataset.pot))
@@ -371,6 +370,7 @@ function buildMenu() {
     settings.sound = !settings.sound
     store.set('paint-splash-sound', settings.sound)
     audio.setMuted(!settings.sound)
+    if (!settings.sound) voice.hush()
     updateToggles()
   }
   $('voice').onclick = () => say()
@@ -414,7 +414,7 @@ function choosePot(bits) {
     // Paint already rolled keeps its colour; the next stroke starts here in the new paint.
     emitStrokes(true)
     audio.studio('drip', PRIMARIES.indexOf(bits))
-    speak(MIXES[bits].word[0].toUpperCase() + MIXES[bits].word.slice(1))
+    voice.sayNow(MIXES[bits].word[0].toUpperCase() + MIXES[bits].word.slice(1))
   }
   updatePots()
 }
@@ -434,7 +434,7 @@ function askFinished(words = 'Is your picture finished?') {
   audio.unlock()
   audio.click()
   $('finish-ask').classList.remove('hidden')
-  speak(words)
+  voice.sayNow(words)
   clearTimeout(game.askTimer)
   // Unanswered, the question goes away and painting simply carries on.
   game.askTimer = setTimeout(() => closeFinishAsk(), 12000)
@@ -443,7 +443,7 @@ function askFinished(words = 'Is your picture finished?') {
 function closeFinishAsk(spoken = false) {
   clearTimeout(game.askTimer)
   $('finish-ask').classList.add('hidden')
-  if (spoken && game.state === 'play') speak('Keep painting!')
+  if (spoken && game.state === 'play') voice.sayNow('Keep painting!')
 }
 
 function finishPicture() {
@@ -464,6 +464,7 @@ function goHome() {
   audio.unlock()
   audio.click()
   if (['loading', 'menu', 'waiting'].includes(game.state)) return
+  voice.hush()
   if (isHost()) {
     send({ t: 'menu' })
     enterLobby()
@@ -862,7 +863,7 @@ function startPainting() {
   if (modeOf() === 'calm') {
     // The goal, in pictures and words: two paints and a question mark.
     showNote(`${dot(MIXES[1].hex)}<b>+</b>${dot(MIXES[2].hex)}<b>=</b><span class="q">❓</span>`, 5000)
-    later(() => speak('Roll your paint. Roll a new colour over wet, shiny paint to mix!'), 600)
+    later(() => voice.sayNow('Roll your paint. Roll a new colour over wet, shiny paint to mix!'), 600)
   }
 }
 
@@ -939,7 +940,7 @@ function showResults() {
   if (first) {
     later(() => keepFinishedPicture(true), AUTO_KEEP_MS)
     // The natural ending names what was learned.
-    later(() => speak(resultWords(foundOf(game.final))), 900)
+    later(() => voice.sayNow(resultWords(foundOf(game.final))), 900)
   }
 }
 
@@ -1337,7 +1338,7 @@ function sayNextMix(t) {
   game.noteAt = t
   renderFoundRow()
   showNote(recipe(m), NOTE_MS - 400)
-  speak(mixWords(m))
+  voice.sayNow(mixWords(m))
   audio.studio('keep')
   const at = paint.lastAt[m]
   if (at >= 0) {

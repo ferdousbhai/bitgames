@@ -1,10 +1,10 @@
 // Optional learning missions are driven by real game events, not weighted scores.
-// Each option is { emoji, label, pace?, goal?, target?, sequence?, accept?(data, count), reward }.
-// Without accept, every event counts. Pass the game's own voice (speech.js) so mission words queue
-// with the game's words instead of cutting them off; renderChoice draws the choice button.
-import { createVoice } from './speech.js'
-
-export function createAdventure({ id, anchor, hud, options, celebrate, renderProgress, renderChoice, isMuted = () => false, voice = createVoice({ isMuted, rate: 0.82 }) }) {
+// Each option is { emoji, label, pictures?, caption?, icon?, pace?, goal?, target?, sequence?,
+// hint?(count), accept?(data, count), reward }. Without accept, every event counts.
+// The game's voice (speech.js) is required so mission words queue with the game's own words.
+// announce(text, kind) decides what is said ('choice' | 'count' | 'reward' | 'hint'); it defaults
+// to saying everything. renderChoice and renderProgress decorate the default button and progress.
+export function createAdventure({ id, anchor, hud, options, voice, celebrate, renderProgress, renderChoice, goalWords = false, announce = (text, kind) => voice.say(text, { interrupt: kind === 'choice' }) }) {
   const storageKey = `${id}:adventure`
   let selected = 0
   let count = 0
@@ -28,16 +28,50 @@ export function createAdventure({ id, anchor, hud, options, celebrate, renderPro
   goal.setAttribute('aria-live', 'polite')
   hud.append(goal)
 
-  const speak = (text) => voice.say(text)
-  for (const buttonId of ['home', 'sound', 'mute']) document.getElementById(buttonId)?.addEventListener('click', () => voice.hush())
+  const span = (className, content) => {
+    const el = document.createElement('span')
+    el.className = className
+    if (content instanceof Node) el.append(content)
+    else el.textContent = content
+    return el
+  }
+
+  /** Pictures, caption and a ↻ that says "tap for another". */
+  function drawChoice(option) {
+    const pictures = span('adventure-pictures', option.pictures ?? option.emoji)
+    pictures.setAttribute('aria-hidden', 'true')
+    const next = span('adventure-next', '↻')
+    next.setAttribute('aria-hidden', 'true')
+    button.replaceChildren(pictures, span('adventure-caption', option.caption ?? option.label), next)
+  }
+
+  /** One picture per step, lit as the child gets it, then the count (or a star when done). */
+  function drawProgress(option) {
+    goal.classList.toggle('adventure-done', done)
+    if (!option.goal) return
+    if (!option.icon) {
+      goal.textContent = `${done ? '★ ' : ''}${option.goal} · ${count} / ${option.target}`
+      return
+    }
+    const row = span('adventure-steps', '')
+    row.setAttribute('aria-hidden', 'true')
+    for (let i = 0; i < option.target; i++) {
+      const icon = typeof option.icon === 'function' ? option.icon() : option.icon
+      row.append(span(`adventure-step${i < count ? ' adventure-got' : ''}${i === count - 1 ? ' adventure-new' : ''}`, icon))
+    }
+    const tally = document.createElement('b')
+    tally.textContent = done ? '⭐' : `${count} / ${option.target}`
+    goal.replaceChildren(...(goalWords ? [span('adventure-goal-words', option.goal)] : []), row, tally)
+    goal.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
+  }
 
   function update() {
     const option = options[selected]
-    if (renderChoice) renderChoice(button, option)
-    else button.textContent = `${option.emoji} ${option.label}`
+    drawChoice(option)
+    renderChoice?.(button, option)
     button.setAttribute('aria-label', `Adventure: ${option.label}. Tap to choose another.`)
     goal.hidden = !option.goal || !enabled
-    goal.textContent = option.goal ? `${done ? '★ ' : ''}${option.goal} · ${count} / ${option.target}` : ''
+    drawProgress(option)
     renderProgress?.(goal, option, count)
   }
 
@@ -51,8 +85,7 @@ export function createAdventure({ id, anchor, hud, options, celebrate, renderPro
     selected = ((index % options.length) + options.length) % options.length
     try { localStorage.setItem(storageKey, String(selected)) } catch {}
     begin()
-    // Choosing is tap feedback: each new choice replaces the last one's words
-    if (!silent) voice.say(options[selected].goal || options[selected].label, { interrupt: true })
+    if (!silent) announce(options[selected].goal || options[selected].label, 'choice')
   }
 
   button.onclick = () => select(selected + 1)
@@ -71,24 +104,27 @@ export function createAdventure({ id, anchor, hud, options, celebrate, renderPro
     get progress() { return count },
     get complete() { return done },
     begin,
-    // Counts one game event toward the mission; a sequence mission names the expected next step on a miss.
+    /**
+     * Counts one game event toward the mission and says what happened.
+     * Returns 'counted', 'done', 'rejected' (a sequence step out of order), or null when no mission counts.
+     */
     event(data) {
       const option = options[selected]
-      if (!enabled || !option.goal || done) return
+      if (!enabled || !option.goal || done) return null
       if (option.accept && !option.accept(data, count)) {
-        if (option.sequence) speak(`Next: ${option.sequence[count]}`)
-        return
+        if (option.sequence) announce(option.hint?.(count) ?? `Next: ${option.sequence[count]}`, 'hint')
+        return 'rejected'
       }
       count++
-      if (count === option.target) {
-        done = true
-        update()
+      done = count === option.target
+      update()
+      if (done) {
         celebrate?.(option.reward)
-        speak(option.reward)
-      } else {
-        update()
-        speak(String(count))
+        announce(option.reward, 'reward')
+        return 'done'
       }
+      announce(String(count), 'count')
+      return 'counted'
     },
   }
 }

@@ -115,7 +115,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .mission-step.done { background: #8ac926; color: #fff; opacity: 1; }
 .mission-step.next { background: #ffcf1a; color: #603d00; opacity: 1; box-shadow: 0 0 0 3px #ffcf1a55; }
 #menu .mission-step { width: 25px; height: 25px; font-size: 19px; }
-.mission-next { color: #aa679f; font-size: 22px; line-height: 1; }
+#menu .adventure-next { color: #aa679f; font-size: 22px; line-height: 1; }
 #hud .adventure-goal {
   bottom: calc(18px + env(safe-area-inset-bottom)); min-width: 190px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;

@@ -122,13 +122,13 @@ export class Book {
           const fact = fieldNote(c.id, c.name)
           this.note.textContent = `${c.name}: ${fact}`
           this.audio.newOne()
-          this.voice.say(`${c.name}! ${fact}`, { interrupt: true })
+          this.voice.sayNow(`${c.name}! ${fact}`)
         } else {
           // A mystery stays a mystery: just where to look for it
           const where = Object.keys(c.places)
           this.note.textContent = `❓ Not found yet! Look here: ${where.map((p) => PLACES[p].emoji).join(' ')}`
           this.audio.bubbles()
-          this.voice.say(where.length === Object.keys(PLACES).length ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`, { interrupt: true })
+          this.voice.sayNow(where.length === Object.keys(PLACES).length ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`)
         }
       })
       grid.appendChild(tile)

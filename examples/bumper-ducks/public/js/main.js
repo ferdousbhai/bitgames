@@ -155,47 +155,30 @@ const game = {
 
 // Optional learning missions count bubbles the children collect (all of them together; the robots'
 // don't count). A bubble's 'got' event can arrive more than once, so each one is counted once per round.
+// The goal shows as bubbles (icon) that fill in, one per bubble counted, so it reads without words.
 const collectedBubbles = new Set()
 const MISSIONS = [
   { emoji: '🦆', label: 'Free duck play' },
-  { emoji: '3️⃣', label: 'Count 3 bubbles together', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
-  { emoji: '6️⃣', label: 'Count 6 bubbles together', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
+  { emoji: '3️⃣', label: 'Count 3 bubbles together', icon: '🫧', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
+  { emoji: '6️⃣', label: 'Count 6 bubbles together', icon: '🫧', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
 ]
 // In Pond helpers the jar counts aloud, so the mission's own words keep quiet; its reward is said
 // after the jar counts the bubble that earned it (see jarDrop).
-let missionReward = null
 const pondHelping = () => !!game.sim?.calm && game.state === 'play'
-const missionVoice = {
-  say: (text, options) => (pondHelping() ? options?.onend?.() : voice.say(text, options)),
-  hush: voice.hush,
-}
 const adventure = createAdventure({
   id: 'bumper-ducks',
   anchor: $('go'),
   hud: $('hud'),
-  voice: missionVoice,
-  celebrate: (reward) => {
-    if (game.sim?.calm) missionReward = reward
+  voice,
+  announce: (text, kind) => {
+    if (!pondHelping()) voice.say(text, { interrupt: kind === 'choice' })
+  },
+  celebrate: () => {
     const n = adventure.option.target
     // One soft moment: the number of bubbles counted, a gentle chord and a few twinkles.
     banner(`${n} 🫧`, 2400, true)
     audio.chord()
     if (game.me) effects.sparkle(game.me.x, 1.6, game.me.z, '#ffd23f', 10)
-  },
-  // The goal as bubbles that fill in, one per bubble counted, so it reads without words.
-  renderProgress: (goal, option, count) => {
-    if (!option.goal) return
-    goal.replaceChildren()
-    for (let i = 0; i < option.target; i++) {
-      const b = document.createElement('span')
-      b.className = `goal-bubble${i < count ? '' : ' off'}${i === count - 1 ? ' new' : ''}`
-      b.textContent = '🫧'
-      goal.append(b)
-    }
-    const n = document.createElement('b')
-    n.textContent = count >= option.target ? '⭐' : `${count} / ${option.target}`
-    goal.append(n)
-    goal.setAttribute('aria-label', `${option.goal}: ${count} of ${option.target}`)
   },
   options: MISSIONS,
 })
@@ -206,9 +189,6 @@ function useMission(i) {
 }
 const isBotDuck = (id) => !!game.setup?.entries.find((e) => e.id === id)?.bot
 
-/** Speaks for children who can't read yet (quiet when the sound is off); words queue in order. */
-const say = (text, options) => voice.say(text, options)
-
 const colourOf = (c) => BUBBLE_COLOURS[c]?.hex ?? '#ffffff'
 /** A Pond helpers goal in words: said aloud on the menu and when the round starts. */
 function goalWords(g) {
@@ -218,10 +198,10 @@ function goalWords(g) {
 
 /** Says the goal once the round starts, for children who can't read it yet. */
 function sayGoal() {
-  if (game.sim?.calm) return say(goalWords(game.sim.goal))
+  if (game.sim?.calm) return voice.say(goalWords(game.sim.goal))
   const goal = adventure.option.goal
   if (!goal) return
-  say(`Let's count ${adventure.option.target} bubbles together!`)
+  voice.say(`Let's count ${adventure.option.target} bubbles together!`)
 }
 
 const isHost = () => game.room && game.hostId === game.room.selfId
@@ -462,7 +442,7 @@ function renderModes() {
       save('mode', game.mode)
       audio.plop()
       renderModes()
-      say(game.mode === 'calm' ? goalWords(GOALS[game.goalIndex]) : 'Bumper race! Grab bubbles before the clock runs out.', { interrupt: true })
+      voice.say(game.mode === 'calm' ? goalWords(GOALS[game.goalIndex]) : 'Bumper race! Grab bubbles before the clock runs out.', { interrupt: true })
     }
   }
 }
@@ -926,10 +906,11 @@ function playEvent(e) {
       break
     case 'got': {
       const fresh = e.kind === 'bubble' && !collectedBubbles.has(e.item)
+      let reward = null
       if (fresh) {
         collectedBubbles.add(e.item)
         // Pond helpers: only bubbles that went in the jar count toward a mission.
-        if (!isBotDuck(e.id) && (!sim.calm || e.ok)) adventure.event(e)
+        if (!isBotDuck(e.id) && (!sim.calm || e.ok) && adventure.event(e) === 'done' && sim.calm) reward = adventure.option.reward
       }
       const v = game.items.get(e.item)
       const y = v ? v.body.position.y : 0.8
@@ -938,7 +919,7 @@ function playEvent(e) {
       if (e.kind === 'bubble' && sim.calm) {
         effects.pop(e.x, y, e.z)
         // Into the jar it floats, to be counted when it lands; a bubble of another colour just pops softly.
-        if (e.ok && fresh) jarDrop(e, y)
+        if (e.ok && fresh) jarDrop(e, y, reward)
         else if (fresh && mine) audio.plop()
       } else if (e.kind === 'bubble') {
         effects.pop(e.x, y, e.z)
@@ -1192,15 +1173,12 @@ function catchUpJar() {
   renderJar()
 }
 
-/** A collected bubble floats from the duck up into its space in the frame. */
-function jarDrop(e, y) {
+/** A collected bubble floats from the duck up into its space in the frame; a mission it completed is praised once the jar has counted it. */
+function jarDrop(e, y, reward) {
   const sim = game.sim
   const token = jar.token
   const index = jar.shown + jar.flying
-  // A mission this bubble completed is praised once the jar has counted it.
-  const reward = missionReward
-  missionReward = null
-  if (index >= sim.target) return reward && say(reward)
+  if (index >= sim.target) return reward && voice.say(reward)
   jar.flying++
   const land = () => {
     if (token !== jar.token || game.sim !== sim) return
@@ -1208,7 +1186,7 @@ function jarDrop(e, y) {
     jar.shown = Math.min(sim.jar.length, jar.shown + 1)
     renderJar()
     countAloud()
-    if (reward) say(reward)
+    if (reward) voice.say(reward)
   }
   const cell = $('jar-frame').children[sim.goal.kind === 'tens' ? index % 10 : index]
   if (reducedMotion() || !cell || !document.body.animate) return land()
@@ -1243,15 +1221,15 @@ function countAloud() {
   const n = jar.shown
   if (sim.goal.kind !== 'tens') {
     audio.bubble(n - 1)
-    say(String(n))
+    voice.say(String(n))
     return
   }
   const within = n - Math.floor((n - 1) / 10) * 10
   audio.bubble(within - 1)
-  if (within < 10) return say(String(within))
+  if (within < 10) return voice.say(String(within))
   const k = n / 10
   audio.chord(0.15)
-  say(k === 1 ? 'Ten!' : `Ten! ${k} tens.`)
+  voice.say(k === 1 ? 'Ten!' : `Ten! ${k} tens.`)
   const token = jar.token
   later(() => token === jar.token && slideTen(k - 1), 650)
 }
@@ -1379,7 +1357,7 @@ function renderTeamResults() {
       if (run !== jar.token) return
       el.classList.add('lit')
       audio.bubble(tens ? k * 2 : k)
-      say(tens ? `${(k + 1) * 10}${k === steps.length - 1 ? '!' : ''}` : String(k + 1))
+      voice.say(tens ? `${(k + 1) * 10}${k === steps.length - 1 ? '!' : ''}` : String(k + 1))
     }, 500 + k * gap),
   )
   const summary = tens
@@ -1389,7 +1367,7 @@ function renderTeamResults() {
     if (run !== jar.token) return
     $('team').querySelector('.team-total').textContent = tens ? `${'🔟 '.repeat(g.n)}= ${total} 🫧` : `${total} ${BUBBLE_COLOURS[g.c].name} 🫧`
     audio.chord()
-    say(`${summary} Well done, team!`)
+    voice.say(`${summary} Well done, team!`)
   }, 700 + steps.length * gap)
 }
 
@@ -1583,6 +1561,7 @@ const input = new Input({
 $('home').addEventListener('click', (e) => {
   e.stopPropagation()
   audio.click()
+  voice.hush()
   abortToLobby()
 })
 addEventListener('keydown', (e) => {
@@ -1605,6 +1584,7 @@ function setSound(on) {
 if (load('sound') === '0') setSound(false)
 soundBtn.addEventListener('click', (e) => {
   e.stopPropagation()
+  voice.hush()
   audio.unlock()
   setSound(audio.muted)
   audio.click()

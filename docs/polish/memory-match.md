@@ -113,3 +113,4 @@ Quality cleanup only; play is unchanged.
 - Saves: `progress.stars` is moved into `modeDone.twins` once at load and `best` dropped, so `doneLevels()` is just `progress.modeDone[progress.mode]`. Checked with an old save: paw marks kept, and the next save writes the new shape.
 - Removed dead `effects.cannon()`, `audio.star()` and the always-zero `Card.wiggle`/`Card.bob`.
 - Checked: `browser.mjs --run simp` Chromium and WebKit 0 errors; a scripted Twins and Sounds round records the expected spoken order with no console errors.
+- Iteration 2: removed the orphaned `.logo span` `animation-delay`s and the unused `@keyframes bob`.

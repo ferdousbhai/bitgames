@@ -146,6 +146,9 @@ export function buildRace(lanes, rocketThumb, className = '') {
   return race
 }
 
+/** Did rocket `slot` win? On a tie, both did. */
+const won = (result, slot) => result.answer === slot || result.answer === 'same'
+
 /**
  * Fly both little ships to their planets (once the race is in the page). `result` is a
  * compareBuilds result; the winner's lane (both, on a tie) glows when they land.
@@ -168,7 +171,7 @@ export function flyRace(race, result, { duration = 1700, onDone = () => {} } = {
       rail.querySelector('.workshop-ship').classList.remove('flying')
       // The planet each rocket reached pops up above its lane
       stops[result[slot].reach + 1]?.classList.add('reached')
-      race.querySelector(`.lane-${slot}`).classList.toggle('winner', result.answer === slot || result.answer === 'same')
+      race.querySelector(`.lane-${slot}`).classList.toggle('winner', won(result, slot))
     }
     onDone()
   }, duration)
@@ -200,13 +203,12 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
   const finger = dialog.querySelector('.workshop-finger')
   const predictButtons = [...dialog.querySelectorAll('[data-predict]')]
   const predictionRow = dialog.querySelector('.workshop-prediction')
-  // Each tap's answer replaces the last one, so a quick child never hears a backlog
-  const speak = (text) => voice.say(text, { interrupt: true })
+  // Each tap's answer replaces the last one (sayNow), so a quick child never hears a backlog
   let said = ''
   const feedback = (text, words = text) => {
     $('workshop-feedback').textContent = text
     said = words
-    if (dialog.open && words) speak(words)
+    if (dialog.open && words) voice.sayNow(words)
   }
 
   let reference = readStoredReference() // build A
@@ -283,7 +285,10 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
     dialog.querySelector('.workshop-builds').replaceChildren(
       buildCard('A', reference, 'a', rocketThumb),
       buildCard('B', current, 'b', rocketThumb),
-      buildRace([['a', reference], ['b', current]].map(([slot, build]) => ({ slot, build, badge: el('b', 'workshop-lane-badge', slot.toUpperCase()) })), rocketThumb),
+      buildRace([
+        { slot: 'a', build: reference, badge: el('b', 'workshop-lane-badge', 'A') },
+        { slot: 'b', build: current, badge: el('b', 'workshop-lane-badge', 'B') },
+      ], rocketThumb),
     )
     swapPicture(changed)
     dialog.dataset.changes = String(Math.min(changed.length, 2))
@@ -338,7 +343,7 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
     feedback('3… 2… 1…', '')
     sound('go')
     timer = flyRace(dialog.querySelector('.workshop-race'), result, { duration: 1900, onDone: () => {
-      for (const slot of ['a', 'b']) dialog.querySelector(`[data-card="${slot}"]`).classList.toggle('winner', result.answer === slot || result.answer === 'same')
+      for (const slot of ['a', 'b']) dialog.querySelector(`[data-card="${slot}"]`).classList.toggle('winner', won(result, slot))
       const matched = prediction === result.answer
       const verdict = matched ? '✔ Your prediction matched!' : '💡 A new discovery!'
       const why = explain(reference, current, result)
@@ -361,7 +366,7 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
   }
   $('workshop-close').onclick = close
   garageButton.onclick = close
-  $('workshop-say').onclick = () => { if (said) speak(said) }
+  $('workshop-say').onclick = () => { if (said) voice.sayNow(said) }
   dialog.addEventListener('cancel', stop)
   dialog.addEventListener('close', () => { point(null); onChange() })
 

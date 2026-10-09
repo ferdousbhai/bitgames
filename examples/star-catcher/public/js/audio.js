@@ -16,7 +16,7 @@ export class Audio {
   /** Browsers only allow audio after a tap or key press. */
   unlock() {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') this.ctx.resume()
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {})
       return
     }
     try {
@@ -60,7 +60,7 @@ export class Audio {
   }
 
   suspend() {
-    this.ctx?.suspend()
+    this.ctx?.suspend().catch(() => {})
   }
 
   /** A short bell-like note, on the effects bus unless `out` says otherwise. */

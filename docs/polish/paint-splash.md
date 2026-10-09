@@ -119,3 +119,4 @@ Quality cleanup only; play is unchanged.
 - `paint.js` names mixes with `describeMix().base` from `colour-studio.js` instead of its own copy.
 - Removed dead CSS `@keyframes bob` and `.banner`/`.banner.show`.
 - Checked: `browser.mjs --run simp` Chromium and WebKit 0 errors; a scripted round (mode toggle, pots, mixes, studio, finish) records the expected spoken order and paints correctly.
+- Iteration 2: the `speak` wrapper is gone; lines use `voice.sayNow` (also handed to the colour studio). Turning sound off and leaving a round with Home now call `voice.hush()`. Removed the orphaned `.logo span` `animation-delay`s.

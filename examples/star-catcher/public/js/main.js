@@ -156,27 +156,12 @@ const adventure = createAdventure({
     missionTimers.push(setTimeout(() => ($('adventure-goal').hidden = true), 4300))
   },
   renderProgress: renderMissionProgress,
-  renderChoice: renderMissionChoice,
   options: [
-    { emoji: '🚀', label: 'Free space flight' },
-    { emoji: '🐢', label: 'Gentle star counting', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => ['star', 'pink', 'rainbow'].includes(it.kind), reward: 'Five stars for a new constellation!' },
-    { emoji: '💎', label: 'Three-gem mission', pace: 0.65, goal: 'Catch 3 gems', target: 3, accept: (it) => it.kind === 'gem', reward: 'Three gems on your space journey!' },
+    { emoji: '🚀', label: 'Free space flight', caption: 'Free flight' },
+    { emoji: '🐢', label: 'Gentle star counting', pictures: '⭐ ⭐ ⭐ ⭐ ⭐', caption: 'Count 5 stars', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => ['star', 'pink', 'rainbow'].includes(it.kind), reward: 'Five stars for a new constellation!' },
+    { emoji: '💎', label: 'Three-gem mission', pictures: '💎 💎 💎', caption: 'Catch 3 gems', gems: true, pace: 0.65, goal: 'Catch 3 gems', target: 3, accept: (it) => it.kind === 'gem', reward: 'Three gems on your space journey!' },
   ],
 })
-
-function renderMissionChoice(button, option) {
-  button.replaceChildren()
-  const pictures = document.createElement('span')
-  pictures.className = 'mission-choice-pictures'
-  pictures.textContent = option.constellation ? '⭐ ⭐ ⭐ ⭐ ⭐' : option.goal ? '💎 💎 💎' : '🚀'
-  const caption = document.createElement('span')
-  caption.textContent = option.constellation ? 'Count 5 stars' : option.goal ? 'Catch 3 gems' : 'Free flight'
-  const next = document.createElement('span')
-  next.className = 'mission-choice-next'
-  next.textContent = '↻'
-  next.setAttribute('aria-hidden', 'true')
-  button.append(pictures, caption, next)
-}
 
 const items = []
 const pools = {}
@@ -192,7 +177,7 @@ function leg(i) {
     // A constant gentle pace: later planets add variety, never speed
     speed: 2.3,
     interval: 1.0,
-    gem: i >= 1 || adventure.option.label === 'Three-gem mission' ? 0.14 : 0,
+    gem: i >= 1 || adventure.option.gems ? 0.14 : 0,
     pink: i >= 2 ? 0.14 : 0,
     rainbow: i >= 3 ? 0.05 : 0,
     power: i >= 2 ? 0.05 : 0,
@@ -377,9 +362,8 @@ function catchItem(it) {
     game.joy = 0.6
     return
   }
-  // While the star-counting mission is running, its own voice counts these stars aloud
-  const missionCounting = adventure.option.constellation && !adventure.complete
-  adventure.event(it)
+  // A star the mission counted is counted aloud by the mission's own voice, so the sky stays quiet
+  const counted = adventure.event(it)
   // The note follows where the star was caught (left is low, right is high), so it never climbs into a frenzy
   const across = clamp((pos.x - view.xMin) / Math.max(view.xMax - view.xMin, 1), 0, 1)
   audio.catch(Math.round(across * 5), it.kind === 'gem' ? 'gem' : it.kind === 'rainbow' ? 'rainbow' : 'star')
@@ -388,13 +372,13 @@ function catchItem(it) {
   if (game.phase !== 'build') return
   const at = toScreen(pos)
   if (it.kind === 'gem') sky.twinkle(at.x, at.y)
-  else sky.claim(at.x, at.y, { quiet: missionCounting })
+  else sky.claim(at.x, at.y, { quiet: counted === 'counted' || counted === 'done' })
 }
 
 /** A star has landed in the panel: a soft bell, and the count spoken aloud. */
 function starLit(n, total, data) {
   audio.light(n)
-  if (!data?.quiet) voice.say(String(n), { interrupt: true })
+  if (!data?.quiet) voice.sayNow(String(n))
   renderJourney()
 }
 
@@ -481,7 +465,7 @@ function showFinale() {
       audio.unlock()
       audio.light(def.stars.length)
       sky.highlight(i)
-      voice.say(`${def.name}. ${def.fact}`, { interrupt: true })
+      voice.sayNow(`${def.name}. ${def.fact}`)
     })
     return cell
   })
@@ -529,7 +513,8 @@ function renderJourney() {
   // The rocket rides the track being flown, or rests at the planet it just reached
   const ship = game.phase === 'build' ? at : homeward ? STOPS.length : at - 1
   const fills = STOPS.map((s, i) => (i < at ? 1 : i === at && game.phase === 'build' ? legProgress() : 0))
-  fills.push(homeward ? Math.min(game.phaseTime / HOME_TIME, 1) : 0)
+  // Rounded, so the bar is only touched when it visibly moves
+  fills.push(homeward ? Math.round(Math.min(game.phaseTime / HOME_TIME, 1) * 500) / 500 : 0)
   // The stops and tracks are rebuilt only when the trip moves on; every frame just moves the bars
   const key = `${at}:${homeward}:${ship}`
   if (key !== journeyKey) {
@@ -551,7 +536,7 @@ function renderJourney() {
     const bar = journeyFills[i]
     if (bar.fill === fill) return
     bar.fill = fill
-    bar.el.style.width = `${fill * 100}%`
+    bar.el.style.transform = `scaleX(${fill})`
     if (i === ship && journeyShip) {
       journeyShip.style.left = `${fill * 100}%`
       journeyShip.style.transform = `translateX(-${fill * 100}%)`
@@ -589,6 +574,7 @@ function toggleSound() {
   audio.unlock()
   audio.setMuted(!audio.muted)
   store.set('star-catcher-muted', audio.muted)
+  if (audio.muted) voice.hush()
   renderSound()
 }
 
@@ -681,7 +667,7 @@ function start() {
   game.phase = 'build'
   game.phaseTime = 0
   banner(`🚀 Blast off!`, `Fly to ${STOPS[0].emoji} ${STOPS[0].name}`)
-  voice.say(adventure.option.goal || 'Catch the stars to light up the sky!', { interrupt: true })
+  voice.sayNow(adventure.option.goal || 'Catch the stars to light up the sky!')
   resize() // the HUD is on screen now, so the band that things fade in below can be measured
   sky.begin(0, $('sky-panel'))
   renderJourney()

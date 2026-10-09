@@ -72,40 +72,20 @@ const game = {
   misses: 0, // layers in a row that were not the next one in the order
 }
 
-// Feedback on a tap replaces whatever was still being said.
-const speak = (text) => voice.say(text, { interrupt: true })
-
 // Optional learning missions: count layers as they land.
 const adventure = createAdventure({
   id: 'cake-stack',
   anchor: $('play'),
   hud: $('hud'),
-  isMuted: () => sound.muted,
   voice,
   celebrate: (text) => celebrateMission(text),
   // A row of slices to count along with the words, so non-readers can follow it too
-  renderProgress: (el, option, count) => {
-    if (!option.goal) return
-    el.replaceChildren()
-    const row = document.createElement('span')
-    row.className = 'goal-slices'
-    row.setAttribute('aria-hidden', 'true')
-    for (let i = 0; i < option.target; i++) {
-      const s = document.createElement('span')
-      s.textContent = '🍰'
-      if (i < count) s.className = 'got'
-      row.append(s)
-    }
-    const words = document.createElement('span')
-    words.className = 'goal-words'
-    words.textContent = option.goal
-    el.append(words, row, ` ${count} / ${option.target}`)
-  },
+  goalWords: true,
   // The friend's order is the default; the counting missions and free stacking keep any flavour that lands.
   options: [
     { emoji: '🧁', label: "Friend's order", order: true },
-    { emoji: '🐢', label: 'Gentle layer counting', pace: 0.6, goal: 'Stack 3 layers', target: 3, reward: 'Three layers make your little cake!' },
-    { emoji: '🧮', label: 'Count five layers', pace: 0.65, goal: 'Stack 5 layers', target: 5, reward: 'Five layers, counted one at a time!' },
+    { emoji: '🐢', label: 'Gentle layer counting', pace: 0.6, goal: 'Stack 3 layers', target: 3, icon: '🍰', reward: 'Three layers make your little cake!' },
+    { emoji: '🧮', label: 'Count five layers', pace: 0.65, goal: 'Stack 5 layers', target: 5, icon: '🍰', reward: 'Five layers, counted one at a time!' },
     { emoji: '🎂', label: 'Free stacking' },
   ],
 })
@@ -406,7 +386,7 @@ async function notThisOne(L) {
   game.idle = 0
   $('hint').classList.add('hidden')
   const want = wanted()
-  speak(`That one is ${L.flavour}. Let's wait for ${want}!`)
+  voice.sayNow(`That one is ${L.flavour}. Let's wait for ${want}!`)
   askPip()
   sound.whoosh()
   const y0 = L.group.position.y
@@ -499,7 +479,7 @@ function land(L) {
   const n = cake.layers.length
   const target = targetLayers()
   // Each layer of the order is named as it lands, so the sequence is heard as well as seen.
-  if (orderMode() && n < target) speak(L.flavour)
+  if (orderMode() && n < target) voice.sayNow(L.flavour)
   if (n >= target) {
     setTimeout(() => run === game.run && finishCake('done'), 450)
     return
@@ -701,7 +681,7 @@ async function finishCake(reason) {
   // Name what the child built: the order followed layer by layer, or the pattern finished.
   if (game.order && customer && cake.layers.length === game.order.layers.length) {
     const words = orderWords(game.order.layers)
-    speak(game.order.unit ? `You finished the pattern! ${words}.` : `${words}. Just like ${animalName(customer.def.animal)}'s order!`)
+    voice.sayNow(game.order.unit ? `You finished the pattern! ${words}.` : `${words}. Just like ${animalName(customer.def.animal)}'s order!`)
   }
   await wait(0.5)
   if (run !== game.run) return
@@ -811,7 +791,7 @@ async function blowCandles() {
 const PLATES = ['#bedacc', '#bed4ed', '#e6caea', '#ffe3b8']
 const share = createPartyShare({
   root: $('share'),
-  speak,
+  speak: voice.sayNow,
   sound,
   onDone: (result) => {
     if (game.state !== 'share') return
@@ -1058,7 +1038,7 @@ function updateHud() {
 function sayOrder() {
   if (!game.order || !customer) return
   const words = orderWords(game.order.layers)
-  speak(game.order.unit ? `${animalName(customer.def.animal)} wants a pattern! ${words}.` : `${animalName(customer.def.animal)} wants ${words}!`)
+  voice.sayNow(game.order.unit ? `${animalName(customer.def.animal)} wants a pattern! ${words}.` : `${animalName(customer.def.animal)} wants ${words}!`)
 }
 
 /** Point at the next dot of the order for a moment, after a layer it did not need yet. */
@@ -1231,6 +1211,7 @@ $('done').addEventListener('click', (e) => {
 const soundBtn = $('sound')
 function setSound(on) {
   sound.setMuted(!on)
+  if (!on) voice.hush()
   soundBtn.textContent = on ? '🔊' : '🔇'
   try {
     localStorage.setItem('cake-stack-sound', on ? '1' : '0')

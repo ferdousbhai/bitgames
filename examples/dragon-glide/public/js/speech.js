@@ -1,5 +1,5 @@
 // One calm voice per game: spoken words wait their turn instead of cutting each other off.
-// say() queues by default; pass { interrupt: true } to clear what is waiting first.
+// say() queues by default; sayNow() (or { interrupt: true }) clears what is waiting first.
 // onend runs when the words finish (or a fallback timer, for browsers that never fire end),
 // but not for words cut short by hush().
 export function createVoice({ isMuted = () => false, rate = 0.85, pitch = 1.05 } = {}) {
@@ -56,6 +56,8 @@ export function createVoice({ isMuted = () => false, rate = 0.85, pitch = 1.05 }
 
   return {
     say,
+    /** Tap feedback: says this now, dropping anything still waiting. */
+    sayNow: (text, options) => say(text, { ...options, interrupt: true }),
     hush,
     get speaking() { return pending > 0 },
     /** Resolves once everything queued has been said (or hushed). */

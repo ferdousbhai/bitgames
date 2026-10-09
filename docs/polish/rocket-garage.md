@@ -139,3 +139,9 @@ The 🧪 workshop's fair test now happens on every launch after a part change. T
 - The journey track and the ghost rocket write their positions only when they move, and `#journey-fill` is looked up once instead of every frame. The rocket thumbnail cache now drops only its oldest picture.
 - Removed dead CSS: `@keyframes bob`, `.pill.bump` and `@keyframes bump`.
 - Checks: Chromium and WebKit browser checks pass with 0 errors. A scripted play covered a first flight, a booster change with a guess, the reward race and the workshop save, test and say-again. Speech stayed in order.
+- Second pass:
+  - The local `speak` wrappers in `fairtest.js` and `workshop.js` are now direct `voice.sayNow` calls.
+  - The workshop writes its two race lanes directly. One `won(result, slot)` helper decides the winning lane and card.
+  - Muting and Home call `voice.hush()`.
+  - Removed the leftover `animation-delay` on the `.logo span` colour rules.
+  - Checks: Chromium and WebKit browser checks, `original-quality.mjs` and the unit tests pass. A scripted workshop test (save A, change the tank, guess A, test, say again) lit both lanes and cards on the tie. Speech stayed in order, and mute and Home each cancel speech. No console errors.

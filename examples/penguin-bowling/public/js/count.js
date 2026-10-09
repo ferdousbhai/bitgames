@@ -44,6 +44,11 @@ function numberTexture(n) {
 }
 
 /** Which way a pin is from the middle of the lane, as the penguin sees it. */
+/** Seconds between one counted pin and the next. */
+const STEP = 0.7
+const ringGeometry = new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2)
+const ringWhite = new THREE.Color('#fff3b0')
+
 export const sideOf = (x) => (x < -0.2 ? 'left' : x > 0.2 ? 'right' : 'middle')
 
 export class Counter {
@@ -51,7 +56,7 @@ export class Counter {
     this.say = say
     this.marks = Array.from({ length: 10 }, () => {
       const ring = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2),
+        ringGeometry,
         new THREE.MeshBasicMaterial({ map: ringTex, transparent: true, depthWrite: false, toneMapped: false, color: '#ffe066' }),
       )
       ring.renderOrder = 3
@@ -72,18 +77,18 @@ export class Counter {
   /** Start counting `standing` pins ([{x, z, color, i}]) after `delay` seconds. */
   start(standing, delay, onDone) {
     this.clear()
-    this.queue = standing.map((p, k) => ({ ...p, n: k + 1, at: delay + k * 0.7 }))
+    this.queue = standing.map((p, k) => ({ ...p, n: k + 1, at: delay + k * STEP }))
     this.total = standing.length
     this.t = 0
     this.done = false
     this.onDone = onDone
     this.onStep = null
-    this.endAt = delay + standing.length * 0.7 + 0.3
+    this.endAt = Counter.duration(standing.length, delay)
   }
 
   /** How long the whole count takes, in seconds, for `n` pins after `delay`. */
   static duration(n, delay) {
-    return delay + n * 0.7 + 0.3
+    return delay + n * STEP + 0.3
   }
 
   update(dt, t) {
@@ -121,7 +126,7 @@ export class Counter {
   light(q) {
     const m = this.marks[q.n - 1]
     m.ring.position.set(q.x, 0.02, q.z)
-    m.ring.material.color.set(q.color ?? '#ffe066').lerp(new THREE.Color('#fff3b0'), 0.45)
+    m.ring.material.color.set(q.color ?? '#ffe066').lerp(ringWhite, 0.45)
     m.label.material.map = numberTexture(q.n)
     m.label.material.needsUpdate = true
     // Back rows float a little higher, and front numbers draw on top, so clustered pins stay readable.

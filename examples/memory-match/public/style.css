@@ -22,11 +22,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .logo { font-size: clamp(40px, 10vw, 92px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1.05; }
 .logo span { display: inline-block; text-shadow: 0 5px 0 rgba(60, 30, 90, 0.35); }
 .logo span:nth-child(5n+1) { color: #ff6b9d; }
-.logo span:nth-child(5n+2) { color: #ffbe0b; animation-delay: .12s; }
-.logo span:nth-child(5n+3) { color: #8ac926; animation-delay: .24s; }
-.logo span:nth-child(5n+4) { color: #4dc3ff; animation-delay: .36s; }
-.logo span:nth-child(5n) { color: #b388ff; animation-delay: .48s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-9px) rotate(4deg); } }
+.logo span:nth-child(5n+2) { color: #ffbe0b; }
+.logo span:nth-child(5n+3) { color: #8ac926; }
+.logo span:nth-child(5n+4) { color: #4dc3ff; }
+.logo span:nth-child(5n) { color: #b388ff; }
 
 /* Overlays sit on top of the 3D table and leave the middle free for the animals. */
 .overlay {

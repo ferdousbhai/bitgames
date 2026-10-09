@@ -107,17 +107,18 @@ const ASK_AT = 7 // Pip stops a few steps before the hidden obstacle, so its "?"
 if (new URLSearchParams(location.search).has('debug')) window.game = game
 
 // Optional learning missions. A flip is the bunny's 'double' hop.
-const missionSteps = {
-  'Gentle hop counting': ['↑', '↑', '↑', '↑'],
-  'Hop, hop, flip pattern': ['↑', '↑', '↻'],
-}
-
-function missionIcon(symbol, state = '') {
-  const icon = document.createElement('span')
-  icon.className = `mission-step ${state}`
-  icon.textContent = symbol
-  icon.setAttribute('aria-hidden', 'true')
-  return icon
+/** The mission's steps as tiles: the first `count` done, the next one lit. */
+function stepRow(symbols, count = symbols.length) {
+  const row = document.createElement('span')
+  row.className = 'mission-steps'
+  symbols.forEach((symbol, i) => {
+    const icon = document.createElement('span')
+    icon.className = `mission-step ${i < count ? 'done' : i === count ? 'next' : ''}`
+    icon.textContent = symbol
+    icon.setAttribute('aria-hidden', 'true')
+    row.append(icon)
+  })
+  return row
 }
 
 function renderMissionProgress(goal, option, count) {
@@ -129,10 +130,7 @@ function renderMissionProgress(goal, option, count) {
   caption.textContent = option.sequence
     ? count === 2 ? 'Hop, then tap to flip!' : count === 3 ? 'Pattern complete!' : '👆 Hop · hop · flip'
     : `👆 Tap to hop · ${count} / 4`
-  const steps = document.createElement('span')
-  steps.className = 'mission-steps'
-  missionSteps[option.label].forEach((symbol, i) => steps.append(missionIcon(symbol, i < count ? 'done' : i === count ? 'next' : '')))
-  goal.append(caption, steps)
+  goal.append(caption, stepRow(option.steps, count))
 }
 
 // One voice for the game and its missions: words wait their turn, so a mission never swallows a count.
@@ -143,7 +141,6 @@ const adventure = createAdventure({
   anchor: $('play'),
   hud: $('hud'),
   voice,
-  renderChoice: renderMissionChoice,
   celebrate: () => {
     // One soft moment: what the child made, a gentle chord and a few slow petals.
     banner(adventure.option.sequence ? '↑ ↑ ↻ Pattern!' : '↑ ↑ ↑ ↑ Four hops!', 2600)
@@ -152,25 +149,13 @@ const adventure = createAdventure({
   },
   renderProgress: renderMissionProgress,
   options: [
-    { emoji: '🐰', label: 'Free hopping' },
-    { emoji: '🔢', label: 'Gentle hop counting', pace: 0.6, goal: 'Make four hops', target: 4, reward: 'Four! You made four hops!' },
-    { emoji: '🎶', label: 'Hop, hop, flip pattern', pace: 0.6, goal: 'Hop twice, then hop and tap again in the air to flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => n < 2 ? kind === 'hop' || kind === 'double' : kind === 'double', reward: 'You made the hop, hop, flip pattern!' },
+    { emoji: '🐰', label: 'Free hopping', caption: 'Free hop', pictures: stepRow(['🐰']) },
+    { emoji: '🔢', label: 'Gentle hop counting', caption: 'Count 4 hops', steps: ['↑', '↑', '↑', '↑'], pictures: stepRow(['↑', '↑', '↑', '↑']), pace: 0.6, goal: 'Make four hops', target: 4, reward: 'Four! You made four hops!' },
+    // A plain hop where the flip belongs is turned away with a reminder to tap again in the air.
+    { emoji: '🎶', label: 'Hop, hop, flip pattern', caption: 'Hop, hop, flip', steps: ['↑', '↑', '↻'], pictures: stepRow(['↑', '↑', '↻']), pace: 0.6, goal: 'Hop twice, then hop and tap again in the air to flip', target: 3, sequence: ['hop', 'hop', 'flip'], accept: (kind, n) => n < 2 ? kind === 'hop' || kind === 'double' : kind === 'double', hint: () => 'Tap again in the air to flip!', reward: 'You made the hop, hop, flip pattern!' },
   ],
 })
 
-function renderMissionChoice(button, option) {
-  button.replaceChildren()
-  const steps = document.createElement('span')
-  steps.className = 'mission-steps'
-  for (const symbol of missionSteps[option.label] || ['🐰']) steps.append(missionIcon(symbol, 'done'))
-  const caption = document.createElement('span')
-  caption.textContent = option.sequence ? 'Hop, hop, flip' : option.goal ? 'Count 4 hops' : 'Free hop'
-  const next = document.createElement('span')
-  next.className = 'mission-next'
-  next.textContent = '↻'
-  next.setAttribute('aria-hidden', 'true')
-  button.append(steps, caption, next)
-}
 // The mission choice and the 🐢 pace share one row on the menu.
 $('menu-options').prepend($('adventure-choice'))
 function renderPace() {
@@ -317,10 +302,7 @@ function hop() {
   if (game.state !== 'play' || game.asking) return
   const kind = bunny.hop()
   if (!kind) return
-  if (adventure.option.sequence && adventure.progress === 2 && kind === 'hop') {
-    banner('👆 Tap again!', 900)
-    voice.say('Tap again in the air to flip!')
-  } else adventure.event(kind)
+  if (adventure.event(kind) === 'rejected') banner('👆 Tap again!', 900)
   sound.hop(kind === 'double')
   tmp.set(game.x, 0, 0)
   if (kind === 'hop') effects.puff(tmp, 6, dustColor(), 0.9)
@@ -553,6 +535,7 @@ $('home').onclick = () => {
 }
 function toggleMute() {
   sound.unlock()
+  voice.hush()
   sound.setMuted(!sound.muted)
   $('mute').textContent = sound.muted ? '🔇' : '🔊'
 }
