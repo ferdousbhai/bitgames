@@ -47,6 +47,10 @@ Every original now has its learning inside the core action, with calm untimed pl
 
 Each game's `docs/polish/<game-id>.md` has the design, file:line changes, evidence and remaining ideas. Released 2026-10-09 (see below). Family play is the next real test. The Fish Pond builder keeps shipped GLBs unchanged when a fresh export has the same geometry; other builders may want the same guard.
 
+## Splash Tank (separate repo, 2026-10-10)
+
+"Splash Tank" is the repository `ferdousbhai/splat-tanks` (the game is Splat Tanks; its Worker id is `tank-clash`). It is cloned at `~/github.com/ferdousbhai/splat-tanks`. It got the same audit and calm pass as the originals. Its new default mode, 🤝 Paint together, teaches halves, thirds and quarters inside the painting. The timed splat match remains a menu choice. See that repo's `docs/AUDIT_2026-10-10.md` and `docs/POLISH.md`. It is committed locally but not pushed or deployed.
+
 ## Phase 2 design decisions (2026-10-09)
 
 The owner delegated the open Phase 2 questions ("use your judgement"). These defaults hold until family play says otherwise.
