@@ -53,7 +53,7 @@ Each game's `docs/polish/<game-id>.md` has the design, file:line changes, eviden
 
 ## Splash Tank (separate repo, 2026-10-10)
 
-"Splash Tank" is the repository `ferdousbhai/splat-tanks` (the game is Splat Tanks; its Worker id is `tank-clash`). It is cloned at `~/github.com/ferdousbhai/splat-tanks`. It got the same audit and calm pass as the originals. Its new default mode, 🤝 Paint together, teaches halves, thirds and quarters inside the painting. The timed splat match remains a menu choice. See that repo's `docs/AUDIT_2026-10-10.md` and `docs/POLISH.md`. It is committed locally but not pushed or deployed.
+"Splash Tank" is the repository `ferdousbhai/splat-tanks` (the game is Splat Tanks; its Worker id is `tank-clash`). It is cloned at `~/github.com/ferdousbhai/splat-tanks`. It got the same audit and calm pass as the originals. Its new default mode, 🤝 Paint together, teaches halves, thirds and quarters inside the painting. The timed splat match remains a menu choice. See that repo's `docs/AUDIT_2026-10-10.md` and `docs/POLISH.md`. It was pushed and deployed on 2026-10-11 (commit `02b16cd`, Cloudflare version `945becba`) and published as BitGames version `f17e8e7f-53c5-41ed-b999-bd52fa20b04c`, playable at https://bitgames.store/try/203beb358e80f510645a5c085656db30 and waiting for store review. One check needs a real iPad: speech should switch on when a finger lifts off a drive stick.
 
 ## Phase 2 design decisions (2026-10-09)
 
