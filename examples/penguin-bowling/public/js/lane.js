@@ -508,6 +508,24 @@ export class Pins {
     }
   }
 
+  /**
+   * Pins knocked off the deck (into a gutter, onto the bank or into the pit) puff away as soon as
+   * the roll settles, even if they landed upright: they are out of play, so nothing that looks
+   * like a standing pin is left to be "not counted". Returns their positions for effects.
+   */
+  clearOffDeck() {
+    const out = []
+    for (const p of this.list) {
+      const b = p.body.position
+      if (p.removed || (b.z >= LANE.deckEnd && Math.abs(b.x) <= LANE.half)) continue
+      p.removed = true
+      p.vanish = 1
+      this.lane.world.removeBody(p.body)
+      out.push(p.mesh.position.clone())
+    }
+    return out
+  }
+
   /** Fallen pins disappear in a puff; returns their positions for effects. */
   clearFallen() {
     const out = []

@@ -8,6 +8,7 @@ export class Audio {
   constructor() {
     this.ctx = null
     this.muted = false
+    this.musicOn = true
     this.musicStep = 0
     this.musicNext = 0
     this.melody = 2
@@ -32,7 +33,7 @@ export class Audio {
     this.sfx = ctx.createGain()
     this.sfx.connect(this.master)
     this.music = ctx.createGain()
-    this.music.gain.value = 0.32
+    this.music.gain.value = this.musicOn ? 0.32 : 0
     this.music.connect(this.master)
     // A soft echo, shared by everything sparkly
     this.echo = ctx.createDelay(1)
@@ -59,6 +60,12 @@ export class Audio {
     if (this.master) this.master.gain.setTargetAtTime(muted ? 0 : 0.8, this.ctx.currentTime, 0.05)
   }
 
+  /** The music switch: the tune fades out or back in; everything else keeps playing. */
+  setMusic(on) {
+    this.musicOn = on
+    if (this.music) this.music.gain.setTargetAtTime(on ? 0.32 : 0, this.ctx.currentTime, 0.2)
+  }
+
   suspend() {
     this.ctx?.suspend().catch(() => {})
   }
@@ -83,19 +90,18 @@ export class Audio {
   }
 
   /** A soft note chosen by where the catch happened (0 = left … 5 = right); it never climbs with streaks. */
-  catch(step, kind) {
+  catch(step) {
     if (!this.ctx) return
     const n = SCALE[Math.min(step, SCALE.length - 1)]
-    if (kind === 'gem') {
-      this.tone(n, { dur: 0.5, vol: 0.14 })
-      this.tone(n * 2.76, { dur: 0.3, vol: 0.05, when: 0.01 })
-      this.tone(n * 1.5, { dur: 0.4, vol: 0.1, when: 0.08 })
-    } else if (kind === 'rainbow') {
-      ;[0, 2, 4].forEach((k, i) => this.tone(SCALE[k + 1], { when: i * 0.1, dur: 0.45, vol: 0.08, type: 'triangle' }))
-    } else {
-      this.tone(n, { dur: 0.32, vol: 0.16 })
-      this.tone(n * 2, { dur: 0.18, vol: 0.05, type: 'triangle', echo: false })
-    }
+    this.tone(n, { dur: 0.32, vol: 0.16 })
+    this.tone(n * 2, { dur: 0.18, vol: 0.05, type: 'triangle', echo: false })
+  }
+
+  /** Not this number: two low, soft notes that drift down, like a gentle "hmm". Never a buzzer. */
+  notThis() {
+    if (!this.ctx) return
+    this.tone(392, { dur: 0.3, vol: 0.07, attack: 0.03, echo: false })
+    this.tone(330, { when: 0.16, dur: 0.4, vol: 0.06, attack: 0.03, echo: false })
   }
 
   /** A star lighting in the constellation: one soft bell per star, a step up the scale each time. */
@@ -110,15 +116,6 @@ export class Audio {
   constellation() {
     if (!this.ctx) return
     ;[392, 523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, { when: i * 0.12, dur: 1.6, vol: 0.05, attack: 0.08 }))
-  }
-
-  powerUp() {
-    if (!this.ctx) return
-    ;[523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, { when: i * 0.1, dur: 0.4, vol: 0.07 }))
-  }
-
-  powerDown() {
-    this.tone(784, { dur: 0.35, vol: 0.06, slide: 0.6, echo: false })
   }
 
   /** A soft cartoon boing for bumping a sleepy rock: no harsh crash. */
@@ -236,7 +233,7 @@ export class Audio {
 
   /** Gentle music-box tune, scheduled a little ahead of time. */
   updateMusic() {
-    if (!this.ready) return
+    if (!this.ready || !this.musicOn) return
     const ctx = this.ctx
     const beat = 60 / 96 / 2
     if (this.musicNext < ctx.currentTime) this.musicNext = ctx.currentTime + 0.05

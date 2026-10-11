@@ -37,8 +37,9 @@
       <button class="place ice" data-place="ice" aria-label="Icy Sea"><span class="pe">❄️</span><span class="pf">🦭</span></button>
       <button class="place reef" data-place="reef" aria-label="Coral Reef"><span class="pe">🐠</span><span class="pf">🐙</span></button>
     </div>
+    <button id="bear-list" class="bear-list" type="button" hidden><span class="bl-head" aria-hidden="true">🐻📜</span><span id="list-items" class="list-items" aria-hidden="true"></span></button>
     <div class="title-row">
-      <button id="title-book" class="book-big" aria-label="Fish book">📖 <b id="title-count">0/15</b></button>
+      <button id="title-book" class="book-big" aria-label="Fish book">📖 <b id="title-count">0/18</b></button>
     </div>
   </div>
 </div>
@@ -46,12 +47,13 @@
 <div id="hud" class="hidden">
   <div class="hud-left">
     <button id="home" class="round-btn" title="Home (Esc)" aria-label="Home">🏠</button>
-    <button id="book-btn" class="round-btn book-btn" title="Fish book (B)" aria-label="Fish book">📖<span id="count" class="badge-count">0/15</span></button>
+    <button id="book-btn" class="round-btn book-btn" title="Fish book (B)" aria-label="Fish book">📖<span id="count" class="badge-count">0/18</span></button>
   </div>
   <div class="hud-right">
     <button id="music" class="round-btn" title="Music" aria-label="Music on or off">🎵</button>
     <button id="sound" class="round-btn" title="Sound" aria-label="Sound on or off">🔊</button>
   </div>
+  <button id="riddle" class="riddle" type="button" hidden><span class="riddle-bear" aria-hidden="true">🐻</span><span id="riddle-icon" class="riddle-icon" aria-hidden="true"></span><span id="riddle-word" class="riddle-word"></span></button>
   <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div><div id="intro-sub"></div></div>
 </div>
 
@@ -62,6 +64,8 @@
   <div id="card-look" class="clook hidden"></div>
 </div>
 
+<div id="dots" class="dots"></div>
+<div id="guess" class="guess" role="group" aria-label="How many? Guess" hidden></div>
 <button id="look" class="look hidden" aria-label="Look closer"><span class="look-glass" aria-hidden="true">🔍</span></button>
 
 <div id="bang" class="bang hidden"><span>!</span></div>
@@ -70,7 +74,7 @@
 <div id="book" class="book hidden">
   <div class="book-card">
     <div class="book-head">
-      <div class="book-title">📖 <span class="book-count">0 / 15</span></div>
+      <div class="book-title">📖 <span class="book-count">0 / 18</span></div>
       <div class="book-bar"><div class="book-fill"></div></div>
       <button class="book-close round-btn" aria-label="Close">✖</button>
     </div>

@@ -12,13 +12,21 @@ import * as THREE from 'three'
  *   whale    a big shadow glides in from far away
  *
  * Habitats (Phase 2, 2026-10-09): every real animal is caught only where it really lives.
- *   lake, river, night  fresh water: goldfish, trout, turtle
+ *   lake, river, night  fresh water: goldfish, trout, turtle, frog, crayfish, pond snail
  *   ice (Icy Sea)       cold sea: whale, narwhal, snow crabs, jellyfish
  *   reef (Coral Reef)   warm sea: clownfish, pufferfish, octopus, crabs, jellyfish
  * Jellyfish live in every ocean, from warm reefs to icy seas, and many make their own light,
  * so the glow jellyfish lives in both seas (not in the fresh night pond).
  * Blue Fish, Golden Fish, the toy duck, the boot and the treasure are pretend or rubbish, so
  * they can turn up anywhere (their field notes say so). Every creature has at least one place.
+ *
+ * Round 2 (2026-10-11): the frog and the crayfish join the fresh-water places, so Bear's idea riddles
+ * there are a real sort (not a fish: turtle, frog, crayfish; breathes air: turtle, frog; no bones:
+ * crayfish), and the reef's swimmers include its crab.
+ *
+ * Round 3 (2026-10-11): a ramshorn pond snail joins the fresh water. It keeps close under a lily pad
+ * (main.js spawnAmbient), so knowing where snails live tells you where to cast. It widens the sort:
+ * a shell but no claws, breathes air but no bones.
  */
 export const CREATURES = [
   { id: 'goldfish', name: 'Goldfish', stars: 1, size: 0.9, how: 'swim', places: { lake: 10, river: 5, night: 5 } },
@@ -36,25 +44,31 @@ export const CREATURES = [
   { id: 'goldenfish', name: 'Golden Fish', stars: 3, size: 0.95, how: 'swim', places: { lake: 0.8, river: 0.8, night: 0.8, ice: 0.8, reef: 0.8 } },
   { id: 'chest', name: 'Treasure Chest', stars: 3, size: 0.8, how: 'deep', places: { lake: 0.8, river: 0.8, night: 0.9, ice: 0.8, reef: 0.9 } },
   { id: 'whale', name: 'Friendly Whale', stars: 3, size: 2.4, how: 'whale', places: { ice: 1.2 } },
+  { id: 'frog', name: 'Frog', stars: 2, size: 0.8, how: 'swim', places: { lake: 3, river: 2.5, night: 4 } },
+  { id: 'crayfish', name: 'Crayfish', stars: 2, size: 1.05, how: 'swim', places: { lake: 2.5, river: 3.5, night: 2.5 } },
+  { id: 'snail', name: 'Pond Snail', stars: 2, size: 0.75, how: 'swim', places: { lake: 2.5, river: 2, night: 2.5 } },
 ]
 export const BY_ID = Object.fromEntries(CREATURES.map((c) => [c.id, c]))
 
 /** The common fish that swim about in each place while you wait. */
 export const AMBIENT = {
-  lake: ['goldfish', 'bluefish', 'trout', 'goldfish', 'turtle'],
-  river: ['trout', 'goldfish', 'trout', 'bluefish', 'turtle'],
-  night: ['goldfish', 'bluefish', 'trout', 'goldfish', 'turtle'],
+  lake: ['goldfish', 'bluefish', 'trout', 'turtle', 'frog', 'crayfish', 'snail'],
+  river: ['trout', 'goldfish', 'bluefish', 'turtle', 'crayfish', 'frog', 'snail'],
+  night: ['goldfish', 'bluefish', 'trout', 'turtle', 'frog', 'crayfish', 'snail'],
   ice: ['bluefish', 'narwhal', 'jellyfish', 'bluefish', 'crab'],
-  reef: ['clownfish', 'pufferfish', 'clownfish', 'octopus', 'jellyfish'],
+  reef: ['clownfish', 'pufferfish', 'clownfish', 'octopus', 'jellyfish', 'crab'],
 }
 
 const MAX_LUCK = 8
 
-/** Rarity roll: brand-new creatures and long waits for a rare one both tip the odds. */
-export function roll(place, book, luck) {
+/**
+ * Rarity roll: brand-new creatures and long waits for a rare one both tip the odds. `boost` lets the
+ * open water lean toward what Bear's riddle asks for (main.js sendBiter).
+ */
+export function roll(place, book, luck, boost = () => 1) {
   const options = CREATURES.filter((c) => c.places[place])
   const weights = options.map((c) => {
-    let w = c.places[place]
+    let w = c.places[place] * boost(c)
     if (!book[c.id]) w *= 2.2
     // The wait for a rare one helps a little, but never more than double (no ever-growing pity)
     if (c.stars === 3) w *= 1 + Math.min(luck, MAX_LUCK) * 0.12
@@ -67,6 +81,11 @@ export function roll(place, book, luck) {
 }
 
 const SWIM_Y = -0.8
+/** Wandering swimmers keep about this far apart (in water units), so each is easy to tap. */
+const SPACE = 2.2
+const SPOT = new THREE.Vector3()
+/** The light watery tint swimmers keep (see vivid). */
+const WATERY = new THREE.Color('#5fc4d0')
 /** Creatures look bigger in the water than their book size, so little eyes can spot them. */
 export const SWIM_SCALE = 1.6
 
@@ -77,6 +96,7 @@ export class Creatures {
     this.units = {}
     this.centers = {}
     this.swimmers = []
+    this.vividMats = new Map()
     this.bounds = { x: () => 6, zMin: -3, zMax: 7.5, avoid: new THREE.Vector3(0, 0, -5), avoidR: 3.4 }
   }
 
@@ -130,8 +150,33 @@ export class Creatures {
 
   // --- Swimmers -----------------------------------------------------------------
 
+  /**
+   * Seen through the tinted water, colours wash out: under the lake's cyan an orange goldfish reads
+   * as tan, and a colour riddle must match what the child sees. So swimmers are drawn just after the
+   * water (and before the ice sheet) in a copy of their materials with only a light watery tint.
+   * On the stage they wear the real ones again.
+   */
+  vivid(group, on) {
+    group.traverse((o) => {
+      if (!o.isMesh) return
+      o.userData.real ??= o.material
+      const real = o.userData.real
+      o.renderOrder = on ? 1.5 : 0
+      if (!on) return void (o.material = real)
+      let v = this.vividMats.get(real)
+      if (!v) {
+        v = real.clone()
+        v.transparent = true
+        if (v.color) v.color.lerp(WATERY, 0.14)
+        this.vividMats.set(real, v)
+      }
+      o.material = v
+    })
+  }
+
   spawnSwimmer(id, pos, opts = {}) {
     const c = this.make(id, (opts.size ?? BY_ID[id].size) * SWIM_SCALE)
+    this.vivid(c.group, true)
     const s = {
       ...c,
       pos: pos.clone(),
@@ -143,7 +188,7 @@ export class Creatures {
       depth: opts.depth ?? SWIM_Y - Math.random() * 0.35,
       retarget: 0,
       age: 0,
-      home: opts.home ?? null, // a clownfish stays close to its anemone
+      home: opts.home ?? null, // a clownfish stays close to its anemone, the snail to its lily pad
     }
     s.pos.y = opts.y ?? s.depth
     this.pickTarget(s)
@@ -177,9 +222,23 @@ export class Creatures {
   pickTarget(s) {
     if (s.home) {
       const a = Math.random() * Math.PI * 2
-      const r = 0.5 + Math.random() * 1.1
+      // A clownfish circles its anemone; the pond snail creeps about under the edge of its lily pad
+      const r = s.homeR ? s.homeR * (0.45 + Math.random() * 0.6) : 0.5 + Math.random() * 1.1
       s.target.set(s.home.x + Math.cos(a) * r, 0, s.home.z + Math.sin(a) * r)
-    } else this.randomSpot(s.target)
+    } else {
+      // Somewhere clear of the others, so swimmers don't bunch up and a tap picks the one meant
+      let best = -1
+      for (let i = 0; i < 6; i++) {
+        this.randomSpot(SPOT)
+        let near = Infinity
+        for (const o of this.swimmers) if (o !== s && !o.home) near = Math.min(near, o.target.distanceTo(SPOT), Math.hypot(o.pos.x - SPOT.x, o.pos.z - SPOT.z))
+        if (near > best) {
+          best = near
+          s.target.copy(SPOT)
+        }
+        if (near > 3.2) break
+      }
+    }
     s.retarget = 4 + Math.random() * 5
   }
 
@@ -203,9 +262,10 @@ export class Creatures {
     if (s.parts.tail) {
       const wag = Math.sin(t * (6 + s.speed * 4) + s.phase) * 0.45 * wiggle
       if (s.id === 'whale' || s.id === 'narwhal') s.parts.tail.rotation.z = wag * 0.6
+      else if (s.id === 'crayfish') s.parts.tail.rotation.z = wag * 0.25
       else s.parts.tail.rotation.y = wag
     }
-    if (s.id === 'octopus' || s.id === 'crab') g.position.y += Math.sin(t * 3 + s.phase) * 0.08
+    if (s.id === 'octopus' || s.id === 'crab' || s.id === 'crayfish' || s.id === 'frog') g.position.y += Math.sin(t * 3 + s.phase) * 0.08
   }
 
   /** Turn smoothly toward a point and swim at it; returns the distance left. */
@@ -240,6 +300,19 @@ export class Creatures {
           s.pos.z += (az / ad) * (b.avoidR - ad) * dt * 2
         }
         s.pos.y += (s.depth - s.pos.y) * Math.min(1, dt * 1.5)
+        // A gentle nudge apart from any swimmer too close (homes keep theirs: the snail stays by its pad)
+        if (!s.home) {
+          for (const o of this.swimmers) {
+            if (o === s || o.mode !== 'wander') continue
+            const ox = s.pos.x - o.pos.x
+            const oz = s.pos.z - o.pos.z
+            const od = Math.hypot(ox, oz)
+            if (od > 0.01 && od < SPACE) {
+              s.pos.x += (ox / od) * (SPACE - od) * dt * 0.8
+              s.pos.z += (oz / od) * (SPACE - od) * dt * 0.8
+            }
+          }
+        }
       } else if (s.mode === 'flee') {
         // Swim off giggling, and come back to wandering a little later
         s.fleeFor -= dt

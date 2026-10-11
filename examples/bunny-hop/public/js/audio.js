@@ -202,6 +202,16 @@ export class Sound {
   music(on) {
     this.musicOn = on
     if (on && this.ctx) this.nextBeat = Math.max(this.nextBeat, this.ctx.currentTime + 0.1)
+    if (!on) this.hushMusic(false)
+  }
+
+  /**
+   * While a pattern is being hopped (and asked about) the music fades right down, so the
+   * obstacles' own notes are the only tune to listen to; it comes back softly after.
+   */
+  hushMusic(on) {
+    this.musicHushed = on
+    if (this.ctx) this.musicBus.gain.setTargetAtTime(on ? 0.0001 : 0.32, this.ctx.currentTime, on ? 0.15 : 0.8)
   }
 
   schedule() {

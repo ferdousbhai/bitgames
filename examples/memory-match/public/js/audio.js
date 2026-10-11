@@ -42,10 +42,14 @@ const VOICES = {
   },
   cow: (s, t) =>
     s.tone({ at: t, type: 'sawtooth', dur: 0.95, gain: 0.16, freq: [[0, 165], [0.3, 215], [0.95, 150]], filter: { type: 'lowpass', freq: [[0, 350], [0.3, 850], [0.95, 380]] }, vibrato: { rate: 5, depth: 4 } }),
+  // A fish has no call: three soft bubbles rising (so it is left out of Sounds and Babies).
+  fish: (s, t) => {
+    for (const [d, f, g] of [[0, 420, 0.2], [0.15, 560, 0.16], [0.28, 700, 0.12]]) s.tone({ at: t + d, type: 'sine', dur: 0.1, gain: g, freq: [[0, f], [0.1, f * 2.2]] })
+  },
 }
 
 /** How long each call lasts (seconds), so speech can wait until the animal has finished. */
-export const VOICE_LENGTH = { dog: 0.36, cat: 0.65, frog: 0.38, lion: 0.78, panda: 0.52, pig: 0.4, bunny: 0.38, chick: 0.38, elephant: 0.72, fox: 0.3, penguin: 0.38, cow: 0.98 }
+export const VOICE_LENGTH = { dog: 0.36, cat: 0.65, frog: 0.38, lion: 0.78, panda: 0.52, pig: 0.4, bunny: 0.38, chick: 0.38, elephant: 0.72, fox: 0.3, penguin: 0.38, cow: 0.98, fish: 0.4 }
 
 /** Scales a frequency (a number or [[time, hz], ...]) by k. */
 const scaleFreq = (f, k) => (typeof f === 'number' ? f * k : f.map(([t, v]) => [t, v * k]))

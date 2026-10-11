@@ -116,21 +116,33 @@ export class World {
     this.layout()
   }
 
-  layout() {
+  /**
+   * Places the sun in screen pixels, tucked under the home button. `avoid` (a screen rect such as the
+   * counting sky's card) pushes it down below that rect when they would overlap; the sun drifts there gently.
+   */
+  layout(avoid = this.avoid) {
+    this.avoid = avoid
     // Clouds wrap just past the screen edge at their own depth.
     for (const c of this.clouds) c.userData.wrap = halfSize(this.camera, c.position.z).w + 8
     if (!this.sun) return
-    // Placed in screen pixels, tucked under the home button and score pill so the HUD never touches it.
     const W = innerWidth
     const H = innerHeight
     const { w, h } = halfSize(this.camera, SUN_Z)
     const px = H / (2 * h) // pixels per unit at the sun's depth
     const r = Math.min(80, Math.max(30, Math.min(W, H) * 0.1))
     const x = 18 + r
-    const y = 66 + r * 1.08
+    let y = 66 + r * 1.08
+    if (avoid && avoid.left < x + r + 6 && avoid.right > x - r && avoid.top < y + r) y = avoid.bottom + 6 + r
     this.sunScale = r / (SUN_RADIUS * px)
+    this.sunAt = new THREE.Vector3(-w + x / px, h - y / px, SUN_Z)
+    if (!this.sunPlaced) this.placeSun(this.sunAt)
+    this.sunPlaced = true
+  }
+
+  /** Moves the sun's pivot and keeps it facing the camera squarely. */
+  placeSun(at) {
     const pivot = this.sunPivot
-    pivot.position.set(-w + x / px, h - y / px, SUN_Z)
+    pivot.position.copy(at)
     // Face the camera squarely wherever it sits, and narrow it a touch near the screen edge,
     // where a wide landscape view would stretch it.
     pivot.lookAt(this.camera.position)
@@ -214,6 +226,9 @@ export class World {
       c.position.y = c.userData.y + Math.sin(t * 0.3 + c.userData.speed * 10) * 0.3
     }
     if (this.sun) {
+      if (this.sunAt && this.sunPivot.position.distanceToSquared(this.sunAt) > 1e-6) {
+        this.placeSun(this.sunPivot.position.clone().lerp(this.sunAt, 1 - Math.exp(-dt * 2.5)))
+      }
       this.sunSpin = Math.max(0, this.sunSpin - dt * 0.8)
       this.sun.rotation.z = Math.sin(t * 0.8) * 0.08 + this.sunSpin * this.sunSpin * Math.PI * 4
       const s = this.sunScale * (1 + Math.sin(t * 2) * 0.03 + this.sunSpin * 0.3)

@@ -34,9 +34,11 @@
       <button data-theme="aurora" class="lane-btn"><span>🌌</span><small>Night</small></button>
       <button data-theme="bay" class="lane-btn"><span>🐟</span><small>Fishy</small></button>
     </div>
-    <button id="bumpers" class="chip on" title="Bumpers keep the penguin on the ice"><span class="chip-icon">🛟</span> Bumpers <b id="bumpers-state">ON</b></button>
+    <div class="chips">
+      <button id="bumpers" class="chip on" title="Bumpers keep the penguin on the ice"><span class="chip-icon">🛟</span> Bumpers <b id="bumpers-state">ON</b></button>
+      <button id="frames" class="chip on" title="How many frames in a game"><span class="chip-icon">🎳</span> Frames <b id="frames-state">10</b></button>
+    </div>
     <button id="play" class="big-go">▶ Play</button>
-    <div class="scores"><span id="last"></span></div>
   </div>
 </div>
 
@@ -44,7 +46,6 @@
   <div class="hud-top">
     <div class="hud-left">
       <button id="home" class="round-btn" title="Home (Esc)">🏠</button>
-      <div class="pill score">🎳 <b id="score">0</b></div>
     </div>
     <div id="card" class="scorecard"></div>
     <div class="hud-right">
@@ -66,6 +67,7 @@
       <button id="go" class="go" title="Slide! (Space)">🐧💨</button>
     </div>
   </div>
+  <div id="howmany" class="howmany" role="group" aria-label="How many are still standing?" hidden></div>
   <div id="bond" class="bond" role="status" aria-live="polite" hidden>
     <div class="bond-group fallen"><div id="bond-fallen" class="bond-pins"></div><b id="bond-fallen-n">0</b></div>
     <span class="bond-op">+</span>
@@ -74,22 +76,27 @@
     <div class="bond-whole"><b>10</b></div>
   </div>
   <div id="where" class="where" hidden>
-    <div class="where-ask"><span aria-hidden="true">👀</span> Where are the pins?</div>
+    <div class="where-ask"><span aria-hidden="true">👀</span> <span id="where-text">Where are the pins?</span></div>
     <div class="where-row">
       <button data-side="left" aria-label="On the left"><span class="third"><i class="on"></i><i></i><i></i></span></button>
       <button data-side="middle" aria-label="In the middle"><span class="third"><i></i><i class="on"></i><i></i></span></button>
       <button data-side="right" aria-label="On the right"><span class="third"><i></i><i></i><i class="on"></i></span></button>
     </div>
   </div>
+  <div id="plan" class="where plan" hidden>
+    <div class="where-ask"><span aria-hidden="true">🎯</span> <span>How many will you knock down?</span></div>
+    <div id="plan-row" class="where-row"></div>
+    <button id="bumpers-down" class="plan-bumpers" hidden>🛟 Bumpers down?</button>
+  </div>
+  <div id="plan-pill" class="plan-pill" role="status" hidden></div>
   <div id="hint" class="hint-swipe hidden">👆</div>
+  <div id="tap-hint" class="tap-hint" aria-hidden="true" hidden>👆</div>
 </div>
 
 <div id="results" class="screen card-screen hidden">
   <div class="card">
     <div class="trophy">🐧</div>
-    <div class="big-score"><span id="final">0</span></div>
-    <div id="stars" class="stars"></div>
-    <div class="bonds-box"><div id="bonds-title" class="bonds-title"></div><div id="bonds" class="bonds"></div></div>
+    <div class="bonds-box"><h2 id="bonds-title" class="bonds-title"></h2><p id="bonds-key" class="bonds-key" hidden><i class="key-self"></i> worked out · <b id="bonds-own"></b> ways met<span id="bonds-plan"> · 🎯 <b id="bonds-plans"></b> as planned</span></p><div id="bonds" class="bonds"></div></div>
     <div class="row">
       <button id="again" class="big-go">🔁</button>
       <button id="to-home" class="big-go alt">🏠</button>

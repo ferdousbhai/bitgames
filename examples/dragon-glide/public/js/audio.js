@@ -202,13 +202,10 @@ export class Sound {
     for (let i = 0; i < 3; i++) this.note(2200 + i * 200, { at: 0.35 + i * 0.12, len: 0.07, gain: 0.03, slide: 1.3 })
   }
 
-  power() {
-    for (let i = 0; i < 10; i++) this.note(hz(PENTA[i]), { at: i * 0.045, len: 0.25, type: 'triangle', gain: 0.09, echo: true })
-    this.hiss({ len: 0.8, freq: 1500, q: 0.6, gain: 0.08, sweep: 3 })
-  }
-
-  powerDown() {
-    ;[12, 7, 4, 0].forEach((s, i) => this.note(hz(s), { at: i * 0.07, len: 0.2, type: 'triangle', gain: 0.06 }))
+  /** "Not that one": two low, soft notes stepping down. No buzzer. */
+  nope() {
+    this.note(hz(-5, 392), { len: 0.18, type: 'sine', gain: 0.08 })
+    this.note(hz(-8, 392), { at: 0.14, len: 0.28, type: 'sine', gain: 0.07 })
   }
 
   fanfare() {
@@ -229,7 +226,6 @@ export class Sound {
     ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 0.9, len: 1.4, type: 'sine', gain: 0.1 }))
   }
 
-  /** Four rising chimes, one as each ring pops up in the counting party (main.js COUNT_BEAT), then a sparkle. */
   /** A numbered ring: one soft note per number, climbing a major scale, so counting up sounds like going up. */
   number(n) {
     this.hiss({ len: 0.4, freq: 800, q: 0.9, gain: 0.08, sweep: 3 })
@@ -243,9 +239,9 @@ export class Sound {
     this.note(hz(step, 523.25), { len: 0.3, type: 'triangle', gain: 0.14, echo: true })
     this.note(hz(step + 7, 523.25), { at: 0.07, len: 0.25, type: 'sine', gain: 0.06 })
   }
+  /** The counting mission is done: one soft rising pair of notes (a quiet "yes", not a party). */
   counted() {
-    ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s, 523.25), { at: 0.3 + i * 0.42, len: 0.4, type: 'triangle', gain: 0.13, echo: true }))
-    ;[16, 19, 24].forEach((s, i) => this.note(hz(s, 523.25), { at: 1.75 + i * 0.06, len: 0.5, type: 'sine', gain: 0.08, echo: true }))
+    ;[0, 7].forEach((s, i) => this.note(hz(s, 523.25), { at: 0.1 + i * 0.18, len: 0.45, type: 'sine', gain: 0.09, echo: true }))
   }
 
   click() {

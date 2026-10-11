@@ -1,5 +1,5 @@
-import { DESTS, PARTS } from './parts.js'
-import { PLURAL_SLOTS, SLOT_WORDS, buildRace, changedWords, compareBuilds, el, explainFlight, isBuild, keyGuard, placeName, ruling } from './workshop.js'
+import { DESTS, PARTS, isSteady, reach } from './parts.js'
+import { BOOSTER_WORDS, PLURAL_SLOTS, SLOT_WORDS, WOBBLY, buildRace, changedWords, compareBuilds, el, explainFlight, isBuild, keyGuard, placeName, ruling } from './workshop.js'
 
 /**
  * The fair test inside every launch: after a part change the robot asks "farther, the same, or
@@ -32,12 +32,25 @@ export function fairTest(last, rocket) {
   return { before: last, now, result, guess: null }
 }
 
-/** One spoken verdict for the landing: never "wrong", and the cause in the game's real rules. */
+/**
+ * One spoken verdict for the landing: never "wrong", and the cause in the game's real rules. A
+ * planet guess (`test.planet`, asked of older children) must name the very planet; a missed one
+ * hears where it really went first.
+ */
 export function verdict(test) {
-  const guess = guessOf(test.guess)
-  const matched = guess?.answer === test.result.answer
+  const planet = Number.isInteger(test.planet)
+  const matched = planet ? test.planet === test.result.b.reach : guessOf(test.guess)?.answer === test.result.answer
   const why = explainFlight(test.before, test.now, test.result)
-  return { matched, why, say: `${matched ? 'You guessed it!' : 'Ooh, a new discovery!'} ${why}` }
+  const went = planet && !matched ? `It went to ${placeName(test.result.b.reach)}. ` : ''
+  return { matched, why, say: `${matched ? 'You guessed it!' : 'Ooh, a new discovery!'} ${went}${why}` }
+}
+
+/** The guess as a small picture: the farther / same / less far rockets, or the planet picked. */
+export function testChip(test, rocketThumb) {
+  if (!Number.isInteger(test.planet)) return guessPicture(test.guess, rocketThumb(test.before), rocketThumb(test.now))
+  const pic = el('span', 'ft-pic ft-planet-guess')
+  pic.append(el('i', 'ft-mark'), img(rocketThumb(test.now), 'ft-now'), el('b', 'ft-guess-planet', DESTS[test.planet].emoji))
+  return pic
 }
 
 // --- The notebook ---------------------------------------------------------------------------
@@ -54,7 +67,9 @@ export function noteFrom(test) {
   const slot = changed[0]
   const { kind } = ruling(test.result)
   const wobbled = test.result.a.wobble !== test.result.b.wobble
-  return { slot, kind: kind === 'wobble' && !wobbled ? 'same' : kind, id: test.now[slot] }
+  // A wobble page always shows the part that wobbles (the test may have gone wobbly ➜ steady)
+  const id = kind === 'wobble' && wobbled && isSteady(test.now) ? test.before[slot] : test.now[slot]
+  return { slot, kind: kind === 'wobble' && !wobbled ? 'same' : kind, id }
 }
 
 export function noteSentence(slot, kind) {
@@ -85,7 +100,60 @@ export function addNote(notes, note) {
   return true
 }
 
-const ICONS = { distance: ['🪐', '⬆'], wobble: ['〰️', '🪐='], same: ['🪐='], fun: ['🎨', '🪐='] }
+// --- Which single parts wobble ------------------------------------------------------------
+
+/**
+ * Saved findings about single parts, { 'fins:fish': 'w' | 's' }, with anything unknown dropped.
+ * Only nose, tank and fins are ever marked: the parts that can make the wobble.
+ */
+export function sanitizeKnown(value) {
+  const out = {}
+  if (!value || typeof value !== 'object') return out
+  for (const [key, v] of Object.entries(value)) {
+    const [slot, id] = key.split(':')
+    if (WOBBLY.has(slot) && PARTS[slot].some((p) => p.id === id) && (v === 'w' || v === 's')) out[key] = v
+  }
+  return out
+}
+
+/**
+ * What a one-part test of the nose, tank or fins proves about that part, and nothing more: a
+ * rocket that flew steady has a steady part there; when steady turned wobbly (or back), the part
+ * that changed is the wobbly one. Returns the keys that are new. A part is only ever marked
+ * after the child has tested it, never from the rules.
+ */
+export function learnParts(known, test) {
+  const { changed } = test.result
+  if (changed.length !== 1 || !WOBBLY.has(changed[0])) return []
+  const slot = changed[0]
+  const was = isSteady(test.before)
+  const is = isSteady(test.now)
+  const found = []
+  const mark = (id, v) => {
+    const key = `${slot}:${id}`
+    if (known[key] === v) return
+    known[key] = v
+    found.push(key)
+  }
+  if (was) mark(test.before[slot], 's')
+  if (is) mark(test.now[slot], 's')
+  if (was && !is) mark(test.now[slot], 'w')
+  if (!was && is) mark(test.before[slot], 'w')
+  return found
+}
+
+const PART_WORDS = { icecream: 'ice cream', stripes: 'striped', classic: 'classic' }
+/** "The fish fins wobble." / "The cone nose is steady." */
+export function partSentence(key, v) {
+  const [slot, id] = key.split(':')
+  const many = PLURAL_SLOTS.has(slot)
+  const name = `${PART_WORDS[id] ?? id} ${SLOT_WORDS[slot]}`
+  return v === 'w' ? `The ${name} ${many ? 'wobble' : 'wobbles'}.` : `The ${name} ${many ? 'are' : 'is'} steady.`
+}
+export const WOB_MARK = { w: '〰️', s: '━' }
+
+// 📏 is "how far it goes" (a planet here would read as the Ring Planet)
+const ICONS = { distance: ['📏', '⬆'], wobble: ['〰️', '📏='], same: ['📏='], fun: ['🎨', '📏='] }
 
 function img(src, className = '') {
   const i = el('img', className)
@@ -110,7 +178,11 @@ export function flightRace(test, rocketThumb) {
   ], rocketThumb, 'ft-race')
 }
 
-/** "Will it go farther, the same, or less far?" before a launch with a changed part. */
+/**
+ * "Will it go farther, the same, or less far?" before a launch with a changed part. Older children
+ * (`planets: true`, from mission tier 2) name the very planet instead, so every fair test uses
+ * what the notebook says each booster reaches.
+ */
 export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, onGuess, onBack }) {
   const dialog = el('dialog', 'ft-dialog')
   dialog.id = 'predict'
@@ -126,6 +198,7 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
   let said = ''
   let going = null // the guessed test, once the dialog is closing to launch it
   let launchTimer = 0
+  let planets = false
 
   function swapPicture(changed) {
     const swap = dialog.querySelector('.ft-swap')
@@ -146,10 +219,14 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
 
   function choose(id) {
     if (!test || test.guess) return
-    test.guess = id
+    // A planet: the farther / same / less far it implies is kept too, for the ghost and the notebook
+    const planet = Number.isInteger(id) ? id : null
+    const a = test.result.a.reach
+    test.guess = planet === null ? id : planet > a ? 'farther' : planet === a ? 'same' : 'less'
+    test.planet = planet
     sound('pick')
-    for (const b of guesses.children) b.setAttribute('aria-pressed', String(b.dataset.guess === id))
-    voice.sayNow(`You think ${guessOf(id).say}. Let’s find out!`)
+    for (const b of guesses.children) b.setAttribute('aria-pressed', String(b.dataset.guess === String(id)))
+    voice.sayNow(`You think ${planet === null ? guessOf(id).say : placeName(planet)}. Let’s find out!`)
     const chosen = test
     launchTimer = setTimeout(() => {
       going = chosen
@@ -171,8 +248,10 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
     onBack()
   })
   dialog.addEventListener('keydown', (e) => {
+    const n = Number(e.key) - 1
+    if (planets && Number.isInteger(n) && n >= 0 && n < DESTS.length) return choose(n)
     const i = { 1: 0, 2: 1, 3: 2 }[e.key]
-    if (i !== undefined) return choose(GUESSES[i].id)
+    if (!planets && i !== undefined) return choose(GUESSES[i].id)
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       const list = [...guesses.children]
       const at = list.indexOf(document.activeElement)
@@ -184,24 +263,38 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
 
   return {
     get open() { return dialog.open },
-    ask(next) {
+    ask(next, { planets: byPlanet = false } = {}) {
       test = next
+      planets = byPlanet
       const before = rocketThumb(test.before)
       const now = rocketThumb(test.now)
       const last = dialog.querySelector('.ft-last')
       last.replaceChildren(img(before, 'ft-last-rocket'), el('span', 'ft-last-planet', DESTS[test.result.a.reach].emoji))
       last.setAttribute('aria-label', `Last time it reached ${placeName(test.result.a.reach)}`)
       swapPicture(test.result.changed)
-      guesses.replaceChildren(...GUESSES.map((g) => {
-        const b = el('button', 'ft-guess')
-        b.dataset.guess = g.id
-        b.setAttribute('aria-label', `It will go ${g.say}`)
-        b.setAttribute('aria-pressed', 'false')
-        b.append(guessPicture(g.id, before, now), el('span', 'ft-label', g.label))
-        b.onclick = () => choose(g.id)
-        return b
-      }))
-      said = `${changedWords(test.result.changed)} Last time, it reached ${placeName(test.result.a.reach)}. Will it go farther, the same, or less far?`
+      dialog.classList.toggle('by-planet', planets)
+      const q = planets ? 'Where will it land now?' : 'Will it go farther, the same, or less far?'
+      dialog.querySelector('#predict-q').textContent = q
+      guesses.replaceChildren(...(planets
+        ? DESTS.map((d, i) => {
+            const b = el('button', 'where-planet')
+            b.dataset.guess = String(i)
+            b.setAttribute('aria-label', `It will land on ${placeName(i)}`)
+            b.setAttribute('aria-pressed', 'false')
+            b.append(el('span', '', d.emoji))
+            b.onclick = () => choose(i)
+            return b
+          })
+        : GUESSES.map((g) => {
+            const b = el('button', 'ft-guess')
+            b.dataset.guess = g.id
+            b.setAttribute('aria-label', `It will go ${g.say}`)
+            b.setAttribute('aria-pressed', 'false')
+            b.append(guessPicture(g.id, before, now), el('span', 'ft-label', g.label))
+            b.onclick = () => choose(g.id)
+            return b
+          })))
+      said = `${changedWords(test.result.changed)} Last time, it reached ${placeName(test.result.a.reach)}. ${q}`
       dialog.showModal()
       dialog.focus()
       voice.sayNow(said)
@@ -211,17 +304,20 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
 }
 
 /** The pictured "what I found out" notebook: one page per part, filled by fair tests. */
-export function createNotebook({ notes, thumbOf, voice, sound = () => {} }) {
+export function createNotebook({ notes, thumbOf, voice, sound = () => {}, onTest = null, flown = () => new Set(), known = () => ({}) }) {
   const dialog = el('dialog', 'ft-dialog ft-notebook')
   dialog.id = 'notebook'
   dialog.setAttribute('aria-labelledby', 'notebook-title')
   dialog.innerHTML = `<div class="ft-head"><h2 id="notebook-title">📓 What I found out</h2>
-    <button id="notebook-say" class="ft-round" aria-label="Say it again">🔊</button><button id="notebook-close" class="ft-round" aria-label="Close the notebook">✕</button></div>
-    <div class="ft-pages"></div><p id="notebook-line" role="status" aria-live="polite"></p>`
+    <button id="notebook-test" class="ft-round" aria-label="Test two rockets side by side">🧪</button><button id="notebook-say" class="ft-round" aria-label="Say it again">🔊</button><button id="notebook-close" class="ft-round" aria-label="Close the notebook">✕</button></div>
+    <div class="ft-pages"></div><div class="ft-flown" role="group" aria-label="Where each booster landed"></div><div class="ft-wob" role="group" aria-label="Which parts wobble"><button class="ft-wob-key" aria-label="A straight line means steady. A wavy line means wobbly."><b>━</b> steady <b>〰️</b> wobbly</button><span class="ft-wob-parts"></span></div><p id="notebook-line" role="status" aria-live="polite"></p>`
   document.body.append(dialog)
   keyGuard(dialog)
   const pages = dialog.querySelector('.ft-pages')
   const line = dialog.querySelector('#notebook-line')
+  const went = dialog.querySelector('.ft-flown')
+  const wob = dialog.querySelector('.ft-wob')
+  const wobParts = dialog.querySelector('.ft-wob-parts')
   let said = ''
   const tell = (text) => {
     line.textContent = text
@@ -250,18 +346,62 @@ export function createNotebook({ notes, thumbOf, voice, sound = () => {} }) {
       }
       return b
     }))
+    // Where each booster has landed: the garage no longer labels them, so this is the record to look up
+    const order = PARTS.booster.map((p) => p.id).filter((id) => flown().has(id))
+    went.replaceChildren(...order.map((id) => {
+      const text = `${BOOSTER_WORDS[id][0].toUpperCase()}${BOOSTER_WORDS[id].slice(1)} reach ${placeName(reach({ booster: id }))}.`
+      const b = el('button', 'ft-went')
+      b.setAttribute('aria-label', text)
+      const src = id === 'none' ? '' : thumbOf('booster', id)
+      b.append(src ? img(src) : el('span', 'ft-went-none', '🚫'), el('i', '', '➜'), el('span', 'ft-went-planet', DESTS[reach({ booster: id })].emoji))
+      b.onclick = () => {
+        sound('pick')
+        tell(text)
+      }
+      return b
+    }))
+    went.classList.toggle('hidden', !order.length)
+    // Each nose, tank or fins the child has tested on its own, marked steady ━ or wobbly 〰️
+    const keys = Object.keys(known()).sort((a, b) => PAGES.indexOf(a.split(':')[0]) - PAGES.indexOf(b.split(':')[0]))
+    wobParts.replaceChildren(...keys.map((key) => {
+      const [slot, id] = key.split(':')
+      const v = known()[key]
+      const text = partSentence(key, v)
+      const b = el('button', `ft-wob-part ${v === 'w' ? 'wobbly' : 'steady'}`)
+      b.setAttribute('aria-label', text)
+      b.append(img(thumbOf(slot, id)), el('b', '', WOB_MARK[v]))
+      b.onclick = () => {
+        sound('pick')
+        tell(text)
+      }
+      return b
+    }))
+    wob.classList.toggle('hidden', !keys.length)
   }
 
+  dialog.querySelector('.ft-wob-key').onclick = () => {
+    sound('pick')
+    tell('A straight line means steady. A wavy line means wobbly.')
+  }
   dialog.querySelector('#notebook-close').onclick = () => dialog.close()
+  // "Test again": the side-by-side workshop lives in the notebook, beside what it finds out
+  const test = dialog.querySelector('#notebook-test')
+  if (onTest) test.onclick = () => {
+    dialog.close()
+    onTest()
+  }
+  else test.remove()
   dialog.addEventListener('close', () => voice.hush())
   dialog.querySelector('#notebook-say').onclick = () => voice.sayNow(said)
 
   return {
     get open() { return dialog.open },
-    show() {
+    show({ look = '' } = {}) {
       render()
+      went.classList.toggle('look', look === 'flown')
       const found = Object.keys(notes()).length
       dialog.showModal()
+      if (look === 'flown') return tell(`Where did each booster go? Tap one to hear it.`)
       tell(found ? `You found out ${found} thing${found > 1 ? 's' : ''}! Tap a page to hear it.` : 'Change just one part, then fly. What you find out goes here!')
     },
     close() { if (dialog.open) dialog.close() },

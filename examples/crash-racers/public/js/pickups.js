@@ -12,7 +12,7 @@ const STAR_REACH = { along: 1.6, across: 1.9, up: 2.2 }
 const BOX_REACH = { along: 1.8, across: 1.8, up: 2.4 }
 /** Seconds before a car can open the same box again (the box looks gone to that car meanwhile). */
 const BOX_RESPAWN = 5
-const BOX_PRIZES = ['turbo', 'wave', 'fix', 'stars']
+const BOX_PRIZES = ['turbo', 'wave', 'fix']
 /** Only items within this many metres along the road of a car are checked. */
 const NEAR = 6
 const local = {} // scratch for Track.localTo

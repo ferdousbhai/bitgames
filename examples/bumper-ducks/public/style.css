@@ -86,7 +86,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .score { display: flex; align-items: center; gap: 3px; border-radius: 999px; padding: 2px 10px 2px 4px; font-size: 22px; font-weight: 900; background: rgba(20,40,110,0.62); border: 3px solid var(--c); transition: transform .15s; }
 .score .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--c); display: flex; align-items: center; justify-content: center; font-size: 17px; }
 .score.me { background: rgba(255,210,63,0.85); color: #5b3a00; }
-.score.lead { transform: scale(1.08); }
 .score.bump { animation: score-bump .3s; }
 @keyframes score-bump { 50% { transform: scale(1.3); } }
 
@@ -272,20 +271,54 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .mode .name { font-size: 20px; font-weight: 900; }
 .mini-frame { display: inline-grid; grid-template-columns: repeat(5, 9px); gap: 2px; padding: 3px; border: 2px solid #fff; border-radius: 6px; background: rgba(36,48,110,0.2); }
 .mini-frame i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(36,48,110,0.35); }
+/* A ten raft in pictures: an orange-rimmed board holding two rows of five; ones are loose bubbles. */
+.mini-raft { display: inline-block; width: 40px; height: 18px; border-radius: 5px; border: 2px solid #ffb04d;
+  background: radial-gradient(circle, #fff 0 2.6px, transparent 3.2px) 0 0 / 20% 50%, #fff4d6; }
+.mini-ones { display: inline-flex; flex-wrap: wrap; gap: 2px; max-width: 46px; }
+.mini-ones i { width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px rgba(36,48,110,0.35); }
+.mini-num { font-size: 22px; font-weight: 900; line-height: 1; margin-left: 2px; }
+/* ▶ another goal: a round button on Pond helpers' top corner, so a new goal is one visible tap away. */
+.mode-wrap { position: relative; display: flex; }
+.mode-wrap { margin-right: 18px; }
+.next-goal { position: absolute; right: -30px; top: 50%; margin-top: -24px; width: 48px; height: 48px; border-radius: 50%;
+  border: 4px solid #fff; background: #2fb2a0; color: #fff; font-size: 20px; font-weight: 900; line-height: 1; padding: 0 0 0 3px;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.22); z-index: 1; }
+.next-goal[hidden] { display: none; }
+.next-goal:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.22); }
 
 /* The shared jar replaces the clock and the score pills in Pond helpers. */
 #jar { display: none; }
 body.calm-round #jar { display: flex; }
 body.calm-round #timer, body.calm-round #scores { display: none; }
 .jar { align-items: center; gap: 8px; padding: 6px 10px; border-radius: 18px; background: rgba(20,40,110,0.5); }
-.jar-goal:empty, .jar-tens:empty { display: none; }
+.jar-goal:empty, .jar-tens:empty, .jar-frame:empty { display: none; }
+.jar-num { display: block; font-size: calc(var(--cell) * 1.3); font-weight: 900; line-height: 1; padding: 0 2px; text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+/* After a bubble that didn't fit, the open spaces glow softly once (no flashing). */
+.cell, .ten { transition: box-shadow .4s; }
+.jar.look .cell:not(.full):not(.spare), .jar.look .ten:not(.full) { box-shadow: 0 0 0 3px rgba(255,255,255,0.75), 0 0 12px rgba(255,255,255,0.6); }
 .jar-frame {
   display: grid; grid-template-columns: repeat(5, var(--cell)); gap: 4px; padding: 4px; border-radius: 10px;
   background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.8);
 }
-.cell { width: var(--cell); height: var(--cell); border-radius: 50%; border: 2px dashed var(--ring, #fff); opacity: .85; background: var(--c); }
+.cell { width: var(--cell); height: var(--cell); border-radius: 50%; border: 2px solid var(--ring, #fff); background: var(--c); }
+/* An empty space is a soft solid tint of what it wants, so a bond's colours read at a glance. */
+.cell:not(.full):not(.spare) { background: color-mix(in srgb, var(--ring, #fff) 42%, rgba(20,40,110,0.3)); }
+/* Tens first: the ones frame rests, dimmed, until every raft is in. */
+.jar-frame { transition: opacity .4s; }
+.jar-frame.waiting { opacity: .45; }
+/* A trip's goals: one small dot each, the finished ones filled. */
+.trip-dots { display: inline-flex; gap: 4px; align-items: center; }
+.trip-dots i { width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; }
+.trip-dots i.done { background: #fff; }
+.trip-dots i.now { background: #ffd23f; }
+.jar-goal { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mode .trip-dots { flex-basis: 100%; justify-content: center; } .mode .trip-dots i { border-color: #24306e; width: 8px; height: 8px; }
+.next-pic .trip-dots i { border-color: #fff; }
+.team-trip { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 30px; font-weight: 900; text-shadow: 0 3px 0 rgba(0,0,0,.2); }
+.team-trip .way { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 14px; background: rgba(20,40,110,0.3); }
+.team-trip .arrow { opacity: .8; font-size: 24px; }
 .cell.full { border: 2px solid #fff; opacity: 1; background: radial-gradient(circle at 35% 30%, #fff 0 16%, var(--c) 42%); }
-.cell.spare { opacity: .16; border-style: dotted; border-color: #fff; }
+.cell.spare { opacity: .16; border-style: dotted; border-color: #fff; background: transparent; }
 .jar-tens { display: flex; gap: 4px; }
 .ten {
   display: grid; grid-template-rows: repeat(10, 1fr); gap: 1px; width: 15px; height: calc(var(--cell) * 2 + 12px); padding: 2px;
@@ -294,6 +327,11 @@ body.calm-round #timer, body.calm-round #scores { display: none; }
 .ten.full { border: 2px solid #fff; background: rgba(255,255,255,0.22); }
 .ten.arriving { visibility: hidden; }
 .ten i { border-radius: 50%; background: var(--c); }
+.ten.raft { border-color: #ffb04d; }
+.ten.raft.full { background: #fff4d6; }
+.ten.raft i { background: #fff; box-shadow: inset 0 0 0 1px rgba(255,150,40,0.6); }
+.jar-fly.raft { width: calc(var(--cell) * 2.2); height: var(--cell); border-radius: 7px; border-color: #ffb04d;
+  margin: calc(var(--cell) / -2) 0 0 calc(var(--cell) * -1.1); background: radial-gradient(circle, #fff 0 28%, transparent 34%) 0 0 / 20% 50%, #fff4d6; }
 .swatch { display: block; width: calc(var(--cell) * 1.7); height: calc(var(--cell) * 1.7); border-radius: 50%; border: 3px solid #fff;
   background: radial-gradient(circle at 35% 30%, #fff 0 14%, var(--c) 42%); }
 .jar-fly { position: fixed; left: 0; top: 0; width: var(--cell); height: var(--cell); margin: calc(var(--cell) / -2) 0 0 calc(var(--cell) / -2);
@@ -309,8 +347,12 @@ body.calm-round #timer, body.calm-round #scores { display: none; }
 .team-ten.lit .ten { opacity: 1; transform: translateY(-4px); }
 .team-ten.lit b { visibility: visible; }
 .team-jar.colour .jar-frame { --cell: 38px; }
-.team .cell.full { opacity: .3; transition: opacity .4s; }
+.team .cell.full { opacity: .3; transition: opacity .4s; display: grid; place-items: center; }
 .team .cell.full.lit { opacity: 1; }
+.team .cell.full.lit::after { content: attr(data-n); color: #24306e; font-size: 13px; font-weight: 900; }
+.team-jar .jar-frame { align-self: center; }
+.next-pic { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.next-pic .mini-num { color: #fff; }
 .team-total { font-size: 34px; font-weight: 900; min-height: 1.2em; text-shadow: 0 3px 0 rgba(0,0,0,.2); }
 .pond { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 10px; border-radius: 28px; border: 4px solid rgba(255,255,255,0.6);
   background: linear-gradient(170deg, var(--pond), var(--deep)); }
@@ -321,6 +363,8 @@ body.calm-round #timer, body.calm-round #scores { display: none; }
 .helper .note { flex: 1; }
 .helper .helps { white-space: nowrap; font-size: 22px; font-weight: 900; }
 
+/* Tablets: the jar is the lesson, so it is drawn larger. */
+@media (min-width: 768px) and (min-height: 700px) { :root { --cell: 36px; } .jar { gap: 10px; padding: 8px 14px; border-radius: 22px; } .ten { width: 20px; } .trip-dots i { width: 12px; height: 12px; } }
 @media (max-width: 560px) {
   :root { --cell: 22px; }
   .mode { min-height: 80px; } .mode .name { font-size: 17px; }
@@ -374,3 +418,50 @@ body.calm-round #timer, body.calm-round #scores { display: none; }
   @keyframes float-fade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
   .banner, .banner.show { transform: none; transition: opacity .4s; }
 }
+/* Small screens: the place-value picture shrinks so rafts, ones and the number fit beside the ▶. */
+@media (max-height: 500px) and (orientation: landscape), (max-width: 420px) and (orientation: portrait) {
+  .mini-raft { width: 26px; height: 12px; border-width: 1.5px; }
+  .mini-ones { max-width: 34px; gap: 1px; } .mini-ones i { width: 7px; height: 7px; }
+  .mini-num { font-size: 18px; }
+  .next-goal { width: 44px; height: 44px; font-size: 18px; margin-top: -22px; right: -26px; }
+}
+/* Short landscape: the ways to play sit in the right-hand column, so ▶ waits on the column's open left side. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .mode-wrap { margin-right: 0; }
+  .next-goal { right: auto; left: -26px; top: 50%; margin-top: -22px; }
+}
+/* Upright phones: ▶ sits in room kept for it on Together's right edge, clear of the goal picture and of Race. */
+@media (max-width: 420px) and (orientation: portrait) {
+  .mode-wrap { margin-right: 0; }
+  #menu .mode { width: min(44vw, 230px); }
+  #menu .mode.calm { padding-right: 30px; }
+  .next-goal { top: 50%; margin-top: -22px; right: -8px; }
+}
+
+/* 2026-10-11: what the jar makes so far, the ways a free bond already made, and Race counts as tens and ones. */
+/* How far the jar has come: a small filling bar with its number, never "35 = 30". */
+.jar-now { position: relative; display: grid; place-items: center; width: calc(var(--cell) * 2.1); height: calc(var(--cell) * 0.72);
+  border-radius: 999px; overflow: hidden; background: rgba(20,30,80,.55); box-shadow: inset 0 0 0 2px rgba(255,255,255,.55); }
+.jar-now i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,210,63,.55); transition: width .5s ease; }
+.jar-now b { position: relative; font-size: calc(var(--cell) * 0.5); font-weight: 900; line-height: 1; text-shadow: 0 1px 0 rgba(0,0,0,.45); }
+/* A free bond: a faint dashed line where a way already made splits the frame. */
+.cell.cut { position: relative; }
+.cell.cut::after { content: ''; position: absolute; right: -6px; top: -4px; bottom: -4px; border-right: 3px dashed rgba(255,255,255,.9); }
+/* Race results read each catch as tens and ones; the next-goal button shows the number big, without trip dots. */
+.tens-words { font-size: 15px; font-weight: 800; opacity: .9; }
+.next-pic .trip-dots { display: none; }
+.next-pic .mini-num { font-size: 28px; }
+.jar-ways { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.jar-ways:empty { display: none; }
+.way-sum { font-size: calc(var(--cell) * 0.55); font-weight: 900; line-height: 1.1; padding: 1px 6px; border-radius: 8px; background: rgba(20,30,80,.55); white-space: nowrap; }
+.way-sum b { text-shadow: 0 1px 0 rgba(0,0,0,.45); }
+.float.small { font-size: 20px; -webkit-text-stroke: 5px #24306e; text-shadow: 0 2px 0 #24306e; }
+.tally { display: inline-flex; align-items: center; gap: 2px; min-height: 22px; }
+.tally .t-raft { width: 7px; height: 20px; border-radius: 3px; background: #ffb04d; box-shadow: inset 0 0 0 1.5px #fff; }
+.tally .t-ones { display: inline-grid; grid-template-columns: repeat(5, 6px); gap: 2px; }
+.tally .t-ones i { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.score.me .tally .t-ones i { background: #5b3a00; }
+.place .tally .t-raft { width: 10px; height: 28px; }
+.place .tally .t-ones { grid-template-columns: repeat(5, 9px); gap: 3px; }
+.place .tally .t-ones i { width: 9px; height: 9px; }
+.place.me .tally .t-ones i { background: #5b3a00; }

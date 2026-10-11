@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { makeGlowTexture } from './effects.js'
 import { Dragon, LOOKS } from './dragon.js'
+import { TREASURES, treasureMesh } from './goals.js'
 import { copy } from './models.js'
 import { WORLDS, WORLD_LENGTH, worldAt } from './worlds.js'
 
@@ -310,7 +311,41 @@ export class World {
     this.scene.add(group)
     const nestObj = { i, z, group, family, cheer: 0 }
     this.nests.push(nestObj)
+    this.keepsakes(nestObj, this.kept?.[i])
     return nestObj
+  }
+
+  /**
+   * The family keeps what Ember brought home on the last trip: a little row per kind on the front of the
+   * island (`got`, e.g. { pink: 4, blue: 3 }), the way the child sorted it. Nothing is counted or scored;
+   * it is just still there next time, and after the nest puzzle the new basket takes its place.
+   */
+  keepsakes(nest, got) {
+    nest.kept?.removeFromParent()
+    nest.kept = null
+    const rows = Object.entries(got ?? {}).filter(([k, n]) => TREASURES[k] && Number.isInteger(n) && n > 0)
+    if (!rows.length) return
+    const shelf = new THREE.Group()
+    // one line on the grass in front of the nest: each kind together, a small gap between kinds
+    const step = 0.52
+    const shown = rows.map(([kind, n]) => [kind, Math.min(n, 7)])
+    const width = shown.reduce((w, [, n]) => w + n * step, 0) + (shown.length - 1) * 0.5 - step
+    let x = -width / 2
+    for (const [kind, n] of shown) {
+      for (let k = 0; k < n; k++) {
+        const m = treasureMesh(kind)
+        m.scale.setScalar(0.24)
+        m.position.set(x, 0, 0)
+        m.rotation.y = 0.2 * Math.sin(x * 3)
+        shelf.add(m)
+        x += step
+      }
+      x += 0.5
+    }
+    // low on the island's front edge, well below Ember's seat, so it never covers a face
+    shelf.position.set(0, 0.62, 3.3)
+    nest.group.add(shelf)
+    nest.kept = shelf
   }
 
   nestFor(i) {
@@ -369,8 +404,8 @@ export class World {
     this.sun.material.opacity = 0.6 * (1 - this.night)
     this.sun.visible = this.night < 0.98
     this.moon.visible = this.night > 0.05
-    // the end card can ask the moon to drift further left, out from behind its stars
-    this.moonX = THREE.MathUtils.damp(this.moonX ?? -45, this.moonAside ? -150 : -45, 2, dt)
+    // the nest and the end card can ask the moon to drift aside (moonAside, in world units), out from behind words
+    this.moonX = THREE.MathUtils.damp(this.moonX ?? -45, this.moonAside || -45, 2, dt)
     this.moon.position.set(c.x + this.moonX, c.y + 38, c.z - 200)
     this.moon.rotation.set(0, 0.25, Math.sin(this.time * 0.4) * 0.08)
     this.moon.scale.setScalar(9 * Math.min(1, this.night * 1.2))
@@ -398,7 +433,7 @@ export class World {
         const excited = nest.cheer > 0
         d.update(dt, { flap: excited ? 1.2 : 0.2, glide: !excited })
         if (excited && d.hop <= 0 && Math.random() < dt * 2.5) d.hop = 1
-        if (excited && Math.random() < dt * 0.6) d.twirl()
+        // (no barrel rolls here: caught mid-roll, a parent looked as if it had fallen over)
         d.root.rotation.y = Math.PI + (k === 0 ? 0.35 : -0.35) + Math.sin(this.time * 1.3 + k) * 0.1
       }
       nest.cheer = Math.max(0, nest.cheer - dt)

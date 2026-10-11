@@ -2,7 +2,7 @@
   "id": "rocket-garage",
   "title": "Rocket Garage",
   "tagline": "Snap together a silly rocket, then blast your animal pilot off to the Moon and beyond!",
-  "howToPlay": "Tap or drag parts from the tray to build your rocket: nose cones, windows, fuel tanks, fins, boosters and stickers (tap the rocket to swap a part, tap a colour to paint it). Press the big red button to launch! When you change a part, guess first: will it go farther, the same, or less far? Watch last time's rocket fly beside yours, then hear what your change did. Every discovery goes into your 📓 notebook. Drag, or use the arrow keys, to steer and catch stars in fives. Every new planet you visit unlocks new parts, and the 🧪 workshop races rocket A against rocket B.",
+  "howToPlay": "Tap or drag parts from the tray to build your rocket: nose cones, windows, fuel tanks, fins, boosters and stickers (tap the rocket to swap a part, tap a colour to paint it). Press the big red button to launch! When you change a part, guess first: will it go farther, the same, or less far? (Later, name the very planet.) Watch last time's rocket fly beside yours, then hear what your change did. A wobbly rocket rocks on the pad and sways in flight; a steady one stands still. Every discovery goes into your 📓 notebook, which remembers where each booster landed and which noses, tanks and fins you found wobbly 〰️ or steady ━ (the tray marks them too), and its 🧪 workshop races rocket A against rocket B. Steer to the stars out at the sides: fifteen make the ⚡ turbo ready, and you choose whether to zoom one planet farther. After a few flights Robot hands you mission cards. First guess where the rocket on the pad lands as it is, then change parts to reach his planet. Missions grow from landing on a planet, to landing there steady or wobbly, to fixing Robot's own rocket with just one change, to his rocket with two faults (or two wobbly parts), fixed one change per flight. Then the workshop holds a race challenge: one steady and one wobbly rocket to the same planet.",
   "emoji": "🚀",
   "color": "#ff5a5f",
   "category": "space",
@@ -13,5 +13,5 @@
     4,
     8
   ],
-  "learning": "Design comparisons, predictions and experimentation"
+  "learning": "Design comparisons, predictions, experimentation and planning with two variables"
 }

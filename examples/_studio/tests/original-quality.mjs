@@ -33,6 +33,8 @@ async function assertTouchableInViewport(selector) {
 // Games whose menu opens on a mode without missions pick the mission mode first.
 const missionMode = {
   'crash-racers': () => tap('[data-mode="race"]'),
+  // Pond helpers' jar goals replace the counting mission, which now belongs to Bumper race.
+  'bumper-ducks': () => tap('[data-mode="lively"]'),
 }
 const menuReady = () => window.__adventure && document.getElementById('adventure-choice')
 const choiceReady = () => document.getElementById('adventure-choice')?.getBoundingClientRect().width > 0
@@ -57,9 +59,17 @@ await runChecks(session, async (pass) => {
     assert.equal((await mission()).label, selected)
     await tap(originalStartButton(id))
     await page.waitForFunction(() => !document.getElementById('hud').classList.contains('hidden'), null, { timeout: 40000 })
-    assert.equal(await page.locator('#adventure-goal').isVisible(), true)
     assert.equal((await mission()).progress, 0)
-    assert.ok((await page.locator('#adventure-goal').textContent()).includes('0 /'))
+    // Dragon Glide's first world counts numbered rings itself, so the counting mission rests there.
+    if (id === 'dragon-glide') {
+      assert.equal(await page.locator('#adventure-goal').isVisible(), false)
+      pass(`${id}: native mission choice persists and rests in the numbered-ring world.`)
+      continue
+    }
+    assert.equal(await page.locator('#adventure-goal').isVisible(), true)
+    // A tally reads "0 / N"; a pictured row of steps starts with none lit.
+    const goal = page.locator('#adventure-goal')
+    assert.ok((await goal.textContent()).includes('0 /') || (await goal.locator('.adventure-step').count() > 0 && await goal.locator('.adventure-got').count() === 0))
     pass(`${id}: native mission choice persists and starts at zero.`)
   }
 
@@ -119,9 +129,12 @@ await runChecks(session, async (pass) => {
   for (let i = 0; i < 3; i++) {
     await page.waitForFunction(() => window.cakeStack.mover?.appear >= 0.6 && !window.cakeStack.mover.dropping)
     await page.touchscreen.tap(380, 500)
-    await page.waitForFunction((n) => window.__adventure.mission.progress === n, i + 1)
+    await page.waitForFunction((n) => window.cakeStack.cake.layers.length === n, i + 1)
   }
-  assert.equal(await page.evaluate(() => window.cakeStack.cake.layers.length), 3)
+  // Layers are counted together when the child lights the candles.
+  await page.waitForFunction(() => document.getElementById('done').getBoundingClientRect().width > 0)
+  await tap('#done')
+  await page.waitForFunction(() => window.__adventure.mission.progress === 3, null, { timeout: 20000 })
   assert.equal((await mission()).complete, true)
   pass('Actual cake drops count three placed layers.')
 

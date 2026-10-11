@@ -10,7 +10,7 @@ export const START_W = 1.3 // width of the first layer
 export const MIN_W = 0.42 // narrower than this and the cake is finished
 
 export const FLAVOURS = {
-  vanilla: { emoji: '🍦', sponge: '#f7d98f', filling: '#fff3e0', icing: '#fffaf0' },
+  vanilla: { emoji: '🌼', sponge: '#f7d98f', filling: '#fff3e0', icing: '#fffaf0' },
   strawberry: { emoji: '🍓', sponge: '#ffc2d4', filling: '#ff5c8a', icing: '#ff8fb8' },
   chocolate: { emoji: '🍫', sponge: '#8a5a3c', filling: '#ffe0c2', icing: '#5a3420' },
   lemon: { emoji: '🍋', sponge: '#ffe680', filling: '#fffbe0', icing: '#fff07a' },

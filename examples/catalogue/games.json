@@ -3,7 +3,7 @@
     "id": "balloon-pop",
     "title": "Balloon Pop",
     "tagline": "Pop smiley, heart, bunny and star balloons over a sunny countryside!",
-    "howToPlay": "Listen and look at the card: pop the balloons it asks for (4 blue ones, the hearts, 3 then 2 more, or one for each dot on the gold balloon) and watch the slots fill as you count. Other balloons still pop for fun. Tap the sun, a sheep, a house, a tree, the windmill or the hot-air balloon for a surprise. Choose 🎈 Free popping on the menu to pop everything.",
+    "howToPlay": "A friend asks for balloons: pop the ones they want (4 blue ones, the hearts, 3 then 2 more, 3 red and 2 blue, or the balloons with 5 dots) and tap 🧺 Give when the basket is just right. Too many? Tap a balloon in the basket to let it go. Then choose a treat for the picnic. When all eight friends are at the picnic, everyone waves. Stuck? The friend helps with numbered slots. Confident counters move on to plain slots, then ten-frames, the teens, one more / one less and making two bunches the same. 🌱 Start easy goes back to the beginning.",
     "emoji": "🎈",
     "color": "#ff6b9d",
     "category": "pop",
@@ -37,7 +37,7 @@
     "id": "bunny-hop",
     "title": "Bunny Hop",
     "tagline": "Hop Pip the bunny home through meadows, mushrooms, autumn woods and snow!",
-    "howToPlay": "Tap the screen or press the space bar to hop, and tap again in the air for a flippy double hop. Carrots come in rows: hear how many, then count them as Pip munches. Logs, rocks and pumpkins come in little repeating patterns with their own notes; when a ? appears, pick what comes next. Choose 🐢 for a slower trip. At home, see all your carrot rows added up in Pip's pantry.",
+    "howToPlay": "Tap the screen or press the space bar to hop, and tap again in the air for a flippy double hop. Pip needs carrots for winter: some hang at hop height (hop as each one comes) and some grow in the grass (stay down to munch them). Once Pip is catching whole rows, his basket asks for fewer carrots than the row holds: count them in, then let the rest go by. Too many, and the basket is too heavy: one rolls out. Logs, rocks, pumpkins and carrots come in patterns with their own notes; when a ? appears, pick what comes next, then keep the pattern going through the mist: hop for the obstacles and stay down for the carrots. A wrong pick plays the pattern again for another go, and right answers lead on to three-part and growing patterns. At home, Pip's pantry shows each place's crates; answer his question about them (a line of carrots helps you count on), then see if there are enough for winter. After each pattern, wild flowers grow in the grass: stay down to pick them, and at home plant them by Pip's door in a pattern of your own, which Pip sings back. Choose 🐢 for a slower trip.",
     "emoji": "🐰",
     "color": "#8ac926",
     "category": "jump",
@@ -48,7 +48,7 @@
       3,
       8
     ],
-    "learning": "Counting, adding rows, patterns and timing"
+    "learning": "Counting, comparing and adding, reading and making patterns, and timing"
   },
   {
     "id": "cake-stack",
@@ -105,7 +105,7 @@
     "id": "fish-pond",
     "title": "Fish Pond",
     "tagline": "Go fishing with Bear and fill your book with fish, a puffer, a whale and treasure!",
-    "howToPlay": "Pick a place: sunny lake, sunset river, starry night, icy sea or coral reef. Tap the water (or press Space) to cast. When the bobber dips and a big ! pops up, tap anywhere to reel it in. Missed one? It just swims off giggling and another comes along. Every catch goes into your 📖 book: can you find all 15? After a catch, tap the glowing spot to look closer and hear a true fact.",
+    "howToPlay": "Pick a place: sunny lake, sunset river, starry night, icy sea or coral reef. Bear asks a riddle (\"something with a hard shell\"): tap the animal that fits, and it comes to your line. When the bobber dips and a ! pops up, tap to reel it in. An animal that fits goes in your 📖 book; one that doesn't is put back gently, with the reason why. Can you find all 18? Older players get trickier riddles, two clues at once, and Bear's list: animals to find in other waters, so you choose where to fish.",
     "emoji": "🎣",
     "color": "#3fa7e0",
     "category": "animals",
@@ -122,7 +122,7 @@
     "id": "memory-match",
     "title": "Memory Match",
     "tagline": "Flip the cards and find the matching animal twins!",
-    "howToPlay": "Tap two cards to turn them over and hear each animal's name. Find all the matching pairs! Choose how they match: 🐶🐶 twins, 🐮🔊 an animal and its sound (listen carefully, the speaker card only makes the noise), or 🐮 and its baby (a cow's baby is a calf). Tap 👀 once a round to peek at a pair. Start with 2 pairs and grow up to 10.",
+    "howToPlay": "Tap two cards to turn them over and hear each animal's name. Find all the matching pairs! Choose how they match: 🐶🐶 twins (on the big boards some twins wear a 🎀 bow or a 🧢 hat, so look closely), 🐮🔊 an animal and its sound (the speaker card says \"Moo!\": who says that?), 🐮 and its baby (a cow's baby is a calf; on the bigger boards the babies sleep in baskets and you only hear and see their name, so find whose baby it is), or 🐮🐷🐥 Homes for older children: keep turning over the animals that live together on the farm, at home, wild on land or in the water. Tap 👀 once a round to peek. Boards grow from 2 pairs to 10, and the next board follows how carefully you remembered. 📖 My animals keeps what you found out about each animal: its sound, its baby and its home.",
     "emoji": "🧩",
     "color": "#2ec4b6",
     "category": "puzzle",
@@ -133,13 +133,13 @@
       2,
       8
     ],
-    "learning": "Visual and auditory memory, animal names and baby animal words"
+    "learning": "Visual and auditory memory, looking closely, animal names and the sounds they make, baby animal words (and which parent each belongs to), and sorting animals by where they live (including that some fit more than one home)"
   },
   {
     "id": "paint-splash",
     "title": "Paint Splash",
     "tagline": "Roll giant paint rollers with up to 4 friends and paint a picture together!",
-    "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller. Tap the 🔴🟡🔵 pots to change your paint. Roll a new colour over wet, shiny paint to mix it: red and yellow make orange, yellow and blue make green, red and blue make purple. Grab a 🪣 bucket for a big splash. There is no clock: tap 🖼️ Finished! when your picture is done (and when the playground is nearly all painted, we'll ask), then see the colours you discovered together. It is kept in My pictures by itself. Choose ⏱️ Quick for a 75-second round with 🌈 rainbow and 💧 water puddles. Open Mix my colours to explore the same red/yellow/blue toy paint model in the colour studio.",
+    "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller. A dashed chalk shape asks for a colour (\"Paint the fish green!\"), but the pots only hold 🔴🟡🔵, so work out the mix and paint it like a painter, in coats: one paint all over inside the lines, then the other on top while it is still wet and shiny. Swapping pots back and forth still mixes, but careful coats are what move the puzzles on. Red and yellow make orange, yellow and blue make green, red and blue make purple, all three make brown. Painted shapes are inked and kept safe while robot friends paint a frame round the page. The recipe is pictured at first; as you paint carefully it hides behind ❓, two-part shapes (a tree's leaves and trunk) arrive, then puzzles with more than one answer (\"a mix of blue and one more paint\"), and finally puzzles on two-part shapes and with two conditions (\"a mix with blue but no red\"). After each shape you pick the next one from the card, and every few shapes you choose the colour yourself. Stuck? A ring shows the pot to try. When the page is full, keep painting on a fresh page. There is no clock: tap 🖼️ Finished! when your picture is done, and it is kept in My pictures by itself. Choose ⏱️ Quick for 75 seconds of free painting with 🌈 rainbow and 💧 water puddles, or open Mix my colours for the colour studio.",
     "emoji": "🎨",
     "color": "#9b5de5",
     "category": "pop",
@@ -150,13 +150,13 @@
       2,
       8
     ],
-    "learning": "Colour exploration, creative patterns and cooperation"
+    "learning": "Colour mixing with primaries (secondary colours and brown), reasoning from a rule to a colour (including two conditions and elimination), planning in coats while the paint is wet, staying inside the lines, and cooperation"
   },
   {
     "id": "penguin-bowling",
     "title": "Penguin Bowling",
     "tagline": "Belly-slide a chubby penguin down the ice and knock over snowmen and fish!",
-    "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides; ◀ ▶ move the penguin. Bumpers 🛟 keep the penguin out of the gutters. After every roll, count the pins still standing: fallen and standing always make 10. Before a second roll, find where the pins are left, then aim for them. Tap 💭 to guess how many will fall first.",
+    "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides; ◀ ▶ move the penguin. Bumpers 🛟 keep the penguin out of the gutters. After every roll, tap each pin still standing to count it (fallen ones don't count): fallen and standing always make 10. Children who count carefully are asked for the missing part instead (7 + ? = 10, or ? + 2 = 10), first from three numbers, later from a 1–10 strip, and may plan each fresh rack: pick 'knock 8, leave 2' and choose where to stand (the middle knocks nearly all, the edge just one; footprints help at first). The strongest counters work the bond out while a snow cloud hides the pins, and may try bumpers down. Before a second roll, say where the pins are or which side has more: footprints show where to walk the penguin, fewer of them as the child grows, until the spare is their own plan. Tap 💭 to guess how many will fall first. Pick 5 frames for a shorter game.",
     "emoji": "🐧",
     "color": "#4cc9f0",
     "category": "pop",
@@ -173,7 +173,7 @@
     "id": "rocket-garage",
     "title": "Rocket Garage",
     "tagline": "Snap together a silly rocket, then blast your animal pilot off to the Moon and beyond!",
-    "howToPlay": "Tap or drag parts from the tray to build your rocket: nose cones, windows, fuel tanks, fins, boosters and stickers (tap the rocket to swap a part, tap a colour to paint it). Press the big red button to launch! When you change a part, guess first: will it go farther, the same, or less far? Watch last time's rocket fly beside yours, then hear what your change did. Every discovery goes into your 📓 notebook. Drag, or use the arrow keys, to steer and catch stars in fives. Every new planet you visit unlocks new parts, and the 🧪 workshop races rocket A against rocket B.",
+    "howToPlay": "Tap or drag parts from the tray to build your rocket: nose cones, windows, fuel tanks, fins, boosters and stickers (tap the rocket to swap a part, tap a colour to paint it). Press the big red button to launch! When you change a part, guess first: will it go farther, the same, or less far? (Later, name the very planet.) Watch last time's rocket fly beside yours, then hear what your change did. A wobbly rocket rocks on the pad and sways in flight; a steady one stands still. Every discovery goes into your 📓 notebook, which remembers where each booster landed and which noses, tanks and fins you found wobbly 〰️ or steady ━ (the tray marks them too), and its 🧪 workshop races rocket A against rocket B. Steer to the stars out at the sides: fifteen make the ⚡ turbo ready, and you choose whether to zoom one planet farther. After a few flights Robot hands you mission cards. First guess where the rocket on the pad lands as it is, then change parts to reach his planet. Missions grow from landing on a planet, to landing there steady or wobbly, to fixing Robot's own rocket with just one change, to his rocket with two faults (or two wobbly parts), fixed one change per flight. Then the workshop holds a race challenge: one steady and one wobbly rocket to the same planet.",
     "emoji": "🚀",
     "color": "#ff5a5f",
     "category": "space",
@@ -184,13 +184,13 @@
       4,
       8
     ],
-    "learning": "Design comparisons, predictions and experimentation"
+    "learning": "Design comparisons, predictions, experimentation and planning with two variables"
   },
   {
     "id": "star-catcher",
     "title": "Star Catcher",
     "tagline": "Fly Kitty’s rocket past friendly planets and catch the falling stars!",
-    "howToPlay": "Drag your finger or mouse, or use the arrow keys, to fly Kitty's rocket. Every star you catch lights one star of a real constellation: build Cassiopeia, the Southern Cross, Orion, the Little Dipper and the Big Dipper, one at each planet, and hear each one's name and a true fact. Gems add a little twinkle and a magnet pulls stars in. Sleepy space rocks just make you dizzy. After five constellations, fly home to see your whole night sky.",
+    "howToPlay": "Drag your finger or mouse, or use the arrow keys, to fly Kitty's rocket. Stars fall in little rows, each carrying a number: steer to the one that comes next to light the next star of a real constellation. The rule stays under the sky panel with the numbers in order. A wrong pick floats away and the right star shows itself, so careful choices build the sky sooner. At each planet your child joins the dots in counting order (tap, or arrow keys and Enter); above the first level a number or two hides as \"?\" and your child picks the missing one. Then they choose the next shape, and each card carries its own way of counting, so they choose to stay steady or take a stretch. Each sequence starts somewhere new, and as your child gets steady the numbers move from matching to counting on and back, twos, fives, big numbers where 13 sits beside 31, jumps of ten, finding the pattern, and big jumps like 9 or 11. At home, find each constellation again by its shape or by how it was counted.",
     "emoji": "⭐",
     "color": "#6c63ff",
     "category": "space",
@@ -201,6 +201,6 @@
       3,
       8
     ],
-    "learning": "Counting, real constellations and star patterns"
+    "learning": "Number order, counting on and back, skip counting, missing numbers in a sequence, place value with tens, number patterns and two-digit jumps, reading two-digit numbers, real constellations and star patterns"
   }
 ]

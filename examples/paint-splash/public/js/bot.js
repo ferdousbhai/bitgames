@@ -4,8 +4,9 @@ import { clamp } from './util.js'
 
 /**
  * Friendly computer painters for empty seats. They look for bare ground to
- * paint (and sometimes a friend's colour, where the paints mix), go for pickups now and then, roll
- * round obstacles and do the odd happy swirl. A little slower than a child.
+ * paint (never the children's shapes or wet paint near a child), go for pickups now and then, roll
+ * round obstacles and do the odd happy swirl. A little slower than a child. With no clock they
+ * keep to the frame round the page (`frame` metres wide), leaving the middle to the children.
  */
 export class Bot {
   constructor(painter, seed = 1) {
@@ -20,7 +21,8 @@ export class Bot {
     this.rnd = Math.random
   }
 
-  update(dt, { paint, items, obstacles, painters }) {
+  update(dt, { paint, items, obstacles, painters, shapes = [], frame = 0 }) {
+    this.frame = frame
     const p = this.p
     this.retarget -= dt
     if (this.swirl > 0) {
@@ -28,12 +30,12 @@ export class Bot {
       this.swirl -= dt
       const a = p.yaw + this.swirlDir * 1.4
       p.controls = { x: Math.sin(a), z: Math.cos(a) }
-      this.avoid(p.controls, obstacles, painters)
+      this.avoid(p.controls, obstacles, painters, shapes)
       return
     }
     const reached = this.goal && Math.hypot(this.goal.x - p.x, this.goal.z - p.z) < 1.4
     if (!this.goal || reached || this.retarget <= 0 || (this.goal.item && !items.has(this.goal.item))) {
-      this.pick(paint, items, obstacles)
+      this.pick(paint, items, obstacles, painters, shapes)
       if (!this.goal) this.goal = { x: 0, z: 0 }
     }
     // Wedged against something: pick somewhere else.
@@ -52,15 +54,15 @@ export class Bot {
     const wob = Math.sin(performance.now() / 600 + p.seat) * 0.35
     const c = Math.cos(wob), s = Math.sin(wob)
     const want = { x: (dx * c - dz * s) / d, z: (dx * s + dz * c) / d }
-    this.avoid(want, obstacles, painters)
+    this.avoid(want, obstacles, painters, shapes)
     p.controls = want
   }
 
-  pick(paint, items, obstacles) {
+  pick(paint, items, obstacles, painters = [], shapes = []) {
     const p = this.p
     this.retarget = 2 + this.rnd() * 2
-    // Now and then: a swirl.
-    if (this.rnd() < 0.12) {
+    // Now and then: a swirl (not while minding the frame, where it would reach into the page).
+    if (!this.frame && this.rnd() < 0.12) {
       this.swirl = 1.6 + this.rnd()
       this.swirlDir = this.rnd() < 0.5 ? 1 : -1
       return
@@ -80,18 +82,23 @@ export class Bot {
       this.goal = best
       return
     }
-    // Otherwise the best of a few random spots: bare ground, then others' paint, not too far.
+    // Otherwise the best of a few random spots: bare ground, not too far. Robots keep off the
+    // children's shapes and away from where a child is rolling, so every mix there is the child's own.
+    const children = painters.filter((o) => o !== p && !o.bot)
     for (let k = 0; k < 14; k++) {
-      const x = -HALF_W + 2 + this.rnd() * (2 * HALF_W - 4)
-      const z = -HALF_D + 2 + this.rnd() * (2 * HALF_D - 4)
-      if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 1.5)) continue
-      let score = 0
-      for (const [ox, oz] of [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) {
-        // Bare ground first; a friend's different colour is fine too (that is where colours mix).
-        const mix = paint.mixAt(x + ox, z + oz)
-        if (mix === 0) score += 3
-        else if (mix > 0 && mix !== p.paint) score += 1.2
+      let x = -HALF_W + 2 + this.rnd() * (2 * HALF_W - 4)
+      let z = -HALF_D + 2 + this.rnd() * (2 * HALF_D - 4)
+      if (this.frame) {
+        // A spot along the frame, close to the edge.
+        const inset = 1.1 + this.rnd() * 0.4
+        if (this.rnd() < HALF_W / (HALF_W + HALF_D)) z = (this.rnd() < 0.5 ? -1 : 1) * (HALF_D - inset)
+        else x = (this.rnd() < 0.5 ? -1 : 1) * (HALF_W - inset)
       }
+      if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 1.5)) continue
+      if (shapes.some((s) => s.near(x, z, 2))) continue
+      if (children.some((o) => Math.hypot(o.x - x, o.z - z) < 5)) continue
+      let score = 0
+      for (const [ox, oz] of [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) if (paint.mixAt(x + ox, z + oz) === 0) score += 3
       score -= Math.hypot(x - p.x, z - p.z) * 0.25
       score += this.rnd() * 2
       if (score > bestScore) {
@@ -102,8 +109,8 @@ export class Bot {
     this.goal = best ?? { x: 0, z: 0 }
   }
 
-  /** Bends `want` away from walls, obstacles and other painters just ahead. */
-  avoid(want, obstacles, painters) {
+  /** Bends `want` away from walls, obstacles, the children's shapes and other painters just ahead. */
+  avoid(want, obstacles, painters, shapes = []) {
     const p = this.p
     const cx = p.x + Math.sin(p.yaw) * COLLIDE_AHEAD, cz = p.z + Math.cos(p.yaw) * COLLIDE_AHEAD
     const push = (ox, oz, r, strength) => {
@@ -116,8 +123,9 @@ export class Bot {
       want.z += (dz / d) * k
     }
     for (const o of obstacles) push(o.x, o.z, o.r, 2.2)
-    for (const other of painters) if (other !== p) push(other.x, other.z, COLLIDE_R, 1.2)
-    const margin = 2.2
+    for (const other of painters) if (other !== p) push(other.x, other.z, other.bot ? COLLIDE_R : COLLIDE_R + 2, other.bot ? 1.2 : 1.8)
+    for (const s of shapes) push(s.x, s.z, s.r, 2.4)
+    const margin = this.frame ? 0.9 : 2.2
     if (cx < -HALF_W + margin) want.x += (-HALF_W + margin - cx) * 0.8
     if (cx > HALF_W - margin) want.x -= (cx - (HALF_W - margin)) * 0.8
     if (cz < -HALF_D + margin) want.z += (-HALF_D + margin - cz) * 0.8

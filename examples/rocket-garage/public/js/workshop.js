@@ -1,4 +1,4 @@
-import { DESTS, PARTS, reach, wobble } from './parts.js'
+import { DESTS, PARTS, isSteady, reach, wobble } from './parts.js'
 import { listWords } from './speech.js'
 
 const STORAGE_KEY = 'rocket-garage:reference:v1'
@@ -162,7 +162,7 @@ const won = (result, slot) => result.answer === slot || result.answer === 'same'
  */
 export function flyRace(race, result, { duration = 1700, onDone = () => {} } = {}) {
   const rails = [...race.querySelectorAll('.workshop-rail')]
-  for (const rail of rails) rail.querySelector('.workshop-ship').style.setProperty('--wobble', `${4 + result[rail.dataset.build].wobble * 14}deg`)
+  for (const rail of rails) rail.querySelector('.workshop-ship').style.setProperty('--wobble', `${result[rail.dataset.build].wobble * 16}deg`)
   requestAnimationFrame(() => requestAnimationFrame(() => {
     for (const rail of rails) {
       // The rail carries how far it flies: the ship and its glowing trail both follow it
@@ -188,11 +188,16 @@ export function flyRace(race, result, { duration = 1700, onDone = () => {} } = {
  * rocket B), predicts which flies farther, then watches both fly on little tracks.
  * Pictures, a pointing hand and spoken words carry it for children who are not reading yet.
  */
-export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', voice, sound = () => {}, onChange = () => {} }) {
+/**
+ * `challenge()` returns a planet for the open race challenge (offered once tier 4 is reached), or
+ * null: make A and B both land there, one steady and one wobbly, and race them. No score, only the
+ * race, and the finding that the wobble never changes the distance.
+ */
+export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', voice, sound = () => {}, onChange = () => {}, challenge = () => null, onChallenge = () => {} }) {
   const dialog = document.createElement('dialog')
   dialog.id = 'workshop'
   dialog.setAttribute('aria-labelledby', 'workshop-title')
-  dialog.innerHTML = `<div class="workshop-head"><h2 id="workshop-title">🧪 Robot’s test workshop</h2><button id="workshop-say" class="workshop-round" aria-label="Say it again">🔊</button><button id="workshop-close" class="workshop-round" aria-label="Back to the garage">✕</button></div>
+  dialog.innerHTML = `<div class="workshop-head"><h2 id="workshop-title">🧪 Robot’s test workshop</h2><button id="workshop-goal" class="workshop-goal hidden" aria-label="Race challenge"></button><button id="workshop-say" class="workshop-round" aria-label="Say it again">🔊</button><button id="workshop-close" class="workshop-round" aria-label="Back to the garage">✕</button></div>
     <div class="workshop-builds"></div>
     <div class="workshop-change"><div class="workshop-swap" aria-hidden="true"></div><p id="workshop-rule"></p></div>
     <div class="workshop-prediction" role="group" aria-label="${QUESTION}"><button data-predict="a" aria-label="Rocket A flies farther">A</button><button data-predict="same" aria-label="Both fly the same">=</button><button data-predict="b" aria-label="Rocket B flies farther">B</button></div>
@@ -216,6 +221,13 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
     said = words
     if (dialog.open && words) voice.sayNow(words)
   }
+
+  const goalButton = $('workshop-goal')
+  let goal = null
+  const goalWords = () => `Race challenge: make A and B both land on ${placeName(goal)}. One steady, one wobbly!`
+  goalButton.onclick = () => feedback($('workshop-feedback').textContent, goalWords())
+  /** Both rockets reach the challenge planet, and exactly one of them wobbles. */
+  const goalMet = (result) => goal !== null && result.a.reach === goal && result.b.reach === goal && isSteady(reference) !== isSteady(current)
 
   let reference = readStoredReference() // build A
   let current = null // build B: the garage's rocket when the workshop opened
@@ -356,7 +368,14 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
       // "Same boosters, same distance" already says they tie, so it isn't said twice
       const outcome = result.answer !== 'same' ? `${result.answer.toUpperCase()} flies farther.` : why.startsWith('Same') ? '' : 'They fly the same.'
       const spoken = result.answer !== 'same' ? `Rocket ${result.answer.toUpperCase()} flies farther.` : outcome
-      feedback(`${verdict} ${outcome} ${why}`.replace('  ', ' '), `${matched ? 'Yes! You were right!' : 'Ooh, a new discovery!'} ${spoken} ${why}`)
+      // The race challenge: one steady and one wobbly rocket side by side on the same planet
+      const met = goalMet(result)
+      const extra = met ? ` Both landed on ${placeName(goal)}, one steady and one wobbly: the wobble never changes the distance!` : ''
+      if (met) {
+        goalButton.classList.add('met')
+        onChallenge()
+      }
+      feedback(`${verdict} ${outcome} ${why}`.replace('  ', ' '), `${matched ? 'Yes! You were right!' : 'Ooh, a new discovery!'} ${spoken} ${met ? '' : why}${extra}`.trim())
       sound(matched ? 'yay' : 'hmm')
       setBusy(false)
       // The 🔧 glows for "go and try another change"; no hand, so the result stays in view
@@ -376,10 +395,22 @@ export function createWorkshop({ readRocket, thumbOf, rocketThumb = () => '', vo
     onChange()
   })
 
+  function renderGoal() {
+    goal = challenge()
+    goalButton.classList.toggle('hidden', goal === null)
+    goalButton.classList.remove('met')
+    if (goal === null) return
+    const bit = (line) => `<span class="workshop-goal-bit"><span>${DESTS[goal].emoji}</span><b>${line}</b></span>`
+    goalButton.innerHTML = `<span class="workshop-goal-tag">🏁</span>${bit('━')}${bit('〰️')}`
+    goalButton.setAttribute('aria-label', goalWords())
+  }
+
   return {
     open() {
+      renderGoal()
       dialog.showModal()
       render()
+      if (goal !== null) voice.say(goalWords())
     },
     close,
     /** 0 = nothing saved yet or no change, 1 = exactly one part changed (ready to test), 2 = more. */

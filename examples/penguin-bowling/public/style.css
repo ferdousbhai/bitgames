@@ -56,11 +56,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .big-go:active { transform: translateY(6px); box-shadow: 0 2px 0 #1f78b4; }
 .big-go.alt { background: linear-gradient(#ffd166, #ffb703); box-shadow: 0 8px 0 #d08a00; }
-.scores { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; font-weight: 800; font-size: 18px; }
-.scores .pill { background: #ffca3a; color: #2b4a8a; }
 .row { display: flex; gap: 14px; }
 
-.pill { background: rgba(43, 74, 138, 0.6); border-radius: 999px; padding: 6px 16px; font-size: 24px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); white-space: nowrap; }
 #hud { position: fixed; inset: 0; pointer-events: none; }
 .hud-top {
   position: absolute; left: 0; right: 0; top: calc(8px + env(safe-area-inset-top)); padding: 0 calc(10px + env(safe-area-inset-right)) 0 calc(10px + env(safe-area-inset-left));
@@ -78,7 +75,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .frame .rolls { display: flex; justify-content: flex-end; height: 19px; font-size: 14px; font-weight: 900; }
 .frame .rolls span { flex: 1; text-align: center; line-height: 19px; }
 .frame .rolls span + span { border-left: 1px solid #c8def2; }
-.frame .rolls .x { color: #ff595e; } .frame .rolls .s { color: #9b5de5; }
+.frame .rolls .x { color: #2fa8e8; } /* all ten in one slide */
 .frame .tot { height: 20px; line-height: 20px; text-align: center; font-weight: 900; font-size: 15px; background: #fff; }
 .frame.now { background: #ffe066; box-shadow: inset 0 0 0 2px #ffb703; }
 .frame.now .tot { background: #fff6cc; }
@@ -154,7 +151,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   100% { transform: translate(-50%, -260%) scale(1); opacity: 0; }
 }
 
-.hint-swipe { position: fixed; left: 50%; bottom: min(120px, 22vh); font-size: 60px; pointer-events: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); animation: swipe 2.4s ease-in-out infinite; }
+.hint-swipe { position: fixed; left: 50%; bottom: min(120px, 22vh); font-size: 60px; pointer-events: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); animation: swipe 2.4s ease-in-out 3 both; }
 @keyframes swipe {
   0% { transform: translate(-50%, 40px); opacity: 0; }
   15% { opacity: 1; }
@@ -163,9 +160,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 
 .trophy { font-size: 70px; line-height: 1; }
-.big-score { font-size: clamp(60px, 16vw, 96px); font-weight: 900; line-height: 1; color: #2fa8e8; text-shadow: 0 5px 0 rgba(43,74,138,.2); }
-.stars { font-size: 40px; font-weight: 900; display: flex; gap: 14px; color: #2b4a8a; }
-.stars .mark.x { color: #ff595e; } .stars .mark.s { color: #9b5de5; }
 .results-row { display: flex; }
 
 /* Phones in portrait: the scorecard gets its own row under the buttons */
@@ -190,7 +184,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   /* The top bar keeps to one row, so the scorecard stays clear of the result line */
   .hud-left, .hud-right { gap: 5px; }
   .round-btn { width: 42px; height: 42px; font-size: 21px; }
-  .hud-top .pill.score { font-size: 20px; padding: 5px 10px; }
   .ctl { width: 50px; height: 50px; }
   .ctl.small { width: 46px; height: 46px; }
   .go { padding: 0 12px; font-size: 28px; }
@@ -210,7 +203,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #intro-title { font-size: 20px; }
 }
 /* Very short sideways screens (Android phones with the browser bar, ~280-380px tall):
-   the title and results cards shrink to fit, so Play, Best and the play-again
+   the title and results cards shrink to fit, so Play and the play-again
    buttons are never cut off at the bottom. */
 @media (max-height: 380px) {
   .screen { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: calc(6px + env(safe-area-inset-bottom)); gap: 8px; }
@@ -224,10 +217,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .chip { font-size: 16px; padding: 4px 14px; } .chip-icon { font-size: 20px; } .chip b { font-size: 13px; }
   .big-go { font-size: 26px; padding: 5px 40px; box-shadow: 0 5px 0 #1f78b4; }
   .big-go.alt { box-shadow: 0 5px 0 #d08a00; }
-  .scores, .scores .pill { font-size: 16px; } .scores .pill { padding: 3px 12px; }
   .trophy { font-size: 36px; }
-  .big-score { font-size: 50px; }
-  .stars { font-size: 30px; }
 }
 /* Tablets: bigger aim buttons for small hands on a big screen */
 @media (pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
@@ -246,7 +236,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .chip { font-size: 25px; padding: 10px 24px; }
   .chip-icon { font-size: 32px; }
   #title .big-go { font-size: 54px; padding: 14px 70px; }
-  .scores { font-size: 22px; }
 }
 @media (min-width: 1000px) and (min-height: 700px) {
   .frame { width: 44px; } .frame.wide { width: 58px; }
@@ -264,7 +253,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .frame { flex: none; width: 26px; } .frame.wide { flex: none; width: 36px; }
   .frame .rolls { font-size: 12px; height: 16px; } .frame .rolls span { line-height: 16px; }
   .frame .tot { font-size: 14px; height: 18px; line-height: 18px; }
-  .hud-top .pill.score { font-size: 20px; padding: 6px 12px; }
   .hud-left, .hud-right { gap: 6px; }
   .rack { top: calc(66px + env(safe-area-inset-top)); }
   .intro { left: calc(10px + env(safe-area-inset-left)); }
@@ -280,7 +268,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .round-btn { width: 42px; height: 42px; font-size: 21px; }
   .hud-left, .hud-right { gap: 4px; }
   .hud-top { gap: 6px; }
-  .hud-top .pill.score { font-size: 18px; padding: 5px 9px; }
   .frame { width: 20px; } .frame.wide { width: 27px; }
 }
 
@@ -309,14 +296,23 @@ body #pin-prediction .pin.fall:not(.gap)::before { transform: translate(-50%, -3
 .bond b { font-size: 30px; font-weight: 900; line-height: 1; min-width: 1.2em; text-align: center; }
 .bond-whole b { font-size: 38px; background: #ffe066; border-radius: 14px; padding: 6px 10px; }
 .bond-op { font-size: 30px; font-weight: 900; }
-.bond-pins { display: grid; grid-template-columns: repeat(5, 18px); grid-auto-rows: 26px; gap: 3px; min-width: 18px; min-height: 26px; justify-content: center; align-items: end; }
-.bond-group.standing .bond-pins { grid-template-columns: repeat(var(--cols, 5), 18px); }
-.pin-ic { position: relative; width: 14px; height: 22px; margin: 0 auto; border-radius: 7px 7px 6px 6px; background: var(--c, #4cc9f0);
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); transition: transform .35s, box-shadow .35s, opacity .35s; }
-.pin-ic::before { content: ''; position: absolute; left: 3px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--c, #4cc9f0); }
-.fallen .pin-ic { transform: rotate(80deg) scale(.85); opacity: .5; filter: grayscale(.5); }
-.standing .pin-ic { opacity: .45; }
-.standing .pin-ic.lit { opacity: 1; transform: translateY(-3px); box-shadow: inset 0 -3px 0 rgba(0,0,0,.15), 0 0 0 3px #fff3b0, 0 0 10px 3px #ffe066; }
+.bond-pins { display: grid; grid-template-columns: repeat(5, 22px); grid-auto-rows: 30px; gap: 3px; min-width: 22px; min-height: 30px; justify-content: center; align-items: end; }
+.bond-group.standing .bond-pins { grid-template-columns: repeat(var(--cols, 5), 22px); }
+/* Each pin is the lane's own pin: a snowman, or a fish in Fishy Bay, standing on a dash of its colour. */
+.pin-ic { position: relative; display: flex; align-items: flex-end; justify-content: center; width: 22px; height: 28px; margin: 0 auto;
+  font-style: normal; font-size: 22px; line-height: 1; border-radius: 2px;
+  transition: transform .35s, filter .35s, opacity .35s; }
+.pin-ic::before { content: '⛄'; display: inline-block; }
+body.pins-fish .pin-ic::before { content: '🐟'; transform: rotate(-90deg); }
+/* Fallen pins lie on their side, a little faded; standing ones stand on a dash of their hat colour. */
+.fallen .pin-ic { opacity: .8; filter: grayscale(.25); align-items: center; }
+.fallen .pin-ic::before { transform: rotate(80deg); }
+body.pins-fish .fallen .pin-ic::before { transform: none; }
+.standing .pin-ic { opacity: .45; border-bottom: 3px solid var(--c, #4cc9f0); }
+.standing .pin-ic.lit { opacity: 1; transform: translateY(-3px); filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px #ffd23f); }
+/* A tap on a fallen pin while counting: the lying-down group gives one small wobble. */
+.bond-group.fallen .bond-pins.nudge { animation: nudge .45s ease-in-out 1; }
+@keyframes nudge { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 .rack i.lit { box-shadow: 0 0 0 2px #fff, 0 0 8px 2px #ffe066; }
 
 /* Before a second roll: "Where are the pins?" with three pictured sides. */
@@ -347,9 +343,8 @@ body.bond-only #pin-discovery { display: none; }
   .bond { gap: 6px; padding: 8px 10px; }
   .bond b, .bond-op { font-size: 24px; }
   .bond-whole b { font-size: 30px; }
-  .bond-pins, .bond-group.standing .bond-pins { grid-template-columns: repeat(var(--cols, 5), 14px); grid-auto-rows: 22px; gap: 2px; }
-  .pin-ic { width: 11px; height: 18px; }
-  .pin-ic::before { left: 2px; top: -4px; width: 7px; height: 7px; }
+  .bond-pins, .bond-group.standing .bond-pins { grid-template-columns: repeat(var(--cols, 5), 17px); grid-auto-rows: 24px; gap: 2px; }
+  .pin-ic { width: 17px; height: 22px; font-size: 16px; }
 }
 /* Short sideways phones: the picker sits between the two button groups. */
 @media (max-height: 520px) and (orientation: landscape) {
@@ -360,10 +355,113 @@ body.bond-only #pin-discovery { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pin-ic, .bond { transition: none; }
+  .bond-group.fallen .bond-pins.nudge { animation: none; }
 }
 /* Results: every way of making 10 counted this game. */
-.bonds-box { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #2b4a8a; }
-.bonds-title { font-weight: 900; font-size: 18px; }
-.bonds { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 340px; }
-.bonds span { background: #fff5d6; border-radius: 12px; padding: 4px 10px; font-weight: 900; font-size: 18px; box-shadow: 0 3px 0 rgba(43,74,138,.2); white-space: nowrap; }
-@media (max-height: 520px) { .bonds-title { font-size: 14px; } .bonds span { font-size: 14px; padding: 2px 8px; } .bonds { max-width: 420px; } }
+.bonds-box { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #2b4a8a; }
+.bonds-title { margin: 0; font-weight: 900; font-size: 24px; }
+/* Each way to make 10 as a picture: ten pins, the fallen ones lying grey, the rest standing. */
+.bonds { display: grid; grid-template-columns: repeat(2, auto); gap: 8px 12px; justify-content: center; max-width: 500px; }
+.way { display: flex; align-items: center; gap: 8px; background: #fff5d6; border-radius: 14px; padding: 5px 10px; box-shadow: 0 3px 0 rgba(43,74,138,.2); }
+.way b { font-weight: 900; font-size: 18px; white-space: nowrap; min-width: 3.2em; text-align: center; }
+.way-pins { display: flex; gap: 0; align-items: center; height: 22px; }
+.way-pins i { font-style: normal; font-size: 16px; line-height: 1; width: 15px; text-align: center; }
+.way-pins i::before { content: '⛄'; display: inline-block; }
+body.pins-fish .way-pins i::before { content: '🐟'; transform: rotate(-90deg); }
+.way-pins i.f { opacity: .6; filter: grayscale(.5); }
+.way-pins i.f::before { transform: rotate(80deg) scale(.85); }
+body.pins-fish .way-pins i.f::before { transform: scale(.85); }
+.way-pins i:nth-child(5) { margin-right: 5px; }
+@media (max-height: 520px) { .bonds-title { font-size: 17px; } .way b { font-size: 14px; } .way { padding: 3px 8px; } .bonds { grid-template-columns: repeat(3, auto); max-width: 640px; } }
+@media (max-width: 420px) { .bonds { grid-template-columns: auto; } }
+
+/* Counting time. Tier 1: the standing pins in the bond can be tapped too; a still finger
+   points at the first pin for the first counts of a game. */
+.bond.tap .pin-ic { pointer-events: auto; cursor: pointer; }
+.bond.tap .pin-ic::after { content: ''; position: absolute; inset: -6px -3px; }
+.tap-hint { position: fixed; z-index: 3; font-size: 44px; pointer-events: none; transform: translate(-20%, 10%); filter: drop-shadow(0 3px 3px rgba(0,0,0,.25)); }
+.tap-hint[hidden] { display: none; }
+/* Tier 2: "7 + ? = 10". The standing pins hide behind a question mark; three numbers to choose from. */
+.bond.guess .standing .pin-ic { visibility: hidden; }
+.bond.guess #bond-standing-n { background: #fff; border-radius: 10px; box-shadow: inset 0 0 0 2px #9fc4e8; padding: 2px 6px; }
+.howmany { position: absolute; left: 50%; bottom: calc(144px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 14px; }
+.howmany[hidden] { display: none; }
+.howmany button { pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; background: #fff; color: #2b4a8a; font-size: 32px; font-weight: 900; box-shadow: 0 4px 0 rgba(43,74,138,.3); }
+.howmany button:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(43,74,138,.3); }
+.howmany button.yes { background: #b9f6ca; box-shadow: 0 4px 0 #2e9d5b; }
+.howmany button.no { opacity: .45; }
+.howmany button:disabled:not(.yes):not(.no) { opacity: .8; }
+@media (max-width: 760px) { .howmany { bottom: calc(122px + env(safe-area-inset-bottom)); } .howmany button { width: 56px; height: 56px; font-size: 28px; } }
+@media (max-height: 520px) and (orientation: landscape) { .howmany { bottom: auto; top: 38%; left: auto; right: calc(12px + env(safe-area-inset-right)); transform: none; flex-direction: column; gap: 8px; } .howmany button { width: 50px; height: 50px; font-size: 24px; } }
+/* Tier 3: the number strip, 1 to 10 in two rows of five like a ten-frame, so the answer can't be found by its place. */
+.howmany.strip { display: grid; grid-template-columns: repeat(5, 52px); gap: 8px; padding: 8px; border-radius: 20px; background: rgba(255,251,232,.85); bottom: calc(150px + env(safe-area-inset-bottom)); }
+.howmany.strip button { width: 52px; height: 52px; font-size: 25px; }
+@media (max-width: 760px) { .howmany.strip { grid-template-columns: repeat(5, 46px); gap: 6px; bottom: calc(118px + env(safe-area-inset-bottom)); } .howmany.strip button { width: 46px; height: 46px; font-size: 22px; } }
+@media (max-height: 520px) and (orientation: landscape) { .howmany.strip { grid-template-columns: repeat(2, 40px); gap: 5px; top: auto; bottom: calc(10px + env(safe-area-inset-bottom)); padding: 5px; } .howmany.strip button { width: 40px; height: 40px; font-size: 19px; } }
+.howmany.strip[hidden] { display: none; }
+
+/* Round 3. Plans (tiers 2-3): "knock down 7, leave 3". Each choice is its number over a ten-frame,
+   the knocked pins grey and the ones to leave standing blue. */
+.ten { display: grid; grid-template-columns: repeat(5, 7px); gap: 2px; justify-content: center; }
+.ten i { width: 7px; height: 7px; border-radius: 50%; background: #4cc9f0; box-shadow: inset 0 -1px 0 rgba(0,0,0,.15); }
+.ten i.f { background: #c9d6e6; transform: scale(.75); }
+.plan button { width: auto; min-width: 64px; height: 64px; border-radius: 18px; padding: 4px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #2b4a8a; }
+.plan button b { font-size: 26px; font-weight: 900; line-height: 1; }
+.plan-pill { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-top: 6px; padding: 4px 8px; border-radius: 12px; background: rgba(255,251,232,.92); color: #2b4a8a; font-weight: 900; font-size: 15px; white-space: nowrap; box-shadow: 0 3px 0 rgba(43,74,138,.25); }
+.plan-pill[hidden] { display: none; }
+.plan-pill.hit { background: #d9f7e1; }
+/* Upright phones keep the plan at the bottom, as a row: the two choices are wider than the side column. */
+@media (max-width: 699px) and (orientation: portrait) {
+  .where.plan { left: 50%; top: auto; bottom: calc(110px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 6px 10px; }
+  .where.plan .where-row { flex-direction: row; }
+}
+@media (max-height: 520px) and (orientation: landscape) { .plan button { height: 52px; min-width: 52px; } .plan button b { font-size: 21px; } .plan-pill { font-size: 13px; margin-top: 4px; } }
+/* "? + 2 = 10": the fallen part hides behind the question mark. */
+.bond.guess-fallen .fallen .pin-ic { visibility: hidden; }
+.bond.guess-fallen #bond-fallen-n { background: #fff; border-radius: 10px; box-shadow: inset 0 0 0 2px #9fc4e8; padding: 2px 6px; }
+/* The tenth frame can hold more than one rack: one sum each, smaller. */
+.frame .tot.racks { font-size: 11px; letter-spacing: -.5px; }
+/* Results: all eleven ways, the ones not met yet faint; the ones worked out have a green edge. */
+.way.faint { opacity: .38; box-shadow: none; background: rgba(255,245,214,.6); }
+.way.self { background: #eafbea; box-shadow: 0 3px 0 rgba(46,157,91,.35), inset 0 0 0 2px #7bd88f; }
+.way-plan { font-size: 15px; line-height: 1; margin-left: -4px; }
+.bonds-key { margin: -2px 0 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+.bonds-key[hidden] { display: none; }
+.key-self { display: inline-block; width: 14px; height: 14px; border-radius: 5px; background: #eafbea; box-shadow: inset 0 0 0 2px #7bd88f; }
+@media (max-height: 520px) {
+  .bonds { gap: 5px 8px; }
+  .way { gap: 5px; padding: 2px 7px; }
+  .way-pins { height: 16px; }
+  .way-pins i { width: 10px; font-size: 11px; }
+  .way-pins i:nth-child(5) { margin-right: 3px; }
+  .way b { font-size: 13px; min-width: 2.8em; }
+  .bonds-key { font-size: 12px; }
+}
+
+/* Round 4. Title: the bumper and game-length chips side by side. */
+.chips { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+/* While a bond question is open nothing on screen gives the answer away: the rack map's dots
+   and the 💭/💥 line wait (the frame card shows "?"). */
+body.veiled .rack > div, body.veiled #pin-discovery { visibility: hidden; }
+.plan-pill.near { background: #eef8e6; }
+/* Tier 3, after several plans that came out right: one calm offer of the next challenge. */
+.where .plan-bumpers { width: auto; height: auto; pointer-events: auto; margin-top: 2px; padding: 6px 14px; border-radius: 999px; background: #fff; color: #2b4a8a; font-weight: 900; font-size: 15px; box-shadow: 0 3px 0 rgba(43,74,138,.3); }
+.where .plan-bumpers[hidden] { display: none; }
+/* The rack map is solid enough that the scenery doesn't show through it. */
+.rack { background: rgba(255,255,255,.93); }
+/* Results have the stage to themselves: the frame card and rack map step away (on phones they sat under the card). */
+#hud.over .scorecard, #hud.over .rack { display: none; }
+/* Ways not met yet stay readable; the fallen pins in each way are clearly grey and lying down. */
+.way.faint { opacity: .62; background: rgba(255,250,236,.85); }
+.way.faint b { color: #6b7fa8; }
+.way-pins i.f { opacity: .8; filter: grayscale(1) brightness(.72); }
+.bonds-key b { font-weight: 900; }
+@media (max-width: 760px) and (orientation: portrait) {
+  .way-pins { height: 24px; }
+  .way-pins i { font-size: 18px; width: 17px; }
+  .way b { font-size: 17px; }
+  .bonds-title { font-size: 21px; }
+}
+/* The rack map, veiled, asks too. */
+body.veiled .rack::before { content: '?'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; font-weight: 900; color: #9fc4e8; }
+body.veiled .plan-pill { display: none; }

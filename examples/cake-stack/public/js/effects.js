@@ -182,12 +182,13 @@ export class Effects {
   splat(pos, color, dir = 1, amount = 14) {
     const v = this.tmp
     for (let i = 0; i < amount; i++) {
-      v.set(dir * (1.5 + Math.random() * 3), 1 + Math.random() * 3, (Math.random() - 0.3) * 2.5)
-      this.blobs.spawn(pos, v, { life: 0.8 + Math.random() * 0.5, size: 0.6 + Math.random() * 0.9, color, spin: 6 })
+      // Small blobs that fly sideways and up, barely toward the camera, so none looms large in front of the scene
+      v.set(dir * (1.5 + Math.random() * 2.5), 1 + Math.random() * 2.5, (Math.random() - 0.5) * 0.8)
+      this.blobs.spawn(pos, v, { life: 0.7 + Math.random() * 0.4, size: 0.3 + Math.random() * 0.45, color, spin: 6 })
     }
-    for (let i = 0; i < 4; i++) {
-      v.set(dir * Math.random() * 1.5, Math.random(), 0.5)
-      this.puffs.spawn(pos, v, { life: 0.5, size: 0.4 + Math.random() * 0.3, color: '#ffffff' })
+    for (let i = 0; i < 3; i++) {
+      v.set(dir * Math.random() * 1.2, Math.random(), 0.1)
+      this.puffs.spawn(pos, v, { life: 0.45, size: 0.25 + Math.random() * 0.2, color: '#ffffff' })
     }
   }
 

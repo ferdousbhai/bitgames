@@ -6,14 +6,14 @@ import { Audio } from './audio.js'
 import { Bot } from './bot.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
-import { Sim, newStats } from './sim.js'
-import { createVoice } from './speech.js'
+import { Sim, newStats, STAGE_PAUSE } from './sim.js'
+import { createVoice, listWords, COUNT_ALOUD } from './speech.js'
 import { DuckView, ItemView, ObstacleView, Rain, skyTexture, cloneTinted } from './view.js'
 import { makeWater } from './water.js'
 import {
   R, ROUND_TIME, PARTY_TIME, MAX_PLAYERS, DUCKS, DUCK_IDS, ARENAS, ARENA_IDS, POWERS, PLAYER_EMOJI,
   validDuck, validArena, escapeHtml, clamp,
-  BUBBLE_COLOURS, GOALS, validMode, validGoal, duckName,
+  BUBBLE_COLOURS, LEVELS, HIDE_LEVEL, TEN, makeTrip, validTrip, goalValue, placeJar, placeLayout, splitOf, validMode, duckName,
 } from './config.js'
 
 const $ = (id) => document.getElementById(id)
@@ -67,6 +67,7 @@ const voice = createVoice({ muted: audio.muted, rate: 0.85, pitch: 1 })
 /** Frame the whole pond: steeper from above on an upright screen, lower and wider when sideways. */
 const camTarget = new THREE.Vector3()
 const camBase = new THREE.Vector3()
+let hudBottom = 0 // Pond helpers: the jar's lower edge, so the pond's back rim sits below it, not under it
 function frameCamera() {
   const aspect = camera.aspect
   const pitch = THREE.MathUtils.degToRad(aspect < 0.8 ? 64 : aspect < 1.25 ? 58 : 50)
@@ -79,7 +80,7 @@ function frameCamera() {
   pts.push(new THREE.Vector3(0, 1.5, -R)) // ducks at the back stay in view
   // Room at the top for the timer and scores (taller on narrow phones, where they stack under the buttons).
   const sideHud = innerHeight <= 500 && innerWidth > innerHeight // short and sideways: the scores sit on the left
-  const top = clamp(1 - (2 * (sideHud ? 6 : innerWidth < 421 ? 150 : 88)) / innerHeight, 0.4, 0.97)
+  const top = clamp(1 - (2 * Math.max(sideHud ? 6 : innerWidth < 421 ? 150 : 88, hudBottom)) / innerHeight, 0.4, 0.97)
   camTarget.set(0, 0, aspect < 0.8 ? 0.4 : 0.8)
   let lo = 10
   let hi = 120
@@ -101,9 +102,16 @@ function frameCamera() {
   camBase.copy(camera.position)
 }
 
+/** Measures the jar (when it shows) so the camera keeps the pond clear of it. */
+function measureHud() {
+  const on = document.body.classList.contains('calm-round') && !$('hud').classList.contains('hidden')
+  hudBottom = on ? $('jar').getBoundingClientRect().bottom + 24 : 0
+}
+
 function resize() {
   const w = innerWidth
   const h = innerHeight
+  measureHud()
   renderer.setSize(w, h, false)
   camera.aspect = w / h
   camera.updateProjectionMatrix()
@@ -124,7 +132,10 @@ const game = {
   arena: validArena(load('arena')) ? load('arena') : 'bath',
   // Pond helpers (calm, untimed, together) is the default; Bumper race is the lively timed round.
   mode: validMode(load('mode')) ? load('mode') : 'calm',
-  goalIndex: clamp(Math.floor(Number(load('goal'))) || 0, 0, GOALS.length - 1),
+  // The Pond helpers trip waiting on the menu, made fresh at the remembered level (see makeTrip), and its first goal.
+  level: clamp(Math.floor(Number(load('level'))) || 0, 0, LEVELS - 1),
+  trip: null,
+  goal: null,
   models: null,
   thumbs: {},
   assetsReady: false,
@@ -151,10 +162,22 @@ const game = {
   hinted: false,
   roundsPlayed: 0,
   me: null,
+  // Pond helpers: how the children are doing this round, for the robots' help and the next level.
+  kidMiss: 0, // bubbles in a row that didn't fit, since the children's last one that did
+  lastKidCatch: 0, // sim time of the children's last bubble into the jar
+  spokenGoal: '', // the goal the menu last said aloud, so GO doesn't say it again
 }
+function newTrip(level) {
+  game.level = level
+  game.trip = makeTrip(level)
+  game.goal = game.trip[0]
+  save('level', String(level))
+}
+newTrip(game.level)
 
-// Optional learning missions count bubbles the children collect (all of them together; the robots'
-// don't count). A bubble's 'got' event can arrive more than once, so each one is counted once per round.
+// Bumper race's optional counting missions count bubbles the children collect (all of them together; the
+// robots' don't count). Pond helpers has its own jar goals, so the mission choice shows only for Race.
+// A bubble's 'got' event can arrive more than once, so each one is counted once per round.
 // The goal shows as bubbles (icon) that fill in, one per bubble counted, so it reads without words.
 const collectedBubbles = new Set()
 const MISSIONS = [
@@ -162,17 +185,11 @@ const MISSIONS = [
   { emoji: '3️⃣', label: 'Count 3 bubbles together', icon: '🫧', goal: 'Together: collect 3 bubbles', target: 3, reward: 'Your duck team collected three bubbles!' },
   { emoji: '6️⃣', label: 'Count 6 bubbles together', icon: '🫧', goal: 'Together: collect 6 bubbles', target: 6, reward: 'Six bubbles, collected by your whole team!' },
 ]
-// In Pond helpers the jar counts aloud, so the mission's own words keep quiet; its reward is said
-// after the jar counts the bubble that earned it (see jarDrop).
-const pondHelping = () => !!game.sim?.calm && game.state === 'play'
 const adventure = createAdventure({
   id: 'bumper-ducks',
   anchor: $('go'),
   hud: $('hud'),
   voice,
-  announce: (text, kind) => {
-    if (!pondHelping()) voice.say(text, { interrupt: kind === 'choice' })
-  },
   celebrate: () => {
     const n = adventure.option.target
     // One soft moment: the number of bubbles counted, a gentle chord and a few twinkles.
@@ -190,17 +207,112 @@ function useMission(i) {
 const isBotDuck = (id) => !!game.setup?.entries.find((e) => e.id === id)?.bot
 
 const colourOf = (c) => BUBBLE_COLOURS[c]?.hex ?? '#ffffff'
-/** A Pond helpers goal in words: said aloud on the menu and when the round starts. */
-function goalWords(g) {
+const colourName = (c) => BUBBLE_COLOURS[c]?.name ?? ''
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+const raftTold = () => load('raft') === '1'
+/**
+ * A Pond helpers goal in words: said aloud on the menu and when the round starts. The first time rafts
+ * float by, one short line says what they are (`explain`). From level 5 only the number is said: how many
+ * tens and ones is the child's to work out.
+ */
+function goalWords(g, { explain = false } = {}) {
   if (g.kind === 'tens') return g.n === 1 ? "Let's fill one ten together!" : `Let's fill ${g.n} tens together!`
-  return `Let's find ${g.n} ${BUBBLE_COLOURS[g.c].name} bubbles together!`
+  if (g.kind === 'colour') return `Let's find ${g.n} ${colourName(g.c)} bubbles!`
+  if (g.kind === 'bond' && g.free) return `Let's make ${g.n} your own way! Pick two colours.`
+  if (g.kind === 'bond') return `Let's make ${goalValue(g)}: ${listWords.format(g.parts.map(([c, n]) => `${n} ${colourName(c)}`))}!`
+  const raft = explain ? ' Each raft is ten bubbles.' : ''
+  if (g.level >= HIDE_LEVEL) return `Let's make ${goalValue(g)}! Tens first.${raft}`
+  const ones = g.ones ? `, then ${plural(g.ones, 'one')}` : ''
+  return `Let's make ${goalValue(g)}: ${plural(g.tens, 'ten')}${ones}!${raft}`
+}
+/** The words for a trip's next goal, which build on the one just made. */
+function stageWords(g, prev) {
+  if (g.kind === 'colour') return `Now ${g.n} ${colourName(g.c)}!`
+  // The next ways are the children's own: the voice names the number, never the parts.
+  if (g.kind === 'bond') return g.free ? `Another way to make ${g.n}! You pick two colours.` : `Another way to make ${goalValue(g)}: ${listWords.format(g.parts.map(([c, n]) => `${n} ${colourName(c)}`))}!`
+  if (g.kind !== 'place') return goalWords(g)
+  const v = goalValue(g)
+  if (g.level >= HIDE_LEVEL) return `Now make ${v}!`
+  const more = v - goalValue(prev)
+  return `Now ${more} more. Make ${v}!`
+}
+/** What a finished goal made: said when a trip's first goal is full, and on the team's results. */
+function madeWords(g) {
+  const v = goalValue(g)
+  if (g.kind === 'bond') return g.parts ? `${listWords.format(g.parts.map(([c, n]) => `${n} ${colourName(c)}`))} make ${v}!` : `${v}!`
+  if (g.kind === 'place') return `${listWords.format([plural(g.tens, 'ten'), ...(g.ones ? [plural(g.ones, 'one')] : [])])} make ${v}!`
+  if (g.kind === 'colour') return `${v} ${colourName(g.c)}!`
+  return g.n === 1 ? 'Ten bubbles make one ten!' : `${g.n} tens make ${v}!`
+}
+const goalKey = (g) => JSON.stringify(g)
+const STUCK_ON = { mama: 'on Mama Duck', lily: 'on a lily pad', boat: 'in a paper boat' }
+
+/**
+ * Says the goal once the round starts, for children who can't read it yet (unless the menu just said it).
+ * The raft line counts as told only once it is said for a round that is really played.
+ */
+function sayGoal() {
+  const sim = game.sim
+  game.goalSaid = true
+  if (sim?.calm) {
+    const g = sim.goal
+    const explain = g.kind === 'place' && !raftTold()
+    if (goalKey(g) !== game.spokenGoal || game.spokenExplained !== explain) voice.sayOnce(goalWords(g, { explain }))
+    if (explain) save('raft', '1')
+    game.spokenGoal = ''
+    hushFor(4)
+    later(sayStuck, 7000)
+    return
+  }
+  if (!adventure.option.goal) return
+  voice.sayOnce(`Let's count ${adventure.option.target} bubbles together!`)
 }
 
-/** Says the goal once the round starts, for children who can't read it yet. */
-function sayGoal() {
-  if (game.sim?.calm) return voice.say(goalWords(game.sim.goal))
-  if (!adventure.option.goal) return
-  voice.say(`Let's count ${adventure.option.target} bubbles together!`)
+/**
+ * One instruction at a time: after a goal or stage line the voice rests for a few seconds, so the child
+ * has room to think. Nope lines, the stuck-bubble line and the crossing hints wait for (or skip) it.
+ */
+function hushFor(seconds) {
+  game.quietUntil = (game.sim?.time ?? 0) + seconds
+}
+const resting = () => !game.sim || game.sim.time < (game.quietUntil ?? 0) || voice.speaking || jar.flying > 0
+
+/**
+ * Crossing a ten with the single bubbles used up: once, a question ("what can a ten become?"), so the
+ * child thinks of breaking a raft. Only if they still haven't, a while later, the how ("dash into a raft").
+ */
+function scarceTalk() {
+  const sim = game.sim
+  if (game.state !== 'play' || !sim?.calm || !sim.goal?.regroup) return
+  if (!sim.dryOnes()) {
+    game.dryAt = null
+    return
+  }
+  game.dryAt ??= sim.time
+  if (resting()) return
+  const dry = sim.time - game.dryAt
+  if (dry > 1.5 && voice.sayOnce('Not enough ones. What can a ten become?')) hushFor(4)
+  else if (dry > 14 && voice.sayOnce('Dash into a raft to break it into ten ones!')) hushFor(4)
+}
+
+/**
+ * The first few rounds, one line points out the stuck bubble (a bump frees it); after that the picture says it.
+ * It waits until the voice has rested after the goal, and is dropped if the bubble is already free.
+ */
+function sayStuck(tries = 4) {
+  const sim = game.sim
+  const told = Number(load('stuck')) || 0
+  if (told >= 3 || game.state !== 'play' || !sim?.calm) return
+  if (resting()) return tries > 0 && later(() => sim === game.sim && sayStuck(tries - 1), 2500)
+  for (const it of sim.items.values()) {
+    if (it.stuck == null || !sim.counts(it)) continue
+    const where = STUCK_ON[sim.obstacles[it.stuck]?.kind] ?? 'over there'
+    if (voice.sayOnce(`One is stuck ${where}. Bump it free!`)) {
+      save('stuck', String(told + 1))
+      hushFor(3)
+    }
+    return
+  }
 }
 
 const isHost = () => game.room && game.hostId === game.room.selfId
@@ -415,36 +527,80 @@ function buildMenu() {
   }
 }
 
-/** A goal as a picture: little ten-frames for tens, or coloured bubbles in one frame for a colour. */
+/**
+ * A goal as a picture: a ten-frame per ten, coloured spaces for a colour or a number bond, and for
+ * place value a raft per ten beside the single bubbles, with the number they make.
+ */
 function goalPicture(g) {
   const frame = (fill) =>
     `<span class="mini-frame">${Array.from({ length: 10 }, (_, i) => `<i style="--c:${fill(i)}"></i>`).join('')}</span>`
   if (g.kind === 'tens') return Array.from({ length: g.n }, () => frame(() => '#ffffff')).join('')
-  return frame((i) => (i < g.n ? colourOf(g.c) : 'transparent'))
+  if (g.kind === 'colour') return frame((i) => (i < g.n ? colourOf(g.c) : 'transparent'))
+  if (g.kind === 'bond' && !g.parts) return `${frame((i) => (i < g.n ? '#ffffff' : 'transparent'))}<b class="mini-num">${g.n}</b>`
+  if (g.kind === 'bond') {
+    const [[a, x], [b]] = g.parts
+    return `${frame((i) => (i < x ? colourOf(a) : i < goalValue(g) ? colourOf(b) : 'transparent'))}<b class="mini-num">${goalValue(g)}</b>`
+  }
+  // Level 5 shows only the number: the rafts and ones are the child's to work out.
+  if (g.level >= HIDE_LEVEL) return `<span class="mini-raft"></span><span class="mini-ones"><i></i></span><b class="mini-num">${goalValue(g)}</b>`
+  const ones = g.ones ? `<span class="mini-ones">${'<i></i>'.repeat(g.ones)}</span>` : ''
+  return `${'<span class="mini-raft"></span>'.repeat(g.tens)}${ones}<b class="mini-num">${goalValue(g)}</b>`
+}
+/** A trip on the menu: its first goal, and a small dot for each goal in the trip. */
+function tripPicture(trip) {
+  const dots = trip.length > 1 ? `<span class="trip-dots" aria-hidden="true">${'<i></i>'.repeat(trip.length)}</span>` : ''
+  return `${goalPicture(trip[0])}${dots}`
+}
+/** A goal for screen readers. */
+function goalLabel(g) {
+  if (g.kind === 'tens') return plural(g.n, 'ten')
+  if (g.kind === 'colour') return `${g.n} ${colourName(g.c)}`
+  if (g.kind === 'bond') return g.parts ? `${goalValue(g)}: ${listWords.format(g.parts.map(([c, n]) => `${n} ${colourName(c)}`))}` : `${g.n}, your own way`
+  if (g.level >= HIDE_LEVEL) return `${goalValue(g)} with tens and ones`
+  return `${goalValue(g)}: ${plural(g.tens, 'ten')} and ${plural(g.ones, 'one')}`
+}
+const tripLabel = (trip) => listWords.format(trip.map(goalLabel))
+
+/** Says the Pond helpers goal waiting on the menu (and remembers it, so GO doesn't repeat it). */
+function sayMenuGoal() {
+  game.spokenGoal = goalKey(game.goal)
+  game.spokenExplained = game.goal.kind === 'place' && !raftTold()
+  voice.sayNow(goalWords(game.goal, { explain: game.spokenExplained }))
 }
 
-/** Two pictured ways to play: Pond helpers (calm, the default) and Bumper race (lively, 90 s). Tapping Pond helpers again picks the next goal. */
+/**
+ * Two pictured ways to play: Pond helpers (calm, the default) and Bumper race (lively, 90 s).
+ * The ▶ beside Pond helpers shows another goal, one level further up the ladder (and round again).
+ */
 function renderModes() {
-  const goal = GOALS[game.goalIndex]
-  const label = goal.kind === 'tens' ? `${goal.n} ten${goal.n > 1 ? 's' : ''}` : `${goal.n} ${BUBBLE_COLOURS[goal.c].name}`
+  const calm = game.mode === 'calm'
   $('modes').innerHTML = `
-    <button class="mode calm${game.mode === 'calm' ? ' selected' : ''}" data-mode="calm" aria-pressed="${game.mode === 'calm'}" aria-label="Pond helpers: fill the jar together, ${label}. Tap again for another goal.">
-      <span class="pic">${goalPicture(goal)}</span><span class="name">🫧 Together</span></button>
-    <button class="mode lively${game.mode === 'lively' ? ' selected' : ''}" data-mode="lively" aria-pressed="${game.mode === 'lively'}" aria-label="Bumper race: a lively round with a clock">
+    <span class="mode-wrap">
+      <button class="mode calm${calm ? ' selected' : ''}" data-mode="calm" aria-pressed="${calm}" aria-label="Pond helpers: fill the jar together, ${tripLabel(game.trip)}">
+        <span class="pic">${tripPicture(game.trip)}</span><span class="name">🫧 Together</span></button>
+      <button class="next-goal" id="next-goal" aria-label="Another goal"${calm ? '' : ' hidden'}>▶</button>
+    </span>
+    <button class="mode lively${calm ? '' : ' selected'}" data-mode="lively" aria-pressed="${!calm}" aria-label="Bumper race: a lively round with a clock">
       <span class="pic big">⏱️💥</span><span class="name">Race</span></button>`
+  // The counting missions belong to Race; Pond helpers' goal is the jar.
+  adventure.enable(!calm)
   for (const el of $('modes').querySelectorAll('[data-mode]')) {
     el.onclick = () => {
       audio.unlock()
-      if (el.dataset.mode === 'calm' && game.mode === 'calm') {
-        game.goalIndex = (game.goalIndex + 1) % GOALS.length
-        save('goal', String(game.goalIndex))
-      }
       game.mode = el.dataset.mode
       save('mode', game.mode)
       audio.plop()
       renderModes()
-      voice.sayNow(game.mode === 'calm' ? goalWords(GOALS[game.goalIndex]) : 'Bumper race! Grab bubbles before the clock runs out.')
+      if (game.mode === 'calm') sayMenuGoal()
+      else voice.sayNow('Bumper race! Grab bubbles before the clock runs out.')
     }
+  }
+  $('next-goal').onclick = () => {
+    audio.unlock()
+    newTrip((game.goal.level + 1) % LEVELS)
+    audio.plop()
+    renderModes()
+    sayMenuGoal()
   }
 }
 
@@ -485,6 +641,9 @@ function clearRound() {
   game.obstacles = []
   game.sim = null
   game.me = null
+  document.body.classList.remove('calm-round')
+  hudBottom = 0
+  frameCamera()
   game.bots.clear()
   game.inputs.clear()
   effects.clear()
@@ -639,6 +798,7 @@ function onMessage(msg, from) {
       for (const it of added) addItemView(it)
       for (const it of removed) removeItemView(it.id)
       if (Array.isArray(msg.stats)) msg.stats.forEach((s, i) => s && game.sim.ducks[i] && Object.assign(game.sim.ducks[i].stats, s))
+      if (game.sim.goTo(msg.stage)) showStage(false)
       if (game.sim.syncJar(msg.jar)) catchUpJar()
       break
     }
@@ -660,6 +820,7 @@ function onMessage(msg, from) {
       if (from === game.hostId && game.sim) {
         if (Array.isArray(msg.scores)) msg.scores.forEach((s, i) => game.sim.ducks[i] && (game.sim.ducks[i].score = Number(s) || 0))
         if (Array.isArray(msg.stats)) msg.stats.forEach((s, i) => s && game.sim.ducks[i] && Object.assign(game.sim.ducks[i].stats, s))
+        if (game.sim.goTo(msg.stage)) showStage(false)
         if (game.sim.syncJar(msg.jar)) catchUpJar()
         endRound()
       }
@@ -684,7 +845,7 @@ function hostStartRound() {
   }
   const setup = {
     t: 'setup', arena: game.arena, seed, entries, host: game.room.selfId, mission: adventure.selected,
-    mode: game.mode, goal: game.mode === 'calm' ? GOALS[game.goalIndex] : null,
+    mode: game.mode, trip: game.mode === 'calm' ? game.trip : null,
   }
   game.ready = new Set()
   send(setup)
@@ -708,6 +869,13 @@ function startRound(setup) {
   game.idleHinted = false
   game.childActive = 0
   game.lastZzz = -9
+  game.kidMiss = 0
+  game.lastKidCatch = 0
+  game.nopeTalk = 0
+  game.quietUntil = 0
+  game.dryAt = null
+  game.goalSaid = false
+  voice.newRound()
   const entries = setup.entries.slice(0, MAX_PLAYERS).map((e) => ({ ...e, duck: validDuck(e.duck) ? e.duck : 'sunny', emoji: String(e.emoji ?? '🙂').slice(0, 8) }))
   setup.entries = entries
   if (!entries.some((e) => e.id === game.room.selfId)) {
@@ -719,9 +887,15 @@ function startRound(setup) {
     return
   }
   buildArena(setup.arena)
-  const goal = setup.mode === 'calm' ? validGoal(setup.goal) : null
-  const sim = new Sim({ arena: setup.arena, entries, mode: goal ? 'calm' : 'lively', goal })
+  const trip = setup.mode === 'calm' ? validTrip(setup.trip) : null
+  const sim = new Sim({ arena: setup.arena, entries, mode: trip ? 'calm' : 'lively', trip })
   game.sim = sim
+  // Counting aloud teaches on the first trip at a level up to the first place value (and always while
+  // filling the first ten). After that, and for the 6–8 tiers above it, the soft notes and the jar's own
+  // number do the counting, and the voice says only the goals and what was made.
+  const lvl = trip?.[0]?.level ?? 0
+  game.countOn = lvl === 0 || (lvl <= 3 && load(`counted-${lvl}`) !== '1')
+  adventure.enable(!sim.calm)
   document.body.classList.toggle('calm-round', sim.calm)
   resetJar()
   showObstacles(sim)
@@ -737,6 +911,8 @@ function startRound(setup) {
   updateHud()
   game.state = 'syncing'
   show(null)
+  measureHud()
+  frameCamera()
   const el = $('countdown')
   el.textContent = '🦆'
   el.className = 'countdown waiting'
@@ -838,14 +1014,33 @@ function endRound() {
   game.roundsPlayed++
   if (isHost() && !game.room.solo) {
     send({ t: 'ev', r: roundId(), e: flushEvents() })
-    send({ t: 'end', r: roundId(), scores: game.sim.ducks.map((d) => d.score), stats: game.sim.ducks.map((d) => d.stats), jar: game.sim.jar })
+    send({ t: 'end', r: roundId(), scores: game.sim.ducks.map((d) => d.score), stats: game.sim.ducks.map((d) => d.stats), jar: game.sim.jar, stage: game.sim.stage })
   }
   for (const d of game.sim.ducks) d.ix = d.iz = 0
   if (game.sim.calm) {
+    save(`counted-${game.sim.trip[0].level ?? 0}`, '1')
     // Pond helpers: the last bubbles land and the full frame slides onto the shelf, then the team's picture.
     if (isHost()) {
-      game.goalIndex = (GOALS.indexOf(game.sim.goal) + 1) % GOALS.length
-      save('goal', String(game.goalIndex))
+      // The next trip adapts to how carefully the children chose (only bubbles a duck steered at for a
+      // moment count, see Sim.chose): misses are chosen bubbles that didn't fit, and careful catches are
+      // chosen ones that did. Climbing needs few misses (one in five careful catches or fewer), most catches
+      // chosen (not swept up by a random paddle) and at least three of them; from the bonds up it also needs
+      // steady catching (under 7 s a bubble, not counting the pauses between goals). Many misses, or catching
+      // mostly by luck once there is a choice to make, steps back one. Anything else stays, with fresh numbers.
+      const kids = game.sim.ducks.filter((d) => !d.bot)
+      const nopes = kids.reduce((n, d) => n + (d.stats.nopes ?? 0), 0)
+      const chosen = kids.reduce((n, d) => n + (d.stats.chosen ?? 0), 0)
+      const caught = kids.reduce((n, d) => n + d.score, 0)
+      const rate = nopes / Math.max(1, chosen)
+      const careful = chosen / Math.max(1, caught)
+      const level = game.sim.goal.level ?? 0
+      const playTime = game.sim.time - game.sim.stage * STAGE_PAUSE
+      const steady = level < 2 || playTime / Math.max(1, caught) < 7
+      const climb = rate <= 0.2 && careful >= 0.6 && chosen >= 3 && steady
+      const back = (rate >= 0.5 && nopes >= 3) || (level >= 1 && caught >= 4 && careful < 0.35)
+      game.lastRate = rate
+      game.lastCareful = careful
+      newTrip(clamp(level + (climb ? 1 : back ? -1 : 0), 0, LEVELS - 1))
     }
     later(() => {
       game.state = 'results'
@@ -894,6 +1089,46 @@ function flushEvents() {
 
 const posOf = (id) => game.sim?.byId.get(id)
 
+/**
+ * Why a bubble didn't fit, said once a round: the words point at what the jar still needs
+ * ("We have enough green. Now pink!"), so the next choice can be a careful one.
+ */
+function nopeWords(token) {
+  const sim = game.sim
+  const g = sim.goal
+  if (g.kind === 'place') {
+    if (token !== TEN) return sim.open.includes('ten') ? 'Tens first! Find a ten raft.' : 'The ones are full.'
+    // What the child has seen land (and heard counted), not bubbles still floating up.
+    const now = sim.jar.slice(0, jar.shown).reduce((v, t) => v + (t === TEN ? 10 : 1), 0)
+    if (g.regroup) return sim.dryOnes() ? `A raft would make ${now + 10}. Too many! Dash to break it into ones.` : `A raft would make ${now + 10}. Too many! Single bubbles now.`
+    return g.level >= HIDE_LEVEL ? `${goalValue(g)} has ${plural(g.tens, 'ten')}. Now single bubbles!` : 'We have all the tens. Now single bubbles!'
+  }
+  if (g.free) {
+    // A free bond: two colours only, and a way the team hasn't made yet.
+    const have = splitOf(sim.jar)
+    if (have.length >= 2 && !have.some(([c]) => c === token)) return `Just two colours: ${listWords.format(have.map(([c]) => colourName(c)))}.`
+    const made = sim.trip.slice(0, sim.stage).map((t) => t.parts && `${t.parts[0][1]} and ${t.parts[1][1]}`).filter(Boolean)
+    return made.length ? `We made ${listWords.format(made)} already. Try a new way!` : 'Try a new way!'
+  }
+  const want = listWords.format([...new Set(sim.open.filter(Number.isInteger))].map(colourName))
+  if (g.kind === 'bond' && g.parts.some(([c]) => c === token)) return `We have enough ${colourName(token)}. Now ${want}!`
+  return `We need ${want} bubbles.`
+}
+
+/** Runs `fn` once every bubble floating up has landed in the jar (and only if the goal is still the same). */
+function whenLanded(fn, tries = 20) {
+  const token = jar.token
+  if (!jar.flying) return fn()
+  if (tries > 0) later(() => token === jar.token && game.state === 'play' && whenLanded(fn, tries - 1), 250)
+}
+
+/** The jar's open spaces glow softly once, so a child who caught the wrong one can see what fits. */
+function lookAtJar() {
+  const el = $('jar')
+  el.classList.add('look')
+  later(() => el.classList.remove('look'), 1200)
+}
+
 function playEvent(e) {
   const sim = game.sim
   if (!sim) return
@@ -906,22 +1141,25 @@ function playEvent(e) {
       water.ripple(e.x, e.z, 0.3)
       break
     case 'got': {
-      const fresh = e.kind === 'bubble' && !collectedBubbles.has(e.item)
-      let reward = null
+      const sorted = sim.calm && (e.kind === 'bubble' || e.kind === 'ten')
+      const fresh = (e.kind === 'bubble' || e.kind === 'ten') && !collectedBubbles.has(e.item)
       if (fresh) {
         collectedBubbles.add(e.item)
-        // Pond helpers: only bubbles that went in the jar count toward a mission.
-        if (!isBotDuck(e.id) && (!sim.calm || e.ok) && adventure.event(e) === 'done' && sim.calm) reward = adventure.option.reward
+        // Bumper race's counting mission (Pond helpers has its jar instead, and the mission is off).
+        if (!isBotDuck(e.id)) adventure.event(e)
       }
       const v = game.items.get(e.item)
       const y = v ? v.body.position.y : 0.8
       removeItemView(e.item)
       const d = posOf(e.id)
-      if (e.kind === 'bubble' && sim.calm) {
+      if (sorted) {
         effects.pop(e.x, y, e.z)
-        // Into the jar it floats, to be counted when it lands; a bubble of another colour just pops softly.
-        if (e.ok && fresh) jarDrop(e, y, reward)
-        else if (fresh && mine) audio.plop()
+        if (!isBotDuck(e.id)) {
+          game.kidMiss = 0
+          game.lastKidCatch = sim.time
+        }
+        // Into the jar it floats, to be counted when it lands.
+        if (e.ok && fresh) jarDrop(e, y)
       } else if (e.kind === 'bubble') {
         effects.pop(e.x, y, e.z)
         if (mine) {
@@ -942,7 +1180,6 @@ function playEvent(e) {
         // The power's picture floats up from the duck: it says what the gift does without words.
         effects.label(POWERS[e.p].emoji, { x: d?.x ?? e.x, y: 3, z: d?.z ?? e.z }, { size: 'big' })
       }
-      bumpScore(e.id)
       break
     }
     case 'bonk': {
@@ -954,7 +1191,12 @@ function playEvent(e) {
       water.ripple(e.x, e.z, Math.min(2, s / 4))
       audio.bonk(s / 6)
       // A bonk is a real bump, so a child's own duck still feels a small nudge on hard ones.
-      if (s > 4) effects.label('bonk!', { x: e.x, y: 2.4, z: e.z })
+      // One small "bonk!" at a time, never a stack of them.
+      const now = performance.now()
+      if (s > 4 && now - (game.lastBonkLabel ?? 0) > 1500) {
+        game.lastBonkLabel = now
+        effects.label('bonk!', { x: e.x, y: 2.4, z: e.z }, { size: 'small' })
+      }
       if ((e.a === meId || e.b === meId) && s > 6) effects.shake = Math.min(0.35, s / 30)
       break
     }
@@ -986,10 +1228,6 @@ function playEvent(e) {
       effects.splash(d.x, d.z, 1.4)
       water.ripple(d.x, d.z, 1.5)
       effects.label('WHEE!', { x: d.x, y: 3, z: d.z }, { size: 'big' })
-      if (e.by) {
-        const by = posOf(e.by)
-        bumpScore(e.by)
-      }
       break
     }
     case 'land':
@@ -1019,6 +1257,59 @@ function playEvent(e) {
       const it = sim.items.get(e.item)
       if (it) effects.sparkle(it.x, 1.2, it.z, colourOf(it.c), 8)
       game.views.get(e.id)?.hello()
+      // One show answers being stuck; the robots point again only if the child stays stuck.
+      game.kidMiss = 0
+      game.lastKidCatch = Math.max(game.lastKidCatch, sim.time - 12)
+      break
+    }
+    case 'nope': {
+      // A bubble the jar has no space for bobs away from the duck: a soft note, never a buzzer.
+      water.ripple(e.x, e.z, 0.5)
+      // Brushed past on the way to another: it just slides aside, quietly.
+      if (e.q) break
+      if (!isBotDuck(e.id)) game.kidMiss++
+      if (mine) {
+        audio.nope()
+        game.views.get(e.id)?.bonked(2)
+        lookAtJar()
+        // At most two of these a round: after that the soft note and the glowing spaces say it. The words
+        // wait for bubbles still floating up, so they never run ahead of the jar the child sees.
+        if (game.goalSaid && game.nopeTalk < 2) whenLanded(() => {
+            // Once the jar has caught up, the bubble may fit after all (the tens are in): then nothing to say.
+            if (game.nopeTalk >= 2 || sim.between != null || sim.time < (game.quietUntil ?? 0) || sim.counts({ k: e.c === TEN ? 'ten' : 'bubble', c: e.c })) return
+            if (voice.sayOnce(nopeWords(e.c))) game.nopeTalk++
+          })
+      }
+      break
+    }
+    case 'split': {
+      // A dash broke a raft into its ten bubbles: a soft chord and a ring of bubbles on the water.
+      removeItemView(e.item)
+      audio.chord(0.1)
+      effects.splash(e.x, e.z, 0.7)
+      water.ripple(e.x, e.z, 1.2)
+      if (!isBotDuck(e.id)) voice.sayOnce('One ten is ten ones!')
+      break
+    }
+    case 'free': {
+      // A bump knocked the stuck bubble off: it drops into the water with a plop and a little splash.
+      audio.plop()
+      effects.splash(e.x, e.z, 0.6)
+      water.ripple(e.x, e.z, 0.9)
+      break
+    }
+    case 'full':
+      // The jar holds this goal: a short rest while the last bubbles land and the team sees what it made.
+      game.kidMiss = 0
+      break
+    case 'stage':
+      showStage(true)
+      break
+    case 'fade': {
+      // The pond is full: a bubble nobody needed drifts off to make room.
+      const v = game.items.get(e.item)
+      if (v) effects.pop(v.root.position.x, v.body.position.y, v.root.position.z)
+      removeItemView(e.item)
       break
     }
     case 'zzz':
@@ -1033,6 +1324,13 @@ function playEvent(e) {
       if (isHost()) endRound()
       break
   }
+}
+
+/** How high a stuck bubble sits: on a lily pad, on the frog's head, on Mama Duck's back or in a paper boat. */
+function liftOf(it) {
+  const o = it.stuck != null && game.sim?.obstacles[it.stuck]
+  if (!o) return 0
+  return o.kind === 'mama' ? 3.4 : o.kind === 'boat' ? 0.7 : o.frog ? 1.5 : 0.25
 }
 
 function addItemView(it) {
@@ -1054,21 +1352,15 @@ function renderScores() {
   $('scores').innerHTML = game.setup.entries
     .map((e) => {
       const color = game.views.get(e.id)?.color ?? DUCKS[e.duck].body
-      return `<div class="score${e.id === self ? ' me' : ''}" id="score-${escapeHtml(e.id)}" style="--c:${color}"><span class="dot">${escapeHtml(e.emoji)}</span><b>0</b></div>`
+      return `<div class="score${e.id === self ? ' me' : ''}" id="score-${escapeHtml(e.id)}" style="--c:${color}"><span class="dot">${escapeHtml(e.emoji)}</span><b class="tally"></b></div>`
     })
     .join('')
   game.scoreEls = game.setup.entries.map((e) => document.getElementById(`score-${e.id}`))
   game.shownScores = game.setup.entries.map(() => -1)
 }
 
-function bumpScore(id) {
-  const i = game.setup?.entries.findIndex((e) => e.id === id)
-  const el = game.scoreEls?.[i]
-  if (!el) return
-  el.classList.remove('bump')
-  void el.offsetWidth
-  el.classList.add('bump')
-}
+/** Race counts as a picture of tens and ones: a little raft for each ten, a dot for each one (no jumping numbers). */
+const tally = (n) => `${'<span class="t-raft"></span>'.repeat(Math.floor(n / 10))}<span class="t-ones">${'<i></i>'.repeat(n % 10)}</span>`
 
 let lastTimerText = ''
 function updateHud() {
@@ -1081,17 +1373,19 @@ function updateHud() {
     // Calm pass: the clock never turns pink, pulses or beeps as the round ends.
     $('timer').textContent = text
   }
-  const best = Math.max(...sim.ducks.map((d) => d.score))
+  // Each duck's own count, with no leader highlighted.
   sim.ducks.forEach((d, i) => {
     const el = game.scoreEls?.[i]
     if (!el) return
     if (game.shownScores[i] !== d.score) {
       game.shownScores[i] = d.score
-      el.querySelector('b').textContent = d.score
+      const b = el.querySelector('b')
+      b.innerHTML = tally(d.score)
+      b.setAttribute('aria-label', String(d.score))
     }
-    el.classList.toggle('lead', best > 0 && d.score === best)
   })
   idleHint()
+  scarceTalk()
   if (sim.calm && sim.jar.length > jar.shown + jar.flying) catchUpJar()
   // A gentle bubble shower for the last seconds (calm pass: no shouting, no faster music).
   if (game.state === 'play' && sim.party && !game.partyShown) {
@@ -1124,45 +1418,123 @@ function updateHud() {
 // --- Pond helpers: the shared ten-frame jar ------------------------------------------------------
 
 /**
- * Every bubble the team collects floats up into one shared ten-frame and is counted aloud as it
- * lands. Ten fill a frame ("ten!"), which slides onto the shelf as a group of ten, and a fresh frame
- * starts: place value, shown with objects. A colour goal uses one frame with only its colour's spaces.
+ * Every bubble the team collects floats up into one shared jar and is counted as it lands. Ten fill a
+ * frame ("ten!"), which slides onto the shelf as a group of ten; place value counts on from the tens
+ * (10, 20, 21, 22). Landings are spaced out, so every number is heard in order.
  */
-const jar = { shown: 0, flying: 0, slid: 0, token: 0 }
+const jar = { shown: 0, flying: 0, slid: 0, token: 0, nextLand: 0 }
+const FLY_MS = 750
+const LAND_GAP = 650 // at least this long between two landings, so counts never pile up
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
+/** A fresh jar for a new goal: a carried place-value step keeps what is already in it. */
 function resetJar() {
-  jar.shown = jar.flying = jar.slid = 0
+  jar.shown = game.sim?.calm ? game.sim.jar.length : 0
+  jar.flying = jar.slid = 0
+  jar.nextLand = 0
+  jar.bundled = false
   jar.token++
   for (const el of document.querySelectorAll('.jar-fly')) el.remove()
+  $('jar').classList.remove('look')
   renderJar()
+}
+
+/** The trip's next goal: the jar shows its spaces (glowing once), and the voice says what to make next. */
+function showStage(spoken) {
+  const sim = game.sim
+  if (!sim?.calm) return
+  resetJar()
+  lookAtJar()
+  if (!spoken) return
+  voice.sayOnce(stageWords(sim.goal, sim.trip[sim.stage - 1]))
+  hushFor(4)
+  game.dryAt = null
+  later(sayStuck, 7000)
+}
+
+/**
+ * A free bond's bubbles sit in the frame by colour (all of the first colour, then the second), whatever
+ * order they were caught in, so the frame always shows the two parts: 5 green, then 3 pink.
+ */
+const byPart = (g, tokens) => (g.free ? splitOf(tokens).flatMap(([c, k]) => Array(k).fill(c)) : tokens)
+
+/** A number bond as coloured numbers: 6 + 2, each in its bubbles' colour. */
+const wayHtml = (t) => `<span class="way-sum">${t.parts.map(([c, n]) => `<b style="color:${colourOf(c)}">${n}</b>`).join('+')}</span>`
+
+/** How far along the trip the team is: a small dot per goal, the finished ones filled. */
+function tripDots(sim) {
+  if (sim.trip.length < 2) return ''
+  return `<span class="trip-dots">${sim.trip.map((_, k) => `<i class="${k < sim.stage ? 'done' : k === sim.stage ? 'now' : ''}"></i>`).join('')}</span>`
 }
 
 function renderJar() {
   const sim = game.sim
   if (!sim?.calm) return
   const g = sim.goal
-  const tens = g.kind === 'tens'
-  $('jar-goal').innerHTML = tens ? '' : `<span class="swatch" style="--c:${colourOf(g.c)}"></span>`
-  $('jar-tens').innerHTML = tens
-    ? Array.from({ length: g.n }, (_, k) => {
-        const full = k < jar.slid
-        const dots = full ? sim.jar.slice(k * 10, k * 10 + 10).map((c) => `<i style="--c:${colourOf(c)}"></i>`).join('') : ''
-        return `<span class="ten${full ? ' full' : ''}" data-k="${k}">${dots}</span>`
-      }).join('')
+  if (g.kind === 'tens') return renderTensJar(sim, g)
+  // Colour, number-bond and place-value goals: every space knows what it wants; a bubble lands in the first that takes it.
+  const shown = byPart(g, sim.jar.slice(0, jar.shown))
+  const filled = new Map(placeJar(sim.slots, shown).map((slot, k) => [slot, shown[k]]))
+  const place = g.kind === 'place'
+  const lay = place ? placeLayout(g) : { tens: 0, bundle: 0, ones: 0 }
+  // Level 5 shows only the number: the shelf holds just the rafts caught so far, and the ones frame shows
+  // all ten spaces, so how many tens and ones (and how far there is still to go) is the child's to work out.
+  const hide = place && g.level >= HIDE_LEVEL
+  // Below that, place value shows how far the jar has come as a filling bar with its number (progress,
+  // never an "=" to the goal); a free bond shows the ways already made (in their colours), so the
+  // children can see which way is new.
+  const value = shown.reduce((v, t) => v + (t === TEN ? 10 : 1), 0)
+  const now = place && !hide
+    ? `<span class="jar-now" title="${value} so far"><i style="width:${Math.round(clamp(value / Math.max(1, goalValue(g)), 0, 1) * 100)}%"></i><b>${value}</b></span>`
     : ''
-  const base = tens ? jar.slid * 10 : 0
+  const ways = g.free ? `<span class="jar-ways">${sim.trip.slice(0, sim.stage).filter((t) => t.parts).map(wayHtml).join('')}</span>` : ''
+  $('jar-goal').innerHTML = tripDots(sim) + (g.kind === 'colour' ? `<span class="swatch" style="--c:${colourOf(g.c)}"></span>` : `<b class="jar-num">${goalValue(g)}</b>`) + now + ways
+  const raft = (full) => `<span class="ten raft${full ? ' full' : ''}">${full ? '<i></i>'.repeat(10) : ''}</span>`
+  // Crossing a ten: ten single bubbles fill the frame, then slide onto the shelf as one ten (their own colours).
+  const bundling = lay.bundle && !jar.bundled
+  const bundle = !lay.bundle ? '' : jar.bundled
+    ? `<span class="ten full">${Array.from({ length: 10 }, (_, i) => `<i style="--c:${colourOf(filled.get(lay.tens + i))}"></i>`).join('')}</span>`
+    : hide ? '' : '<span class="ten"></span>'
+  const tensIn = place ? [...Array(lay.tens).keys()].filter((k) => filled.has(k)).length : 0
+  $('jar-tens').innerHTML = !place ? ''
+    : hide ? raft(true).repeat(tensIn) + bundle
+    : Array.from({ length: lay.tens }, (_, k) => raft(filled.has(k))).join('') + bundle
+  const base = bundling ? lay.tens : lay.ones
+  const open = hide || bundling ? 10 : place ? g.ones : sim.slots.length
+  // A free bond marks where the ways already made split the frame (a dashed line after the 6th space
+  // for 6 + 2, and after the 2nd), so a careful child can plan a split that is new.
+  const cuts = new Set(g.free ? sim.used.flatMap((w) => w.split('+').map(Number)).filter((k) => k > 0 && k < g.n) : [])
+  const cells = []
+  for (let i = 0; open && i < 10; i++) {
+    const want = sim.slots[base + i]
+    const full = filled.has(base + i)
+    const ring = Number.isInteger(want) ? colourOf(want) : '#ffffff'
+    cells.push(`<span class="cell${i < open ? '' : ' spare'}${full ? ' full' : ''}${cuts.has(i + 1) ? ' cut' : ''}" style="--c:${full ? colourOf(filled.get(base + i)) : 'transparent'};--ring:${ring}"></span>`)
+  }
+  $('jar-frame').innerHTML = cells.join('')
+  // Tens first: the ones frame waits, dimmed, until every raft is in.
+  $('jar-frame').classList.toggle('waiting', place && sim.open.includes('ten'))
+  $('jar').setAttribute('aria-label', `Team jar: ${jar.shown} of ${sim.target} spaces filled, to make ${goalValue(g)}`)
+}
+
+/** One ten (or more): a frame of ten any-colour spaces; each full frame slides onto the shelf as a ten. */
+function renderTensJar(sim, g) {
+  $('jar-goal').innerHTML = ''
+  $('jar-tens').innerHTML = Array.from({ length: g.n }, (_, k) => {
+    const full = k < jar.slid
+    const dots = full ? sim.jar.slice(k * 10, k * 10 + 10).map((c) => `<i style="--c:${colourOf(c)}"></i>`).join('') : ''
+    return `<span class="ten${full ? ' full' : ''}" data-k="${k}">${dots}</span>`
+  }).join('')
+  const base = jar.slid * 10
   const inFrame = jar.shown - base
   const cells = []
   for (let i = 0; i < 10; i++) {
-    const open = tens || i < g.n
     const full = i < inFrame
-    const ring = tens ? '#ffffff' : colourOf(g.c)
-    cells.push(`<span class="cell${open ? '' : ' spare'}${full ? ' full' : ''}" style="--c:${full ? colourOf(sim.jar[base + i]) : 'transparent'};--ring:${ring}"></span>`)
+    cells.push(`<span class="cell${full ? ' full' : ''}" style="--c:${full ? colourOf(sim.jar[base + i]) : 'transparent'};--ring:#ffffff"></span>`)
   }
   $('jar-frame').innerHTML = cells.join('')
-  const done = tens ? `${jar.shown} of ${g.n * 10}, ${jar.slid} ten${jar.slid === 1 ? '' : 's'} full` : `${jar.shown} of ${g.n} ${BUBBLE_COLOURS[g.c].name}`
-  $('jar').setAttribute('aria-label', `Team jar: ${done}`)
+  $('jar-frame').classList.remove('waiting')
+  $('jar').setAttribute('aria-label', `Team jar: ${jar.shown} of ${g.n * 10}, ${plural(jar.slid, 'ten')} full`)
 }
 
 /** Missed events or a late join: show the jar as it is, without animation. */
@@ -1171,15 +1543,47 @@ function catchUpJar() {
   if (!sim?.calm) return
   jar.shown = Math.max(0, sim.jar.length - jar.flying)
   if (sim.goal.kind === 'tens') jar.slid = Math.min(sim.goal.n, Math.floor(jar.shown / 10))
+  if (sim.goal.regroup) jar.bundled = jar.shown >= placeLayout(sim.goal).ones
   renderJar()
 }
 
-/** A collected bubble floats from the duck up into its space in the frame; a mission it completed is praised once the jar has counted it. */
-function jarDrop(e, y, reward) {
+/** Where the jar's `index`th bubble lands: its space in the frame, or a raft's place on the shelf. */
+function jarSpace(index) {
+  const sim = game.sim
+  const g = sim.goal
+  if (g.kind === 'tens') return $('jar-frame').children[index % 10]
+  if (g.free) {
+    // Its place among its own colour: after every bubble of the colours that came first.
+    const t = sim.jar[index]
+    let at = -1
+    for (const [c, k] of splitOf(sim.jar.slice(0, index + 1))) {
+      at += k
+      if (c === t) break
+    }
+    return $('jar-frame').children[Math.min(9, Math.max(0, at))]
+  }
+  const slot = placeJar(sim.slots, sim.jar.slice(0, index + 1))[index]
+  if (slot == null || slot < 0) return null
+  if (g.kind === 'place') {
+    // A bundle space and a ones space sit in the same frame cell (the bundle slides away first).
+    const lay = placeLayout(g)
+    if (slot >= lay.tens) return $('jar-frame').children[(slot - lay.tens) % 10]
+    const shelf = $('jar-tens').children
+    return shelf[Math.min(slot, shelf.length - 1)] ?? $('jar-goal')
+  }
+  return $('jar-frame').children[slot]
+}
+
+/**
+ * A collected bubble (or raft) floats from the duck up into its space in the jar, and is counted when it
+ * lands. It rises from below the jar, so it never spills over the top of the screen, and a raft turns
+ * upright to fit its shelf place.
+ */
+function jarDrop(e, y) {
   const sim = game.sim
   const token = jar.token
   const index = jar.shown + jar.flying
-  if (index >= sim.target) return reward && voice.say(reward)
+  if (index >= sim.target) return
   jar.flying++
   const land = () => {
     if (token !== jar.token || game.sim !== sim) return
@@ -1187,28 +1591,33 @@ function jarDrop(e, y, reward) {
     jar.shown = Math.min(sim.jar.length, jar.shown + 1)
     renderJar()
     countAloud()
-    if (reward) voice.say(reward)
   }
-  const cell = $('jar-frame').children[sim.goal.kind === 'tens' ? index % 10 : index]
-  if (reducedMotion() || !cell || !document.body.animate) return land()
+  const now = performance.now()
+  const cell = jarSpace(index)
+  const still = reducedMotion() || !cell || !document.body.animate
+  const landAt = Math.max(now + (still ? 0 : FLY_MS), jar.nextLand + LAND_GAP)
+  jar.nextLand = landAt
+  if (still) return later(land, landAt - now)
   const from = new THREE.Vector3(e.x, y, e.z).project(camera)
   const sx = ((from.x + 1) / 2) * innerWidth
   const sy = ((1 - from.y) / 2) * innerHeight
   const r = cell.getBoundingClientRect()
   const tx = r.left + r.width / 2
   const ty = r.top + r.height / 2
+  const raft = e.c === TEN
   const dot = document.createElement('div')
-  dot.className = 'jar-fly'
+  dot.className = raft ? 'jar-fly raft' : 'jar-fly'
   dot.style.setProperty('--c', colourOf(e.c))
   document.body.append(dot)
-  const lift = Math.min(sy, ty) - 60
+  const midY = Math.max(ty + 70, (sy + ty) / 2)
+  const turn = raft ? ' rotate(90deg)' : ''
   const anim = dot.animate(
     [
       { transform: `translate(${sx}px, ${sy}px) scale(1.4)` },
-      { transform: `translate(${(sx + tx) / 2}px, ${lift}px) scale(1.2)`, offset: 0.5 },
-      { transform: `translate(${tx}px, ${ty}px) scale(1)` },
+      { transform: `translate(${(sx + tx) / 2}px, ${midY}px) scale(1.15)`, offset: 0.55 },
+      { transform: `translate(${tx}px, ${ty}px) scale(1)${turn}` },
     ],
-    { duration: 750, easing: 'ease-in-out' },
+    { duration: landAt - now, easing: 'ease-in-out' },
   )
   anim.onfinish = () => {
     dot.remove()
@@ -1216,36 +1625,91 @@ function jarDrop(e, y, reward) {
   }
 }
 
-/** Each bubble is counted as it lands; a full frame says "ten!" and slides onto the shelf. */
+/**
+ * Each landing gets a soft rising note, and the voice says only what teaches, never skipping or going
+ * backwards: numbers to ten while filling the first ten; a colour counted to five, then its total; each
+ * bond part counted with its colour ("2 pink") when it is five or less, or named whole when it fills
+ * ("7 pink!"); place value counted on from the tens ("10, 20, 21, 22"). A finished goal mid-trip says
+ * what it made. Counts wait their turn (landings are spaced), so every number is heard in order.
+ */
 function countAloud() {
   const sim = game.sim
+  const g = sim.goal
   const n = jar.shown
-  if (sim.goal.kind !== 'tens') {
-    audio.bubble(n - 1)
-    voice.say(String(n))
+  const say = (text) => voice.say(text)
+  const done = n >= sim.target
+  if (g.kind === 'tens') {
+    const within = n - Math.floor((n - 1) / 10) * 10
+    audio.bubble(within - 1)
+    if (within < 10) return voice.count(within, { aloud: n <= 10 ? 10 : 0, interrupt: false })
+    const k = n / 10
+    audio.chord(0.15)
+    say(k === 1 ? 'Ten!' : `${k} tens!`)
+    const token = jar.token
+    later(() => token === jar.token && slideTen(k - 1), 650)
     return
   }
-  const within = n - Math.floor((n - 1) / 10) * 10
-  audio.bubble(within - 1)
-  if (within < 10) return voice.say(String(within))
-  const k = n / 10
-  audio.chord(0.15)
-  voice.say(k === 1 ? 'Ten!' : `Ten! ${k} tens.`)
-  const token = jar.token
-  later(() => token === jar.token && slideTen(k - 1), 650)
+  const at = placeJar(sim.slots, sim.jar.slice(0, n))
+  const slot = at[n - 1]
+  if (g.kind === 'colour') {
+    audio.bubble(n - 1)
+    if (done) say(`${n} ${colourName(g.c)}!`)
+    else if (game.countOn) voice.count(n, { interrupt: false })
+  } else if (g.kind === 'bond' && g.free) {
+    // The children's own way: soft notes while it fills, then what they made ("5 pink and 3 blue make 8!").
+    audio.bubble((n - 1) % 10)
+  } else if (g.kind === 'bond') {
+    const [[a, x], [b, y]] = g.parts
+    const first = slot < x
+    const size = first ? x : y
+    const k = at.filter((sl) => sl >= 0 && (first ? sl < x : sl >= x)).length
+    audio.bubble(k - 1 + (first ? 0 : 3))
+    const colour = colourName(first ? a : b)
+    if (!game.countOn) {
+      // A trip already heard at this level: the picture counts, and the made line says the bond.
+    } else if (k === size) say(`${k} ${colour}!`)
+    else if (size <= COUNT_ALOUD) say(`${k} ${colour}`)
+  } else {
+    // Count on from the tens: each raft adds ten, each single bubble one (a full bundle is ten of them).
+    const lay = placeLayout(g)
+    const tensIn = at.filter((sl) => sl >= 0 && sl < lay.tens).length
+    const singles = at.filter((sl) => sl >= lay.tens).length
+    if (slot < lay.tens) audio.chord(0.05)
+    else audio.bubble((singles - 1) % 10)
+    const value = tensIn * 10 + singles
+    if (lay.bundle && slot < lay.ones && singles === 10) {
+      // Regrouping: the tenth single fills the frame, and the frame slides onto the shelf as one ten.
+      audio.chord(0.15)
+      voice.sayOnce(`${value}! Ten ones make one ten!`)
+      const token = jar.token
+      later(() => token === jar.token && slideFrame(lay.tens, () => { jar.bundled = true }), 400)
+    } else if (game.countOn && sim.stage === 0) say(String(value))
+    // Later steps and later trips count with soft notes and the jar's own number; the voice stays quiet.
+  }
+  // (A colour's count already ends with its total, "5 green!", and a carried step's was just said: "Now 10 more. Make 36!")
+  if (done && sim.stage < sim.trip.length - 1 && g.kind !== 'colour' && !g.carry) {
+    audio.chord(0.1)
+    say(madeWords(g))
+  }
 }
 
 /** The full frame moves onto the shelf as one group of ten, and an empty frame waits for more. */
 function slideTen(k) {
   if (jar.slid > k) return
+  slideFrame(k, () => { jar.slid = k + 1 })
+}
+/** Slides a picture of the full frame onto shelf place `k`; `mark` records that it moved, before the jar redraws. */
+function slideFrame(k, mark) {
   const frame = $('jar-frame')
   const from = frame.getBoundingClientRect()
   const ghost = frame.cloneNode(true)
-  jar.slid = k + 1
+  mark()
   renderJar()
   const slot = $('jar-tens').children[k]
-  if (reducedMotion() || !slot || !document.body.animate) return
+  if (reducedMotion() || !slot || !document.body.animate || game.state !== 'play') return
   const to = slot.getBoundingClientRect()
+  // A hidden jar (the round just ended, or the HUD is away) has no size to slide between.
+  if (!from.width || !from.height || !to.width || !to.height) return
   slot.classList.add('arriving')
   ghost.removeAttribute('id')
   ghost.className = 'jar-frame jar-ghost'
@@ -1279,7 +1743,6 @@ function banner(text, ms = 1300, big = false) {
 
 // --- Results --------------------------------------------------------------------------------
 
-const MEDALS = ['🥇', '🥈', '🥉', '🏅']
 /** Everyone gets an award: each goes to whoever did the most of it and has none yet (children first on a tie). */
 const AWARDS = [
   { title: '💥 Bonk Boss', stat: (s) => s.bonks, min: 1 },
@@ -1294,7 +1757,6 @@ const KIND_AWARDS = ['😊 Happy Paddler', '🌈 Super Splashy', '💛 Best Budd
 
 export function giveAwards(rows) {
   const out = new Map()
-  if (rows[0] && rows[0].score > 0) out.set(rows[0].id, '🏆 Bubble Champ')
   for (const award of AWARDS) {
     let best = null
     let bestN = (award.min ?? 1) - 1
@@ -1313,28 +1775,40 @@ export function giveAwards(rows) {
   return out
 }
 
+/** Every duck in player order (children first on award ties), never ranked. */
 function standings() {
   const sim = game.sim
-  return game.setup.entries
-    .map((e, i) => ({ ...e, score: sim.ducks[i].score, stats: sim.ducks[i].stats ?? newStats(), i }))
-    .sort((a, b) => b.score - a.score || (a.bot === b.bot ? a.i - b.i : a.bot ? 1 : -1))
+  return game.setup.entries.map((e, i) => ({ ...e, score: sim.ducks[i].score, stats: sim.ducks[i].stats ?? newStats(), i }))
 }
 
 /**
- * Pond helpers' ending: no medals. The groups of ten are counted up ("10, 20, 30!") or the sorted
- * bubbles one by one, the team total is said, and each duck gets a kind note about how it helped.
+ * Pond helpers' ending: no medals. The jar is shown again and lit step by step with soft notes and
+ * its numbers (10, 20, 21, 22, 23), then one sentence says what the bubbles made, and each duck gets
+ * a kind note about how it helped.
  */
 function renderTeamResults() {
   const sim = game.sim
   const g = sim.goal
   const self = game.room.selfId
-  const total = sim.jar.length
-  const tens = g.kind === 'tens'
-  const dots = (from, to) => sim.jar.slice(from, to).map((c) => `<i style="--c:${colourOf(c)}"></i>`).join('')
-  const jarHtml = tens
-    ? Array.from({ length: g.n }, (_, k) => `<div class="team-ten"><span class="ten full">${dots(k * 10, k * 10 + 10)}</span><b>${(k + 1) * 10}</b></div>`).join('')
-    : `<div class="team-ten"><span class="jar-frame">${Array.from({ length: 10 }, (_, i) =>
-        `<span class="cell${i < g.n ? ' full' : ' spare'}" style="--c:${i < total ? colourOf(sim.jar[i]) : 'transparent'};--ring:${colourOf(g.c)}"></span>`).join('')}</span></div>`
+  const shown = byPart(g, sim.jar.slice(0, sim.target))
+  const filled = new Map(placeJar(sim.slots, shown).map((slot, k) => [slot, shown[k]]))
+  const cell = (slot, ring, label = '') =>
+    `<span class="cell${filled.has(slot) ? ' full' : ' spare'}" data-n="${label}" style="--c:${filled.has(slot) ? colourOf(filled.get(slot)) : 'transparent'};--ring:${ring}"></span>`
+  const frame = (from, open, ring, label) =>
+    `<div class="team-ten"><span class="jar-frame">${Array.from({ length: 10 }, (_, i) => (i < open ? cell(from + i, ring(from + i), label(i)) : '<span class="cell spare"></span>')).join('')}</span></div>`
+  const bar = (k, dots, label) => `<div class="team-ten bar"><span class="ten full${g.kind === 'place' ? ' raft' : ''}">${dots}</span><b>${label}</b></div>`
+  let jarHtml
+  if (g.kind === 'tens') jarHtml = Array.from({ length: g.n }, (_, k) => bar(k, shown.slice(k * 10, k * 10 + 10).map((c) => `<i style="--c:${colourOf(c)}"></i>`).join(''), (k + 1) * 10)).join('')
+  else if (g.kind === 'place') {
+    // Rafts, then the ten made from single bubbles when the trip crossed a ten (in their own colours), then the ones.
+    const lay = placeLayout(g)
+    const at = placeJar(sim.slots, shown)
+    const bundle = shown.filter((_, k) => at[k] >= lay.tens && at[k] < lay.ones)
+    jarHtml = Array.from({ length: lay.tens }, (_, k) => bar(k, '<i></i>'.repeat(10), (k + 1) * 10)).join('') +
+      (lay.bundle ? `<div class="team-ten bar"><span class="ten full">${bundle.map((c) => `<i style="--c:${colourOf(c)}"></i>`).join('')}</span><b>${g.tens * 10}</b></div>` : '') +
+      (g.ones ? frame(lay.ones, g.ones, () => '#ffffff', (i) => g.tens * 10 + i + 1) : '')
+  }
+  else jarHtml = frame(0, sim.target, (slot) => colourOf(sim.slots[slot]), (i) => i + 1)
   const helpers = game.setup.entries
     .map((e, i) => {
       const d = sim.ducks[i]
@@ -1346,29 +1820,38 @@ function renderTeamResults() {
     })
     .join('')
   const pond = ARENAS[game.arena]
-  $('team').innerHTML = `<div class="team-jar${tens ? '' : ' colour'}">${jarHtml}</div>
+  // The whole trip in one line: three ways to make 9 as pictures, or 23 → 33 → 35.
+  const trip = sim.trip
+  const tripHtml = trip.length < 2 ? ''
+    : g.kind === 'place' ? trip.map((t) => `<b>${goalValue(t)}</b>`).join('<span class="arrow">→</span>')
+    : trip.map((t) => `<span class="way">${goalPicture(t)}</span>`).join('')
+  $('team').innerHTML = `<div class="team-jar${g.kind === 'tens' || g.kind === 'place' ? '' : ' colour'}">${jarHtml}</div>
     <div class="team-total" aria-live="polite"></div>
+    ${tripHtml ? `<div class="team-trip" aria-label="${escapeHtml(tripLabel(trip))}">${tripHtml}</div>` : ''}
     <div class="pond" style="--pond:${pond.water.shallow};--deep:${pond.water.deep}">${helpers}</div>`
-  // The count-up: each group of ten (or each sorted bubble) lights in turn as it is said.
-  const steps = tens ? [...$('team').querySelectorAll('.team-ten')] : [...$('team').querySelectorAll('.cell.full')]
-  const gap = tens ? 1000 : 600
+  // The count-up: each ten, then each single bubble, lights in turn with a soft rising note and its number.
+  const steps = [...$('team').querySelectorAll('.team-ten.bar, .cell.full')]
+  const gap = steps.length > 6 ? 450 : 650
   const run = jar.token
   steps.forEach((el, k) =>
     later(() => {
       if (run !== jar.token) return
       el.classList.add('lit')
-      audio.bubble(tens ? k * 2 : k)
-      voice.say(tens ? `${(k + 1) * 10}${k === steps.length - 1 ? '!' : ''}` : String(k + 1))
+      audio.bubble(Math.min(k, 12))
     }, 500 + k * gap),
   )
-  const summary = tens
-    ? g.n === 1 ? 'Ten bubbles make one ten!' : `${g.n} tens make ${g.n * 10}!`
-    : `We found ${g.n} ${BUBBLE_COLOURS[g.c].name} bubbles!`
+  const v = goalValue(g)
+  const ways = trip.length > 2 ? ` ${['', 'One', 'Two', 'Three'][trip.length]} ways to make ${v}!` : ''
+  const [total, summary] =
+    g.kind === 'tens' ? [`${'🔟 '.repeat(g.n)}= ${v} 🫧`, g.n === 1 ? 'Ten bubbles make one ten!' : `${g.n} tens make ${v}!`]
+    : g.kind === 'colour' ? [trip.map((t) => `${t.n} ${colourName(t.c)}`).join(' + ') + ' 🫧', `We found ${listWords.format(trip.map((t) => `${t.n} ${colourName(t.c)}`))} bubbles!`]
+    : g.kind === 'bond' ? [trip.map((t) => (t.parts ? `${t.parts[0][1]} + ${t.parts[1][1]}` : '')).filter(Boolean).join(' = ') + ` = ${v}`, madeWords(g) + ways]
+    : [`${plural(g.tens, 'ten')}${g.ones ? ` + ${g.ones}` : ''} = ${v}`, madeWords(g)]
   later(() => {
     if (run !== jar.token) return
-    $('team').querySelector('.team-total').textContent = tens ? `${'🔟 '.repeat(g.n)}= ${total} 🫧` : `${total} ${BUBBLE_COLOURS[g.c].name} 🫧`
+    $('team').querySelector('.team-total').textContent = total
     audio.chord()
-    voice.say(`${summary} Well done, team!`)
+    voice.say(summary)
   }, 700 + steps.length * gap)
 }
 
@@ -1379,24 +1862,30 @@ function renderResults() {
   $('podium').classList.toggle('hidden', calm)
   $('team').classList.toggle('hidden', !calm)
   // Everyone can tap Again (a friend's tap asks the host); only the host picks a new place.
+  // In Pond helpers the host's Again shows the next goal the jar will ask for.
   $('again').classList.remove('asked')
+  $('again').innerHTML = calm && isHost() ? `▶ <span class="next-pic" aria-hidden="true">${tripPicture(game.trip)}</span>` : '🔁 Again!'
+  $('again').setAttribute('aria-label', calm && isHost() ? `Next: ${tripLabel(game.trip)}` : 'Again')
   $('change').classList.toggle('hidden', !isHost())
   if (calm) return renderTeamResults()
   const rows = standings()
   const awards = giveAwards(rows)
   const self = game.room.selfId
-  // Ties share a medal.
-  let place = 0
+  // Calm Race: no medals or places; every duck shows its own award and what it caught.
   $('podium').innerHTML = rows
-    .map((r, i) => {
-      if (i > 0 && r.score < rows[i - 1].score) place = i
-      return `<div class="place ${r.id === self ? 'me' : ''}"><span class="medal">${MEDALS[Math.min(place, 3)]}</span>${duckPicture(r.duck)}
+    .map((r) => `<div class="place ${r.id === self ? 'me' : ''}">${duckPicture(r.duck)}
         <span class="who"><span>${escapeHtml(r.emoji)}${r.id === self ? ' ⬅️' : ''}</span><span class="award">${awards.get(r.id)}</span></span>
-        <span class="pts">${r.score} 🫧</span></div>`
-    })
+        <span class="pts tally" aria-label="${r.score}">${tally(r.score)}</span><span class="tens-words">${tensWords(r.score)}</span></div>`)
     .join('')
-  const meRow = rows.findIndex((r) => r.id === self)
-  if (meRow === 0) later(() => audio.quack(1.2), 600)
+  // The race's one sum: your own catch read as tens and ones (each raft is ten), said once.
+  const mine = rows.find((r) => r.id === self)
+  if (mine?.score) later(() => game.state === 'results' && voice.sayOnce(`Your bubbles: ${tensWords(mine.score)} make ${mine.score}!`), 900)
+}
+/** 71 as "7 tens and 1 one". */
+function tensWords(n) {
+  const t = Math.floor(n / 10)
+  const o = n % 10
+  return t && o ? `${plural(t, 'ten')} and ${plural(o, 'one')}` : t ? plural(t, 'ten') : plural(o, 'one')
 }
 
 // --- Main loop -------------------------------------------------------------------------------
@@ -1444,8 +1933,9 @@ function step(dt) {
   if (host && game.bots.size) {
     let kids = -1
     let napping = sim.time > 3
-    // Pond helpers: the child leads. Once the robots hold over a quarter of the jar they only show bubbles
-    // (bumps and drifting add a few more catches, so the child's share stays about 60% or more).
+    // Pond helpers: the child leads and does the choosing. The robots fetch only while they hold under a
+    // quarter of the jar, and point a bubble out only when the child seems stuck (two bubbles in a row that
+    // didn't fit, or 25 s without one that did).
     let botHelps = 0
     let kidHelps = 0
     for (const d of sim.ducks) {
@@ -1459,8 +1949,10 @@ function step(dt) {
     }
     // Every child has stopped paddling: the robots float and nap until someone paddles again.
     napping = napping && kids >= 0 && sim.time - (game.childActive ?? 0) > NAP_AFTER
-    const helpedEnough = sim.calm && botHelps * 3 >= kidHelps
-    for (const bot of game.bots.values()) bot.update(sim, dt, kids < 0 ? 0 : bot.duck.score - kids, napping, helpedEnough)
+    // A free bond's colours are the children's choice, so the robots leave it to them (unless they seem stuck).
+    const helpedEnough = sim.calm && (botHelps * 3 >= kidHelps || !!sim.goal?.free)
+    const help = sim.calm && (game.kidMiss >= 2 || sim.time - game.lastKidCatch > 25)
+    for (const bot of game.bots.values()) bot.update(sim, dt, kids < 0 ? 0 : bot.duck.score - kids, napping, helpedEnough, help)
     if (napping && sim.time - (game.lastZzz ?? -9) > 2.2) {
       game.lastZzz = sim.time
       const e = { k: 'zzz', ids: [...game.bots.keys()] }
@@ -1473,6 +1965,9 @@ function step(dt) {
       outbox.push(e)
     }
   }
+  // Between a trip's goals: the next goal waits until every bubble still floating up has landed (and been
+  // heard), so a quick burst of catches is never cut off by the next goal's words.
+  if (host && sim.calm && sim.between != null && jar.flying > 0) sim.between = Math.max(sim.between, sim.time - (STAGE_PAUSE - 1.2))
   sim.step(dt, host)
   if (host) {
     for (const e of sim.events) {
@@ -1495,7 +1990,7 @@ function sendNet(now) {
       }
       if (now - game.lastSync > 2000) {
         game.lastSync = now
-        send({ t: 'st', r, items: game.sim.itemList(), stats: game.sim.ducks.map((d) => d.stats), ...(game.sim.calm ? { jar: game.sim.jar } : {}) })
+        send({ t: 'st', r, items: game.sim.itemList(), stats: game.sim.ducks.map((d) => d.stats), ...(game.sim.calm ? { jar: game.sim.jar, stage: game.sim.stage } : {}) })
       }
     }
   } else if (game.me && game.state === 'play') {
@@ -1524,7 +2019,11 @@ function tick(now) {
     }
     if (steps === 6) accumulator = 0
     for (const d of game.sim.ducks) game.views.get(d.id)?.update(d, t, dt, effects)
-    for (const v of game.items.values()) v.update(t, dt, effects)
+    for (const [id, v] of game.items) {
+      const it = game.sim.items.get(id)
+      if (it) v.follow(it.x, it.z, dt, liftOf(it))
+      v.update(t, dt, effects)
+    }
     for (const o of game.obstacles) o.update(t, dt)
     updateHud()
     sendNet(now)

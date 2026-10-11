@@ -155,3 +155,315 @@ The 🧪 workshop's fair test now happens on every launch after a part change. T
   - `hintStep` waits for layout with `requestAnimationFrame` instead of a 50 ms timer.
   - `keyGuard` stops key events on the dialog itself instead of in a window capture listener, so the guess dialog's 1/2/3 and arrow keys work again, while the garage still ignores keys pressed in a dialog.
   - Checks: `node --check`, Chromium and WebKit `--run exits`, `original-quality.mjs` and the unit tests pass. With speech stubbed: pressing 1 in the guess dialog picks a guess and launches; 🔧 on the reward card cancels speech and the garage is settled two seconds later; arrows still switch tabs in the garage; 🏠 cancels speech and leaves the title with the finger hidden. No console errors.
+
+# Round 1 to 8.5: real decisions, two variables, missions (2026-10-11)
+
+Source: the Rocket Garage section of [AUDIT_2026-10-10.md](AUDIT_2026-10-10.md) (8/10: one variable, infinite pulses, nothing for 6–8). All paths are under `examples/rocket-garage/public/`.
+
+## Design
+
+- **The garage no longer gives the answer away.** The reach bar was a live forecast: picking boosters slid the 🚀 to the next planet with a banner and a chime, so "farther, the same, or less far?" was answered before it was asked. The bar is now a record. The 🚀 sits under the place the last flight landed (`save.landed`). A booster's tray button wears its planet only after that booster has flown (`save.flown`; older saves are seeded from the places already visited). Guessing is now a real prediction, and the flight is the test.
+- **⚡ Turbo is the child's in-flight choice.** Fifteen stars (three fives) make the bar a button, `⚡ ➜ 🔴`, with no pulse. Tapping it (or Space, Enter or T) carries the rocket one planet farther. Ignoring it lands where the boosters go. Robot explains it the first time in a session ("Tap the lightning to zoom on to Mars, or just land on the Moon"); after that it only says "Fifteen!". Test flights still have no turbo.
+- **Robot's missions, the adaptive harder tier.** After 3 flights a dashed 📮 card waits quietly under 📓. Robot mentions it once, and nothing is judged until the child taps the card. The card is pictures only: planet, steady ━ or wobbly 〰️, and boosters. Robot reads it aloud.
+  - Tier 1: land on a planet other than where this rocket goes. This uses one variable: boosters set the distance.
+  - Tier 2: the planet plus steady or wobbly, always the opposite of the rocket on the pad. Two variables now: boosters for distance, and nose, tank and fins for the wobble (the notebook's own findings).
+  - Tier 3: fixed boosters that fall one planet short, so the plan must include catching 15 stars and choosing the turbo. Turning the turbo down matters too: overshooting with it gets "keep the lightning for later".
+  - Adapting: two missions done moves up a tier. Three tries without landing it moves down a tier with a new card. Three matched guesses in a row start at tier 2. ✕ puts the card away. It is never a gate.
+  - A mission flight skips the farther/same/less question, because the card is its question. Afterwards the reward card repeats the card with ✔ or 💡 on each part, and Robot says one sentence: either done, or the single most useful thing to change (`missionVerdict`).
+- **The 🧪 workshop now lives in the notebook** (a 🧪 button on the 📓 page). The garage keeps just 📓, 🎲 and GO.
+- **Calmer:**
+  - No infinite animations: the 🚀 "fly again" pulse, the 🧪 wiggle, the workshop nudges and the guess glow are removed. The guess glow now runs once, in turn.
+  - Hint fingers bob 4 times, then rest.
+  - Fives are said aloud only up to the turbo's fifteen.
+  - Star drift-in now only helps genuine near misses, so steering matters.
+
+## Changes
+
+- `js/missions.js` (new): `makeMission`, `checkMission`, `missionVerdict`, `afterFlight` (tier up/down), `missionWords`, `missionPicture`, `sanitizeMission`.
+- `js/parts.js:142`: `isSteady(rocket)` (no wobbly nose, tank or fins).
+- `js/main.js`:
+  - `:45-60`: save `landed`, `guessRun`, `mission` and `flown`.
+  - `:513`: the reach bar shows the last landing.
+  - `:599`: booster planet badges appear only after that booster has flown.
+  - `choose()`: no reach banner or chime.
+  - `:905-955`: the mission card in the garage.
+  - `:1027`: mission flights skip the guess.
+  - `liftoff()`: shows the mission chip and the turbo target.
+  - `catchStar()`/`useTurbo()` `:1343-1381`: turbo is a choice, and fives are spoken up to 15.
+  - `:1518`: smaller star drift-in.
+  - `startParty()` `:1756-1777`: records the landing, guess run and mission check.
+  - `renderMissionResult()` `:1857`: the mission result on the reward card.
+  - `:2054`: turbo keys.
+  - The 🧪 garage button wiring is removed.
+- `js/fairtest.js`: the notebook takes `onTest` and shows a 🧪 "test again" button.
+- `index.html`: `#turbo` is a `<button>` with `#turbo-to`; adds `#mission` and `#reward-mission`; removes `#experiment`.
+- `fairtest.css`: turbo button, mission card, reward mission row, and narrow-screen flight bar (the chip drops under 🏠 at ≤520 px; tighter at ≤400 px); the guess glow plays once.
+- `style.css` and `workshop.css`: infinite pulse, wiggle and nudge removed; fingers stop after 4 bobs.
+- `game.json`: howToPlay and learning updated (turbo choice, missions, 🧪 in the notebook).
+
+## Evidence
+
+- `scratchpad/polish/rocket-garage/play.mjs` at 834×1194 and 1194×834 (Chromium, `--use-angle=gl`, speech stubbed) ran the following with **0 console or page errors**:
+  1. first flight
+  2. small boosters → guess → test flight → notebook page
+  3. unchanged flight → turbo ready → tap → Ring Planet
+  4. mission card → tier 1 done
+  5. tier 2 missed wobble ("It got there, but it flew too steady!…")
+  6. tier 3 done with ⚡ (`{done:true}`, "The turbo carried it the last stop!")
+  7. notebook → 🧪 workshop
+- `small.mjs` at 375×667 and 667×375 checked the seeded tier 3 card, turbo ready and used, and a wrong-booster reward. The flight bar fits after the narrow rules (sound button right edge 367 ≤ 375). Screenshots are `p-*`, `l-*` and `s-*.png` in the same folder.
+- Spoken lines per trip are about 4 to 6: the question, the guess, 5, 10, 15 and the verdict. Before, a long flight counted up to "95".
+- `m.test.mjs`: 1,800 generated missions are never already solved (except by the steady/wobbly ask) and never need a turbo from an unvisited base. Tier up, tier down and sanitising behave as expected.
+- `browser.mjs --ids rocket-garage --run rocket-garage-r1`: BOOT and PLAY pass with 0 errors. `node --check` passes on every JS file. `curriculum.test.mjs`: the rocket comparison passes. The manifest and catalogue tests fail until the coordinator rebuilds (the new `js/missions.js`, and other games' metadata).
+
+## Remaining ideas
+
+- Stars are plentiful on long flights (55–95). The turbo choice is a decision, not a steering skill. Fewer, wider star patterns would make steering for the fifteen count.
+- A notebook page for ⚡ ("fifteen stars = one planet farther") once the child has used it.
+- Tier 3 could add "fix Robot's rocket", a diagnosis puzzle, without overwriting the child's own build.
+
+# Round 2: earned turbo, predictions in missions, Robot's fix-it puzzle (2026-10-11)
+
+Source: independent review 1 (7.8: calm 8.5, focus 7, learning 7.8, fun/depth 7.5). The blockers were that steering barely mattered, random tapping could tier up, the tray badges made tier 1 an emoji match, missions dropped the prediction, and tier 3 was recipe-following. All paths are under `examples/rocket-garage/public/`.
+
+## Design
+
+- **The turbo is earned by steering.** Stars now come in small groups of three, about two seconds apart, with at most nine groups a flight. Four in five groups sit out at the sides, usually the opposite side from the last one, and diagonals lean outward, never in toward a still rocket. The fifteen-star ⚡ is now a skill plus a choice.
+- **Missions keep a prediction.** Every mission launch first asks "Where will it land?" with five planet buttons (the rocket and the card shown above them). The guess rides in the flight bar as 🤔 + planet, and the reward card marks it ✔ or 💡. A mission counts toward the next tier only when it is done **and** the landing was predicted. Done without the prediction just clears the card, and Robot names the booster fact ("Big boosters reach the Ring Planet.").
+- **No more booster→planet badges in the tray.** The 📓 notebook now holds that record as a row of `booster ➜ planet` buttons (each speaks its sentence). Tier 1 needs recall, or looking it up in your own notebook.
+- **Tier 3 is "Fix Robot's rocket".** Tapping the card puts Robot's own rocket (in his teal and purple) on the pad. It misses in exactly one way: the boosters miss the planet, or the wobble is the wrong kind. The child may change **one** part (🔧1 on the card). When it falls one planet short, catching fifteen stars and taking the turbo fixes it with no changes, which is accepted as the clever route. More than one change gets "Robot's puzzle is just one change. Tap his card to get his rocket back", and tapping the card then restores his rocket. The child's own rocket is kept in `save.mission.own` and comes back when the mission is done, put away, or swapped for an easier one.
+- **Honest records.** Flights count only when they land (`save.last`, `save.flown` and `save.flights` moved from `liftoff()` to `startParty()`). The verdict uses what happened: "You had fifteen stars! Tap the lightning next time…" only when the turbo was ready and not taken. A miss can now add "And look at the wobble too!".
+- **Thinner voice.** Fives are counted only on flights where a turbo is possible, and they stop being spoken once the child has used the turbo twice (`save.turbos`). "Robot has a mission" is said once per visit, not after every mission. "You guessed it!" is said only when the mission was done.
+- **Calmer tray.** Only the tab holding the newest gift wears ✨. Booster thumbnails use an eased per-part scale, so the small booster reads clearly on notebook pages and race lanes.
+
+## Changes
+
+- `js/missions.js`:
+  - New: `robotRocket`, `robotBuild`, `changesFrom`, `predictionWords` and `createWhere` (the "Where will it land?" dialog).
+  - `makeMission` tier 3 is now the fix-it card `{dest, steady, robot}`.
+  - `checkMission` adds `fix` and `changes`.
+  - `missionVerdict` takes `turbo`, `turboReady` and `rocket`.
+  - `afterFlight(state, done, matched)` gates tier-up on the prediction.
+  - `missionPicture(m, {rocketThumb, marks})` draws Robot's rocket with 🔧1.
+  - `sanitizeMission` drops old tier-3 booster cards and keeps `own`.
+- `js/main.js`:
+  - `:290` `boosterRadius`
+  - `:555` one ✨ tab
+  - Booster tray badge removed.
+  - `:926-1000` the mission card, `putOnPad` and `restoreOwn` (Robot's rocket on and off the pad)
+  - `:1083` mission launches ask `where`
+  - `:1185` `flight.predicted`
+  - `:1214` star group spacing
+  - `:1239` `missionChip` and `predictedBit`
+  - `:1382` `spawnPattern` rewritten
+  - `:1423` silent stars when no turbo is possible
+  - `:1444` `save.turbos`
+  - `:1846` records moved to the landing
+  - `:1855` prediction and verdict
+  - `:2029` the newest-gift tab
+  - The debug hook exposes `items` and `where`.
+- `js/fairtest.js`: the notebook takes `flown` and renders the `.ft-flown` booster→planet row.
+- `fairtest.css`: the where dialog (5 planets on one row down to 360 px), the Robot-rocket bit, the guess bit, the notebook flown row, and a wrapping reward mission row. `style.css`: `.item .goes` removed.
+- `game.json`: howToPlay describes steering for side stars, "say where it will land", and the fix-it tier.
+
+## Evidence (scratchpad `polish/rocket-garage/r2/`)
+
+- `stars.mjs` (834×1194, 4 flights per cell, simulated in-page steering) gives stars caught per flight:
+
+  | Boosters | Still | Random retargeting (every 0.3–1.1 s) | Careful |
+  |---|---|---|---|
+  | none | 0–9 | 6–17 | 21 |
+  | small | 3–9 | 9–17 | 27 |
+  | big | 6–12 | 4–18 | 30 |
+  | mega | 6–12 | 18–21 | 30 |
+
+  Round 1 was 16–45 caught with no or random steering, and 32–92 careful.
+- `logic.test.mjs`:
+  - Over 3,000 generated tier-3 cards, Robot's rocket never already succeeds, and every card is fixable with one part. About 22% can also be fixed by the turbo alone.
+  - A random player at tier 1 (random booster, random guess) needs a median of 33 flights (p10 12) to reach tier 2. A careful player needs 2.
+- `play2.mjs`, 834×1194 and 1194×834, Chromium `--use-angle=gl`, speech stubbed, **0 console or page errors**. It covered:
+  - first flight
+  - fair test with the reward race
+  - abort mid-flight: `flights`, `last` and `flown` are unchanged, and no mission card appears
+  - turbo ready, then used
+  - tier 1 done with a wrong guess (wins stay 0, and the booster fact is spoken)
+  - tiers 1→2→3 with right guesses
+  - tier 3 flown unchanged with the turbo ready but not taken ("You had fifteen stars!…")
+  - tier 3 with 3 changes, then a card tap restores Robot's rocket
+  - tier 3 fixed with one change
+  - the child's own rocket comes back
+  - the notebook flown row
+
+  It spoke 47 lines over 12 flights (about 4 a flight).
+- `small.mjs` at 375×667, 667×375 and 360×640: the tier-3 card, the where dialog, the reward and the notebook fit, with 0 errors.
+- `browser.mjs --ids rocket-garage --run rocket-garage-r2`: BOOT and PLAY pass with 0 errors. `node --check` passes on main.js, missions.js and fairtest.js.
+
+## Remaining ideas
+
+- The farther/same/less question could become "Where will it land?" for older children everywhere, not only in missions.
+- A ⚡ notebook page ("fifteen stars = one planet farther") once the turbo has been used.
+- Robot's rocket in the garage could wear a small 🤖 tag on the pad, so it is clear whose rocket it is.
+
+# Round 3: visible wobble, the diagnosis guess, adaptive tier 1, a two-fault tier 4 (2026-10-11)
+
+Source: independent review 1 of round 2 (8.3: calm 8.6, focus 8.2, learning 7.9, fun/depth 8.1, visual 8.5, voice 8.3, polish 8.2). The blockers were that wobble (half of tiers 2–3) was not visible, mission predictions copied the card, tier 1 repeated the same advice with no help, the star tally sat on every reward, and the 6–8 step-up ended at tier 3. All paths are under `examples/rocket-garage/public/`.
+
+## Design
+
+- **Wobble is binary and visible.** `wobble()` is 0.05 for every steady rocket and at least 0.5 (up to 1) with any wobbly nose, tank or fins. Boosters no longer add wobble. In flight, a wobbly rocket rolls about 9–18°, and a steady one under 1°. In the garage, a wobbly rocket rocks gently on its fins three times after a part goes on (and when the garage comes back), then settles. A steady one stands still. So a part's effect is seen before flying. The workshop race ships use the same numbers.
+- **Wobbly parts are discoverable from the child's own tests.** A one-part test of a nose, tank or fins marks that part: steady ━ or wobbly 〰️. Mission flights with one change since the last landing count too. The logic is honest: a steady flight proves its part steady, and steady↔wobbly proves the changed part wobbly. The mark shows in the tray (bottom-left of the square) and as a "which parts wobble" row in the 📓. Untested parts never get a mark.
+- **Predictions carry thinking.**
+  - Tiers 1–2: "Where will it land?" shows the rocket and (tier 2) the ━/〰️ goal, but never the goal planet. The garage card is hidden while the dialog is open.
+  - Tiers 3–4: the guess moves to the moment Robot's rocket first goes on the pad: "Robot's rocket, as it is: where will it land?" The answer shows at once as a soft trail along the planets to where his boosters reach, ✔ or 💡, and one sentence: "Yes! Robot's rocket lands on Mars. He wants the Ring Planet. One change!" or "…That is the right planet! So what is wrong? Watch it on the pad." That is the diagnosis: boosters or wobble. Tier 3–4 launches then go straight up. The diagnosis guess is what counts toward the next tier.
+- **Tier 1 adapts.** The first miss gives the booster advice. The second miss says "Your notebook shows which boosters reach the Comet!" (or "…Try ones you have not flown yet!"), and back in the garage the 📓 opens with the booster ➜ planet row framed. The third miss swaps in a planet one booster size from the rocket on the pad ("Robot has a new card for you, one booster size away.").
+- **Tier 4: Robot's rocket has two faults** (the boosters miss AND the wobble is wrong), with still one change per flight (🔧1 ➜ 🔧1 on the card). Each flight's rocket becomes the new starting point, and fixing one fault is a step, not a miss ("It lands on Mars now! Next, the wobble: which part wobbles?…"). No single change can fix it, so it is the fair-test method used as a plan. Tapping the card restores his rocket as it last flew.
+- **Thinner turbo talk and no idle tally.** Fives are counted aloud only when the turbo fits the plan (not on a mission it would overshoot), and only until the first "Fifteen!" of a visit. On an overshooting mission, "Fifteen!" is not said and the ⚡ lights quietly. The reward card shows the star count only on flights where the turbo was possible and relevant.
+- **Clearer mission card.** It is 66 px per picture on tablets (it was 46). A 🤖 tag stands at the front of the pad while Robot's rocket is on it.
+
+## Changes
+
+- `js/parts.js:107` `wobble()`: binary floor, and booster `none` no longer adds wobble.
+- `js/main.js`:
+  - `:325-345` `swayOnPad`/`updatePadSway`, called from `choose`, `putOnPad` and `toGarage`, and reset at launch.
+  - `:627` tray ━/〰️ badge.
+  - `:966` `missionCard` with `near`.
+  - `:995` `renderPadTag`.
+  - `:1050` the diagnosis on the first card tap.
+  - `:1148` the launch skips `where` for diagnosed Robot cards and hides the card behind the dialog.
+  - `:1518` `fivesAloud`/`turboRelevant`.
+  - `:1605` flight sway amplitude.
+  - `:1930` implicit one-change tests on mission flights feed `learnParts`.
+  - `:1949` tier-3/4 `matched` from the diagnosis, and `afterFlight` gets `check`/`rocket`.
+  - `:2052` reward stars only when relevant.
+  - `:2120` `hint` opens the notebook on the booster row.
+  - `save.known` is persisted.
+- `js/missions.js`:
+  - `TIERS = 4`.
+  - Card fields `two`, `base`, `diag`, `diagOk` and `got`.
+  - `robotRocket(…, two)`.
+  - `makeMission(…, {near})`.
+  - `robotBuild` uses `base`.
+  - `missionVerdict(…, {next, flown, known})` with half-fixed, hint and look-up wording.
+  - New `diagnosisWords`.
+  - `afterFlight` returns `step`, `hint` or `nearer`.
+  - `missionPicture({hidePlace})`.
+  - `createWhere` gains a diagnose mode (trail reveal, ✔/💡, a 🔧➜🚀 back button).
+- `js/fairtest.js:94-140`: `sanitizeKnown`, `learnParts`, `partSentence` and `WOB_MARK`. The notebook takes `known`, renders `.ft-wob`, and `show({look:'flown'})` frames the booster row.
+- `js/workshop.js:165`: the race ship sway is `wobble * 16°`, so steady ships are still.
+- `index.html`: `#pad-tag`. `fairtest.css`: the round-3 block (bigger mission card on tablets, pad tag, tray badge, notebook wobble row, framed booster row, diagnosis trail). `game.json`: howToPlay.
+
+## Evidence (scratchpad `polish/rocket-garage/r3/`)
+
+- `logic.test.mjs`:
+  - Over 5,000 random builds, the steady maximum wobble is 0.05 and the wobbly minimum is 0.56.
+  - 3,000 tier-3 cards: none already succeeds, and all can be fixed with one change.
+  - 3,000 tier-4 cards: none can be fixed with one change, and all can be fixed with two one-change steps. In every one, the as-is landing differs from the goal, so the diagnosis guess matters.
+  - Tier-1 misses go `again → hint → nearer`, and the nearer card avoids the planet that was missed.
+  - `learnParts` marks classic ━ and fish 〰️ from one fins test, and learns nothing from a wobbly→wobbly test.
+  - A random tier-1 player still needs a median of 34 flights to tier 2.
+- `play3.mjs`, run at 834×1194 and 1194×834 (Chromium `--use-angle=gl`, speech stubbed), **0 console or page errors**, 14 flights each.
+  - Paths covered:
+    - The pad rocks after the ball tank goes on (wobbler roll −0.045 rad mid-sway).
+    - Flight `wob` is 0.62 wobbly and 0.05 steady.
+    - The tank test learns `tank:stripes ━, tank:ball 〰️`, and the tray shows the badges.
+    - The where dialog has no goal planet.
+    - Tier-1 misses give "…Try ones you have not flown yet!", then the notebook opens framed, then a new card.
+    - Tiers 1→2→3.
+    - The tier-3 diagnosis ("Yes! Robot's rocket lands on the Alien Planet. That is the right planet! So what is wrong? Watch it on the pad."), then a one-change fix that launches straight up.
+    - Tier 4: diagnosis, then step 1 ("It lands on Mars now! Next, the wobble…", `step`), then step 2 ("Both fixed, one change at a time!").
+    - The 🤖 pad tag, the child's rocket coming back, and the notebook's wobble row.
+  - **45 spoken lines over 14 flights (3.2 a flight).** Fives were counted once in the session.
+- `random.mjs` (834×1194, 16 flights of random parts, mission taps, guesses, steering and turbo): 0 errors, 62 lines (3.9 a flight). The tier-1 card cycled through again, hint and nearer, and was never the same sentence three times running. Random play learned no wobble parts (it never made a one-part test).
+- `small.mjs` at 667×375 and 375×667: the diagnosis reveal with the 🔧➜🚀 button, the tray badges and the notebook fit, with 0 errors.
+- `browser.mjs --ids rocket-garage --run rocket-garage-r3`: BOOT and PLAY pass with 0 errors. `node --check` passes on parts.js, missions.js, fairtest.js, main.js and workshop.js.
+
+## Remaining ideas
+
+- An open 🧪 workshop challenge ("one rocket to Mars steady, one wobbly, race them") for children past tier 4.
+- With only two planets unlocked, the "nearer" card can be the same planet again (no other choice exists).
+- The notebook's wobble row has no heading. A small 〰️/━ legend would help non-readers link it to the tray.
+
+# Round 4: every guess before the build, honest help, a varied tier 4 and an open race (2026-10-11)
+
+Source: round-3 reviews (8.6 and 8.1). The blockers were a soft-lock (mission miss, then 🚀, then 🔧 left the tray and GO away), tier 1–2 predictions that copied the build, the same miss sentence repeated, a "new card" that was not new, the diagnosis read from a small thumbnail, misleading notebook pictures, and a tier 4 that played out the same way every time. All paths are under `examples/rocket-garage/public/`.
+
+## Design
+
+- **The guess always comes before any part changes.** On picking up a card, the camera eases down to the boosters for 1.6 s (the garage buttons rest), then asks "as it is: where will it land?". On tiers 1–2 the question is about the child's own rocket, and on 3–4 about Robot's. The dialog shows the rocket at 112–160 px with its boosters close up beside it. The answer lights as a trail, and one sentence follows: "Yes! Your rocket lands on Mars. Robot wants the Moon. What will you change?" Mission launches then go straight up. The tier moves up only when the mission is done and this guess was right. The reach bar is hidden during the guess, so it cannot give the answer away.
+- **Tier 2+ fair tests ask for the planet.** Once mission tier 2 is reached, a changed-part launch asks "Where will it land now?" with the five planets instead of farther / same / less far. A wrong guess hears where the rocket went first. The chip and the reward show the rocket and the planet that was picked.
+- **Honest tier-1 help.** After the third miss, a new card appears only when a different planet one booster size away exists. Otherwise the same card stays: the reward says "Let's try it together!", the garage opens on the booster tab with the finger on the booster to try, and Robot says "Try the small boosters!". The notebook opens by itself only on the first second-miss. After that the 📓 wears a still yellow ring, and tapping it opens on the booster row.
+- **Thinner voice.** A miss sentence already said this visit becomes a short line ("The Moon. Mars is one booster size farther."). Fives are counted aloud on one flight per visit at most. The reward drops "Try again?". On a missed card that is still on, the 🚀 is hidden (the same rocket would land the same), unless the turbo could carry it the one missing stop.
+- **Tier 4 varies.** About 40% of tier-4 cards are 'wobbly2': the rocket lands on the right planet but must fly steady, and two parts wobble. Fixing one still leaves a wobble ("One wobbly part fixed! It still wobbles a little, so another part wobbles too."), so the child finds two causes, one test at a time. Steps count faults left (`faultsLeft`), not checks passed.
+- **An open race after tier 4.** The 🧪 workshop gets a 🏁 challenge, shown as two pictures (🔴━ and 🔴〰️): make A and B land on the same planet, one steady and one wobbly, and race them. There is no score, only the race and "the wobble never changes the distance!". Robot mentions it once, on reaching tier 4.
+- **Clearer records.** A notebook wobble page always shows the wobbly part, even when the test went from wobbly to steady. Distance icons are 📏⬆ and 📏= (no 🪐, which can be read as the Ring Planet). The wobble row has a tappable "━ steady 〰️ wobbly" key. The reach bar's 🚀 stays hidden until Robot's rocket has flown. Only the newest gift wears a ✨, on the reward card and in the tray. The 📮 card sits on a solid plate.
+
+## Changes
+
+- **Soft-lock fix.** `js/main.js:954` `backToBuilding()` removes `away` from the tray and GO and shows the reach bar again. The predictor and where `onBack` handlers call it, and so does `backToGarage(true)` whenever the launch stopped for a question (`:2218`).
+- **`js/main.js`, other changes:**
+  - `:425`: the look camera.
+  - `:548`: `renderReach` waits on Robot's rocket.
+  - `:617`: one ✨ per tray.
+  - `:886`: `helpBooster` and its finger.
+  - `:935`: `raceChallenge`.
+  - `:1102`: `lookThenAsk`/`endLook`; the mission card goes to the as-is question for every tier.
+  - `launch`: no where-question at launch, and `predictor.ask(test, {planets})` from tier 2.
+  - `:1565`: `fivesAloud`/`fivesOn`.
+  - `:2000`: the honest nearer/help step.
+  - `:2028`: `toldMiss` and `missionShort`.
+  - `:2061`: 🚀 hidden on a missed card.
+  - `:2224`: the notebook opens once, then is framed.
+  - `save.hinted` and `save.raceTold` are persisted.
+- **`js/missions.js`:**
+  - `robotRocket`/`makeMission` (`:85`, `:114`): 'wobbly2', and `near` falls back to the same planet.
+  - `:157` `faultsLeft`; `afterFlight` steps on fewer faults.
+  - `:183` the wobbly2 step line.
+  - `:214` `missionShort`.
+  - `:225` `diagnosisWords` for the child's own rocket.
+  - `:320` `createWhere` is now only the as-is question, with the big rocket and booster chip, and separate first-time wording for own and Robot cards.
+  - `predictionWords` and the launch mode are removed.
+- **`js/fairtest.js`:**
+  - `:40` `verdict` for planet guesses.
+  - `:49` `testChip`.
+  - `:71` the wobble page shows the wobbly part.
+  - `:156` the 📏 icons.
+  - `:266` the planet mode of `createPredict`.
+  - `:313`/`:382` the wobble key.
+- **`js/workshop.js:196-230`:** the `challenge`/`onChallenge` race goal.
+- **CSS:**
+  - `fairtest.css`: the round-4 block (big as-is rocket, booster chip, `body.looking`, planet chip, framed 📓, wobble key, solid mission plate).
+  - `workshop.css`: the challenge chip.
+  - `style.css:216`: the ✨ only on the last gift.
+- **`game.json`:** howToPlay.
+
+## Evidence (scratchpad `polish/rocket-garage/r4/`)
+
+- **`logic.test.mjs`: all pass.**
+  - Over 3,000 tier-4 cards (1,180 of them wobbly2), every card has two faults. None can be fixed with one change, and all can be fixed with two one-change steps. Every wobbly2 card lands on the right planet, and fixing one wobbly part is a `step`.
+  - A nearer card with only Moon and Mars falls back to the same planet. With three planets it picks the other neighbour.
+  - The wobble page shows `fins:fish` for a fish ➜ classic test.
+  - Planet verdicts match only the exact planet.
+- **`play4.mjs`: careful runs at 834×1194 and 1194×834, 12 flights each, 0 console or page errors.**
+  - The soft-lock path (🚀 after a changed part, then 🔧) ends with the tray and actions back (`tray:"" actions:""`).
+  - The look phase runs (`look:true`, reach bar hidden).
+  - Tiers 1→2→3 go through the as-is guesses. Mission launches go straight to the countdown.
+  - The tier-2 planet fair test gives "You guessed it! Big boosters push harder…".
+  - The tier-3 reach bar has no 🚀 before Robot's rocket flies.
+  - Tier-4 wobbly2: the step says "One wobbly part fixed!…" with 🚀 hidden, then "Both fixed…". The race challenge is told once and shows in the workshop.
+  - **36 spoken lines over 12 flights (3 a flight).**
+- **`help.mjs`** (only the Moon and Mars, missing on purpose six times):
+  - The run goes again → hint (the notebook opens) → help (the card stays Mars, the booster tab opens, the finger points at the small boosters, and Robot says "Try the small boosters!").
+  - The second cycle frames the 📓 instead of opening it.
+  - The repeat miss line is short ("The Moon. Mars is one booster size farther."). 0 errors.
+- **`random.mjs`** (the reviewer's harness, 20 random flights at 834×1194):
+  - 0 errors and no stuck states. Tier stayed 1 and no wobble parts were learned.
+  - Fives were counted on one flight only. Repeated miss advice came back as the short line.
+  - Most of the 107 lines were answers to the random taps themselves (notebook pages, card taps).
+- **`small.mjs`** at 667×375 and 375×667: the as-is dialog fits without scrolling. 0 errors.
+- **Checks:** `browser.mjs --ids rocket-garage --run rocket-garage-r4` gives BOOT + PLAY with 0 errors. `node --check` passes on main, missions, fairtest, workshop and parts.
+
+## Remaining ideas
+
+- The 🧪 button in the notebook could wear a small 🏁 while the race challenge is open.
+- The look phase could also play a soft camera "whirr" sound, to make the pause read as deliberate.
+- The planet-guess chip on the reward card is small in landscape.

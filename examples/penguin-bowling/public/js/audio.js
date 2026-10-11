@@ -97,6 +97,11 @@ export class Audio {
     this.tone({ freq: 660, type: 'triangle', gain: 0.18, decay: 0.12, slide: 300 })
   }
 
+  /** One counted pin: a soft, short note that climbs with each number, so a count past 5 is still heard. */
+  tick(n = 1) {
+    this.tone({ freq: note(n + 2), type: 'sine', gain: 0.07, decay: 0.12 })
+  }
+
   /** A little penguin squeak (tapping the penguin, or diving onto its belly). */
   squeak(pitch = 1) {
     this.tone({ freq: 900 * pitch, type: 'sine', gain: 0.16, decay: 0.12, slide: 500 * pitch })

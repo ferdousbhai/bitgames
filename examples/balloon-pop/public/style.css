@@ -17,7 +17,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 #loading { background: radial-gradient(circle at 50% 35%, #fff6e0, #a9dcff 70%); color: #6c4ab6; font-size: 22px; font-weight: 800; }
 .card-screen { pointer-events: none; }
 .card {
-  pointer-events: auto; background: rgba(255, 255, 255, 0.9); border-radius: 36px; padding: 26px 30px 24px;
+  pointer-events: auto; background: #fffdfa; border-radius: 36px; padding: 26px 30px 24px;
   box-shadow: 0 10px 0 rgba(108, 74, 182, 0.25), 0 20px 50px rgba(0, 0, 0, 0.15); max-width: min(640px, 100%);
   display: flex; flex-direction: column; align-items: center; gap: 14px; color: #5b3fa0;
   /* Solid, not backdrop-filter: balloons rise behind the card, so a blur would redraw every frame */
@@ -42,6 +42,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   border-radius: 999px; box-shadow: 0 8px 0 #c2185b; transition: transform .1s; text-shadow: 0 2px 0 rgba(0,0,0,.15);
 }
 .big-go:active { transform: translateY(6px); box-shadow: 0 2px 0 #c2185b; }
+/* A small, quiet way back to numbered slots when a tier above 1 is remembered on this device. */
+.easy-go {
+  margin-top: -4px; padding: 8px 18px; min-height: 44px; border-radius: 999px; background: #eef9e0; color: #4f7a1f;
+  font-size: 17px; font-weight: 900; border: 2px solid #fff; box-shadow: 0 4px 0 #8ac92666;
+}
+.easy-go:active { transform: translateY(3px); box-shadow: 0 1px 0 #8ac92666; }
 .scores { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; font-weight: 800; font-size: 18px; }
 
 .pill { background: rgba(91, 63, 160, 0.55); border-radius: 999px; padding: 6px 16px; font-size: 24px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); }
@@ -130,23 +136,70 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   100% { transform: translate(-50%, -16px) scale(.9); opacity: 0; }
 }
 
-/* Counting sky (Phase 2): the request card replaces the level bar at the bottom of the screen. */
-#hud.counting .level-wrap { display: none; }
+/* Counting sky: the friend's card sits at the top, clear of the balloons rising from the ground.
+   The popped-count pill is hidden there: the basket is the count. */
+#hud.counting .level-wrap, #hud.counting .score { display: none; }
 .sky {
-  /* Centred with auto margins (not left: 50%), so the card may use the full width before it wraps. */
-  position: absolute; left: 0; right: 0; margin-inline: auto; width: max-content; bottom: calc(10px + env(safe-area-inset-bottom));
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  max-width: calc(100vw - 20px); padding: 6px 14px 8px;
-  border: 2px solid #fff; border-radius: 20px; background: #fff9e6f2; box-shadow: 0 4px 0 #5b3fa055;
+  /* Centred with auto margins (not left: 50%), between the home and sound buttons. */
+  position: absolute; left: 0; right: 0; margin-inline: auto; width: max-content; top: calc(8px + env(safe-area-inset-top));
+  display: flex; align-items: center; gap: 10px;
+  max-width: calc(100vw - 280px); padding: 6px 10px 8px 12px;
+  border: 2px solid #fff; border-radius: 20px; background: #fff9e6; box-shadow: 0 4px 0 #5b3fa055;
   color: #5b3fa0; transition: box-shadow .8s, background-color .8s;
+  /* The card takes every tap on it, so no balloon hidden behind it is popped by accident. */
+  pointer-events: auto;
 }
 .sky[hidden] { display: none; }
-.sky.done { background: #fffbe0f8; box-shadow: 0 4px 0 #5b3fa055, 0 0 0 5px #ffe58a99, 0 0 26px #ffd23f88; }
+.sky-body { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.sky-friend { font-size: 40px; line-height: 1; flex: none; }
+.sky-friend.ask { animation: friend-ask .9s ease-in-out; }
+@keyframes friend-ask { 30% { transform: rotate(-10deg); } 65% { transform: rotate(8deg); } }
+/* A balloon the friend did not ask for: one small, slow shake of the head. */
+.sky-friend.no { animation: friend-no .7s ease-in-out; }
+@keyframes friend-no { 25% { transform: translateX(-4px); } 60% { transform: translateX(4px); } }
+/* A balloon in the basket can be tapped to let it go. */
+.sky [data-i] { pointer-events: auto; cursor: pointer; }
+.sky-give {
+  pointer-events: auto; flex: none; min-width: 64px; min-height: 64px; padding: 4px 8px; border-radius: 18px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  background: #fff; color: #5b3fa0; font-size: 15px; font-weight: 900; line-height: 1.1;
+  border: 2px solid #e8d9ff; box-shadow: 0 4px 0 #5b3fa044; transition: box-shadow .6s, background-color .6s;
+}
+.sky-give span { font-size: 28px; }
+.sky-give:active { transform: translateY(3px); box-shadow: 0 1px 0 #5b3fa044; }
+.sky-give[hidden] { display: none; }
+.sky-give:disabled { opacity: .45; }
+/* Resting after a hand-over that was not right yet: softly dimmed, still answers with a click. */
+.sky-give.rest { opacity: .6; }
+/* Tier 1 only: a full basket rests in a steady warm glow (no pulse). */
+.sky-give.full { background: #fff6cf; box-shadow: 0 4px 0 #5b3fa044, 0 0 0 4px #ffd23faa; }
 .sky-caption { font-size: 15px; font-weight: 900; line-height: 1.15; text-align: center; text-wrap: balance; }
 .sky-slots { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
 .sky-group { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
 .sky-row { display: flex; gap: 3px; }
 .sky-plus { font-size: 26px; font-weight: 900; color: #e4598d; }
+/* Past the number: balloons wait outside the slots until the basket is handed over. */
+.sky-extra { padding-left: 8px; border-left: 2px dashed #e4598d88; }
+/* One more / one less: the other friend's bunch, counted first. */
+.sky-ref { display: flex; align-items: center; gap: 4px; padding-right: 10px; border-right: 2px solid #5b3fa022; }
+.sky-ref-face { font-size: 26px; line-height: 1; }
+/* Make-the-same: the other friend's bunch in a ten-frame of its own, to compare row by row. */
+.sky-them { display: flex; align-items: center; gap: 6px; padding-left: 10px; border-left: 2px solid #5b3fa022; }
+.sky .sky-ref .mission-picture { width: 22px; height: 26px; }
+.sky .sky-ref .colour-balloon::before { width: 16px; height: 20px; }
+.sky .sky-ref .colour-balloon::after { top: 21px; left: 11px; height: 5px; }
+/* Tier 2: ten-frames with no stopping line; the child counts. */
+.sky-frame { display: grid; grid-template-columns: repeat(5, 30px); grid-auto-rows: 34px; gap: 2px; padding: 3px; border-radius: 8px; background: #5b3fa022; }
+.sky-cell { display: flex; align-items: center; justify-content: center; border-radius: 6px; background: #fff; }
+/* An adding request in a ten-frame: the first group's cells are butter yellow, the "more" cells pink-edged. */
+.sky-cell.part1 { background: #fff1b8; }
+.sky-cell.part2 { background: #ffe8f1; box-shadow: inset 0 0 0 2px #e4598d77; }
+/* Balloons a friend already holds (make-the-same): they stay put on a lilac cell. */
+.sky-cell.own { background: #ece3ff; }
+.sky .sky-cell .mission-picture { width: 26px; height: 32px; font-size: 22px; }
+.sky .sky-cell .colour-balloon::before { width: 19px; height: 23px; }
+.sky .sky-cell .colour-balloon::after { top: 24px; left: 13px; height: 6px; }
+.sky-gold-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-bottom: 6px; font-size: 34px; color: #5b3fa0; text-shadow: 0 1px 0 #fff8; }
 .sky .mission-picture { width: 34px; height: 39px; font-size: 28px; }
 .sky .colour-balloon::before { width: 25px; height: 30px; }
 .sky .colour-balloon::after { top: 32px; left: 17px; height: 7px; }
@@ -159,10 +212,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   position: absolute; left: 0; right: 0; top: 7px; text-align: center; font-size: 14px; line-height: 1;
   color: #fff; text-shadow: 0 1px 2px #0009, 0 0 3px #0006;
 }
-.sky-slot:not(.colour-balloon) .sky-num { top: auto; bottom: -1px; }
-.sky-slot.new { animation: slot-in .6s ease-out; }
+.sky-slot:not(.colour-balloon) .sky-num {
+  /* On a heart or bunny the number is a small badge at its foot, clear of the face. */
+  top: auto; left: auto; right: -5px; bottom: -4px; min-width: 1.35em; padding: 1px 2px; border-radius: 999px;
+  background: #5b3fa0; color: #fff; text-shadow: none; font-size: 12px; box-shadow: 0 0 0 2px #fff9e6;
+}
+.sky-slot.new, .sky-cell .new { animation: slot-in .6s ease-out; }
 @keyframes slot-in { from { transform: scale(.6); opacity: .3; } }
-/* The gold balloon of the dots request: one dot lights for each balloon popped. */
+/* The gold balloon of the dots request: the number to match, as dice dots (tier 1) or a numeral (tier 2). */
 .sky-gold {
   position: relative; flex: none; width: 64px; height: 74px; margin-bottom: 8px; border-radius: 50% 50% 46% 46%;
   background: radial-gradient(circle at 32% 24%, #fff6c8, #ffd54a 40%, #e6a800 90%);
@@ -170,11 +227,72 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .sky-gold::after { content: ''; position: absolute; left: 50%; bottom: -9px; width: 1px; height: 9px; background: #9f6076; }
 .sky-gold i {
-  /* Sized with the balloon, so five dots fit across even on a phone. */
-  position: absolute; width: 13.5%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
-  border: 2px solid #b8860b; background: #fffdf0; transition: background-color .4s, border-color .4s;
+  /* The same big cream dots with a purple ring as the dotted sky balloons, so the two match at a glance. */
+  position: absolute; width: 21%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
+  box-sizing: border-box; border: 2.5px solid #4a2f86; background: #fffdf0;
 }
-.sky-gold i.lit { background: #5b3fa0; border-color: #fff; }
+/* Seven to ten dots sit in two rows of five, so each is a little smaller. */
+.sky-gold.many i { width: 15%; border-width: 2px; }
+
+/* The picnic: each friend the child helped, holding the exact bunch they were given. */
+.picnic-row { display: flex; align-items: flex-end; justify-content: center; gap: 6px; }
+.picnic {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom));
+  max-width: calc(100vw - 24px); padding: 4px 12px 2px; border: 2px solid #fff; border-radius: 18px;
+  background: repeating-conic-gradient(#ffe1e7 0 25%, #fffaf0 0 50%) 0 0 / 18px 18px; box-shadow: 0 4px 0 #5b3fa033;
+}
+.picnic[hidden] { display: none; }
+.picnic-friend { display: inline-flex; flex-direction: column; align-items: center; flex: none; }
+.picnic-flyer { position: fixed; z-index: 8; pointer-events: none; }
+.picnic-bunch {
+  position: relative; display: flex; flex-wrap: wrap-reverse; justify-content: center; gap: 1px;
+  width: 52px; padding-bottom: 7px;
+}
+.picnic-bunch i {
+  width: 9px; height: 11px; border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(circle at 32% 25%, #ffffffa0, #fff0 40%), var(--c); box-shadow: inset -1px -1px 2px #0002;
+}
+.picnic-bunch::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 1px; height: 8px; background: #9f6076; }
+.picnic-face { font-size: 30px; line-height: 1; }
+/* A place on the blanket still waiting for a friend: a faint plate. */
+.picnic-empty { flex: none; width: 34px; height: 34px; margin: 0 9px 2px; border-radius: 50%; border: 2px dashed #5b3fa055; background: #ffffff99; }
+.picnic-friend { position: relative; }
+.picnic-treat { position: absolute; right: -6px; bottom: -2px; font-size: 20px; line-height: 1; }
+/* The picnic is full: everyone waves, three times, then rests. */
+.picnic.wave .picnic-friend { animation: wave 1.1s ease-in-out 3; transform-origin: 50% 100%; }
+.picnic.wave .picnic-friend:nth-child(even) { animation-delay: .25s; }
+@keyframes wave { 30% { transform: rotate(-7deg); } 70% { transform: rotate(7deg); } }
+/* After a hand-over: two treats to choose for the picnic. */
+.sky-treats { display: flex; align-items: center; gap: 10px; }
+.sky-treats-basket { font-size: 26px; opacity: .7; }
+.sky-treat {
+  pointer-events: auto; width: 58px; height: 58px; border-radius: 18px; background: #fff; border: 2px solid #e8d9ff;
+  font-size: 34px; line-height: 1; box-shadow: 0 4px 0 #5b3fa033; transition: opacity .4s;
+}
+.sky-treat:active { transform: translateY(3px); box-shadow: 0 1px 0 #5b3fa033; }
+.sky-treat.chosen { background: #fff6cf; border-color: #ffd23f; }
+.sky-treat:disabled { opacity: .3; }
+/* A two-colour basket in tier 3: one open ten-frame per colour, tinted in its colour. */
+.sky-pair-frames .sky-frame { background: color-mix(in srgb, var(--c) 35%, #fff); }
+#title .picnic-row { flex-wrap: wrap; max-width: 520px; gap: 4px 8px; }
+#title .picnic-face { font-size: 26px; }
+
+@media (max-width: 560px) {
+  .sky { gap: 6px; padding: 5px 6px 6px 8px; }
+  .sky-friend { font-size: 32px; }
+  .sky-give { min-width: 52px; min-height: 52px; font-size: 13px; }
+  .sky-give span { font-size: 22px; }
+  .sky-frame { grid-template-columns: repeat(5, 24px); grid-auto-rows: 28px; }
+  .sky .sky-cell .mission-picture { width: 21px; height: 26px; }
+  .picnic { gap: 2px; padding: 3px 6px 2px; }
+  .picnic-bunch { width: 36px; }
+  .picnic-bunch i { width: 7px; height: 9px; }
+  .picnic-face { font-size: 24px; }
+  .picnic-empty { width: 26px; height: 26px; margin: 0 5px 2px; }
+  .picnic-treat { font-size: 15px; right: -4px; }
+  .sky .sky-cell .colour-balloon::before { width: 16px; height: 19px; }
+  .sky .sky-cell .colour-balloon::after { top: 20px; left: 10px; }
+}
 
 @media (max-height: 500px) {
   .card { padding: 14px 22px; gap: 8px; }
@@ -192,6 +310,17 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .sky .colour-balloon::after { top: 26px; left: 14px; height: 6px; }
   .sky-num { top: 5px; font-size: 12px; }
   .sky-gold { width: 58px; height: 66px; }
+  .sky-friend { font-size: 30px; }
+  .sky-give { min-width: 52px; min-height: 52px; font-size: 13px; }
+  .sky-give span { font-size: 22px; }
+  .sky-frame { grid-template-columns: repeat(5, 24px); grid-auto-rows: 26px; }
+  .sky .sky-cell .mission-picture { width: 20px; height: 24px; }
+  .sky .sky-cell .colour-balloon::before { width: 15px; height: 18px; }
+  .sky .sky-cell .colour-balloon::after { top: 19px; left: 10px; height: 5px; }
+  .sky-ref-face { font-size: 22px; }
+  .sky .sky-ref .mission-picture { width: 17px; height: 20px; }
+  .sky .sky-ref .colour-balloon::before { width: 13px; height: 16px; }
+  .sky .sky-ref .colour-balloon::after { top: 16px; left: 8px; height: 4px; }
 }
 
 @media (max-height: 330px) {
@@ -226,7 +355,29 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 
 @media (min-width: 700px) and (min-height: 700px) {
-  .sky { bottom: calc(18px + env(safe-area-inset-bottom)); padding: 10px 22px 12px; border-radius: 26px; gap: 6px; }
+  .sky { top: calc(12px + env(safe-area-inset-top)); padding: 10px 14px 12px 18px; border-radius: 26px; gap: 14px; max-width: calc(100vw - 290px); }
+  .sky-body { gap: 6px; }
+  .sky-friend { font-size: 60px; }
+  .sky-give { min-width: 84px; min-height: 84px; font-size: 19px; border-radius: 22px; }
+  .sky-give span { font-size: 38px; }
+  .sky-frame { grid-template-columns: repeat(5, 44px); grid-auto-rows: 50px; gap: 3px; padding: 4px; }
+  .sky .sky-cell .mission-picture { width: 38px; height: 46px; font-size: 32px; }
+  .sky .sky-cell .colour-balloon::before { width: 29px; height: 35px; }
+  .sky .sky-cell .colour-balloon::after { top: 36px; left: 19px; height: 8px; }
+  .sky-ref-face { font-size: 38px; }
+  .sky-slot:not(.colour-balloon) .sky-num { font-size: 16px; }
+  .picnic-bunch { width: 66px; gap: 2px; }
+  .picnic-bunch i { width: 11px; height: 14px; }
+  .picnic-face { font-size: 40px; }
+  .picnic-empty { width: 44px; height: 44px; margin: 0 11px 3px; }
+  .picnic-treat { font-size: 26px; right: -10px; }
+  .sky-treat { width: 84px; height: 84px; font-size: 50px; border-radius: 22px; }
+  .sky-treats-basket { font-size: 38px; }
+  .picnic { padding: 6px 16px 3px; gap: 10px; }
+  .sky .sky-ref .mission-picture { width: 30px; height: 36px; }
+  .sky .sky-ref .colour-balloon::before { width: 22px; height: 27px; }
+  .sky .sky-ref .colour-balloon::after { top: 28px; left: 15px; height: 7px; }
+  .sky-gold-num { font-size: 48px; }
   .sky-caption { font-size: 23px; }
   .sky .mission-picture { width: 52px; height: 60px; font-size: 44px; }
   .sky .colour-balloon::before { width: 39px; height: 47px; }
@@ -246,10 +397,16 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #bar-fill { background-size: min(50vw, 460px) 100%; }
 }
 
+/* Portrait: the card sits under the buttons and may use the full width. */
+@media (orientation: portrait) {
+  .sky { top: calc(66px + env(safe-area-inset-top)); max-width: calc(100vw - 16px); }
+}
+
 /* Calm pass: honour reduced motion for the animations that remain (cards fade in place). */
 @media (prefers-reduced-motion: reduce) {
-  .card, .spinner, .hint-finger, .sky-slot.new { animation: none; }
-  .sky, .sky-gold i { transition: none; }
+  .picnic.wave .picnic-friend { animation: none; }
+  .card, .spinner, .hint-finger, .sky-slot.new, .sky-cell .new, .sky-friend.ask, .sky-friend.no { animation: none; }
+  .sky, .sky-give { transition: none; }
   .intro.show, .mission-reward.show { animation-timing-function: linear; }
   @keyframes intro { 0%, 100% { opacity: 0; transform: translate(-50%, -50%); } 10%, 85% { opacity: 1; transform: translate(-50%, -50%); } }
   @keyframes mission-party { 0%, 100% { opacity: 0; transform: translate(-50%, 0); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); } }

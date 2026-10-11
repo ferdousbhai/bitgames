@@ -19,9 +19,11 @@ export class Bot {
   /**
    * `lead` is how far this robot is ahead of the best child; robots in front ease off so children win plenty.
    * `napping`: every child has stopped paddling, so the robots float and wait for them.
-   * `helpedEnough` (Pond helpers): the robots already put in their share of the jar, so they only show bubbles.
+   * `helpedEnough` (Pond helpers): the robots already put in their share of the jar, so they leave the rest to the child.
+   * `help` (Pond helpers): the child seems stuck (a few bubbles that didn't fit, or a long while without one),
+   * so a robot shows one that fits. Otherwise the choosing is the child's.
    */
-  update(sim, dt, lead = 0, napping = false, helpedEnough = false) {
+  update(sim, dt, lead = 0, napping = false, helpedEnough = false, help = false) {
     const d = this.duck
     // A robot that has done its share (or is showing a bubble) floats past jar bubbles without taking them.
     d.leave = sim.calm && (helpedEnough || !!this.target?.show)
@@ -50,12 +52,10 @@ export class Bot {
     }
     if (this.think <= 0 && !this.holdT) {
       this.think = 0.25 + (1 - this.skill) * 0.5
-      const before = this.target?.item
-      this.target = this.choose(sim)
-      // Pond helpers: often a robot swims over to a bubble and waits beside it, showing it to the child
-      // instead of taking it (always, once the robots have done their share of the jar).
-      if (sim.calm && this.target?.item && this.target.item !== before) this.target.show = helpedEnough || Math.random() < 0.55
-      else if (sim.calm && this.target?.item && helpedEnough) this.target.show = true
+      this.target = this.choose(sim, helpedEnough && !help)
+      // Pond helpers: when the child seems stuck, a robot swims to a bubble that fits and waits beside it,
+      // showing it instead of taking it. The rest of the time the robots don't point the answer out.
+      if (sim.calm && this.target?.item) this.target.show = help
     }
     let tx = 0
     let tz = 0
@@ -107,7 +107,7 @@ export class Bot {
     else if (t && !t.duck && !easy && !sim.calm && len > 5 && d.dashCd <= 0 && Math.random() < dt * 0.4) sim.dash(d)
   }
 
-  choose(sim) {
+  choose(sim, playOnly = false) {
     const d = this.duck
     if (this.mood === 'bonk') {
       let best = null
@@ -125,10 +125,11 @@ export class Bot {
     let best = null
     let bestScore = -Infinity
     for (const it of sim.items.values()) {
-      // A helper only fetches bubbles the jar wants (and the odd gift).
-      if (sim.calm && it.k === 'bubble' && !sim.counts(it)) continue
+      // A helper only fetches bubbles the jar wants (and the odd gift); one that has done its share just plays.
+      // A bubble stuck on a lily pad (or the mama duck) is the children's to bump free.
+      if (it.stuck != null || (sim.sorts(it) && (playOnly || !sim.counts(it)))) continue
       const dist = Math.hypot(it.x - d.x, it.z - d.z)
-      const value = it.k === 'gift' ? (sim.calm ? 1 : 3) : ITEMS[it.k].points
+      const value = it.k === 'gift' ? (sim.calm ? 1 : 3) : sim.calm ? 1 : ITEMS[it.k].points
       // A little randomness so the robots don't all pick the same bubble.
       const score = value * 3 - dist + Math.random() * 2
       if (score > bestScore) {

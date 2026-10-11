@@ -45,7 +45,7 @@
   <div id="flightbar" class="flightbar hidden">
     <div id="guess" class="guess hidden" aria-label="Your guess"></div>
     <div id="stars" class="pill stars" role="img" aria-label="0 stars"><b id="stars-fives" class="fives">⭐</b><span id="stars-frame" class="frame"><i></i><i></i><i></i><i></i><i></i></span></div>
-    <div id="turbo" class="turbo"><b>⚡</b><i><span id="turbo-fill"></span></i></div>
+    <button id="turbo" class="turbo" disabled aria-label="Turbo: catch fifteen stars"><b>⚡</b><i><span id="turbo-fill"></span></i><em id="turbo-to"></em></button>
   </div>
   <div class="right">
     <button id="music" class="round-btn" title="Music" aria-label="Music on or off">🎵</button>
@@ -60,9 +60,11 @@
 </div>
 
 <button id="notebook-btn" class="round-btn hidden" title="What I found out" aria-label="What I found out notebook">📓</button>
+<div id="mission" class="mission hidden"><b class="mission-tag" aria-hidden="true">📮</b><button id="mission-go" class="mission-go" aria-label="Robot has a mission"></button><button id="mission-off" class="mission-off hidden" aria-label="Put the mission away">✕</button></div>
+
+<div id="pad-tag" class="pad-tag hidden" aria-hidden="true">🤖</div>
 
 <div id="actions" class="hidden">
-  <button id="experiment" class="dice" title="Compare two builds" aria-label="Robot’s test workshop">🧪</button>
   <button id="dice" class="dice" title="Surprise me (R)" aria-label="Surprise rocket">🎲</button>
   <button id="launch" class="launch" title="Launch (Enter)" aria-label="Launch"><span class="em">🚀</span><span class="go">GO!</span></button>
 </div>
@@ -76,6 +78,7 @@
     <div id="reward-head" class="reward-head"></div>
     <div id="reward-stars" class="reward-stars"></div>
     <div id="reward-test" class="reward-test hidden"></div>
+    <div id="reward-mission" class="reward-mission hidden"></div>
     <div id="reward-new" class="reward-new"></div>
     <div class="btns">
       <button id="to-garage" class="btn garage" title="Back to the garage" aria-label="Back to the garage">🔧</button>

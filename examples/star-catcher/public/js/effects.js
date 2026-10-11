@@ -170,15 +170,40 @@ export class Popups {
     this.el.appendChild(d)
     setTimeout(() => d.remove(), 950)
   }
+}
 
-  /** A bigger cheer that slides out to the right of a screen point (in CSS pixels). */
-  showAt(x, y, text) {
-    const d = document.createElement('div')
-    d.className = 'pop side'
-    d.textContent = text
-    d.style.left = `${x}px`
-    d.style.top = `${y}px`
-    this.el.appendChild(d)
-    setTimeout(() => d.remove(), 1500)
-  }
+const numberTextures = new Map()
+
+/**
+ * A number (or "?") drawn once into a canvas: dark, round digits on a solid cream plate with a
+ * soft gold rim, so 4, 10 and 31 read the same over a star, the night sky or the panel (and the
+ * star's face never shows through). `aspect` is width ÷ height, for sizing sprites.
+ */
+export function numberTexture(text) {
+  let tex = numberTextures.get(text)
+  if (tex) return tex
+  const h = 96
+  const w = text.length > 1 ? 136 : 96
+  const c = document.createElement('canvas')
+  c.width = w
+  c.height = h
+  const g = c.getContext('2d')
+  const r = 40
+  g.beginPath()
+  g.roundRect(6, 6, w - 12, h - 12, r)
+  g.fillStyle = '#fff6d8'
+  g.fill()
+  g.lineWidth = 5
+  g.strokeStyle = '#e0b54a'
+  g.stroke()
+  g.font = `900 ${text.length > 1 ? 62 : 66}px ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif`
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  g.fillStyle = '#2a1a5e'
+  g.fillText(text, w / 2, h / 2 + 4)
+  tex = new THREE.CanvasTexture(c)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.userData.aspect = w / h
+  numberTextures.set(text, tex)
+  return tex
 }

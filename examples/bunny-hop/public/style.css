@@ -51,19 +51,66 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .found { margin: 0; max-width: 32ch; font-size: clamp(20px, 4vw, 28px); font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.35); }
 .results-top { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 /* The burrow pantry: each counted row in its own crate (in fives, like a ten-frame), added up. */
-.pantry { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 14px; max-width: min(760px, 94vw); border-radius: 22px; background: #fff8e8e6; color: #6b3d00; box-shadow: 0 5px 0 #c98f0055; }
-.pantry[hidden] { display: none; }
-.pantry-shelf { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; }
-.pantry-row { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
+.pantry { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 14px; max-width: min(760px, 94vw); border-radius: 22px; background: #fff8e8; color: #6b3d00; box-shadow: 0 5px 0 #c98f0055; overflow: hidden; }
+.pantry[hidden], .pantry-ask[hidden], .pantry-total[hidden] { display: none; }
+/* one shelf per place: its two rows as crates, side by side, then its little 🎵 crate; one shelf under another */
+.pantry-shelves { display: grid; grid-template-columns: auto; gap: 2px; justify-content: center; }
+.pantry-shelf { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 6px; padding: 3px 8px; border-radius: 16px; transition: opacity .4s, background .4s; }
+.pantry-shelf.asked { background: #ffe58a99; }
+.pantry-shelf.quiet { opacity: 0.4; }
+.pantry-place { font-size: 22px; }
+.pantry-row { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 3px; border-radius: 12px; background: transparent; color: inherit; touch-action: manipulation; }
+.pantry-row:disabled { cursor: default; }
+.pantry-row:not(:disabled) { background: #fff; box-shadow: 0 4px 0 #c98f00; }
+.pantry-row:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 #c98f00; }
+.pantry-row:focus-visible { outline: 3px solid #6575b0; outline-offset: 2px; }
+.pantry-row.more { background: #c9ec9a; }
 .pantry-row b { font-size: 20px; line-height: 1; }
-.pantry-crate { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 1px; padding: 3px 5px; border-radius: 10px; background: #e9b97a; box-shadow: inset 0 -3px 0 #c98f4a; font-size: 18px; line-height: 1.1; }
+.pantry-crate { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 1px; padding: 3px 5px; border-radius: 10px; background: #e9b97a; box-shadow: inset 0 -3px 0 #c98f4a; font-size: 22px; line-height: 1.1; }
+/* a carrot that got away on the trip leaves its place in the crate empty */
+.pantry-crate .away { opacity: 0.35; filter: grayscale(1); }
 .pantry-plus { font-size: 24px; font-weight: 900; }
+/* the little crate of carrots munched in a place's pattern */
+.pantry-row { position: relative; }
+.pantry-row.pattern .pantry-crate { background: #d9c3f0; box-shadow: inset 0 -3px 0 #a98bd0; }
+.pantry-tag { position: absolute; top: -6px; right: -8px; font-size: 15px; font-style: normal; line-height: 1; }
+/* count on at the burrow: the bigger crate's number, then a carrot to tap for each one more */
+.count-on { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; max-width: 100%; }
+.count-on b { font-size: 34px; font-weight: 900; color: #6b3d00; margin-right: 4px; }
+.count-step { display: grid; place-items: center; width: 48px; height: 48px; border: 2px solid #fff; border-radius: 14px; background: #fff; box-shadow: 0 3px 0 #c98f00; font-size: 26px; font-weight: 900; color: #6b3d00; touch-action: manipulation; }
+.count-step.counted { background: #c9ec9a; box-shadow: none; translate: 0 3px; }
+#again[hidden] { display: none; }
+.pantry-ask { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #5b3a8c; }
+.pantry-choices { display: flex; gap: 14px; }
+.ask-choice.pantry-number { width: 80px; height: 80px; font-size: 42px; font-weight: 900; color: #6b3d00; }
+.pantry-goal { margin-left: 10px; padding: 2px 10px; border-radius: 99px; background: #e3eefa; color: #2f5d8a; font-size: 0.5em; }
+.pantry-goal.met { background: #c9ec9a; color: #2f6a12; }
+.score-goal { font-size: 0.55em; opacity: 0.85; align-self: flex-end; margin-bottom: 4px; }
+.pill.met { background: rgba(60, 140, 40, 0.5); }
 .found:empty { display: none; }
 .found { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 10px; max-width: 94vw; }
 .found-pattern { display: inline-flex; gap: 2px; padding: 3px 6px; border-radius: 12px; background: #fff8e8d9; }
 .found-pattern img { width: 34px; height: 34px; object-fit: contain; }
 .found-pattern > span { font-size: 24px; }
 .pantry-total { display: flex; align-items: center; gap: 8px; font-size: clamp(34px, 7vw, 52px); font-weight: 900; line-height: 1; }
+/* after the total, the shelves fold into one line of place totals, so Pip stands clear above */
+.pantry-sums { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 8px; font-size: 22px; font-weight: 900; }
+/* Pip's door garden: a row of places to plant in, and the picked flowers by colour (with how many are left) */
+.garden { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px; }
+.garden-bed { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 5px 8px; border-radius: 14px; background: #a4d36a; box-shadow: inset 0 -4px 0 #7aa94a; }
+.garden-place { display: grid; place-items: center; width: 44px; height: 48px; padding: 0; border-radius: 12px; background: #8a5a32; box-shadow: inset 0 3px 0 #6e4626; touch-action: manipulation; }
+.garden-place.planted { background: #9c6a3e; }
+.garden-place:disabled { cursor: default; }
+.garden-place:not(:disabled) { outline: 3px dashed #fff; outline-offset: -3px; }
+.garden-place img { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+.garden-place > span, .garden-seed > span { font-size: 30px; line-height: 1; }
+.garden-seeds { display: flex; gap: 12px; }
+.garden-seed { position: relative; display: grid; place-items: center; width: 68px; height: 68px; border: 3px solid #fff; border-radius: 20px; background: #ffe58a; box-shadow: 0 5px 0 #c98f00; touch-action: manipulation; }
+.garden-seed img { width: 56px; height: 56px; object-fit: contain; pointer-events: none; }
+.garden-seed b { position: absolute; right: -6px; bottom: -6px; min-width: 26px; padding: 1px 6px; border-radius: 99px; background: #fff; color: #6b3d00; font-size: 17px; line-height: 1.3; box-shadow: 0 2px 0 #c98f0077; }
+.garden-seed:active { transform: translateY(3px); box-shadow: 0 2px 0 #c98f00; }
+.garden-seed:disabled { opacity: 0.35; filter: grayscale(1); box-shadow: none; transform: translateY(3px); }
+.garden-seed:focus-visible, .garden-place:focus-visible { outline: 3px solid #6575b0; outline-offset: 3px; }
 
 /* The menu's mission choice and the 🐇/🐢 pace switch share a row. */
 .menu-options { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
@@ -148,6 +195,17 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .cue-step img { width: 42px; height: 42px; object-fit: contain; }
 .cue-step > span { font-size: 28px; line-height: 1; }
 .cue-question { font-size: 30px; font-weight: 900; color: #7a4fc2; }
+.cue-step.later { border-style: dashed; border-color: #c4cce6; background: #dfe4f3; }
+/* a carrot that got away leaves its place empty, outlined; one past a full basket sits outside it, going back */
+.cue-carrot.away { opacity: 0.5; filter: grayscale(1); background: transparent; outline: 2px dashed #c98f4a; outline-offset: -3px; font-size: 0; }
+.cue-carrot.over { width: 30px; opacity: 0.55; background: transparent; rotate: -25deg; }
+.cue.basket .cue-count { font-size: 36px; }
+/* the counting basket has no empty places: it starts empty and the child keeps count */
+.cue.counting .cue-tray { min-width: 48px; min-height: 48px; }
+/* a carrot of the pattern that Pip hopped over: its picture rests, faded */
+.cue-step.away { background: transparent; opacity: 0.45; filter: grayscale(1); border-style: dashed; }
+/* listening again: each picture of the pattern lights in turn, with its note */
+.cue-step.sing { background: #ffe58a; opacity: 1; scale: 1.12; transition: scale .15s, background .15s; }
 
 /* "What comes next?": big picture choices up in the sky, while Pip waits. */
 .ask {
@@ -163,6 +221,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .ask-choice:focus-visible { outline: 3px solid #6575b0; outline-offset: 3px; }
 .ask-choice img { width: 76px; height: 76px; object-fit: contain; pointer-events: none; }
 .ask-choice > span { font-size: 52px; }
+.ask-choice:disabled { opacity: 0.3; filter: grayscale(1); box-shadow: none; transform: translateY(3px); }
+/* Tall portrait screens: the question sits just above Pip and the "?", not up under the trip bar */
+@media (orientation: portrait) and (min-height: 700px) {
+  .ask { top: auto; bottom: calc(36% + env(safe-area-inset-bottom)); }
+  #results .pantry-crate { font-size: 19px; }
+}
 
 #popups { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 /* Floating words: a thick coloured outline keeps them readable on grass, sky and snow alike. */
@@ -172,6 +236,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   animation: float 1.1s ease-out forwards;
 }
 .popup.oops { --edge: #d63a74; font-size: 40px; }
+.popup.flower { font-size: 34px; --edge: #fff; }
+.popup.flower.pink { color: #ef4f86; } .popup.flower.yellow { color: #e9b400; } .popup.flower.blue { color: #3f8fe8; }
 @keyframes float { 0% { transform: translateY(0) scale(0.8); opacity: 0; } 15% { transform: translateY(-10px) scale(1); opacity: 1; } 100% { transform: translateY(-60px) scale(1); opacity: 0; } }
 
 @media (max-width: 520px) {
@@ -183,8 +249,18 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 /* Tablets held sideways: the pantry stands to the left of the burrow, so Pip stays in view. */
 @media (orientation: landscape) and (min-height: 481px) {
-  #results .pantry { position: absolute; left: calc(16px + env(safe-area-inset-left)); top: 52%; translate: 0 -50%; max-width: min(34vw, 420px); }
-  #results .pantry-crate { font-size: 16px; }
+  #results .pantry { position: absolute; left: calc(16px + env(safe-area-inset-left)); top: 52%; translate: 0 -50%; max-width: min(40vw, 480px); }
+  #results .pantry-shelves { grid-template-columns: auto; }
+  #results .pantry-crate { font-size: 15px; }
+  #results .pantry-row b { font-size: 17px; }
+  /* the place's name banner sits higher, clear of Pip as he hops up for a row of carrots */
+  .banner { top: 14%; font-size: clamp(36px, 6vw, 62px); }
+}
+
+/* smaller tablets held sideways (1024×768): smaller crates keep each shelf on one line, clear of Pip */
+@media (orientation: landscape) and (min-height: 481px) and (max-width: 1100px) {
+  #results .pantry-crate { font-size: 12px; }
+  #results .pantry-shelf { gap: 3px 4px; }
 }
 
 /* Phones held sideways: shrink the screens so the big button stays on screen */
@@ -201,7 +277,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   /* sideways phones: the pantry sits to the left of the burrow, clear of Pip */
   @media (orientation: landscape) {
     #results .pantry { position: absolute; left: calc(10px + env(safe-area-inset-left)); top: calc(62px + env(safe-area-inset-top)); max-width: 38vw; }
-    #results .pantry-shelf { gap: 2px 4px; }
+    #results .pantry-shelves { grid-template-columns: auto; gap: 0; }
+    #results .pantry-shelf { gap: 2px 4px; padding: 0 4px; }
+    #results .pantry-place { font-size: 15px; }
+    #results .ask-choice.pantry-number { width: 56px; height: 56px; font-size: 30px; }
     #results .pantry-crate { font-size: 11px; padding: 2px 3px; }
     #results .pantry-plus { font-size: 16px; }
   }
@@ -223,7 +302,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .banner { top: 15%; font-size: 52px; }
   /* the trip bar joins the top row, so high golden carrots never hide behind it */
   /* (left of 59% leaves room for the 🏠 button the calm pass added to the top row) */
-  .trip { top: calc(8px + env(safe-area-inset-top)); left: 59%; width: min(400px, 46vw); }
+  .trip { top: calc(8px + env(safe-area-inset-top)); left: 62%; width: min(400px, 42vw); }
   /* results in one row, leaving Pip and his burrow in view */
   #results .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; column-gap: 22px; }
 }
@@ -239,8 +318,49 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* Calm pass: honour reduced motion for the animations that remain. */
 @media (prefers-reduced-motion: reduce) {
   .hopper, .tap-hint, .pill.bump .icon { animation: none; }
-  .cue-carrot, .cue { transition: none; }
+  .pantry-shelf { transition: none; }
+  .cue-carrot, .cue, .cue-step.sing { transition: none; scale: none; }
   .popup { animation: float-fade 1.1s linear forwards; }
   @keyframes float-fade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
   .banner, .banner.show { transform: none; }
+}
+
+/* Small phones: while Pip asks, only the shelf he asks about shows (all of them come back with the total) */
+@media (max-height: 480px), (max-width: 520px) {
+  #results .pantry-shelf.quiet { display: none; }
+  .count-on b { font-size: 24px; }
+  .count-step { width: 38px; height: 38px; border-radius: 11px; font-size: 18px; }
+}
+@media (max-width: 520px) {
+  #results .pantry { padding: 8px; }
+  #results .pantry-crate { font-size: 12px; padding: 2px 3px; }
+  #results .pantry-place, #results .pantry-plus { font-size: 15px; }
+  #results .pantry-shelf { gap: 2px 3px; padding: 2px 4px; }
+  #results .pantry-row b { font-size: 15px; }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  #results .pantry { max-width: 42vw; }
+  #results .pantry-crate { font-size: 10px; }
+  #results .pantry-shelf { gap: 0 3px; }
+}
+
+/* the garden on small screens: smaller places and flowers */
+@media (max-height: 480px), (max-width: 520px) {
+  .garden { gap: 5px; }
+  .garden-place { width: 32px; height: 34px; border-radius: 9px; }
+  .garden-place img { width: 32px; height: 32px; }
+  .garden-place > span, .garden-seed > span { font-size: 22px; }
+  .garden-seed { width: 50px; height: 50px; border-radius: 15px; }
+  .garden-seed img { width: 42px; height: 42px; }
+  .garden-seed b { font-size: 14px; min-width: 22px; }
+  .pantry-sums { font-size: 17px; }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  /* sideways phones: the garden in two rows of four, and a narrower panel, so Pip stays clear */
+  .garden-bed { max-width: 224px; }
+  .pantry-sums { font-size: 15px; gap: 0 5px; }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  /* Pip's question is about the two rows: the little 🎵 crate steps aside meanwhile, so Pip stays clear */
+  #results .pantry-shelf.asked :is(.pantry-row.pattern, .pantry-plus.to-pattern) { display: none; }
 }

@@ -120,7 +120,7 @@ export function buildArena(id, gltfScene, paint) {
         const box = new THREE.Box3().setFromObject(node)
         const size = box.getSize(new THREE.Vector3())
         const c = box.getCenter(new THREE.Vector3())
-        obstacles.push({ x: c.x, z: c.z, r: (Math.max(size.x, size.z) / 2) * 0.9 })
+        obstacles.push({ x: c.x, z: c.z, r: (Math.max(size.x, size.z) / 2) * 0.9, h: size.y })
         root.add(node)
         continue
       }

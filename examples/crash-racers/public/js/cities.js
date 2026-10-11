@@ -1153,34 +1153,31 @@ function grandstand(track, dist, sign, flags, crowds) {
 }
 
 /**
- * The big screen by the start: cheers and emojis, flashing. Every frame of it
- * (five messages, each in two blink states) is drawn once; the screen swaps between them.
+ * The big screen by the start: a slow slideshow of the park's own pictures and
+ * names (no cheers, no blinking). Each slide is drawn once; the screen changes every few seconds.
  */
-const JUMBOTRON_MESSAGES = [['WOW!', '🤩', '#ff5d8f'], ['GO GO GO!', '🏎️', '#ffd23f'], ['BIG JUMP!', '🚀', '#4cc9f0'], ['CRASH!', '💥', '#f77f00'], ['STUNT PARK', '🏁', '#7bd389']]
+const JUMBOTRON_MESSAGES = [['STUNT PARK', '🏁', '#7bd389'], ['DESERT', '🌵', '#ffd23f'], ['DRIVE KINDLY', '🚗', '#4cc9f0'], ['SUNNY DAY', '☀️', '#ff9f68'], ['LIZARD LANE', '🦎', '#9bd36b']]
 const jumbotronScreen = () =>
   cached('jumbotron', () => {
-    const frames = JUMBOTRON_MESSAGES.flatMap(([text, emoji, color]) =>
-      [0, 1].map((blink) =>
-        canvasTexture(512, 280, (g, w, h) => {
-          g.fillStyle = '#10121a'
-          g.fillRect(0, 0, w, h)
-          for (let y = 0; y < h; y += 20) for (let x = 0; x < w; x += 20) {
-            g.fillStyle = (x + y + blink * 20) % 40 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)'
-            g.fillRect(x, y, 18, 18)
-          }
-          g.textAlign = 'center'
-          g.textBaseline = 'middle'
-          g.font = '110px sans-serif'
-          g.fillText(emoji, 256, 100)
-          g.font = 'bold 74px sans-serif'
-          g.fillStyle = blink ? color : '#ffffff'
-          g.fillText(text, 256, 215)
-        }),
-      ),
+    const frames = JUMBOTRON_MESSAGES.map(([text, emoji, color]) =>
+      canvasTexture(512, 280, (g, w, h) => {
+        g.fillStyle = '#10121a'
+        g.fillRect(0, 0, w, h)
+        for (let y = 0; y < h; y += 20) for (let x = 0; x < w; x += 20) {
+          g.fillStyle = (x + y) % 40 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)'
+          g.fillRect(x, y, 18, 18)
+        }
+        g.textAlign = 'center'
+        g.textBaseline = 'middle'
+        g.font = '110px sans-serif'
+        g.fillText(emoji, 256, 100)
+        g.font = 'bold 64px sans-serif'
+        g.fillStyle = color
+        g.fillText(text, 256, 215)
+      }),
     )
     const material = new THREE.MeshBasicMaterial({ map: frames[0], toneMapped: false })
-    // A new message every two seconds, blinking four times a second.
-    const show = (t) => (material.map = frames[(Math.floor(t / 2) % JUMBOTRON_MESSAGES.length) * 2 + (Math.floor(t * 4) % 2)])
+    const show = (t) => (material.map = frames[Math.floor(t / 5) % frames.length])
     return { material, show }
   })
 

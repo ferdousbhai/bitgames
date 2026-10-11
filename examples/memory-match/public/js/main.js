@@ -24,50 +24,114 @@ const ANIMALS = {
   fox: { emoji: '🦊', color: '#ffad85' },
   penguin: { emoji: '🐧', color: '#8fd3ff' },
   cow: { emoji: '🐮', color: '#bff2cf' },
+  fish: { emoji: '🐠', color: '#9fe3ff' },
 }
 const NAMES = Object.keys(ANIMALS)
 
-/** Words for each animal: the plural, what its call is called, and its baby. */
+/**
+ * Words for each animal: the plural, what its call is called, the call itself as children say it
+ * (the sound card says it after the animal's voice and shows it written, so the sound is a real
+ * word to know, "Moo!", and still works with the sound off), and its baby.
+ */
 const WORDS = {
-  dog: { many: 'dogs', says: 'barks', baby: 'puppy' },
-  cat: { many: 'cats', says: 'meows', baby: 'kitten' },
-  frog: { many: 'frogs', says: 'croaks' }, // a tadpole looks nothing like a small frog
-  lion: { many: 'lions', says: 'roars', baby: 'cub' },
-  panda: { many: 'pandas', says: 'squeaks', baby: 'cub' },
-  pig: { many: 'pigs', says: 'oinks', baby: 'piglet' },
-  bunny: { many: 'bunnies', says: 'squeaks', baby: 'kit' },
-  chick: { many: 'chicks', says: 'cheeps' }, // already a baby
-  elephant: { many: 'elephants', says: 'trumpets', baby: 'calf' },
-  fox: { many: 'foxes', says: 'yips', baby: 'kit' },
-  penguin: { many: 'penguins', says: 'honks', baby: 'chick' },
-  cow: { many: 'cows', says: 'moos', baby: 'calf' },
+  dog: { many: 'dogs', says: 'barks', call: 'Woof woof!', baby: 'puppy' },
+  cat: { many: 'cats', says: 'meows', call: 'Meow!', baby: 'kitten' },
+  frog: { many: 'frogs', says: 'croaks', call: 'Ribbit!' }, // a tadpole looks nothing like a small frog
+  lion: { many: 'lions', says: 'roars', call: 'Roar!', baby: 'cub' },
+  panda: { many: 'pandas', baby: 'cub' }, // no call a child knows: left out of Sounds
+  pig: { many: 'pigs', says: 'oinks', call: 'Oink oink!', baby: 'piglet' },
+  bunny: { many: 'bunnies', baby: 'kit' }, // a bunny is nearly silent: left out of Sounds
+  chick: { many: 'chicks', says: 'cheeps', call: 'Cheep cheep!' }, // already a baby
+  elephant: { many: 'elephants', says: 'trumpets', call: 'Toot toot!', baby: 'calf' },
+  fox: { many: 'foxes', says: 'yips', call: 'Yip yip!', baby: 'kit' },
+  penguin: { many: 'penguins', says: 'honks', call: 'Honk honk!', baby: 'chick' },
+  cow: { many: 'cows', says: 'moos', call: 'Moo!', baby: 'calf' },
+  fish: { many: 'fish' }, // no call to learn (it blows bubbles), and its baby (a fry) is not a word for 3–8
 }
 const WITH_BABIES = NAMES.filter((name) => WORDS[name].baby)
+const WITH_CALLS = NAMES.filter((name) => WORDS[name].call)
+/** "A calf is a cow's or an elephant's baby." */
+const orWords = new Intl.ListFormat('en-GB', { type: 'disjunction' })
 const cap = (word) => word[0].toUpperCase() + word.slice(1)
-/** "a", "a and b", "a, b and c" */
+const an = (word) => (/^[aeiou]/.test(word) ? 'An' : 'A')
+
+/**
+ * Homes mode (for 6–8): no two cards are the same. The child sorts by knowledge, flipping the
+ * animals that live together: every card of a turn must belong with the first, so careful
+ * thinking ("a pig is a farm animal, the dog is a pet") is what keeps a turn going.
+ * The homes do not overlap: wild means wild on land, and the frog, the penguin and the fish go
+ * with the water animals. Where a child's own knowledge is right too (a penguin is wild, a fish can
+ * be a pet) the game says so (see ALSO) instead of correcting them.
+ */
+const GROUPS = {
+  farm: { icon: '🌾', members: ['cow', 'pig', 'chick'], word: 'farm animals', is: 'lives on a farm', together: 'live on the farm' },
+  pets: { icon: '🏡', members: ['dog', 'cat', 'bunny'], word: 'pets', is: 'is a pet', together: 'are pets at home' },
+  wild: { icon: '🌳', members: ['lion', 'elephant', 'fox', 'panda'], word: 'wild animals on land', is: 'is a wild animal on land', together: 'are wild animals on land' },
+  water: { icon: '🌊', members: ['frog', 'penguin', 'fish'], word: 'water animals', is: 'lives in the water', together: 'live in the water' },
+}
+const GROUP_OF = Object.fromEntries(Object.entries(GROUPS).flatMap(([id, g]) => g.members.map((name) => [name, id])))
+/** Where an animal is said to live, when that says more than its group's line. */
+const LIVES = { penguin: 'swims in the cold sea', frog: 'lives in a pond' }
+/** True outside the game too: a second home an animal also fits, and how to say it kindly. */
+const ALSO = {
+  penguin: { home: 'wild', line: 'is wild too' },
+  frog: { home: 'wild', line: 'is wild too' },
+  fish: { home: 'pets', line: 'can be a pet too' },
+  bunny: { home: 'wild', line: 'can live in the wild too' },
+}
 
 /**
  * What a pair is. twins: two of the same animal (the default). sound: an animal and a card that
  * only plays its call. baby: an animal and its baby, the same model made small and round.
+ * groups: the animals that live together (farm, home or wild), three or four at a time.
  */
 const MODES = {
-  twins: { goal: 'Find the animal twins!', banner: 'Find the twins!', hint: 'Find the animal twins! Tap an animal to say hello.' },
-  sound: { goal: 'Listen! Find the animal that makes each sound.', banner: 'Who says that?', hint: 'Listen, then find the animal that makes the sound!' },
-  baby: { goal: 'Find each animal’s baby!', banner: 'Find the babies!', hint: 'Find each animal’s baby!' },
+  twins: { word: 'Twins!', goal: 'Find the animal twins!', banner: 'Find the twins!', hint: 'Find the animal twins! Tap an animal to say hello.' },
+  sound: { word: 'Sounds! Who says that?', goal: 'Listen! Find the animal that makes each sound.', banner: 'Who says that?', hint: 'Listen, then find the animal that makes the sound!' },
+  baby: { word: 'Babies!', goal: 'Find each animal’s baby!', banner: 'Find the babies!', hint: 'Find each animal’s baby!' },
+  groups: { word: 'Homes! Who lives together?', goal: 'Find the animals that live together! Keep turning cards that belong with the first one.', banner: 'Who lives together?', hint: 'Farm, home, wild or water? Find who lives together.' },
 }
-/** Phrases said when a pair is found. */
+/** The bigger boards change the rule a little, so they have their own goal instead of the mode's. */
+const LEVEL_GOALS = {
+  cradle: 'Sleeping babies! Listen to the baby’s name, then find its mum or dad.',
+  looks: 'Look closely! Some twins wear a bow, and some wear a hat.',
+}
+/**
+ * Twins from this level on (12 cards and up) have look-alikes: the same animal twice over, one
+ * pair with a bow and one with a hat, so the child must look closely, not just remember "dog".
+ * One look-alike animal at 12 cards, two at 16, three at 20.
+ */
+const LOOK_LEVEL = 3
+const LOOKS = {
+  bow: { icon: '🎀', a: 'a bow', many: 'bows', color: '#ff5c8a' },
+  hat: { icon: '🧢', a: 'a hat', many: 'hats', color: '#4d8cff' },
+}
+/** Phrases said when a pair (or a group) is found. */
 const MATCH_WORDS = {
-  twins: (name) => `Two ${WORDS[name].many}!`,
+  twins: (name, look) => `Two ${WORDS[name].many}${look ? ` with ${LOOKS[look].many}` : ''}!`,
   sound: (name) => `The ${name} ${WORDS[name].says}!`,
-  baby: (name) => `${/^[aeiou]/.test(name) ? 'An' : 'A'} ${name}’s baby is a ${WORDS[name].baby}!`,
+  baby: (name) => `${an(name)} ${name}’s baby is a ${WORDS[name].baby}!`,
+  groups: (id, names) => `${cap(listWords.format(names))} ${GROUPS[id].together}!`,
 }
 /** Pairs per level: gentle for 3-year-olds, a real puzzle by the end. */
 const LEVELS = [2, 3, 4, 6, 8, 10]
 /**
- * The levels a mode offers. Sounds stops at 8 pairs: ten identical loudspeakers is too much to hold
- * in mind for a young child. (An old Sounds save marking level 6 done is simply ignored.)
+ * Homes levels: cards in each group (a 4 is the wild group with all four of its animals). The top
+ * two boards use all four homes, so the child keeps four groups in mind at once.
  */
-const levelsFor = (mode) => (mode === 'sound' ? LEVELS.slice(0, 5) : LEVELS)
+const GROUP_LEVELS = [[3, 3], [3, 3, 3], [3, 3, 4], [3, 3, 3, 3], [3, 3, 4, 3]]
+/**
+ * Babies from this level on (12 cards and up) sleep in a basket under a blanket: the card only
+ * says the baby's word ("Kitten!"), so the child must know whose baby a kitten is. Any parent with
+ * that word matches ("cub" is a lion's or a panda's baby), and the baby that wakes up is theirs.
+ */
+const CRADLE_LEVEL = 3
+/**
+ * Cards on each level a mode offers. Sounds stops at 8 pairs: ten identical loudspeakers is too
+ * much to hold in mind for a young child. (An old Sounds save marking level 6 done is simply ignored.)
+ */
+const levelsFor = (mode) =>
+  mode === 'groups' ? GROUP_LEVELS.map((g) => g.reduce((a, b) => a + b)) : (mode === 'sound' ? LEVELS.slice(0, 5) : LEVELS).map((p) => p * 2)
 /** Seconds between each animal's hello when a board is finished, so only one voice plays at a time. */
 const WIN_CALL_GAP = 0.9
 
@@ -94,12 +158,16 @@ const shuffle = (list) => {
 // --- Saved progress (finished levels per mode) ---------------------------------------
 
 const SAVE_KEY = 'memory-match:v2'
-const progress = { muted: false, mode: 'twins', modeDone: {} }
+// next: the level each mode suggests after the last win (see adaptNext), so Play moves on
+// book: what the child has found out about each animal (see the animal book), e.g. { cow: { met: 1, call: 1, baby: 1, home: 1 } }
+const progress = { muted: false, mode: 'twins', modeDone: {}, next: {}, book: {} }
 try {
   Object.assign(progress, JSON.parse(localStorage.getItem(SAVE_KEY)) ?? {})
 } catch {}
 if (!MODES[progress.mode]) progress.mode = 'twins'
-progress.modeDone = { twins: {}, sound: {}, baby: {}, ...progress.modeDone }
+progress.modeDone = { twins: {}, sound: {}, baby: {}, groups: {}, ...progress.modeDone }
+progress.next = { ...progress.next }
+progress.book = { ...progress.book }
 // Older saves kept twins' finished levels in `stars` (and an unused `best`): move them over once
 Object.assign(progress.modeDone.twins, progress.stars)
 delete progress.stars
@@ -167,7 +235,12 @@ const game = {
   turns: 0,
   peekUsed: false,
   round: 0,
-  mode: 'twins', // twins | sound | baby (see MODES)
+  mode: 'twins', // twins | sound | baby | groups (see MODES)
+  sets: [], // what each match is: an animal, or (Homes) a group id, in HUD order
+  setSize: {}, // cards in each set: 2 for a pair, 3 or 4 for a group
+  slips: 0, // turns missed although a match for the first card had already been seen
+  named: new Set(), // words already said on a reveal this round (each name is said once)
+  goalSaid: null, // the mode whose goal was last spoken, so it is never said twice in a row
   busy: false,
   mismatch: null,
   layout: null,
@@ -368,7 +441,7 @@ function settleProps(view, w, d) {
   // The HTML on top of the scene, in NDC: a toy may not hide behind it.
   const range = document.createRange()
   const blockers = []
-  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) #play, #menu:not(.hidden) .level, #menu:not(.hidden) .mode, #win:not(.hidden) .win-card')) {
+  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) .book-btn, #menu:not(.hidden) #play, #menu:not(.hidden) .level, #menu:not(.hidden) .mode, #win:not(.hidden) .win-card')) {
     range.selectNodeContents(el) // the text itself, not the full-width paragraph around it
     const r = el.matches('.hint, .logo')
       ? range.getBoundingClientRect()
@@ -376,7 +449,7 @@ function settleProps(view, w, d) {
         ? { left: el.offsetLeft, right: el.offsetLeft + el.offsetWidth, top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight }
         : el.getBoundingClientRect()
     // The HUD buttons get a margin, so a toy never crowds the home or sound button.
-    const m = el.matches('.hud-left') ? 18 : 0
+    const m = el.matches('.hud-left, .book-btn') ? 18 : 0
     // A toy peeking out from under the win card looks lost, so that one must be fully clear.
     const tol = el.matches('.win-card') ? 0.01 : 0.15
     blockers.push([((r.left - m) / innerWidth) * 2 - 1, ((r.right + m) / innerWidth) * 2 - 1, 1 - ((r.bottom + m) / innerHeight) * 2, 1 - ((r.top - m) / innerHeight) * 2, tol])
@@ -438,19 +511,141 @@ function makeAnimal(name) {
   return a
 }
 
-/** The same animal as a baby: much smaller, a little rounder, with a big head. */
+/** A baby tips its big head back to look up at the child (negative x turns the face up). */
+const LOOK_UP = -0.45
+/** Babies are softer and paler than their parents: a gentle cream glow lifts every colour. */
+const babyMaterials = new Map(
+  [matte, glossy].map((m) => [m, Object.assign(m.clone(), { emissive: new THREE.Color('#fff1e6'), emissiveIntensity: 0.1 })]),
+)
+
+/**
+ * The same animal as a baby: smaller, rounder and paler, with a small body under a big head that
+ * looks up, so it reads as a baby by shape and colour, not by size alone (far cards look small too).
+ */
 function babyfy(a) {
   a.baby = true
-  a.size = ANIMAL_SIZE * 0.6
+  a.size = ANIMAL_SIZE * 0.68
   a.wide = 1.1
-  a.head?.scale.setScalar(1.3)
+  // A small body under a big head: the head sits lower on the neck and grows, the body shrinks
+  if (a.head) {
+    for (const part of a.head.parent.children) if (part !== a.head) part.scale.setScalar(0.78)
+    a.head.position.multiplyScalar(0.78)
+    a.head.scale.setScalar(1.35)
+    a.lookUp = LOOK_UP
+  }
+  a.holder.traverse((o) => {
+    if (o.isMesh && babyMaterials.has(o.material)) o.material = babyMaterials.get(o.material)
+  })
   return a
 }
 
-/** Says an animal's name after its call: "Cow!", or for a baby "Calf!". */
-function callAndName(a, { droppable = true } = {}) {
-  talk.call(a.name, { baby: a.baby, droppable })
-  talk.say(`${cap(a.baby ? WORDS[a.name].baby : a.name)}!`, { droppable })
+/** Where the top of each animal's head is (in the head's own space), measured once. */
+const headTops = {}
+function headTop(a) {
+  if (headTops[a.name]) return headTops[a.name]
+  a.holder.updateMatrixWorld(true)
+  const box = new THREE.Box3().setFromObject(a.head)
+  const top = a.head.worldToLocal(new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2))
+  return (headTops[a.name] = { top, width: box.max.x - box.min.x })
+}
+
+const lookParts = {
+  loop: new THREE.ConeGeometry(0.075, 0.13, 14).rotateZ(Math.PI / 2),
+  knot: new THREE.SphereGeometry(0.04, 12, 8),
+  cap: new THREE.SphereGeometry(0.12, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+  band: new THREE.TorusGeometry(0.12, 0.022, 8, 24).rotateX(Math.PI / 2),
+  bobble: new THREE.SphereGeometry(0.045, 12, 8),
+  white: new THREE.MeshStandardMaterial({ color: '#fff6e8', roughness: 0.8 }),
+}
+const lookMaterials = Object.fromEntries(Object.entries(LOOKS).map(([id, l]) => [id, new THREE.MeshStandardMaterial({ color: l.color, roughness: 0.6 })]))
+
+/** A look-alike twin wears something on its head: a bow or a woolly hat (see LOOKS). */
+function dressUp(a, look) {
+  if (!a.head) return a
+  a.look = look
+  const { top, width } = headTop(a)
+  const g = new THREE.Group()
+  const m = lookMaterials[look]
+  if (look === 'bow') {
+    const left = new THREE.Mesh(lookParts.loop, m)
+    left.position.x = -0.075
+    const right = new THREE.Mesh(lookParts.loop, m)
+    right.position.x = 0.075
+    right.rotation.z = Math.PI
+    g.add(left, right, new THREE.Mesh(lookParts.knot, m))
+    g.position.copy(top).add(new THREE.Vector3(0, 0.02, 0.02))
+  } else {
+    g.add(new THREE.Mesh(lookParts.cap, m), new THREE.Mesh(lookParts.band, lookParts.white))
+    const bobble = new THREE.Mesh(lookParts.bobble, lookParts.white)
+    bobble.position.y = 0.13
+    g.add(bobble)
+    g.position.copy(top).add(new THREE.Vector3(0, -0.03, 0))
+  }
+  // A big head gets a bigger bow; the head's own scale is undone so every bow reads alike
+  g.scale.setScalar(THREE.MathUtils.clamp(width / 0.5, 0.8, 1.4) / a.head.scale.x)
+  g.traverse((o) => {
+    if (o.isMesh) o.castShadow = true
+  })
+  a.head.add(g)
+  return a
+}
+
+/** A small written label (a baby's word, a call): a cream paper tag drawn on a canvas, one per text. */
+const tagTextures = {}
+const tagMaterials = {}
+const tagGeometry = new THREE.PlaneGeometry(0.66, 0.22)
+function makeTag(text) {
+  const tex = (tagTextures[text] ??= (() => {
+    const c = document.createElement('canvas')
+    c.width = 384
+    c.height = 128
+    const g = c.getContext('2d')
+    g.fillStyle = '#fffaf0'
+    g.strokeStyle = '#b9adff'
+    g.lineWidth = 8
+    g.beginPath()
+    g.roundRect(6, 6, 372, 116, 54)
+    g.fill()
+    g.stroke()
+    g.fillStyle = '#5a3d7a'
+    g.font = '900 64px ui-rounded, "Arial Rounded MT Bold", Nunito, system-ui, sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    let size = 64
+    while (g.measureText(text).width > 340 && size > 30) g.font = `900 ${(size -= 4)}px ui-rounded, "Arial Rounded MT Bold", Nunito, system-ui, sans-serif`
+    g.fillText(text, 192, 68)
+    const t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 4
+    return t
+  })())
+  const tag = new THREE.Mesh(tagGeometry, (tagMaterials[text] ??= new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })))
+  // Lies on the front of the card, tipped up towards the child
+  tag.rotation.x = -Math.PI / 2 + 0.55
+  tag.position.set(0, FACE_TOP + 0.1, 0.47)
+  tag.visible = false
+  return tag
+}
+
+/** What an animal is called: "Cow!", or for a baby "Calf!". */
+const nameOf = (a) => `${cap(a.baby ? WORDS[a.name].baby : a.name)}${a.look ? ` with ${LOOKS[a.look].a}` : ''}!`
+
+/**
+ * Says an animal's name after its call. For a card being revealed (card), a name already said this
+ * round is not said again (the call alone is enough), and both go stale (are skipped, never said
+ * late) once the card has turned back; its name also once it is matched, as the match line says it.
+ */
+function callAndName(a, { card = null } = {}) {
+  const word = nameOf(a)
+  if (!card) {
+    talk.call(a.name, { baby: a.baby, droppable: true })
+    talk.say(word, { droppable: true })
+    return
+  }
+  const down = () => card.state === 'down' || card.state === 'closing'
+  talk.call(a.name, { baby: a.baby, stale: () => down() || (card.state === 'matched' && card.kind !== 'sound') })
+  if (game.named.has(word) || talk.has(word)) return
+  talk.say(word, { droppable: true, stale: () => card.state !== 'open' && card.state !== 'opening', onStart: () => game.named.add(word) })
 }
 
 function poseAnimal(a, time) {
@@ -462,7 +657,7 @@ function poseAnimal(a, time) {
   const breathe = Math.sin(t * 3) * 0.02
   const w = s * a.wide * (1 + a.squash * 0.5)
   a.holder.scale.set(w, s * (1 - a.squash + breathe), w)
-  if (a.head) a.head.rotation.set(a.nod + Math.sin(t * 2.3) * 0.05, a.shake + Math.sin(t * 0.9) * 0.12, a.tilt + Math.sin(t * 1.7) * 0.07)
+  if (a.head) a.head.rotation.set((a.lookUp ?? 0) + a.nod + Math.sin(t * 2.3) * 0.05, a.shake + Math.sin(t * 0.9) * 0.12, a.tilt + Math.sin(t * 1.7) * 0.07)
 }
 
 /** A happy dance: three hops, a full spin and a wiggly head. */
@@ -495,7 +690,7 @@ const ringGeometry = new THREE.TorusGeometry(0.37, 0.03, 8, 48)
 const ringMaterial = new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.4 })
 /** One tinted card-spot material per animal, shared by every card that shows it. */
 const spotMaterials = {}
-/** A sound card's spot stays plain until it is matched: its colour would give the animal away. */
+/** A sound card's (or a sleeping baby's) spot stays plain until it is matched: its colour would give the animal away. */
 let soundSpot = null
 
 // The sound card's loudspeaker, made at runtime: a box, a cone and three sound waves, standing up
@@ -536,11 +731,49 @@ function makeSpeaker() {
   return { group, waves, pop: 0, yaw: 0 }
 }
 
+// A little wicker basket that every baby sits in, so a baby reads as a baby from above (not by
+// size alone). On the bigger Babies boards (CRADLE_LEVEL) a blanket hides who is asleep in it.
+const basketParts = {
+  base: new THREE.CylinderGeometry(0.29, 0.24, 0.12, 32).translate(0, 0.06, 0),
+  rim: new THREE.TorusGeometry(0.29, 0.05, 10, 36).rotateX(Math.PI / 2).translate(0, 0.12, 0),
+  blanket: new THREE.SphereGeometry(0.27, 28, 14).scale(1, 0.5, 1).translate(0, 0.13, 0.02),
+  pillow: new THREE.SphereGeometry(0.11, 18, 10).scale(1.5, 0.7, 0.9).translate(0, 0.17, -0.17),
+  fold: new THREE.CapsuleGeometry(0.035, 0.38, 6, 12).rotateZ(Math.PI / 2).scale(1, 0.9, 1.5).translate(0, 0.235, -0.05),
+  wicker: new THREE.MeshStandardMaterial({ color: '#c9945a', roughness: 0.8 }),
+  rimWicker: new THREE.MeshStandardMaterial({ color: '#dcae72', roughness: 0.7 }),
+  cloth: new THREE.MeshStandardMaterial({ color: '#ffc9dc', roughness: 0.9 }),
+  pillowCloth: new THREE.MeshStandardMaterial({ color: '#fff4e4', roughness: 0.9 }),
+}
+
+function makeBasket(covered) {
+  const group = new THREE.Group()
+  group.add(new THREE.Mesh(basketParts.base, basketParts.wicker), new THREE.Mesh(basketParts.rim, basketParts.rimWicker))
+  let blanket = null
+  if (covered) {
+    blanket = new THREE.Group()
+    // A pink blanket turned down at the top, over a cream pillow: someone small is asleep in there
+    blanket.add(new THREE.Mesh(basketParts.blanket, basketParts.cloth), new THREE.Mesh(basketParts.pillow, basketParts.pillowCloth), new THREE.Mesh(basketParts.fold, basketParts.pillowCloth))
+    group.add(blanket)
+  }
+  group.traverse((o) => {
+    if (o.isMesh) o.castShadow = o.receiveShadow = true
+  })
+  return { group, blanket, pop: 0 }
+}
+
 class Card {
-  /** kind: 'animal', 'sound' (plays the call, shows a loudspeaker) or 'baby'. */
-  constructor(animal, kind = 'animal') {
+  /**
+   * kind: 'animal', 'sound' (plays the call, shows a loudspeaker), 'baby' (in its basket) or
+   * 'cradle' (a baby asleep under a blanket: only its word is heard until it is matched).
+   * set: what it matches with (its animal, or in Homes the group it lives in). look: a look-alike
+   * twin's bow or hat (see LOOKS).
+   */
+  constructor(animal, kind = 'animal', set = animal, look = null) {
     this.animal = animal
     this.kind = kind
+    this.set = set
+    this.seen = false // turned up at least once this round
+    this.clues = 0 // times this clue card's word was said this round (see sayClue)
     this.state = 'down' // down | opening | open | closing | matched
     this.group = new THREE.Group()
     this.group.userData.card = this // a tap anywhere on the card, its animal or its ring finds the card
@@ -551,7 +784,9 @@ class Card {
       if (o.isMesh && o.material.name === 'card_spot') {
         this.spot = o
         this.base = o.material
-        if (kind === 'sound') {
+        // A sound card or a sleeping baby keeps a plain spot until it is matched: its colour
+        // would give the animal away.
+        if (kind === 'sound' || kind === 'cradle') {
           o.material = soundSpot ??= o.material.clone()
           soundSpot.color.set('#efe9ff')
         } else this.tint()
@@ -559,8 +794,16 @@ class Card {
     })
     this.pivot.add(mesh)
     this.critter = makeAnimal(animal)
-    if (kind === 'baby') babyfy(this.critter)
     this.critter.baseY = FACE_TOP
+    if (look) dressUp(this.critter, look)
+    if (kind === 'baby' || kind === 'cradle') {
+      babyfy(this.critter)
+      this.critter.baseY = FACE_TOP + 0.05 // sitting in the basket
+      this.basket = makeBasket(kind === 'cradle')
+      this.basket.group.position.y = FACE_TOP
+      this.basket.group.visible = false
+      this.group.add(this.basket.group)
+    }
     this.critter.holder.position.z = 0.1
     this.critter.holder.visible = false
     this.critter.pop = 0
@@ -571,6 +814,12 @@ class Card {
       this.speaker.group.visible = false
       this.group.add(this.speaker.group)
     }
+    // A clue card's clue is also written on it ("Moo!", "kit"), so it still works with the sound off
+    if (kind === 'sound' || kind === 'cradle') {
+      this.tag = makeTag(kind === 'sound' ? WORDS[animal].call : WORDS[animal].baby)
+      this.tagPop = 0
+      this.group.add(this.tag)
+    }
     this.ring = new THREE.Mesh(ringGeometry, ringMaterial)
     this.ring.rotation.x = -Math.PI / 2
     this.ring.position.y = FACE_TOP + 0.01
@@ -580,6 +829,7 @@ class Card {
     this.hoverTarget = 0
     this.lift = 0
     this.waveUntil = 0
+    this.hintUntil = 0
     this.revealed = null
   }
 
@@ -593,6 +843,7 @@ class Card {
   /** Flips the card over with a little hop, then (face up) pops the animal out. */
   flipUp() {
     this.state = 'opening'
+    this.seen = true
     sound.flip()
     this.revealed = this.reveal() // tapCard waits on this for both cards of a turn
     return this.revealed
@@ -612,21 +863,69 @@ class Card {
     sound.pop()
     effects.sparkle(this.worldTop(), { count: 10, speed: 1.4, up: 1.6, size: 0.06 })
     if (this.kind === 'sound') {
-      // Only the call: the child must remember the sound and find the animal that makes it.
+      // Only the call ("Moo!"): the child must know or remember who makes it and find that animal.
       const sp = this.speaker
       sp.group.visible = true
       this.playCall()
+      this.showTag()
       await tween(0.42, (t) => (sp.pop = ease.outBack(t)))
+    } else if (this.kind === 'cradle') {
+      // Only the word: the child must know whose baby a kitten is.
+      talk.hurry()
+      this.sayClue()
+      this.showTag()
+      await this.showBasket()
     } else {
-      callAndName(this.critter, { droppable: false })
+      callAndName(this.critter, { card: this })
+      if (this.basket) this.showBasket()
       await this.showAnimal()
     }
     if (this.state === 'opening') this.state = 'open'
   }
 
+  showBasket() {
+    const b = this.basket
+    b.group.visible = true
+    if (b.blanket) b.blanket.visible = this.state !== 'matched'
+    return tween(0.42, (t) => (b.pop = ease.outBack(t)))
+  }
+
+  /**
+   * A clue card's word ("Moo!", "Kitten!"), said first: older names waiting are dropped. Never late:
+   * it goes stale once the card turns back. Said on the first two reveals of each card in a round;
+   * after that the written tag carries it (a quick tapper is not answered with a stream of words),
+   * and tapping the open card says it again (again = true).
+   */
+  sayClue(again = false) {
+    if (!again && this.clues >= 2) return
+    const text = this.kind === 'sound' ? WORDS[this.animal].call : nameOf(this.critter)
+    if (talk.has(text)) return
+    talk.say(text, { stale: () => this.state !== 'open' && this.state !== 'opening', onStart: () => this.clues++ })
+  }
+
+  showTag() {
+    this.tag.visible = true
+    tween(0.42, (t) => (this.tagPop = ease.outBack(t)))
+  }
+
+  /** A matched cradle: the blanket slides away and the baby sits up. */
+  async wake() {
+    const blanket = this.basket.blanket
+    await tween(0.3, (t) => {
+      blanket.scale.setScalar(Math.max(0.001, 1 - ease.inCubic(t)))
+      blanket.position.y = t * 0.1
+    })
+    blanket.visible = false
+    this.tint()
+    effects.sparkle(this.worldTop(), { count: 8, speed: 1.2, up: 1.4, size: 0.06 })
+    await this.showAnimal()
+  }
+
   /** The sound card's call, with its waves pulsing while it plays. */
-  playCall() {
-    talk.call(this.animal, { onStart: () => (this.waveUntil = game.time + (VOICE_LENGTH[this.animal] ?? 0.6) + 0.2) })
+  playCall(again = false) {
+    talk.hurry() // the sound is the clue: older names (and a goal still being said) give way
+    talk.call(this.animal, { onStart: () => (this.waveUntil = game.time + (VOICE_LENGTH[this.animal] ?? 0.6) + 0.2), stale: () => this.state !== 'open' && this.state !== 'opening' })
+    this.sayClue(again)
   }
 
   async showAnimal() {
@@ -659,13 +958,18 @@ class Card {
     this.state = 'closing'
     const a = this.critter
     const sp = this.speaker
+    const b = this.basket
     a.excited = false
     await tween(fast ? 0.12 : 0.22, (t) => {
       a.pop = 1 - ease.inCubic(t)
       if (sp) sp.pop = a.pop
+      if (b) b.pop = a.pop
+      if (this.tag) this.tagPop = a.pop
     })
     a.holder.visible = false
     if (sp) sp.group.visible = false
+    if (b) b.group.visible = false
+    if (this.tag) this.tag.visible = false
     sound.flip()
     await tween(fast ? 0.28 : 0.38, (u) => {
       this.pivot.rotation.z = Math.PI * (1 - ease.inOutCubic(u))
@@ -681,6 +985,11 @@ class Card {
     tween(0.25, (t) => (this.pivot.scale.y = 1 - Math.sin(t * Math.PI) * 0.25))
   }
 
+  /** A soft hint: the card rises a little and settles again, once. */
+  hint() {
+    this.hintUntil = game.time + 1.6
+  }
+
   showRing() {
     this.ring.visible = true
     tween(0.5, (t) => this.ring.scale.setScalar(ease.outBack(t) + 0.001))
@@ -693,9 +1002,13 @@ class Card {
   update(dt, time) {
     const hoverTarget = this.state === 'down' ? this.hoverTarget : 0
     this.hover = THREE.MathUtils.damp(this.hover, hoverTarget, 14, dt)
-    this.pivot.position.y = this.lift + this.hover * 0.08
+    // A hint (see hint()) is one slow rise and settle: no glow, no flashing
+    const nudge = this.state === 'down' && time < this.hintUntil ? Math.sin(((this.hintUntil - time) / 1.6) * Math.PI) * 0.16 : 0
+    this.pivot.position.y = this.lift + this.hover * 0.08 + nudge
     if (this.critter.holder.visible) poseAnimal(this.critter, time)
     if (this.speaker?.group.visible) this.poseSpeaker(time)
+    if (this.basket?.group.visible) this.basket.group.scale.setScalar(Math.max(0.001, this.basket.pop))
+    if (this.tag?.visible) this.tag.scale.setScalar(Math.max(0.001, this.tagPop))
     if (this.ring.visible) this.ring.rotation.z += dt * 0.6
   }
 
@@ -726,7 +1039,9 @@ function chooseGrid(n, region) {
     const w = cols * CARD_W + (cols - 1) * GAP_X + 0.4
     const h = (rows * CARD_D + (rows - 1) * GAP_Z) * Math.sin(elev) + ANIMAL_H * Math.cos(elev) + 0.4
     const empty = cols * rows - n
-    const score = Math.min(aspect / w, 1 / h) * (1 - empty * 0.04)
+    // A lone card on its own last row looks left over (see rowSizes, which avoids it when it can)
+    const lone = rows > 1 && rowSizes(n, cols, rows).at(-1) === 1 ? 0.8 : 1
+    const score = Math.min(aspect / w, 1 / h) * (1 - empty * 0.04) * lone
     if (!best || score > best.score) best = { cols, rows, score }
   }
   return best
@@ -736,16 +1051,23 @@ function elevation() {
   return THREE.MathUtils.degToRad(game.state === 'menu' ? 34 : innerWidth / innerHeight < 0.8 ? 54 : 47)
 }
 
+/**
+ * Cards in each row. The gaps are shared out over the last rows (4+3+3, not 4+4+2; 3+3+2+2, not
+ * 3+3+3+1), so no card is left alone on a row; when there are too many gaps the last row is short.
+ */
+function rowSizes(n, cols, rows) {
+  const empty = cols * rows - n
+  if (empty < rows) return Array.from({ length: rows }, (_, r) => (r >= rows - empty ? cols - 1 : cols))
+  return Array.from({ length: rows }, (_, r) => (r === rows - 1 ? n - cols * (rows - 1) : cols))
+}
+
 function slots(n, cols, rows) {
   const out = []
   const pitchX = CARD_W + GAP_X
   const pitchZ = CARD_D + GAP_Z
-  for (let i = 0; i < n; i++) {
-    const r = Math.floor(i / cols)
-    const inRow = r === rows - 1 ? n - cols * (rows - 1) : cols
-    const c = i % cols
-    out.push(new THREE.Vector3((c - (inRow - 1) / 2) * pitchX, REST_Y, (r - (rows - 1) / 2) * pitchZ))
-  }
+  rowSizes(n, cols, rows).forEach((inRow, r) => {
+    for (let c = 0; c < inRow; c++) out.push(new THREE.Vector3((c - (inRow - 1) / 2) * pitchX, REST_Y, (r - (rows - 1) / 2) * pitchZ))
+  })
   return { list: out, hw: (cols * pitchX - GAP_X) / 2, hd: (rows * pitchZ - GAP_Z) / 2 }
 }
 
@@ -770,7 +1092,7 @@ function freeRegion() {
   if (!$('win').classList.contains('hidden')) {
     // Layout box, not getBoundingClientRect: the card is still scaled small by its pop-in.
     if (el.offsetLeft > w * 0.4) right = el.offsetLeft - 10
-    else bottom = el.offsetTop - 10
+    else bottom = el.offsetTop - 24
   }
   if (bottom - top < h * 0.3) {
     top = Math.min(top, h * 0.35)
@@ -897,9 +1219,15 @@ function show(screen) {
   $('win').classList.toggle('hidden', screen !== 'win')
 }
 
+/**
+ * The level Play starts: the one suggested after the last win in this mode (one step on, two after
+ * a careful board, the same size after a hard one), else the first one not yet done.
+ */
 function nextLevel() {
-  const done = doneLevels()
   const levels = levelsFor(progress.mode)
+  const suggested = progress.next[progress.mode]
+  if (Number.isInteger(suggested)) return Math.min(levels.length - 1, Math.max(0, suggested))
+  const done = doneLevels()
   const i = levels.findIndex((_, k) => !done[k])
   return i < 0 ? levels.length - 1 : i
 }
@@ -907,10 +1235,14 @@ function nextLevel() {
 function renderLevels() {
   const next = nextLevel()
   const done = doneLevels()
-  $('levels').innerHTML = levelsFor(progress.mode).map((pairs, i) => {
+  $('levels').innerHTML = levelsFor(progress.mode).map((cards, i) => {
     // A finished level gets a paw print: no grading by turns
     const row = done[i] ? '<span aria-label="Done">🐾</span>' : ''
-    return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}"><span class="num">${i + 1}</span><span class="cards"><i class="mini"></i>${pairs * 2}</span><span class="lstars">${row}</span></button>`
+    // Babies asleep in baskets (only their word is heard) from CRADLE_LEVEL on
+    // and twins with look-alikes from LOOK_LEVEL on
+    const key = goalKey(progress.mode, i)
+    const cradle = key === 'cradle' ? '<span class="cradle" aria-label="sleeping babies">🧺</span>' : key === 'looks' ? '<span class="cradle" aria-label="look-alike twins">🎀</span>' : ''
+    return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}"><span class="num">${i + 1}</span><span class="cards"><i class="mini"></i>${cards}${cradle}</span><span class="lstars">${row}</span></button>`
   }).join('')
   for (const el of document.querySelectorAll('[data-level]')) {
     el.addEventListener('click', () => {
@@ -936,15 +1268,43 @@ function chooseMode(mode) {
   save()
   renderModes()
   renderLevels()
+  relayout(true) // the hint's length changed: the toys settle clear of it again
   talk.clear()
-  talk.say(MODES[mode].goal)
+  // Just the button's word: the round says its one goal (a sleeping-baby or look-alike board has its
+  // own), so no board starts with two goals in a row.
+  talk.say(MODES[mode].word, { droppable: true })
+}
+
+/** Which goal a board has: the mode's, or the bigger boards' own (sleeping babies, look-alikes). */
+function goalKey(mode, level) {
+  if (mode === 'baby' && level >= CRADLE_LEVEL) return 'cradle'
+  if (mode === 'twins' && level >= LOOK_LEVEL) return 'looks'
+  return mode
+}
+
+/** The round's goal, said once after the menu: never again on Next or 🔁 unless the rule changes. */
+function sayGoal() {
+  const key = goalKey(game.mode, game.level)
+  if (game.goalSaid === key) return
+  game.goalSaid = key
+  // Droppable: a child already turning cards over may cut it short with a clue (see talk.hurry)
+  talk.say(LEVEL_GOALS[key] ?? MODES[key].goal, { droppable: true, goal: true })
 }
 
 function renderPairs() {
-  const pairs = LEVELS[game.level]
-  const done = game.cards.filter((c) => c.state === 'matched')
-  const found = [...new Set(done.map((c) => c.animal))]
-  $('pairs').innerHTML = Array.from({ length: pairs }, (_, i) => (found[i] ? `<span class="done">${ANIMALS[found[i]].emoji}</span>` : '<span></span>')).join('')
+  const found = [...new Set(game.cards.filter((c) => c.state === 'matched').map((c) => c.set))]
+  if (game.mode === 'groups') {
+    // Homes: every group's sign is there from the start (faded) with how many animals it holds,
+    // so the child knows what to look for; a found group lights up.
+    // Each sign can be tapped to hear its word: pre-readers learn what 🌾 means.
+    $('pairs').innerHTML = game.sets.map((id) => `<button class="group ${found.includes(id) ? 'done' : ''}" data-group="${id}" aria-label="${GROUPS[id].word}: ${game.setSize[id]}">${GROUPS[id].icon}<b>${game.setSize[id]}</b></button>`).join('')
+  } else {
+    const emoji = (set) => {
+      const card = game.cards.find((c) => c.set === set)
+      return `${ANIMALS[card.animal].emoji}${card.critter.look ? `<sup>${LOOKS[card.critter.look].icon}</sup>` : ''}`
+    }
+    $('pairs').innerHTML = game.sets.map((_, i) => (found[i] ? `<span class="done">${emoji(found[i])}</span>` : '<span></span>')).join('')
+  }
   $('level-pill').textContent = `Level ${game.level + 1}`
 }
 
@@ -996,6 +1356,7 @@ function updateMute() {
 function enterMenu() {
   resetScene()
   game.state = 'menu'
+  game.goalSaid = null // back on the menu, the next round says its goal again
   show('menu')
   renderModes()
   renderLevels()
@@ -1036,22 +1397,49 @@ function resetScene() {
 
 function startLevel(level) {
   resetScene()
-  game.level = Math.min(level, levelsFor(progress.mode).length - 1)
+  game.mode = progress.mode
+  game.level = Math.min(level, levelsFor(game.mode).length - 1)
   game.matched = 0
   game.turns = 0
+  game.slips = 0
+  game.recalled = 0 // cards found again from memory: a seen card turned over as the match
+  game.setSlips = {}
+  game.named = new Set()
+  talk.newRound()
   game.peekUsed = false
   $('peek').disabled = false
-  $('peek').setAttribute('aria-label', 'Peek at one matching pair')
+  $('peek').setAttribute('aria-label', game.mode === 'groups' ? 'Peek at two animals that live together' : 'Peek at one matching pair')
   game.idle = 0
   game.state = 'dealing'
-  game.mode = progress.mode
   show('play')
-  const pairs = LEVELS[game.level]
-  const picks = shuffle([...(game.mode === 'baby' ? WITH_BABIES : NAMES)]).slice(0, pairs)
-  // Each pair: an animal and its twin, its sound card or its baby.
-  const partner = { twins: 'animal', sound: 'sound', baby: 'baby' }[game.mode]
-  const deck = shuffle(picks.flatMap((animal) => [[animal, 'animal'], [animal, partner]]))
-  game.cards = deck.map(([animal, kind]) => new Card(animal, kind))
+  // Each card: [animal, kind, set]. A pair is an animal and its twin, its sound card or its baby.
+  let deck
+  if (game.mode === 'groups') {
+    const sizes = GROUP_LEVELS[game.level]
+    // A 4 in the level is the wild group with all four animals; the other homes are picked at random.
+    const order = Object.keys(GROUPS)
+    const allWild = sizes.includes(4)
+    const others = shuffle(order.filter((id) => !allWild || id !== 'wild')).slice(0, sizes.length - (allWild ? 1 : 0))
+    const ids = (allWild ? ['wild', ...others] : others).sort((x, y) => order.indexOf(x) - order.indexOf(y))
+    deck = ids.flatMap((id) => shuffle([...GROUPS[id].members]).slice(0, id === 'wild' && allWild ? 4 : 3).map((animal) => [animal, 'animal', id]))
+    game.sets = ids
+  } else {
+    const pool = { twins: NAMES, sound: WITH_CALLS, baby: WITH_BABIES }[game.mode]
+    const pairs = levelsFor(game.mode)[game.level] / 2
+    // Look-alike twins: some animals come twice, one pair with a bow and one with a hat
+    const doubles = game.mode === 'twins' && game.level >= LOOK_LEVEL ? game.level - LOOK_LEVEL + 1 : 0
+    const picks = shuffle([...pool].filter((n) => !doubles || n !== 'fish')).slice(0, pairs - doubles)
+    const sets = picks.flatMap((animal, i) => (i < doubles ? [[animal, 'bow'], [animal, 'hat']] : [[animal, null]]))
+    const partner = { twins: 'animal', sound: 'sound', baby: game.level >= CRADLE_LEVEL ? 'cradle' : 'baby' }[game.mode]
+    deck = sets.flatMap(([animal, look]) => {
+      const set = look ? `${animal}-${look}` : animal
+      return [[animal, 'animal', set, look], [animal, partner, set, look]]
+    })
+    game.sets = sets.map(([animal, look]) => (look ? `${animal}-${look}` : animal))
+  }
+  game.setSize = {}
+  for (const [animal, , set = animal] of deck) game.setSize[set] = (game.setSize[set] ?? 0) + 1
+  game.cards = shuffle(deck).map(([animal, kind, set, look]) => new Card(animal, kind, set, look))
   for (const card of game.cards) board.add(card.group)
   renderPairs()
   relayout(true)
@@ -1077,15 +1465,21 @@ function startLevel(level) {
   wait(0.35 + game.cards.length * 0.06 + 0.5).then(() => {
     game.state = 'play'
     banner(MODES[game.mode].banner, 1400)
-    talk.say(MODES[game.mode].goal) // pre-readers hear the goal of every round
+    sayGoal() // pre-readers hear the goal once: when the mode is chosen, or the first round after the menu
   })
 }
 
+/**
+ * A turn is a pair, or in Homes a whole group: cards keep turning up while they belong with the
+ * first one. A card that does not belong ends the turn, and they all turn back.
+ */
 async function tapCard(card) {
   if (game.state !== 'play') return
   if (card.state === 'matched' || card.state === 'open') {
-    // Matched animals love attention; an open sound card plays its sound again.
-    if (card.state === 'open' && card.kind === 'sound') card.playCall()
+    // Matched animals love attention; an open clue card says its clue again (a sleeping baby only
+    // its word: its call, or a hop under the blanket, would give it away).
+    if (card.state === 'open' && card.kind === 'sound') card.playCall(true)
+    else if (card.state === 'open' && card.kind === 'cradle') card.sayClue(true)
     else {
       hopOnce(card.critter)
       callAndName(card.critter)
@@ -1101,80 +1495,191 @@ async function tapCard(card) {
     return tapCard(card)
   }
   if (card.state !== 'down' || game.busy) return
+  talk.cutGoal() // a child already turning cards has heard enough of the goal; the card's words come next
   if (game.mismatch) closeMismatch(true)
-  if (game.open.length >= 2) return
+  const first = game.open[0] ?? card
+  // Did the child already see where a partner of the first card was? Then a miss is a slip.
+  const knew = card !== first && game.cards.some((c) => c !== card && c !== first && c.state === 'down' && c.seen && belongs(c, first))
+  const wasSeen = card.seen
   game.open.push(card)
   const revealing = card.flipUp()
-  if (game.open.length === 1) {
+  const fits = card === first || belongs(card, first)
+  if (fits && card !== first && wasSeen) game.recalled++
+  // Right outside the game too (a penguin is wild): said kindly, and never counted as a slip
+  const kindMiss = !fits && game.mode === 'groups' && overlap(first, card)
+  if (card === first && (game.setSlips[first.set] ?? 0) >= 2) {
+    // This one has been missed twice although its partner was seen: that partner rises a little.
+    for (const c of game.cards) if (c !== card && c.state === 'down' && c.seen && belongs(c, card)) c.hint()
+  }
+  if (fits && game.open.length < game.setSize[first.set]) {
     await revealing
     if (card.state === 'open') card.critter.excited = true
     return
   }
-  const [a, b] = game.open
+  const opened = [...game.open]
   game.busy = true
   game.turns++
-  await Promise.all([a.revealed, b.revealed])
+  if (!fits && knew && !kindMiss) {
+    game.slips++
+    game.setSlips[first.set] = (game.setSlips[first.set] ?? 0) + 1
+  }
+  await Promise.all(opened.map((c) => c.revealed))
   game.busy = false
   game.open = []
-  a.critter.excited = b.critter.excited = false
-  if (a.animal === b.animal) onMatch(a, b)
-  else onMismatch(a, b)
+  for (const c of opened) c.critter.excited = false
+  if (fits) onMatch(opened)
+  else onMismatch(opened, kindMiss)
 }
 
-function onMatch(a, b) {
-  a.state = b.state = 'matched'
+/** Homes: does the odd card (or the first) also really fit the other's home? Returns who and how. */
+function overlap(first, odd) {
+  if (ALSO[odd.animal]?.home === first.set) return { animal: odd.animal, ...ALSO[odd.animal] }
+  if (ALSO[first.animal]?.home === odd.set) return { animal: first.animal, ...ALSO[first.animal] }
+  return null
+}
+
+/**
+ * Does card go with first? The same set (a pair, or in Homes a group), except a sleeping baby: it
+ * goes with any parent whose baby has its word (a cub is a lion's or a panda's), never with a baby.
+ */
+function belongs(card, first) {
+  if (card.kind === 'cradle' || first.kind === 'cradle') return card.kind !== first.kind && WORDS[card.animal].baby === WORDS[first.animal].baby
+  return card.set === first.set
+}
+
+/**
+ * A sleeping baby matched with a parent that shares its word but not its animal (a "calf" card
+ * given to the elephant, though it was dealt as the cow's): it swaps with the elephant's own
+ * sleeping calf, which nobody has seen, so the baby that wakes up is the elephant's.
+ */
+function settleCradle(cards) {
+  const cradle = cards.find((c) => c.kind === 'cradle')
+  const parent = cards.find((c) => c !== cradle)
+  if (!cradle || cradle.set === parent.set) return
+  const other = game.cards.find((c) => c.kind === 'cradle' && c.set === parent.set)
+  for (const key of ['animal', 'set', 'critter']) [cradle[key], other[key]] = [other[key], cradle[key]]
+  for (const c of [cradle, other]) {
+    c.group.add(c.critter.holder)
+    c.critter.yaw = Math.atan2(-c.slot.x, 9) * 0.8
+  }
+}
+
+function onMatch(cards) {
+  settleCradle(cards)
+  const [a] = cards
+  for (const card of cards) card.state = 'matched'
   game.matched++
   sound.match()
-  // Name what was learned: "Two cows!", "The cow moos!", "A cow's baby is a calf!"
-  talk.say(MATCH_WORDS[game.mode](a.animal))
-  for (const card of [a, b]) {
+  // Name what was learned: "Two cows!", "The cow moos!", "A cow's baby is a calf!",
+  // "Cow, pig and chick live on the farm!" Older names still waiting go stale (see callAndName).
+  talk.say(game.mode === 'groups' ? MATCH_WORDS.groups(a.set, cards.map((c) => c.animal)) : MATCH_WORDS[game.mode](a.animal, a.critter.look))
+  learn(cards)
+  for (const card of cards) {
     if (card.kind === 'sound') card.becomeAnimal().then(() => dance(card.critter, { dur: 1.0, hops: 2, height: 0.35 }))
+    else if (card.kind === 'cradle') card.wake().then(() => dance(card.critter, { dur: 1.0, hops: 2, height: 0.3 }))
     else dance(card.critter, { delay: 0.05 })
     card.showRing()
     effects.sparkle(card.worldTop(), { count: 8, speed: 1.2, up: 1.2 })
   }
   // The pair joins the row of found animals at the top (no praise banner).
   renderPairs()
-  if (game.matched === LEVELS[game.level]) {
-    // The party waits until the last pair has been named.
+  if (game.matched === game.sets.length) {
+    // The party waits until the last pair has been named (that line teaches the last set; the
+    // long cap is only for a voice that never says it has finished).
     const round = game.round
-    Promise.all([wait(1.1), Promise.race([talk.idle(), wait(4)])]).then(() => round === game.round && winLevel())
+    Promise.all([wait(1.1), Promise.race([talk.idle(), wait(20)])]).then(() => round === game.round && winLevel())
   }
 }
 
-function onMismatch(a, b) {
+/** The animal book remembers what each match taught: met, its call, its baby, its home. */
+function learn(cards) {
+  const fact = { sound: 'call', baby: 'baby', groups: 'home' }[game.mode]
+  for (const { animal } of cards) {
+    const page = (progress.book[animal] ??= {})
+    page.met = 1
+    if (fact) page[fact] = 1
+  }
+  save()
+}
+
+function onMismatch(cards, kind = null) {
   sound.miss()
-  for (const card of [a, b]) {
+  for (const card of cards) {
     const c = card.critter
+    // A kind miss (the child was right, the game sorts it elsewhere) nods instead of shaking its head
     tween(0.7, (t) => {
-      c.shake = Math.sin(t * Math.PI * 4) * 0.45 * (1 - t)
+      if (kind) c.nod = Math.sin(t * Math.PI * 2) * 0.2 * (1 - t)
+      else c.shake = Math.sin(t * Math.PI * 4) * 0.45 * (1 - t)
       c.tilt = Math.sin(t * Math.PI) * 0.15
-      if (t >= 1) c.shake = c.tilt = 0
+      if (t >= 1) c.shake = c.tilt = c.nod = 0
     })
   }
-  game.mismatch = { a, b }
+  if (game.mode === 'groups') {
+    if (kind) {
+      // "A penguin is wild too! In this game, it goes with the water animals."
+      talk.sayOnce(`${an(kind.animal)} ${kind.animal} ${kind.line}! In this game, it goes with the ${GROUPS[GROUP_OF[kind.animal]].word}.`)
+    } else {
+      // The one that did not belong says where it lives, once a round: "A dog is a pet."
+      const odd = cards.at(-1).animal
+      talk.sayOnce(`${an(odd)} ${odd} ${LIVES[odd] ?? GROUPS[GROUP_OF[odd]].is}.`)
+    }
+  } else if (game.mode === 'twins' && cards[0].animal === cards[1].animal) {
+    // Look-alikes: the same animal, but not the same twin
+    talk.sayOnce(`Look closely! One ${cards[0].animal} has ${LOOKS.bow.a}, and one has ${LOOKS.hat.a}.`)
+  } else {
+    // A sleeping baby that was missed says whose baby it is, once a round: "A cub is a lion's or a
+    // panda's baby." Only the parents on this board are named.
+    const cradle = cards.find((c) => c.kind === 'cradle')
+    if (cradle) {
+      const word = WORDS[cradle.animal].baby
+      const parents = [...new Set(game.cards.filter((c) => c.kind === 'animal' && WORDS[c.animal].baby === word).map((c) => c.animal))]
+      // Droppable: the next sleeping baby's word (the clue) may cut it short
+      talk.sayOnce(`${an(word)} ${word} is ${orWords.format(parents.map((p) => `${an(p).toLowerCase()} ${p}’s`))} baby.`, { droppable: true })
+    }
+  }
+  game.mismatch = { cards }
   // The cards stay open until their names (or sounds) have been heard, then turn back over.
+  // Big boards need less time to look: the names were already said the first time.
   const round = game.round
-  Promise.all([wait(1.25), Promise.race([talk.idle(), wait(4)])]).then(() => {
-    if (round === game.round && game.mismatch?.a === a) closeMismatch(false)
+  const look = game.cards.length >= 12 ? 0.8 : 1.25
+  Promise.all([wait(look), Promise.race([talk.idle(), wait(4)])]).then(() => {
+    if (round === game.round && game.mismatch?.cards === cards) closeMismatch(false)
   })
 }
 
 function closeMismatch(fast) {
-  const { a, b } = game.mismatch
+  const { cards } = game.mismatch
   game.mismatch = null
-  for (const card of [a, b]) {
+  for (const card of cards) {
     card.critter.shake = card.critter.tilt = 0
     card.close(fast)
   }
 }
 
+/**
+ * The board that comes next adapts to how this one went, without locking anything (every level
+ * stays on the menu): a careful board (hardly a slip) steps up two sizes, a hard one (many slips)
+ * stays the same size with new animals, anything else steps up one.
+ */
+function adaptNext() {
+  const last = levelsFor(game.mode).length - 1
+  // Careful means remembering, not luck: few slips, and some cards found again from memory (a
+  // small board matched first time by chance has no memory in it, so it only steps up one).
+  const careful = game.slips <= Math.max(1, Math.floor(game.sets.length / 4)) && game.recalled >= Math.max(1, Math.ceil(game.sets.length / 3))
+  const hard = game.slips >= Math.ceil(game.sets.length / 2) + 1
+  const step = hard ? 0 : careful && game.level >= 1 ? 2 : 1
+  const next = Math.min(last, game.level + step)
+  progress.next[game.mode] = next
+  return { next, step: next - game.level, hard }
+}
+
 function winLevel() {
   game.state = 'won'
-  const pairs = LEVELS[game.level]
+  const sets = game.sets.length
   // A finished level is remembered as done (1). Saves from before the calm pass may hold 2 or 3.
   const done = doneLevels()
   done[game.level] = Math.max(done[game.level] ?? 0, 1)
+  const { next, step, hard } = adaptNext()
   save()
 
   // One soft moment: a gentle chord, a few slow pieces drifting down, then each
@@ -1182,11 +1687,12 @@ function winLevel() {
   sound.fanfare()
   const { hw, hd } = game.layout
   effects.rain(new THREE.Vector3(0, 0, 0), hw + 0.6, hd + 0.6, 24)
+  const byPlace = [...game.cards].sort((a, b) => a.slot.z - b.slot.z || a.slot.x - b.slot.x)
+  // Homes: group by group, so the farm animals call together, then the pets…
+  if (game.mode === 'groups') byPlace.sort((a, b) => game.sets.indexOf(a.set) - game.sets.indexOf(b.set))
   const found = []
-  for (const card of [...game.cards].sort((a, b) => a.slot.z - b.slot.z || a.slot.x - b.slot.x)) {
-    if (!found.includes(card.animal)) found.push(card.animal)
-  }
-  talk.clear()
+  for (const card of byPlace) if (!found.includes(card.animal)) found.push(card.animal)
+  talk.trim() // only what is droppable: a match line still waiting is heard
   const round = game.round
   found.forEach((animal, i) => {
     const delay = 0.6 + i * WIN_CALL_GAP
@@ -1194,12 +1700,14 @@ function winLevel() {
     // Waited on the game clock (not booked ahead on the AudioContext), so leaving strands it
     wait(delay).then(() => round === game.round && sound.voice(animal))
   })
-  // After the last hello, name everything that was found.
-  // Only this mode's line: animals without a baby word never reach a Babies board
+  // After the last hello, name what was found: the animals on a small board, just the line on a
+  // big one (every name was already said while playing).
+  const names = (list) => (list.length <= 4 ? `${cap(listWords.format(list))}. ` : '')
   const recap = {
-    twins: () => `${cap(listWords.format(found))}. You found all the twins!`,
-    sound: () => `${cap(listWords.format(found))}. You know all their sounds!`,
-    baby: () => `${cap(listWords.format(found.map((name) => WORDS[name].baby)))}. You found every baby!`,
+    twins: () => `${names(found)}You found all the twins!`,
+    sound: () => `${names(found)}You know all their sounds!`,
+    baby: () => `${names(found.map((name) => WORDS[name].baby))}You found every baby!`,
+    groups: () => `${cap(listWords.format(game.sets.map((id) => GROUPS[id].word)))}. You know who lives together!`,
   }[game.mode]()
   wait(0.6 + found.length * WIN_CALL_GAP + 0.5).then(() => talk.say(recap))
 
@@ -1207,28 +1715,50 @@ function winLevel() {
     const last = game.level === levelsFor(game.mode).length - 1
     $('win-title').textContent = 'You found them all!'
     $('win-text').textContent = {
-      twins: `${pairs} pairs of animal twins`,
-      sound: `${pairs} animals and their sounds`,
-      baby: `${pairs} animals and their babies`,
+      twins: `${sets} pairs of animal twins`,
+      sound: `${sets} animals and their sounds`,
+      baby: `${sets} animals and their babies`,
+      groups: `${sets} groups that live together`,
     }[game.mode]
+    // What comes next, and why: a quiet line, never a grade.
+    $('win-next').textContent = last
+      ? ''
+      : step >= 2
+        ? 'You remembered where they were! Next is a bigger board.'
+        : hard
+          ? 'Next: the same size, with new animals.'
+          : ''
     $('next').classList.toggle('hidden', last)
-    // Show what the child found: the animals, in the order they say hello
-    // Each one can be tapped to hear it again.
-    $('win-stars').replaceChildren(...found.map((animal, i) => {
+    $('next').dataset.level = next
+    // Show what the child found, in the order they say hello. Each can be tapped to hear it again.
+    const entries = game.mode === 'groups'
+      ? game.sets.map((id) => ({ animals: found.filter((n) => GROUP_OF[n] === id), html: `<i>${GROUPS[id].icon}</i>${found.filter((n) => GROUP_OF[n] === id).map((n) => ANIMALS[n].emoji).join('')}`, label: GROUPS[id].word, line: () => MATCH_WORDS.groups(id, found.filter((n) => GROUP_OF[n] === id)) }))
+      : [...new Set(byPlace.map((c) => c.set))].map((set) => {
+          const { animal, critter: { look } } = game.cards.find((c) => c.set === set)
+          return {
+            animals: [animal],
+            look,
+            html: game.mode === 'baby' ? `${ANIMALS[animal].emoji}<small>${ANIMALS[animal].emoji}</small>` : `${ANIMALS[animal].emoji}${look ? `<sup>${LOOKS[look].icon}</sup>` : ''}`,
+            label: game.mode === 'baby' ? `${animal} and ${WORDS[animal].baby}` : look ? `${animal} with ${LOOKS[look].a}` : animal,
+            line: () => (game.mode === 'baby' ? MATCH_WORDS.baby(animal) : `${cap(animal)}${look ? ` with ${LOOKS[look].a}` : ''}!`),
+          }
+        })
+    $('win-stars').classList.toggle('grouped', game.mode === 'groups')
+    $('win-stars').replaceChildren(...entries.map((entry) => {
       const el = document.createElement('button')
-      const emoji = ANIMALS[animal].emoji
       el.className = 'found'
-      el.innerHTML = game.mode === 'baby' ? `${emoji}<small>${emoji}</small>` : emoji
-      el.setAttribute('aria-label', game.mode === 'baby' ? `${animal} and ${WORDS[animal].baby}` : animal)
-      el.style.animationDelay = `${(0.6 + i * WIN_CALL_GAP - 1.6).toFixed(2)}s`
+      el.innerHTML = entry.html
+      el.setAttribute('aria-label', entry.label)
+      // Fades in as its first animal says hello
+      el.style.animationDelay = `${(0.6 + found.indexOf(entry.animals[0]) * WIN_CALL_GAP - 1.6).toFixed(2)}s`
       el.addEventListener('click', () => {
-        for (const card of game.cards) if (card.animal === animal) hopOnce(card.critter, 0.35)
-        talk.call(animal, { droppable: true })
-        talk.say(game.mode === 'baby' ? MATCH_WORDS.baby(animal) : `${cap(animal)}!`, { droppable: true })
+        for (const card of game.cards) if (entry.animals.includes(card.animal) && (card.critter.look ?? null) === (entry.look ?? null)) hopOnce(card.critter, 0.35)
+        if (entry.animals.length === 1) talk.call(entry.animals[0], { droppable: true })
+        talk.say(entry.line(), { droppable: true })
       })
       return el
     }))
-    $('win-stars').setAttribute('aria-label', found.join(', '))
+    $('win-stars').setAttribute('aria-label', entries.map((e) => e.label).join(', '))
     show('win')
     relayout(true) // the camera pulls back so the animals stay in view above the card
   })
@@ -1404,8 +1934,74 @@ $('again').addEventListener('click', () => {
 })
 $('next').addEventListener('click', () => {
   sound.tap()
-  startLevel(Math.min(levelsFor(game.mode).length - 1, game.level + 1))
+  // The board winLevel chose from how this one went (see adaptNext)
+  startLevel(Number($('next').dataset.level ?? game.level + 1))
 })
+// Homes: a tapped sign says its word ("Water animals: 3"), or once found, who lives there.
+$('pairs').addEventListener('click', (e) => {
+  const id = e.target.closest('[data-group]')?.dataset.group
+  if (!id || (game.state !== 'play' && game.state !== 'dealing')) return
+  const home = game.cards.filter((c) => c.set === id && c.state === 'matched').map((c) => c.animal)
+  const line = home.length ? MATCH_WORDS.groups(id, home) : `${cap(GROUPS[id].word)}: ${game.setSize[id]}`
+  if (!talk.has(line)) talk.say(line, { droppable: true })
+})
+// --- The animal book -------------------------------------------------------------------------------
+
+/** What the book says about an animal: only what the child has found out. */
+function pageWords(name) {
+  const page = progress.book[name] ?? {}
+  const w = WORDS[name]
+  return [
+    `${cap(name)}!`,
+    page.call && w.call ? `It says ${w.call}` : '',
+    page.baby && w.baby ? `Its baby is ${an(w.baby).toLowerCase()} ${w.baby}.` : '',
+    page.home ? `It ${LIVES[name] ?? GROUPS[GROUP_OF[name]].is}.` : '',
+  ].filter(Boolean).join(' ')
+}
+
+/**
+ * A page for every animal. A page fills in as the child finds the animal (any mode), its call
+ * (Sounds), its baby (Babies) and its home (Homes); the dashed spaces show what is still to find.
+ */
+function openBook() {
+  $('book-grid').replaceChildren(...NAMES.map((name) => {
+    const page = progress.book[name] ?? {}
+    const w = WORDS[name]
+    const fact = (known, icon, text) => (known ? `<span>${icon} ${text}</span>` : `<span class="todo">${icon} ?</span>`)
+    const el = document.createElement('button')
+    el.className = `page ${page.met ? '' : 'unmet'}`
+    el.innerHTML = `<span class="face">${ANIMALS[name].emoji}</span><span class="name">${page.met ? cap(name) : '?'}</span><span class="facts">${[
+      w.call ? fact(page.call, '🔊', w.call.replace(/!$/, '')) : '',
+      w.baby ? fact(page.baby, '🍼', w.baby) : '',
+      fact(page.home, GROUPS[GROUP_OF[name]].icon, { farm: 'farm', pets: 'home', wild: 'wild', water: 'water' }[GROUP_OF[name]]),
+    ].join('')}</span>`
+    el.setAttribute('aria-label', page.met ? pageWords(name) : 'Not found yet')
+    el.addEventListener('click', () => {
+      sound.tap()
+      if (!page.met) return
+      talk.clear()
+      talk.call(name, { droppable: true })
+      talk.say(pageWords(name), { droppable: true })
+    })
+    return el
+  }))
+  $('book-page').classList.remove('hidden')
+}
+
+function closeBook() {
+  talk.clear()
+  $('book-page').classList.add('hidden')
+}
+
+$('book').addEventListener('click', () => {
+  sound.tap()
+  openBook()
+})
+$('book-close').addEventListener('click', () => {
+  sound.tap()
+  closeBook()
+})
+
 for (const el of document.querySelectorAll('[data-mode]')) {
   el.addEventListener('click', () => {
     sound.tap()
@@ -1421,6 +2017,10 @@ $('mute').addEventListener('click', () => {
   save()
 })
 addEventListener('keydown', (e) => {
+  if (!$('book-page').classList.contains('hidden')) {
+    if (e.key === 'Escape') closeBook()
+    return
+  }
   if (e.key === 'Enter' && game.state === 'menu') startLevel(nextLevel())
   else if (e.key === 'Escape' && game.state !== 'menu' && game.state !== 'loading') enterMenu()
 })
@@ -1495,22 +2095,24 @@ addEventListener('pagehide', stopPeekSpeech)
 // One demonstration per round supports memory without solving the whole board.
 $('peek').onclick = async () => {
   if (game.state !== 'play' || game.busy || game.open.length || game.peekUsed) return
-  const first = game.cards.find((card) => card.state === 'down')
-  const second = first && game.cards.find((card) => card !== first && card.state === 'down' && card.animal === first.animal)
-  if (!second) return
+  // A pair (or in Homes a group) whose cards are all face down
+  const first = game.cards.find((card) => card.state === 'down' && game.cards.every((c) => c.set !== card.set || c.state === 'down'))
+  if (!first) return
+  // Two cards: the whole pair, or two of a group (the rest of the group is still to find)
+  const shown = game.cards.filter((c) => c.set === first.set).slice(0, 2)
   game.peekUsed = true
   $('peek').disabled = true
-  $('peek').setAttribute('aria-label', 'Pair peek used for this round')
+  $('peek').setAttribute('aria-label', 'Peek used for this round')
   game.busy = true
   const round = game.round
   talk.clear()
-  const revealing = Promise.all([first.flipUp(), second.flipUp()])
-  talk.say('These two match. Remember where they are.')
+  const revealing = Promise.all(shown.map((card) => card.flipUp()))
+  talk.say(game.mode === 'groups' ? 'These two live together. Remember where they are.' : 'These two match. Remember where they are.')
   await revealing
-  banner(game.mode === 'twins' ? 'Look! Twins!' : 'Look! A pair!', 2200, [first, second])
+  banner(game.mode === 'twins' ? 'Look! Twins!' : game.mode === 'groups' ? `Look! ${cap(GROUPS[first.set].word)}!` : 'Look! A pair!', 2200, shown)
   await Promise.all([wait(2.4), Promise.race([talk.idle(), wait(6)])])
   if (game.state !== 'play' || round !== game.round) return
-  await Promise.all([first.close(), second.close()])
+  await Promise.all(shown.map((card) => card.close()))
   game.busy = false
 }
-if (new URLSearchParams(location.search).has('debug')) window.__memory = { game, camera, talk, chooseMode }
+if (new URLSearchParams(location.search).has('debug')) window.__memory = { game, camera, talk, chooseMode, belongs }

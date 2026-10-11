@@ -125,3 +125,297 @@ Quality cleanup only; play is unchanged.
 ### Exit paths (2026-10-09)
 
 `stopRound()` is the one exit cleanup: it calls `voice.hush()` and `clearTimers()`, which also clears the results line booked at 900 ms. So 🏠, the results "change" button, the host's `menu` message and 🔁 / the next round (`startRound` → `stopRound`) all go quiet. `goHome` no longer hushes on its own. Checked: `browser.mjs --run exits-fmp` Chromium and WebKit 0 errors, `original-quality.mjs` pass, and a speech-stubbed run (change, 🔁 and 🏠 before the 900 ms results line: hushed, results line never spoken, right state, no console errors) in both engines.
+
+## Round 1 of the 8.5 pass: paint requests (2026-10-11)
+
+Starting point: the 2026-10-10 re-audit (6.5). The game was calm but passive: robots made the mixes and the game announced them, nothing asked for a colour, and all three secondaries were found in about 25 s with no step up. Portrait left the bottom 35–40% as empty ground.
+
+### Design
+
+- **Paint requests are the core decision.** In the no-clock round the host chalks a dashed shape on the ground near the child, drawn in the colour it wants: "Paint the fish green!" The pots still hold only red, yellow and blue, so the child must choose the right two paints and roll the second over the first while it is still wet and shiny. A card under the bar shows the shape, the wanted colour and the recipe (● + ●). Tapping the card says the request again.
+- **Mistakes matter, gently.** A part is painted once 60% of it is the wanted colour. Paint that can't become that colour (red in a green fish, or wet orange plus blue making brown) blocks this until it dries and is painted over. The game says once what happened and the recipe: "That's orange. Yellow and blue make green." Once a round it adds "Let it dry, then roll over it." In a scripted test, careful rows finished each shape in 7–15 s. Random pots over the same shape reached only 6% after 28 s, with 84% of it the wrong colour.
+- **Painted shapes become the picture.** At 60%, a part is tidied inside its lines (washed, then filled with exactly that colour at one game time, so every device agrees). It is then **kept**: later rolling can't spoil it. Its outline turns to dark ink. The finished picture is a page of coloured-in shapes, and the gallery keeps it. A shape still waiting when the round ends is removed. The results show each painted shape (🐟 ●), then the colours found. The spoken ending names the shapes: "We painted a purple fish, an orange heart, a green and brown tree and a green leaf!"
+- **The steps adapt and are never a gate.**
+  - Tier 0 pictures and says the recipe.
+  - Tier 1 hides it as ❓ + ❓. It is shown after a slip, or after 35 s with no progress.
+  - Tier 2 adds two-part shapes with brown: a tree (green leaves and a brown trunk), a flower (petals and a green stem), a carrot (an orange root and green leaves). Painting one part spills onto the other while it is wet, so a careful child finishes one part (it is then kept), lets it dry, and paints the other.
+  - A shape finished with no slip and no tip adds 0.5 to the skill. A slip takes away 0.5. The skill is kept between visits (`paint-splash-skill`), so a 7-year-old starts at tier 2 next time.
+  - A "Roll blue over the shiny yellow!" tip comes when one recipe paint has sat on the shape for 14 s with nothing mixing.
+- **Only the child's own roller names a mix.** Discoveries count only cells changed by this device's child (`PaintMap.mineCounts`). A friend's discoveries reach the host with the end-of-round stats. Robots now paint bare ground only. They keep off every shape and stay more than 5 m from a child, giving children a wider berth than other robots. The bucket never spawns within 6 m of a shape.
+- **Less voice.** Each pot says its name once a round (`voice.sayOnce`). A recipe is said once a round. The old opening instruction is gone: the first request carries it. A careful 70–80 s round with four shapes spoke 18 lines, against 45–66 in the worst trips of the re-audit.
+- **Portrait framing.** The follow camera works out where the bottom screen edge meets the ground. It keeps the near edge of the playground (with its flower beds) at the bottom of the screen, so tall screens show more picture and no bare cobbles.
+- The "nearly all painted" question now comes at 80% (was 85%). Shapes and the space around the child are kept free of robots, so coverage now levels off near 84%.
+
+### Changes (file:line)
+
+| Where | What |
+| --- | --- |
+| `public/js/jobs.js` (new) | `SHAPES` (:30, eight shapes, three with two parts), `chooseJob(tier)` :76, `fits` :106, `Job` :114 (cells, `check` :164, `fill` :201 keeps a painted part, dashed or ink `ribbon` :227) |
+| `public/js/paint.js:75,136` | `locked`: a painted part ignores later paint (order-independent: writes after the lock time are skipped) |
+| `public/js/paint.js:85,172` | `mineCounts`/`mine`/`who`: cells each colour gained from this child's roller |
+| `public/js/bot.js:85-90,119` | Robots skip shapes and a child's surroundings, paint bare ground only, and steer round shapes |
+| `public/js/main.js:56` | `TOP_TIER`, `HELP_MS`, `WET_TIP_MS`; `game.skill` from storage |
+| `public/js/main.js:1430-1590` | `nextJob` (host, near the child and on screen), `onJob` (guests, `job` message), `addJob`, `renderJob`, `checkJob` (slips, tips, skill), `partPainted`, `finishJob` |
+| `public/js/main.js:429` | Pot names said once a round |
+| `public/js/main.js:810,1154,1161,1378` | Only the child's own strokes and splats name mixes |
+| `public/js/main.js:677,931` | A guest's found colours join the host's results |
+| `public/js/main.js:901` | An unfinished shape is removed before the reveal |
+| `public/js/main.js:981` | Results line names the painted shapes; results show shape chips (`.found.many` shrinks them when there are many) |
+| `public/js/main.js:1288` | Portrait camera clamp |
+| `public/index.html:67-68`, `public/style.css:113` | `#job` request card; `#mix-note` now flows under it in `.hud-top` (no fixed offsets per layout) |
+| `game.json` | `howToPlay` and `learning` describe requests and tiers (`public/bitgames.json` is stale until the coordinator rebuilds) |
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/paint-splash/`. Speech was stubbed and every line logged.
+
+- `full.mjs`, a careful round from menu to results, had 0 console errors in each of these runs:
+  - Chromium 834×1194 at tier 0 and 1194×834 at tier 1.
+  - 375×667 and 667×375 at tiers 2 and 0.
+  - WebKit 834×1194.
+
+  See `r1/portrait-3-later.png` (inked heart, star and leaf; the tier 1 card shows ❓ + ❓), `r1/portrait-4-results.png` and `r1/landscape-4-results.png`. Compare `before/portrait-3b-note.png`, which shows the empty bottom, with `r1/portrait-1-job.png`.
+- `play.mjs 834 1194 tier2 2`: a tree went green and brown. In an earlier version, a carrot's leaves turned brown when the root was painted wet beside them. That led to the bigger two-part shapes with a gap between parts, and to keeping each part once it is painted.
+- `careless.mjs`: random pots over the shape leave it unfinished (above).
+- `duo.mjs` uses two iframes and real WebRTC:
+  - calm: the host painted the star and the guest's star was inked too. Both lists show `[["star",5]]` and the picture hashes match (`-123248695`).
+  - timed: the hashes match.
+- `ask.mjs`: on autopilot, coverage levels off near 84–85%, which is why the threshold is now 80%.
+- `gal.mjs`: the gallery keeps 3 pictures, a tap on the card repeats the request, and 🏠 clears the shapes.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids paint-splash --run paint-splash-r1`: BOOT + PLAY ready, 0 errors (Chromium, and WebKit as `paint-splash-r1-wk`). `node --check` passes on every edited JS file.
+
+### Remaining ideas
+
+- An older ladder within mixing: ratios (more yellow = yellow-orange) and tints (a white pot). Both need more paint bits in `PaintMap` and new colours in `colour-model.js`.
+- Guests' devices show the request but don't run the tips or adapt; only the host's child sets the tier.
+- The leaf outline is a plain lens; a midrib line would read better.
+- Needs real children: is a 60% fill the right bar for 3-year-olds on a touch stick, and is the 8 s wet window long enough?
+
+## Round 2 of the 8.5 pass: honest slips, a page that lasts, rescue and a rule tier (2026-10-11)
+
+Starting point: independent review 1 of round 1 scored 7.2 (calm 8, focus 7.5, learning 7.5, fun/depth 6.5, visual 7.5, voice 7, polish 6.8). It found three blockers. Careful play on two-part shapes was marked as a slip. The robots filled the ground, so requests stopped after 4–5 shapes. There was nothing below tier 0 and nothing above tier 2.
+
+### Design
+
+- **Slips are honest.** Only the part being painted can slip. That is the unfinished part with the most of its own paint on it, so a carrot root spilling over the gap into its leaves is no longer a mistake. A cell counts as a slip only when the paint that spoils it was laid since the part opened. When a part is finished, the other parts open afresh from that moment, so earlier spill is not held against them. When a shape is chalked, the ground under it is washed clean at the same game time on every device, so leftover trails and robot paint can't spoil it or stall it at 59%. A part at 45%+ that stops growing for 8 s with nothing wrong on it counts as painted, which covers hard-to-reach tips.
+- **A page with a frame.** With no clock the playground is a colouring page. The robots paint only a 2.6 m frame round the edge: they roll across the page with the roller lifted. They also leave the bucket to the child, and the bucket now waits in the frame. A finished shape gets ink lines, and the spill just round it is washed away. At the reveal, paint outside the shapes inside the page softens halfway toward the ground. Only the colour shown changes, so picture hashes are unaffected. The kept picture is now bright inked shapes on a pastel page in a bright frame.
+- **Requests never run out.** The page fits about 10 shapes: 4–6 full size, then smaller ones (scale 1 → 0.8 → 0.65 → 0.55) in the gaps. When no shape fits, the host asks once: "Your page is full! Is your picture finished?" ✅ ends the round. 🖌️ files the whole page in My pictures (a top-down snapshot) and washes it for a fresh page on every device, and requests carry on. The coverage-based "nearly all painted" question is gone from the calm round, so there are no double asks. The coverage bar shows only in the quick round.
+- **A rescue below tier 0.** If nothing right has gone on the shape for 20 s (or after two slips), a soft dashed ring appears round the pot to use next. It is still, with no pulse, and it moves to the second paint once the first is on. The game says once: "Try the yellow pot." At 45 s a still picture appears on the shape: one nearly solid stripe of each paint, crossing, with the mix where they meet (three stripes for brown). The game says: "Look: yellow, then blue on top while it shines." Progress is timed for the whole shape, so painting part one doesn't count as being stuck on part two. A rescue counts as help, so the skill does not rise. At skill below 0.5, shapes are 85% size.
+- **Tier 3 for ages 6–8: rules with more than one answer.** About 45% of top-tier requests are rules on one-part shapes:
+  - "Paint the heart a colour with blue in it!": green or purple, and the child chooses.
+  - "Paint the star a mixed colour with no blue!": only orange, worked out by elimination.
+
+  The card shows 🦋 ❓ and the rule in pictures: ● + ❓, or a paint with a line through it. The chalk is drawn in the named paint, or in grey for a "no" rule. A slip names why: "That's orange. It has no blue in it." The shape is filled and listed in the colour the child chose (`Job.chosen`), and devices sync it as `mix`. At tier 3 a slip on a named colour says "That's orange, not green." and never shows the recipe. Tier 2 is now mostly two-part shapes.
+- **More shapes, less repetition.** There are now 14 shapes: 8 one-part (adding sun, apple and butterfly) and 6 two-part (adding mushroom, boat and ice cream). Thin ink details help shapes read: a fish eye, a leaf midrib, an apple stalk, a butterfly body and antennae. `chooseJob` gets the round's history. It skips the last 3 shapes and any (shape, colours) pair already asked this round, and changes the colour from the last request.
+- **Less voice.**
+  - A painted shape gets a chime and its ink lines, with no spoken name; names wait for the ending, and more than 4 shapes are counted: "We painted 7 shapes, in green, orange, brown and purple!"
+  - Mixes found while a request is active are added silently to the row of dabs.
+  - Pot names are said only in the first round of a visit.
+  - Careful scripted play spoke 6.0–7.3 lines a minute, mostly one request line per shape at a scripted pace of 7–30 s per shape. That was 13 lines in 130 s at tier 2→3. Round 1 was 18–26.
+- The quick ⏱️ round is unchanged but labelled as free painting ("A quick free paint, with a clock."), so it no longer looks like it is missing the requests.
+
+### Changes (file:line)
+
+| Where | What |
+| --- | --- |
+| `public/js/jobs.js:30-87` | 14 shapes, `deco` ink details, `SINGLE`/`DOUBLE`/`RULED` |
+| `public/js/jobs.js:106`, `:118` | `ruleColours`; `chooseJob(tier, history)` with rules at tier 3 and no repeats |
+| `public/js/jobs.js:160` | `fits` takes a scale and a page edge; gap between shapes 0.3 m |
+| `public/js/jobs.js:192` | The ground under a new shape is washed at `t0` |
+| `public/js/jobs.js:243` | `check`: slips only on the active part, judged on the offending paint's own time, against `part.t0` |
+| `public/js/jobs.js:286-330` | `chosen` (rule colour), `fill` (re-opens the other parts, tidies when the shape is done), `tidy`, `ghost` |
+| `public/js/paint.js:243` | `soften(keep)`: display-only fade of non-shape paint |
+| `public/js/bot.js:24`, `:64`, `:91`, `:128` | Frame mode: goals along the edge, no swirls, narrow wall margin |
+| `public/js/main.js:55-76` | `TOP_TIER` 3, `RESCUE_MS`, `GHOST_MS`, `STALL_*`, `FRAME`/`inFrame`, `potsNamed` |
+| `public/js/main.js:385` | 🖌️ on a full page turns to a fresh page |
+| `public/js/main.js:854`, `:1786` | Coverage bar and coverage ask only in the quick round |
+| `public/js/main.js:1087` | Calm bucket spawns in the frame |
+| `public/js/main.js:1230`, `:1248` | Robots paint only in the frame; no pickups for calm robots |
+| `public/js/main.js:1424` | Calm discoveries are silent |
+| `public/js/main.js:1484-1560` | `nextJob` (scales, page full), `onJob` (rules, `mix`, `page`), `addJob` |
+| `public/js/main.js:1563-1610` | Rule card, `nextPaint`, `suggestPot` |
+| `public/js/main.js:1609-1690` | `checkJob`: rule and tier-3 slip lines, job-level progress, rescue ring and ghost, stall finish |
+| `public/js/main.js:1696-1750` | `finishJob` (chime only), `freshPage`/`turnPage`, `softenPage`, `keepWholePage` |
+| `public/js/main.js:1013` | Long shape lists are counted with their colours |
+| `public/js/main.js:1856` | Debug `chalk()` for tests |
+| `public/style.css` | `.pot.suggest` (still dashed ring), rule card `.q.big`, `.no` |
+| `public/index.html`, `game.json` | Quick round labelled free painting; `howToPlay`/`learning` describe the frame, rescue, fresh page and rules (`public/bitgames.json` stale until the coordinator rebuilds) |
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/paint-splash/` (`r2/`). Speech was stubbed and logged. Every run had 0 console or page errors.
+
+- `careful2.mjs`, careful rows with drying between parts:
+  - Portrait tier 0: 7 shapes and 0 slips. The skill climbed 0 → 3 and the recipe hid from shape 2.
+  - Landscape tier 2: 7 shapes, including the mushroom, the tree and two rules, with 0 slips. The skill went 2 → 3.5. A carrot run had 0 slips (round 1 had a false slip on every carrot). Before the job-level progress fix, a two-part shape set off a false "Try the yellow pot." That is fixed.
+  - Landscape tier 1: 4 shapes. The results line named them.
+  - See `r2/fin2-land-t1-5-results.png` (softened page, bright frame) against round 1's scribble.
+- `stuck.mjs`:
+  - One pot: the slip and the fix line, then the ring at 20 s with "Try the yellow pot.", then the ghost at 46 s with "Look: yellow, then blue on top while it shines." That was 5 lines in 57 s with no nagging. See `r2/one2-1.png`.
+  - Random pots: 0 shapes in 100 s, with 84–100% of the shape wrong.
+- `botpage.mjs`: idle child, 90 s. Robots painted 29,137 of 39,650 frame cells and 314 of 69,050 page cells (the roller's edge bleeding inward).
+- `pagefull.mjs`: 10 shapes fit before the page was full (scales `[1,1,1,1,0.8,1,1,0.8,0.55,0.55]`). 🖌️ moved the gallery from 0 to 1 picture, washed the page and chalked a new request (see `r2/pf-portrait-full.png`, `r2/pf-portrait-fresh.png` and `r2/kept-page.jpg`).
+- `duo2.mjs`: two iframes with real WebRTC at tier 3. A rule butterfly and a balloon were painted across a fresh page. Both devices had the same `jobs`, the same chosen colours and 1 gallery picture each, and the final hashes matched (`-951741609`).
+- `look.mjs`: the rule cards fit at 1194×834, 667×375 and 375×667. `shapes.mjs` (`r2/shapes.png`) shows all 14 shapes. `quick2.mjs`: the quick round is unchanged (coverage bar, spoken mixes).
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids paint-splash --run paint-splash-r2`: BOOT + PLAY ready, 0 errors. `node --check` passes on `main.js`, `jobs.js`, `bot.js` and `paint.js`.
+
+### Remaining ideas
+
+- Tints and ratios (a white pot, yellow-orange) for a fifth step. This needs more paint bits and `colour-model.js` colours.
+- On small portrait phones a request can land partly off screen. `nextJob` prefers on-screen spots but doesn't require them.
+- A guest's own child gets no rescue or adaptation (only the host's child does).
+- The child's travel trail across the page stays vivid during play (it softens only at the reveal). A lifted roller while travelling would be cleaner, but painting freely is the toy.
+
+## Round 3 of the 8.5 pass: honest rules, findable requests, a quiet question, a tier for 6–8 and the child's own choice (2026-10-11)
+
+Starting point: independent review of round 2 scored 7.9 (calm 8.5, focus 8, learning 8, fun/depth 7.6, visual 7.7, voice 7.8, polish 7.2). It found these blockers:
+- A false teaching line: brown was said to have "no red in it".
+- Requests were chalked partly or wholly off screen.
+- Queued lines cut off the Finished question.
+- Careful two-part play was marked as a slip.
+- Scribble competed with the shapes during play.
+- The depth stopped at tier 3, and the child never chose anything.
+
+### Design
+
+- **Rules say exactly what counts, and slips tell the truth.** "A colour with blue in it" became "a mix of blue and one more paint" (green or purple). "A mixed colour with no yellow" became "a mix of two paints with no yellow" (purple). That matches the scoring: brown and plain blue are not two-paint mixes.
+  - Slip lines come from `ruleSlip`. Brown always gets "That's brown. It has all three paints in it. Use just two." A forbidden plain paint gets "That's yellow. This one needs no yellow." "It has no X in it" is said only when the colour truly lacks X.
+  - Plain X left on an "X and one more" shape gets "Blue alone is not a mix. Blue needs a friend!" once a round. The rescue ring then waits 8 s more before it comes.
+- **Requests are always findable.**
+  - `nextJob` first requires the whole shape (13 rim and centre points) to sit in the clear part of the screen: below the request card, above the pots, and as seen from where the follow camera is heading. It tries every scale this way first. Only when nothing fits does it accept partly visible spots, scored by how much shows. Only when nothing fits at all is the page full.
+  - A request that still lands out of sight gets a camera glance: the follow camera eases 75% of the way over to it for 2.8 s, then comes back.
+  - Whenever the active part's middle is off screen or under the card, a still arrow (➜ in a white disc, with the shape's emoji) sits at the edge of the clear view, pointing to it. It fades in and out and has no motion of its own.
+  - Shapes also keep clear of the ground hidden behind tall things (a fountain hid a boat hull in round 2). The hidden strip is 0.75 m per metre of height.
+- **The Finished question is never talked over.** While ✅ / 🖌️ shows, waiting lines and the next request hold back (`asking()`). When it closes, there is a 1.5 s pause before anything waiting is said.
+- **Careful two-part painting is never a slip.** When a part is painted, the other parts open 2.5 s later (`OPEN_GRACE_MS`, was 2 ms), so rolling on from the last row of petals onto the stem is forgiven.
+- **The shapes are the picture during play.** Dry paint off the shapes softens once a second, by 55% on the page and 30% in the robots' frame. Wet paint stays true while it can still mix, and so does paint on a shape still being painted. Fresh paint on a cell shows bright again. The fade is display only (`PaintMap.soft`), so picture hashes are unchanged. The reveal uses the same amounts.
+- **Tier 4 for 6–8 year olds** (`TOP_TIER` 4; recipes stay hidden from `RULE_TIER` 3). About 85% of tier-4 requests are rules:
+  - Rules on the choosy part of two-part shapes: "Paint the flower: a green stem, and the petals a mix with red but no blue!"
+  - Two-condition rules, solved by elimination: "Paint the balloon a mix with yellow but no red!"
+  - The card shows ● + ❓ beside a crossed-out ●.
+- **The child's own choice.** Every 5th request, at any tier, is "Paint the fish any colour you can mix!" (🎨 on the card). Brown counts too. When it is painted, the game says what the child chose and how they made it: "Purple! Red and blue make purple." It is listed in the results like any shape. It is for making, so it does not move the skill up.
+- **Spread.** `chooseJob` still skips the last 3 shapes. It now also never picks a shape asked more than once more than the least-asked one this round. In two 4-minute runs the most-asked shape came up 3 times out of 19–21.
+
+### Changes (file:line)
+
+| Where | What |
+| --- | --- |
+| `public/js/jobs.js:92`, `:106`, `:108` | `RULED2`, `OPEN_GRACE_MS`, `CHOICE_EVERY` |
+| `public/js/jobs.js:118-185` | `ruleColours` (`with` + `without`, `any`), `makeRule`, `chooseJob` (tier 4, choice every 5th, spread) |
+| `public/js/jobs.js:195` | `fits` keeps clear of ground hidden behind tall obstacles (`arena.js:123` records `h`) |
+| `public/js/jobs.js:342` | Other parts reopen after the grace |
+| `public/js/paint.js:180`, `:251` | `soft` display flag; `soften(amountAt, before)` |
+| `public/js/main.js:58`, `:71` | `RULE_TIER`, `GLANCE_MS` |
+| `public/js/main.js:487`, `:1453` | `asking()` holds `sayNextMix` and `nextJob` |
+| `public/js/main.js:1348` | `followTarget` glance |
+| `public/js/main.js:1489-1505` | `ruleWords`, `ruleSlip` |
+| `public/js/main.js:1522-1638` | `clearView`, `shownShare`, `nextJob` (strict on screen first), `updateJobArrow` |
+| `public/js/main.js:1640` | `validRule`/`cleanRule` accept two-condition and choice rules from the host |
+| `public/js/main.js:1678` | Glance when a request is chalked out of sight |
+| `public/js/main.js:1772`, `:1778` | "needs a friend" line; the rescue waits after a tip |
+| `public/js/main.js:1805`, `:1835` | A choice shape doesn't raise the skill; the chosen colour and its recipe are said |
+| `public/js/main.js:1875-1890` | `softAmount`, `softenDry` (in `updateHud`), `softenPage` |
+| `public/index.html:81`, `public/style.css` | `#job-arrow`; card `.gap` and `.pick` |
+| `game.json` | `howToPlay` and `learning` mention tier 4 and the child's choice (`public/bitgames.json` stale until the coordinator rebuilds) |
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/paint-splash/r3/`. Speech was stubbed and logged. Every run had 0 console or page errors, except one found and fixed: a tier-0 choice request tried to say a recipe for a rule part.
+
+- `careful.mjs` (the reviewer's script) ran with only 1 s between parts:
+  - Portrait tier 0: 19 shapes in 254 s with 0 slips. The skill went 0 → 4.5.
+  - Landscape tier 3: 21 shapes in 241 s with 0 slips.
+  - Voice was 7.1–7.5 lines a minute: one request per shape plus a choice line every 5 shapes.
+  - See `fp-t0-3-later.png` (soft trails, crisp inked shapes) and `fl-t3-5-results.png`.
+- `random.mjs` (random pots over the shape): the skill stayed at 0–1 against 4.5 for careful play, and most shapes had a slip.
+- `checks.mjs` and `grace.mjs`:
+  - Brown on "with red" says "That's brown. It has all three paints in it. Use just two."
+  - Plain blue on "with blue" says "Blue alone is not a mix. Blue needs a friend!"
+  - Red spilled on the stem within the grace gives 0 slips. Red on the stem later gives 1 slip.
+  - While the question showed, nothing was said and no request was chalked for 8 s. After 🖌️, "Keep painting!", then the queued line, then the next request.
+  - A choice balloon in purple said "Purple! Red and blue make purple." and was listed as `['balloon', 5]`.
+- `offscreen.mjs` teleports the child between instant fills and measures each request 1.5 s after it is chalked:
+  - 375×667: 0 of 12 entirely off and 0 partly off (round 2: 4 of 5 partly off).
+  - 834×1194: 0 of 10.
+  - Requests that had to land out of sight were shown by the glance. The arrow showed whenever the request was off screen (`ph-arrow.png`).
+- `look.mjs`: the tier-4 card fits at 375×667, 667×375 and 1194×834.
+- `fill.mjs`: shapes before the page is full: square 7, farm 8, toys 11.
+- `duo2.mjs` at tier 4: the guest got `{with:1, without:2}` rules. The final hashes matched (`1399552252`), and both devices sent the same `final`.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids paint-splash --run paint-splash-r3`: BOOT + PLAY ready, 0 errors. `node --check` passes on `main.js`, `jobs.js`, `paint.js` and `arena.js`.
+
+### Remaining ideas
+
+- Tints and ratios (a white pot) are still not built. They need more paint bits and `colour-model.js` colours. Tier 4 deepens reasoning about recipes instead.
+- A guest's own child gets no rescue or adaptation (only the host's child does).
+- The square fits fewer shapes per page now (about 7), because the fountain's hidden strip is kept clear.
+- Random scribbling over a shape can still finish some shapes through the 45% stall rule. The skill does not rise, though, so the steps stay with careful play.
+
+## Round 4 of the 8.5 pass: coats, a slower ladder, the child picks the next shape, and rests (2026-10-11)
+
+Starting point: independent review of round 3 scored 8.4 (calm 8.5, focus 8.5, learning 8.6, fun/depth 8, visual 8, voice 8.1, polish 8.1). Blockers: the wet-layering lesson barely mattered (scrubbing while swapping pots did as well as coats), making stayed narrow (the host placed and chose every shape), the ladder climbed 0.5 a shape and was carried between visits, requests came back to back, and the quick round was noisy. Bugs: requests hidden under the pots tray had no arrow; the results card showed the last pot, not the seat colour; a quick child heard about 11 lines a minute.
+
+### Design
+
+- **Coats are the skill.** The host notes each change of paint the child rolls onto the part being painted (`Job.roll`), giving a list of runs. A part is *in coats* when it has at most one run more than its recipe: yellow then blue (2), or one touch-up (3); brown allows 4. Only a clean, unhelped shape painted in coats moves the requests up. Swapping pots back and forth while scrubbing still paints the shape and is never a failure, but it moves nothing.
+  - The first time in a round a shape is done in coats, the game says once: "One coat, then the next on top while it shines. Just like a painter!" The first time a clean shape is scrubbed, it says once: "Next time, try red all over first, then yellow on top."
+  - Paint stays wet for 12 s, up from 8 s, so three whole coats of brown fit over a big part before the first coat dries. The shine lasts as long as the paint can still mix, so "while it shines" stays true.
+  - Rescue timing counts a coat that can still become the wanted colour as progress (half weight). Laying the first two coats of brown no longer brings a false "Try the blue pot."
+- **A slower, age-safe ladder.** Each clean shape in coats now adds +0.25 (it was +0.5), and a slip still costs 0.5. A visit starts at tier 2 at most (`CARRY_SKILL`), so tiers 3–4 are earned again each visit. Tests can start at any step with `?debug&skill=4`.
+- **The child picks the next shape.** After the first shape, the card offers three chalk shapes in dashed rings, all with room on the page. The child taps one and it is chalked near them. The game still chooses its colour or rule, which is the puzzle.
+  - "Which shape next? Tap one." is said once a round.
+  - A child who doesn't pick gets a shape after 16 s.
+  - If no offered shape fits, the page is full.
+- **Rests.** There is now a 6 s pause after each shape (it was 3 s). Every 4th shape, the pause is 10 s longer and the card waits up to 60 s for the pick, so there is time to paint freely or look at the page. A careful child now hears 4.3–4.6 lines a minute (round 3: 5–7.5).
+- **Requests are never hidden under buttons.** `underButtons` treats the pots tray and 📣 as covered ground in three places: in placement (`shownShare`), in the arrow (`updateJobArrow`) and in the rescue picture. The still picture of the mix is now drawn at the visible point of the part nearest its middle (`visiblePoint`), not at the polygon centre.
+- **Results.** Each painter card shows the painter's seat colour (the ring they wore). Shape chips stop at 8 (7 plus "+N"), so a long round reads as a picture, not a tally.
+- **Quick round.** The coverage bar is gone and new mixes are no longer spoken. A mix just joins the row of dabs, and its recipe card shows silently with a soft drip.
+
+### Changes (file:line)
+
+| Where | What |
+| --- | --- |
+| `public/js/jobs.js:229`, `:325`, `:338`, `:368` | `runs`/`cellSet` per part; `roll(paint, t, x, z, bits)`; `Job.layered`; other parts' runs reset when they open |
+| `public/js/jobs.js:396` | `ghost(part, at)` draws at a given visible point |
+| `public/js/paint.js:62`, `:268` | `WET_MS` 12000; `PaintMap.index` |
+| `public/js/main.js:73-90` | `NEXT_JOB_MS` 6000, `REST_MS`, `PICK_N`, `REST_EVERY`, `PICK_WAIT_MS`, `REST_PICK_MS`, `SKILL_STEP`, `SLIP_STEP`, `CARRY_SKILL` |
+| `public/js/main.js:234` | `?debug&skill=` override for tests |
+| `public/js/main.js:437` | Card tap: pick an offered shape, or hear the request again |
+| `public/js/main.js:890`, `:1481` | Quick round: no coverage bar, silent discoveries |
+| `public/js/main.js:1090-1117` | `SHAPE_CHIPS` cap; seat colour on the cards |
+| `public/js/main.js:1280` | Host notes the child's runs on the request (`emitStrokes`) |
+| `public/js/main.js:1582-1690` | `underButtons`, `inView`, `placeSpot`, `nextJob` (offers), `pickJob`, `chalkJob` |
+| `public/js/main.js:1705`, `:1776` | Arrow when under buttons; card renders the offer |
+| `public/js/main.js:1849`, `:1900-1915`, `:1931` | Progress counts coats; skill step only for coats, plus the two once-a-round lines; `visiblePoint` |
+| `public/style.css:133` | `.job-card.offer`, `.opt` (dashed chalk rings, no motion), `.shape-chip.more` |
+| `game.json` | `howToPlay`/`learning` describe coats and picking (`public/bitgames.json` stays stale until the coordinator rebuilds) |
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/paint-splash/r4/`. Speech was stubbed. Every run had 0 console or page errors.
+
+| Run | Shapes | Slips | Skill | Lines a minute | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `careful.mjs … coats`, portrait tier 0 | 11 in 4 min | 0 | 0 → 2.25 | 4.6 | Runs were "12" / "24" |
+| `careful.mjs … coats`, landscape, stored skill 3 | 8 in 3.5 min | 0 | 2 → 3.75 | 4.5 | Carried skill capped at 2 |
+| `careful.mjs … coats`, tier 4 with `Q='&skill=4'`, portrait | 4 | 0 | 4.5 | — | Brown parts "4124" / "124" |
+| `careful.mjs … coats`, tier 4 with `Q='&skill=4'`, landscape | 5 | 0 | 4.5 | — | Two-condition rules |
+| `careful.mjs … rows` (round 3's script: swaps pots every row), portrait tier 0 | 12–14 | 0 | 0 → 0.75–1.25 | — | Runs "1212" / "141414" earned no step; heard "Next time, try red all over first, then blue on top." once |
+| `sloppy.mjs` (swaps pots every 1.5–3 s), landscape, stored skill 3 | 9 | — | 2 → 2.25 | — | Flower "1212" / "12124242" |
+| `sloppy.mjs`, portrait tier 0 | 12 | — | 2.25 | — | Small tier-0 shapes often finish in 2–3 runs, which really is coats |
+| `random.mjs shape` | 3 in 3 min | 1 each | 0 | — | — |
+| `random.mjs free` | 0 in 3 min | — | — | — | Ring at 21 s, ghost at 46 s |
+
+- `stuck.mjs one`: the wet tip at 20 s, the ring at 34 s, then the ghost at 51 s with "Look: red, then yellow on top while it shines." That was 4 lines in 72 s.
+- `offer.mjs`: the offer card at 834×1194, 1194×834 and 375×667 (`offer-*.png`). Its aria-label reads "Pick the next shape: flower, carrot or butterfly".
+- `pots.mjs`: a fish chalked under the landscape pots tray shows the arrow (`pots-arrow.png`).
+- `duo.mjs`: the guest's card stays hidden while the host picks. After `pick(1)` both devices got the apple. Final hashes matched (`-625073458`), and the final messages were identical.
+- `quick.mjs`: the quick round spoke only its start line and the ending. The coverage bar is hidden.
+- `cl-t3-5-results.png`: the pig's card is red, its seat colour.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids paint-splash --run paint-splash-r4`: BOOT + PLAY ready, 0 errors. `node --check` passes on `main.js`, `jobs.js` and `paint.js`.
+
+### Remaining ideas
+
+- Tints and ratios (a white pot) for a step past recipe logic. This needs more paint bits and `colour-model.js` colours.
+- The child picks which shape comes next, but not where it goes. Dragging a chalk shape onto the page would add placement.
+- The coat count uses the roller's middle plus four points 0.55 m out. Edging along a part's outline can note a run.
+- A guest's own child still gets no rescue or adaptation, and no pick card (the host picks).

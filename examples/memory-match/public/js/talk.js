@@ -3,6 +3,9 @@ import { VOICE_LENGTH } from './audio.js'
 /**
  * One voice at a time: animal calls and spoken words wait their turn, so a name is never said
  * over a moo. Silent (and instant) while muted; words go through the game's one voice (speech.js).
+ *
+ * The queue never lags behind play: a step can say when it has gone stale (a card's name once that
+ * card has turned back or been matched), and stale steps are skipped instead of said late.
  */
 export class Talk {
   constructor(sound, voice) {
@@ -13,27 +16,76 @@ export class Talk {
     this.gen = 0
     this.wake = null // resolves the step that is playing now (clear() cuts it short)
     this.waiters = []
+    this.said = new Set()
   }
 
-  /** An animal's call. onStart runs when it actually plays (the sound card's waves pulse then). */
-  call(animal, { baby = false, onStart, droppable = false } = {}) {
-    this.push({ animal, baby, onStart, droppable })
+  /**
+   * An animal's call. onStart runs when it actually plays (the sound card's waves pulse then);
+   * stale() true means it no longer matters and is skipped.
+   */
+  call(animal, { baby = false, onStart, droppable = false, stale } = {}) {
+    this.push({ animal, baby, onStart, droppable, stale })
   }
 
   /** Words, spoken after whatever is already queued. Droppable words go first if taps pile up. */
-  say(text, { droppable = false } = {}) {
-    this.push({ text, droppable })
+  say(text, { droppable = false, onStart, stale, goal = false } = {}) {
+    this.push({ text, droppable, onStart, stale, goal })
+  }
+
+  /** The child has started turning cards: a goal still being said has done its job and stops. */
+  cutGoal() {
+    if (!this.current?.goal) return
+    this.voice.hush()
+    this.wake?.()
+  }
+
+  /** Words said at most once a round (see newRound): a fact heard once does not need repeating. */
+  sayOnce(text, options) {
+    if (this.said.has(text)) return false
+    this.said.add(text)
+    this.say(text, options)
+    return true
+  }
+
+  /** Is these words already waiting to be said? */
+  has(text) {
+    return this.queue.some((step) => step.text === text)
+  }
+
+  /** A fresh board: sayOnce() may say everything again. */
+  newRound() {
+    this.said.clear()
   }
 
   push(step) {
     this.queue.push(step)
-    // Quick little fingers: keep the queue short by dropping the oldest name.
-    while (this.queue.length > 4) {
+    this.trim(4)
+    if (!this.running) this.run()
+  }
+
+  /**
+   * Forgets what went stale, then (quick little fingers) drops the oldest droppable steps until at
+   * most `keep` are waiting. Lines that are not droppable (what a match taught) always stay.
+   */
+  trim(keep = 0) {
+    this.queue = this.queue.filter((step) => !step.stale?.())
+    while (this.queue.length > keep) {
       const i = this.queue.findIndex((s) => s.droppable)
       if (i < 0) break
       this.queue.splice(i, 1)
     }
-    if (!this.running) this.run()
+  }
+
+  /**
+   * A clue is coming (a sound card's call, a sleeping baby's word): drops every droppable step
+   * waiting, and cuts short a droppable one being said (a long goal line), so the clue is next.
+   */
+  hurry() {
+    this.trim()
+    if (this.current?.droppable) {
+      this.voice.hush()
+      this.wake?.()
+    }
   }
 
   get busy() {
@@ -58,6 +110,8 @@ export class Talk {
     const gen = this.gen
     while (this.queue.length && gen === this.gen) {
       const step = this.queue.shift()
+      if (step.stale?.()) continue
+      this.current = step
       step.onStart?.()
       if (!this.sound.live) continue
       if (step.animal) {
@@ -67,6 +121,7 @@ export class Talk {
         await this.speak(step.text)
       }
     }
+    this.current = null
     if (gen === this.gen) this.finish()
     else {
       // clear() ran: a later push may already be waiting for this loop to stop.

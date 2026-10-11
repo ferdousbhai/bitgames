@@ -2,7 +2,7 @@
   "id": "penguin-bowling",
   "title": "Penguin Bowling",
   "tagline": "Belly-slide a chubby penguin down the ice and knock over snowmen and fish!",
-  "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides; ◀ ▶ move the penguin. Bumpers 🛟 keep the penguin out of the gutters. After every roll, count the pins still standing: fallen and standing always make 10. Before a second roll, find where the pins are left, then aim for them. Tap 💭 to guess how many will fall first.",
+  "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides; ◀ ▶ move the penguin. Bumpers 🛟 keep the penguin out of the gutters. After every roll, tap each pin still standing to count it (fallen ones don't count): fallen and standing always make 10. Children who count carefully are asked for the missing part instead (7 + ? = 10, or ? + 2 = 10), first from three numbers, later from a 1–10 strip, and may plan each fresh rack: pick 'knock 8, leave 2' and choose where to stand (the middle knocks nearly all, the edge just one; footprints help at first). The strongest counters work the bond out while a snow cloud hides the pins, and may try bumpers down. Before a second roll, say where the pins are or which side has more: footprints show where to walk the penguin, fewer of them as the child grows, until the spare is their own plan. Tap 💭 to guess how many will fall first. Pick 5 frames for a shorter game.",
   "emoji": "🐧",
   "color": "#4cc9f0",
   "category": "pop",

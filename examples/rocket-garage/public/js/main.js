@@ -3,12 +3,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
 import { Particles, Popups, Rings, makeGlowTexture } from './effects.js'
-import { COLORS, DESTS, PARTS, SLOTS, isUnlocked, modelName, part, reach, sanitize, unlocksAt, wobble } from './parts.js'
+import { COLORS, DESTS, PARTS, SLOTS, isSteady, isUnlocked, modelName, part, reach, sanitize, unlocksAt, wobble } from './parts.js'
 import { Rocket } from './rocket.js'
 import { Thumbs } from './thumbs.js'
 import { createVoice } from './speech.js'
-import { createWorkshop, flyRace } from './workshop.js'
-import { addNote, createNotebook, createPredict, fairTest, flightRace, guessPicture, noteFrom, partsOf, sanitizeNotes, validBuild, verdict } from './fairtest.js'
+import { BOOSTER_WORDS, createWorkshop, flyRace, placeName } from './workshop.js'
+import { TIERS, afterFlight, changesFrom, checkMission, createWhere, makeMission, missionPicture, missionShort, missionVerdict, missionWords, robotBuild, sanitizeMission } from './missions.js'
+import { WOB_MARK, addNote, createNotebook, createPredict, fairTest, flightRace, learnParts, noteFrom, partsOf, sanitizeKnown, sanitizeNotes, testChip, validBuild, verdict } from './fairtest.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -48,9 +49,26 @@ const save = {
   // The "what I found out" notebook, and whether it has a page the child has not seen yet
   notes: sanitizeNotes(saved.notes),
   notesNew: !!saved.notesNew,
+  // Single noses, tanks and fins the child has tested on their own: 'w' wobbly or 's' steady
+  known: sanitizeKnown(saved.known),
+  // Where the last flight landed: the reach bar shows this record, never the next flight's answer
+  landed: Number.isInteger(saved.landed) && saved.landed >= 0 && saved.landed < DESTS.length ? saved.landed : -1,
+  // Guesses in a row that matched, and Robot's missions (the harder tier)
+  guessRun: Number.isInteger(saved.guessRun) ? saved.guessRun : 0,
+  mission: sanitizeMission(saved.mission),
+  // Boosters that have landed somewhere: the notebook's booster page lists where each one went
+  // (older saves start from the places already visited)
+  // Turbos taken: once the child knows the lightning, the fives are no longer counted aloud
+  turbos: Number.isInteger(saved.turbos) ? saved.turbos : 0,
+  // The notebook has opened by itself once (after a second tier-1 miss); after that the 📓 is only framed
+  hinted: !!saved.hinted,
+  // Robot has told the child about the workshop's race challenge (once, on reaching the top tier)
+  raceTold: !!saved.raceTold,
+  flown: new Set(Array.isArray(saved.flown) ? saved.flown.filter((id) => PARTS.booster.some((p) => p.id === id)) : PARTS.booster.filter((p) => visited[Math.min(DESTS.length - 1, p.power)] && Number.isFinite(saved.flights)).map((p) => p.id)),
 }
+if (save.mission.own) save.mission.own = sanitize(save.mission.own, visited)
 function persist() {
-  store.set(SAVE, { visited: save.visited, rocket: save.rocket, fresh: [...save.fresh], stars: save.stars, flights: save.flights, picked: save.picked, last: save.last, notes: save.notes, notesNew: save.notesNew })
+  store.set(SAVE, { visited: save.visited, rocket: save.rocket, fresh: [...save.fresh], stars: save.stars, flights: save.flights, picked: save.picked, last: save.last, notes: save.notes, notesNew: save.notesNew, landed: save.landed, guessRun: save.guessRun, mission: save.mission, flown: [...save.flown], turbos: save.turbos, known: save.known, hinted: save.hinted, raceTold: save.raceTold })
 }
 
 // --- Renderer, scene, camera --------------------------------------------------------
@@ -167,6 +185,7 @@ const game = {
   tab: 'nose',
   count: 3,
   busy: false,
+  look: false, // the camera is showing the rocket before the "as it is" question
 }
 let models = {}
 let rocket = null
@@ -272,8 +291,10 @@ const shadow = (() => {
 })()
 
 const thumbPaint = {}
-// Boosters are pictured at one shared scale (the mega booster fills its square), so small ones look small
+// Boosters are pictured nearly to one shared scale, so bigger ones look bigger, but the scale is
+// eased (not true size) so the small booster still reads clearly on notebook pages and race lanes
 const BOOSTER_R = 0.84
+const boosterRadius = (id) => BOOSTER_R * (0.6 + 0.4 * (part('booster', id).r ?? 0.32) / 0.32)
 function makeThumb(slot, id) {
   if (id === 'none') return null
   const obj = models[modelName(slot, id)].clone()
@@ -297,7 +318,7 @@ function makeThumb(slot, id) {
       })
     }
   }
-  const opts = slot === 'sticker' ? { turn: 0, tilt: 0, fill: 0.78 } : slot === 'pilot' ? { turn: -0.15, tilt: 0.05, fill: 0.86 } : slot === 'booster' ? { turn: -0.3, fill: 0.8, radius: BOOSTER_R } : {}
+  const opts = slot === 'sticker' ? { turn: 0, tilt: 0, fill: 0.78 } : slot === 'pilot' ? { turn: -0.15, tilt: 0.05, fill: 0.86 } : slot === 'booster' ? { turn: -0.3, fill: 0.8, radius: boosterRadius(id) } : {}
   thumbCache[`${slot}:${id}`] = thumbs.shot(obj, opts)
   return thumbCache[`${slot}:${id}`]
 }
@@ -305,6 +326,25 @@ function makeThumb(slot, id) {
 function thumbOf(slot, id) {
   if (id === 'none') return thumbCache[`${slot}:${PARTS[slot][1].id}`]
   return thumbCache[`${slot}:${id}`] ?? makeThumb(slot, id)
+}
+
+/**
+ * A wobbly rocket rocks gently on its feet for a few seconds after a part goes on, then settles;
+ * a steady one stands still. So the child sees what a nose, tank or fins does before flying.
+ */
+const PAD_SWAY = 3.6
+let padSway = 0
+function swayOnPad() {
+  padSway = isSteady(save.rocket) ? 0 : PAD_SWAY
+}
+function updatePadSway(dt) {
+  if (padSway <= 0 || (game.state !== 'garage' && game.state !== 'title')) return
+  padSway = Math.max(0, padSway - dt)
+  const u = 1 - padSway / PAD_SWAY
+  // Rises, then fades: three slow rocks, pivoting on the fins so it never slides off the pad
+  const a = Math.sin(u * Math.PI * 6) * 0.09 * Math.sin(u * Math.PI) * (0.6 + wobble(save.rocket) * 0.6)
+  rocket.wobbler.rotation.z = a
+  rocket.wobbler.position.x = -rocket.half * Math.sin(a)
 }
 
 function placeOnPad() {
@@ -381,6 +421,11 @@ function camTarget(out) {
     out.oy = innerHeight / 2 - (f.y + f.h / 2)
     out.tilt = 0.12
     if (game.state === 'title') out.x = Math.sin(game.time * 0.3) * 0.4
+    // "As it is": the camera eases in toward the boosters before the question opens
+    if (game.look && rocket) {
+      out.d = Math.max(6, d * 0.62)
+      out.y = padTop + rocket.half * 0.7
+    }
     return out
   }
   if (game.state === 'flight' || game.state === 'arrive') {
@@ -495,8 +540,15 @@ function renderSound() {
   $('music').classList.toggle('off', !audio.musicOn)
 }
 
+/**
+ * The journey bar in the garage: every place, a 🚩 where you have been, and the 🚀 under the place
+ * the last flight landed. It is a record, not a forecast: how far this build goes is for the
+ * child to work out (and guess before launch), not for the bar to give away.
+ */
 function renderReach(ping = -1) {
-  const r = reach(save.rocket)
+  // Robot's rocket has not flown yet: the 🚀 record belongs to the child's own rocket, so it waits
+  const card = save.mission.on ? save.mission.card : null
+  const r = card?.robot && save.mission.own && !card.flew ? -1 : save.landed
   const el = $('reach')
   el.innerHTML = ''
   DESTS.forEach((d, i) => {
@@ -532,6 +584,8 @@ function slotDef(id) {
 function renderTray() {
   const tabs = $('tabs')
   tabs.innerHTML = ''
+  // Only the tab holding the newest gift wears a ✨ (seven sparkles at once would mean nothing)
+  const newest = [...save.fresh].pop()?.split(':')[0]
   for (const s of SLOTS) {
     const b = document.createElement('button')
     b.className = 'tab' + (s.id === game.tab ? ' on' : '')
@@ -541,7 +595,7 @@ function renderTray() {
     img.src = thumbOf(s.id, save.rocket[s.id]) ?? ''
     img.alt = ''
     b.append(img)
-    if (PARTS[s.id].some((p) => save.fresh.has(`${s.id}:${p.id}`))) {
+    if (s.id === newest) {
       const dot = document.createElement('span')
       dot.className = 'dot'
       dot.textContent = '✨'
@@ -553,13 +607,14 @@ function renderTray() {
   renderPaints()
   fitItems()
   layoutActions()
-  renderExperiment()
 }
 
 function renderItems() {
   const el = $('items')
   el.innerHTML = ''
   const slot = game.tab
+  // Only the newest gift wears a ✨, like the tabs
+  const newest = [...save.fresh].pop()
   for (const p of PARTS[slot]) {
     const b = document.createElement('button')
     const open = isUnlocked(p, save.visited)
@@ -579,11 +634,15 @@ function renderItems() {
     }
     if (!open) {
       b.insertAdjacentHTML('beforeend', `<span class="lock">🔒</span><span class="where">${DESTS[p.at].emoji}</span>`)
-    } else if (save.fresh.has(`${slot}:${p.id}`)) {
+    } else if (newest === `${slot}:${p.id}`) {
       b.insertAdjacentHTML('beforeend', '<span class="new">✨</span>')
     }
-    // Each booster wears the planet it can fly to, so picking one needs no reading
-    if (open && slot === 'booster') b.insertAdjacentHTML('beforeend', `<span class="goes">${DESTS[reach({ booster: p.id })].emoji}</span>`)
+    // What the child's own one-part tests found: steady ━ or wobbly 〰️ (untested parts stay blank)
+    const found = save.known[`${slot}:${p.id}`]
+    if (found && open) {
+      b.insertAdjacentHTML('beforeend', `<span class="wob ${found === 'w' ? 'wobbly' : 'steady'}" aria-hidden="true">${WOB_MARK[found]}</span>`)
+      b.setAttribute('aria-label', `${slot} ${p.id}, ${found === 'w' ? 'wobbly' : 'steady'}`)
+    }
     el.append(b)
   }
 }
@@ -644,29 +703,25 @@ function setTab(slot) {
 
 /** Put a part on the rocket. */
 function choose(slot, id, { quiet = false } = {}) {
+  if (game.look) return
   const p = part(slot, id)
   if (!isUnlocked(p, save.visited)) return nope(slot, id)
-  const before = reach(save.rocket)
   const same = save.rocket[slot] === id
   save.rocket[slot] = id
   save.fresh.delete(`${slot}:${id}`)
+  if (slot === 'booster' && id === helpBooster) helpBooster = null
   if (!save.picked) {
     save.picked = true
     hintStep()
   }
   rocket.build(save.rocket, slot)
   if (game.state === 'garage' || game.state === 'title') placeOnPad()
+  if (!same) swayOnPad()
   if (!quiet) {
     audio.snap(PARTS[slot].indexOf(p))
     sparkleAt(slot)
     if (slot === 'pilot') audio.whistle(true)
   }
-  const after = reach(save.rocket)
-  if (after > before && !quiet) {
-    setTimeout(() => audio.reach(), 220)
-    renderReach(after)
-    banner(`${DESTS[after].emoji} !`, 1300)
-  } else renderReach()
   if (!same || slot === game.tab) renderTray()
   persist()
 }
@@ -739,7 +794,6 @@ function surprise() {
   rocket.squash = 1
   for (const s of SLOTS) if (s.paint) for (const p of PARTS[s.id]) if (p.id !== 'none') makeThumb(s.id, p.id)
   renderTray()
-  renderReach(reach(save.rocket))
   persist()
 }
 
@@ -799,7 +853,7 @@ $('paints').addEventListener('click', (e) => {
 })
 $('dice').addEventListener('click', () => {
   audio.unlock()
-  if (game.state === 'garage') surprise()
+  if (game.state === 'garage' && !game.look) surprise()
 })
 $('launch').addEventListener('click', () => {
   audio.unlock()
@@ -815,14 +869,21 @@ const idle = () => (performance.now() - lastInput) / 1000
 
 function hintTarget() {
   if (game.state === 'party') return !$('reward').classList.contains('hidden') && idle() > 30 ? $('again') : null
-  if (game.state !== 'garage' || $('workshop')?.open || $('predict')?.open || $('notebook')?.open) return null
+  if (game.state !== 'garage' || $('workshop')?.open || $('predict')?.open || $('where')?.open || $('notebook')?.open) return null
   if (!save.picked) {
     const items = [...$('items').children]
     return items.find((b) => !b.classList.contains('on') && !b.classList.contains('locked')) ?? null
   }
+  // A tier-1 card missed three times with no nearer planet: the finger shows the booster to try
+  if (helpBooster) {
+    if (game.tab !== 'booster') return $('tabs').querySelector('[data-slot="booster"]')
+    return [...$('items').children].find((b) => b.dataset.id === helpBooster) ?? null
+  }
   if (save.flights === 0 || idle() > 30) return $('launch')
   return null
 }
+/** The booster the finger points at after the third tier-1 miss (until the child puts it on). */
+let helpBooster = null
 function placeFinger() {
   const el = game.state === 'garage' || game.state === 'party' ? hintTarget() : null
   const f = $('finger')
@@ -866,15 +927,18 @@ function workshopSound(kind) {
   else if (kind === 'hmm') audio.reach()
 }
 
-/** The 🧪 button shows an A once a rocket is saved, and wiggles when exactly one part has changed. */
-function renderExperiment() {
-  const status = workshop.status(save.rocket)
-  const b = $('experiment')
-  b.classList.toggle('has-a', status >= 0)
-  b.classList.toggle('ready', status === 1)
+/**
+ * Past the top tier the workshop holds an open race challenge: one steady and one wobbly rocket to
+ * the same planet. A new planet each time it is met; no score, only the race.
+ */
+let raceGoal = null
+function raceChallenge() {
+  if (save.mission.tier < TIERS) return null
+  const places = [...new Set(PARTS.booster.filter((p) => isUnlocked(p, save.visited)).map((p) => Math.min(DESTS.length - 1, p.power)))].filter((d) => d > 0)
+  if (!places.includes(raceGoal)) raceGoal = places.length ? pick(places) : null
+  return raceGoal
 }
-
-const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf, rocketThumb, voice, sound: workshopSound, onChange: () => renderExperiment() })
+const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf, rocketThumb, voice, sound: workshopSound, challenge: raceChallenge, onChallenge: () => (raceGoal = -1) })
 const predictor = createPredict({
   thumbOf,
   rocketThumb,
@@ -884,41 +948,199 @@ const predictor = createPredict({
     pendingTest = test
     launch({ asked: true })
   },
-  onBack: () => hintStep(),
+  onBack: () => backToBuilding(),
 })
-const notebook = createNotebook({ notes: () => save.notes, thumbOf, voice, sound: workshopSound })
+/** A question closed without launching: the tray and GO come back (they may be away after 🚀). */
+function backToBuilding() {
+  $('tray').classList.remove('away')
+  $('actions').classList.remove('away')
+  show('reach')
+  layoutActions()
+  hintStep()
+}
+// The 🧪 workshop now opens from the notebook ("test again"), so the garage keeps one 📓 for findings
+const notebook = createNotebook({ notes: () => save.notes, thumbOf, voice, sound: workshopSound, onTest: () => workshop.open(), flown: () => save.flown, known: () => save.known })
 /** The 📓 button wears a ✨ while there is a page the child has not looked at yet. */
 function renderNotebookButton() {
   $('notebook-btn').classList.toggle('fresh', save.notesNew)
 }
 $('notebook-btn').onclick = () => {
-  if (game.state !== 'garage' || predictor.open) return
+  if (game.state !== 'garage' || game.look || predictor.open || where.open) return
   audio.unlock()
   audio.click()
   keys.clear()
   workshop.close()
   save.notesNew = false
   persist()
+  // Framed after a tier-1 miss: it opens on where each booster went
+  const look = $('notebook-btn').classList.contains('look')
+  $('notebook-btn').classList.remove('look')
   renderNotebookButton()
-  notebook.show()
+  notebook.show({ look: look ? 'flown' : '' })
 }
 let pendingTest = null
+const where = createWhere({
+  rocketThumb,
+  thumbOf,
+  voice,
+  sound: workshopSound,
+  onBack: () => {
+    renderMission()
+    renderReach()
+    backToBuilding()
+  },
+  // Robot's rocket "as it is": the guess and whether it was right ride on the card
+  onDiagnose: (dest, ok) => {
+    const card = save.mission.card
+    if (!card) return
+    card.diag = dest
+    card.diagOk = ok
+    persist()
+  },
+})
 
-$('experiment').onclick = () => {
-  if (game.state !== 'garage') return
+// --- Robot's missions (the harder tier) ------------------------------------------------------
+
+/** Missions appear after a few landings; the card waits quietly until the child taps it. */
+const MISSION_AFTER = 3
+let missionTold = false
+function missionCard() {
+  const m = save.mission
+  if (save.flights < MISSION_AFTER) return null
+  if (!m.card) {
+    m.card = makeMission(Math.max(m.tier, save.guessRun >= 3 ? 2 : 1), save.rocket, save.visited, { near: m.near })
+    m.near = null
+  }
+  return m.card
+}
+function renderMission() {
+  const box = $('mission')
+  const card = game.state === 'garage' ? missionCard() : null
+  show('mission', !!card)
+  if (!card) return
+  // Robot mentions the first card of a visit once; after that new cards wait quietly to be picked up
+  if (!save.mission.on && !missionTold) {
+    missionTold = true
+    voice.say('Robot has a mission for you. Tap the card to hear it!')
+  }
+  box.classList.toggle('on', save.mission.on)
+  const words = missionWords(card)
+  $('mission-go').replaceChildren(missionPicture(card, { rocketThumb }))
+  $('mission-go').setAttribute('aria-label', save.mission.on ? `${words} Tap to hear it again.` : `Robot has a mission. ${words}`)
+  show('mission-off', save.mission.on)
+  renderPadTag()
+  renderReach()
+}
+
+/** A small 🤖 on the pad while Robot's rocket stands there, so it is clear whose rocket it is. */
+const padTagAt = new THREE.Vector3()
+function renderPadTag() {
+  const card = save.mission.on ? save.mission.card : null
+  const on = game.state === 'garage' && !!card?.robot && !!save.mission.own
+  show('pad-tag', on)
+  if (!on) return
+  padTagAt.set(rocket.width * 0.5 + 0.2, padTop + 0.05, 1.6).project(camera)
+  const tag = $('pad-tag')
+  tag.style.left = `${(padTagAt.x * 0.5 + 0.5) * innerWidth}px`
+  tag.style.top = `${(-padTagAt.y * 0.5 + 0.5) * innerHeight}px`
+}
+
+/** Put a whole rocket on the pad (Robot's for a fix-it card, or the child's own back again). */
+function putOnPad(build) {
+  save.rocket = sanitize(build, save.visited)
+  rocket.build(save.rocket)
+  placeOnPad()
+  rocket.squash = 0.8
+  swayOnPad()
+  for (const s of SLOTS) if (s.paint) for (const p of PARTS[s.id]) if (p.id !== 'none') makeThumb(s.id, p.id)
+  renderTray()
+}
+
+/** The child's own rocket comes back once Robot's puzzle is over (done, put away or swapped). */
+function restoreOwn() {
+  const own = save.mission.own
+  if (!own || save.mission.on) return false
+  save.mission.own = null
+  putOnPad(own)
+  persist()
+  return true
+}
+
+$('mission-go').onclick = () => {
+  const card = missionCard()
+  if (game.state !== 'garage' || !card || game.look) return
   audio.unlock()
   audio.click()
+  let words = missionWords(card)
+  if (!save.mission.on) {
+    save.mission.on = true
+    robot.wave = 2
+    // A fix-it card: Robot's rocket goes on the pad, and the child's own waits safely for later
+    if (card.robot) {
+      save.mission.own ??= { ...save.rocket, colors: { ...save.rocket.colors } }
+      putOnPad(robotBuild(card))
+    }
+    persist()
+  } else if (card.robot && changesFrom(card.base ?? card.robot, save.rocket) > 1) {
+    // Lost track of the changes? Tapping the card puts Robot's rocket back as it last flew
+    putOnPad(robotBuild(card))
+    persist()
+    words = card.base ? 'Here is Robot’s rocket as it last flew. Change just one part!' : 'Here is Robot’s rocket again. Change just one part!'
+  }
+  renderMission()
+  // Before any change: as it is, where does the rocket on the pad land? (Robot's, or the child's own)
+  if (card.diag === null && (!card.robot || changesFrom(card.robot, save.rocket) === 0)) return lookThenAsk(card)
+  voice.sayNow(words)
+}
+
+/**
+ * The "as it is" question waits a moment while the camera eases down to the boosters, so the
+ * child sees the real rocket (and what it has on its sides) before the planets are asked.
+ */
+const LOOK_FOR = 1.6
+let lookTimer = 0
+function lookThenAsk(card) {
+  $('finger').classList.add('hidden')
   keys.clear()
-  workshop.open()
+  voice.hush()
+  game.look = true
+  document.body.classList.add('looking')
+  show('reach', false)
+  clearTimeout(lookTimer)
+  lookTimer = setTimeout(() => {
+    endLook()
+    if (game.state !== 'garage' || !save.mission.on || save.mission.card !== card) return backToBuilding()
+    where.ask(save.rocket, card)
+  }, LOOK_FOR * 1000)
+}
+function endLook() {
+  clearTimeout(lookTimer)
+  game.look = false
+  document.body.classList.remove('looking')
+}
+$('mission-off').onclick = () => {
+  if (game.state !== 'garage' || game.look) return
+  audio.click()
+  save.mission.on = false
+  save.mission.misses = 0
+  restoreOwn()
+  persist()
+  renderMission()
+  voice.sayNow('Okay! The mission waits here for later.')
 }
 
 function toTitle() {
   game.state = 'title'
+  endLook()
+  helpBooster = null
   voice.hush()
   workshop.close()
   predictor.close()
+  where.close()
   notebook.close()
   show('notebook-btn', false)
+  show('mission', false)
+  show('pad-tag', false)
   show('title')
   show('topbar', false)
   show('tray', false)
@@ -949,6 +1171,10 @@ function toGarage({ snap = false } = {}) {
   show('actions')
   show('notebook-btn')
   renderNotebookButton()
+  restoreOwn()
+  renderMission()
+  // A wobbly rocket rocks once as the garage comes back, so its kind is plain before the next launch
+  swayOnPad()
   show('reward', false)
   show('journey', false)
   $('tray').classList.remove('away')
@@ -976,19 +1202,27 @@ $('play').addEventListener('click', () => {
  * (farther, the same, or less far); with nothing changed it is straight to the countdown.
  */
 function launch({ asked = false } = {}) {
-  if (game.state !== 'garage' || game.busy || (!asked && predictor.open)) return
+  if (game.state !== 'garage' || game.busy || game.look || (!asked && (predictor.open || where.open))) return
   workshop.close()
   notebook.close()
   if (!asked) {
     pendingTest = null
-    const test = fairTest(save.last, save.rocket)
+    // A mission flight goes straight up: its guess was made "as it is", before any part changed.
+    // Otherwise a changed part asks for a guess first: farther, the same or less far, and from
+    // tier 2 the very planet, so every fair test uses what the boosters are known to reach.
+    const card = save.mission.on ? save.mission.card : null
+    const test = card ? null : fairTest(save.last, save.rocket)
     if (test) {
       $('finger').classList.add('hidden')
       keys.clear()
-      return predictor.ask(test)
+      return predictor.ask(test, { planets: save.mission.tier >= 2 })
     }
   }
+  helpBooster = null
   show('notebook-btn', false)
+  show('mission', false)
+  show('pad-tag', false)
+  padSway = 0
   game.state = 'countdown'
   game.t = 0
   game.count = 3
@@ -1079,7 +1313,9 @@ function liftoff() {
   // A fair test changes one thing: the stars' turbo waits for a flight with no part changed
   flight.test = pendingTest
   pendingTest = null
-  save.last = partsOf(save.rocket)
+  flight.mission = save.mission.on ? save.mission.card : null
+  flight.used = false
+  flight.ready = false
   Object.assign(flight, {
     base,
     target: base,
@@ -1104,22 +1340,29 @@ function liftoff() {
   flight.passed.clear()
   flight.flyby = []
   flight.dist = flight.cruise * (12 + base * 3.2)
+  // About two seconds between star groups on short flights; nine groups at most on long ones
+  flight.gap = Math.max(flight.cruise * 1.6, (flight.dist - 24) / 9)
+  flight.side = 0
   shadow.visible = false
   show('flightbar')
   show('journey')
   // Turbo carries you one stop further, but only past places you have already visited: a first
   // trip always lands at the boosters' own destination, so no planet (or its new parts) gets skipped.
+  // Fifteen stars make it ready; using it is the child's choice (on a mission it can be the plan,
+  // or the thing that overshoots).
   flight.canTurbo = !flight.test && base < DESTS.length - 1 && save.visited[base]
   startGhost()
   $('turbo').classList.toggle('hidden', !flight.canTurbo)
-  $('turbo').classList.remove('full')
-  // The guess rides along in the top bar while the two rockets are compared
-  $('guess').replaceChildren(...(flight.test ? [guessPicture(flight.test.guess, rocketThumb(flight.test.before), rocketThumb(flight.test.now))] : []))
-  show('guess', !!flight.test)
+  $('turbo').classList.remove('full', 'used')
+  $('turbo').disabled = true
+  $('turbo-to').textContent = flight.canTurbo ? DESTS[base + 1].emoji : ''
+  $('turbo').setAttribute('aria-label', 'Turbo: catch fifteen stars')
+  // The guess (or the mission card and the planet the child picked) rides along in the top bar
+  const chip = flight.test ? testChip(flight.test, rocketThumb) : flight.mission ? missionPicture(flight.mission) : null
+  $('guess').replaceChildren(...(chip ? [chip] : []))
+  show('guess', !!chip)
   renderStars()
   renderJourney()
-  save.flights++
-  persist()
 }
 
 /** Stars are counted in fives: a frame of five fills up, and the number beside it goes 5, 10, 15… */
@@ -1247,30 +1490,28 @@ function clearFlight() {
   }
 }
 
+/**
+ * Stars come in small groups of four, spaced out along the flight and mostly out to the sides, so
+ * the ⚡ turbo is earned by steering: a rocket left in the middle catches only the odd middle
+ * group (about 4–8 stars), while steering to each group gathers 20–30. Now and then a piece of
+ * space junk drifts in between (bumping it makes the rocket dizzy for a moment).
+ */
 function spawnPattern(y) {
+  const f = flight
   const xm = Math.max(1.5, view.hw - 1.4)
-  const space = flight.alt > 70
-  const r = Math.random()
-  if (space && r < 0.22) {
+  if (f.alt - f.start > 60 && Math.random() < 0.35) {
     const kind = pick(['junk_satellite', 'junk_boot', 'junk_teapot', 'junk_duck'])
-    spawn(kind, rand(-xm, xm), y, 0, { scale: rand(0.8, 1.05), spin: rand(-0.8, 0.8), vx: rand(-0.5, 0.5), junk: true })
-    return 6
+    spawn(kind, rand(-xm, xm), y + f.gap * 0.5, 0, { scale: rand(0.8, 1.05), spin: rand(-0.8, 0.8), vx: rand(-0.4, 0.4), junk: true })
   }
-  if (r < 0.5) {
-    const x = rand(-xm * 0.8, xm * 0.8)
-    const n = 3 + ((Math.random() * 3) | 0)
-    for (let i = 0; i < n; i++) spawn('star', x, y + i * 1.5, 0, { scale: 0.42, star: true })
-    return n * 1.5 + 3
-  }
-  if (r < 0.8) {
-    // A swoopy arc of stars
-    const x0 = rand(-xm * 0.6, xm * 0.6)
-    const dir = Math.random() < 0.5 ? -1 : 1
-    for (let i = 0; i < 5; i++) spawn('star', clamp(x0 + dir * Math.sin(i * 0.7) * 2.2, -xm, xm), y + i * 1.3, 0, { scale: 0.42, star: true })
-    return 9
-  }
-  spawn('star', rand(-xm, xm), y, 0, { scale: 0.5, star: true })
-  return 4
+  // Each group sits on the other side from the last one more often than not, so steering goes back and forth
+  const side = Math.random() < 0.2 ? 0 : Math.random() < 0.7 ? -(f.side || 1) : f.side || 1
+  if (side) f.side = side
+  const near = Math.min(xm * 0.9, Math.max(rocket.width * 0.5 + 1.2, xm * 0.5))
+  const x = side ? side * rand(near, xm * 0.92) : rand(-0.4, 0.4)
+  // A short column, or a diagonal leaning outward (never in toward a rocket that is not steering)
+  const lean = Math.random() < 0.5 ? 0 : 0.55 * (side || pick([-1, 1]))
+  for (let i = 0; i < 3; i++) spawn('star', clamp(x + lean * i, -xm, xm), y + i * 1.3, 0, { scale: 0.44, star: true })
+  return f.gap
 }
 
 function steerPointer(e) {
@@ -1294,20 +1535,60 @@ function catchStar(it) {
   audio.catch(Math.round(clamp((it.obj.position.x - cam.x) / (view.hw * 2) + 0.5, 0, 1) * 5))
   sparks.burst(it.obj.position, ['#fff3a0', '#ffd23f', '#ffffff'], 6, 2.5, 0.5)
   renderStars()
-  // Every full group of five is counted aloud: five, ten, fifteen…
-  if (flight.stars % 5 === 0) voice.say(String(flight.stars))
-  if (!flight.turbo && flight.canTurbo && flight.stars >= TURBO && flight.target < DESTS.length - 1) {
-    flight.turbo = true
-    flight.target++
-    flight.dist += flight.cruise * 4.5
-    flight.boost = 2.5
-    audio.turbo()
-    banner(`⚡ ${DESTS[flight.target].emoji} !`, 2000)
+  // Stars only matter when they can buy a turbo: then the fives are counted aloud up to fifteen
+  // (only until the child has used the lightning a couple of times; then the bar does the counting)
+  if (!flight.canTurbo || game.state !== 'flight') return
+  const ready = flight.stars === TURBO && !flight.turbo
+  if (ready) {
+    flight.ready = true
     $('turbo').classList.add('full')
-    renderJourney()
-    sparks.burst(rocket.root.position, ['#8ef0c8', '#3bb5ff', '#c9b6ff', '#ffd23f'], 12, 3, 0.8)
+    $('turbo').disabled = false
+    $('turbo').setAttribute('aria-label', `Turbo to ${placeName(flight.target + 1)}`)
+    audio.reach()
+    // The first time, Robot says what the lightning does; after that the button speaks for itself
+    // Said only when the lightning could help the plan; on an overshooting mission it lights quietly
+    if (turboRelevant()) {
+      voice.say(turboTold ? 'Fifteen!' : `Fifteen! Tap the lightning to zoom on to ${placeName(flight.target + 1)}, or just land on ${placeName(flight.target)}.`)
+      turboTold = true
+    }
+  } else if (flight.stars % 5 === 0 && flight.stars < TURBO && fivesAloud()) {
+    fivesOn = save.flights
+    voice.say(String(flight.stars))
   }
 }
+
+/**
+ * The fives are counted aloud only while the turbo could matter to this flight's plan: never on a
+ * mission flight where it would carry the rocket past the card's planet, on one flight a visit at
+ * most (reaching fifteen or not), and never once the child has used the lightning twice.
+ */
+function fivesAloud() {
+  return turboRelevant() && !turboTold && save.turbos < 2 && (fivesOn < 0 || fivesOn === save.flights)
+}
+/** The flight (by number) whose fives were counted this visit. */
+let fivesOn = -1
+const turboRelevant = () => !flight.mission || flight.mission.dest === flight.base + 1
+
+let turboTold = false
+
+/** The child's in-flight choice: spend the fifteen stars on one more planet, or land where the boosters go. */
+function useTurbo() {
+  if (game.state !== 'flight' || flight.turbo || !flight.canTurbo || flight.stars < TURBO) return
+  flight.turbo = true
+  flight.used = true
+  save.turbos++
+  flight.target++
+  flight.dist += flight.cruise * 4.5
+  flight.boost = 2.5
+  audio.turbo()
+  banner(`⚡ ${DESTS[flight.target].emoji}`, 2000)
+  $('turbo').disabled = true
+  $('turbo').classList.add('used')
+  renderJourney()
+  sparks.burst(rocket.root.position, ['#8ef0c8', '#3bb5ff', '#c9b6ff', '#ffd23f'], 12, 3, 0.8)
+}
+$('turbo').addEventListener('pointerdown', (e) => e.stopPropagation())
+$('turbo').addEventListener('click', () => useTurbo())
 
 /**
  * Flying past a planet for the first time still counts: it waves, drops its new parts, and
@@ -1369,9 +1650,10 @@ function updateFlight(dt) {
   f.dizzy = Math.max(0, f.dizzy - dt)
   const t = game.time
   const W = f.wob
-  rocket.wobbler.rotation.z = clamp(-f.vx * 0.05, -0.45, 0.45) + W * (0.2 * Math.sin(t * 3.1) + 0.08 * Math.sin(t * 7.7))
-  rocket.wobbler.rotation.x = W * 0.12 * Math.sin(t * 2.3)
-  rocket.wobbler.position.x = W * 0.25 * Math.sin(t * 1.7)
+  // Steady is 0.05 and any wobbly part at least 0.5, so the two kinds of flight look plainly different
+  rocket.wobbler.rotation.z = clamp(-f.vx * 0.05, -0.45, 0.45) + W * (0.3 * Math.sin(t * 2.6) + 0.07 * Math.sin(t * 7.7))
+  rocket.wobbler.rotation.x = W * 0.14 * Math.sin(t * 2.1)
+  rocket.wobbler.position.x = W * 0.35 * Math.sin(t * 1.5)
   f.spin = f.dizzy > 0 ? f.spin + dt * 14 * (f.dizzy / 1.1 + 0.2) : damp(f.spin, Math.round(f.spin / (Math.PI * 2)) * Math.PI * 2, 6, dt)
   rocket.wobbler.rotation.y = f.spin
 
@@ -1441,12 +1723,12 @@ function updateItems(dt) {
     if (it.star) {
       o.rotation.y = Math.sin(it.t * 2.2) * 0.6
       o.rotation.z = Math.sin(it.t * 1.4) * 0.2
-      // Stars near the rocket drift in, so near misses still count
+      // Stars that only just miss drift in, so steering matters but a near miss still counts
       const dx = rp.x - o.position.x
       const dy = rp.y - o.position.y
-      if (Math.abs(dx) < rw + 0.9 && Math.abs(dy) < rh + 0.8 && game.state === 'flight') {
-        o.position.x += dx * dt * 1.8
-        o.position.y += dy * dt * 1.5
+      if (Math.abs(dx) < rw + 0.4 && Math.abs(dy) < rh + 0.4 && game.state === 'flight') {
+        o.position.x += dx * dt * 1.2
+        o.position.y += dy * dt * 1.0
       }
       if (Math.abs(dx) < rw && Math.abs(dy) < rh && game.state === 'flight') {
         catchStar(it)
@@ -1692,9 +1974,46 @@ function startParty() {
   party.news = [...flight.flyby, ...(first ? unlocksAt(d).map((n) => ({ ...n, from: d })) : [])]
   flight.flyby = []
   for (const n of party.news) save.fresh.add(`${n.slot}:${n.id}`)
-  // A fair test (one part changed) adds a page to the "what I found out" notebook
-  party.found = !!flight.test && addNote(save.notes, noteFrom(flight.test))
+  // A fair test (one part changed) adds a page to the "what I found out" notebook. A mission
+  // flight with one part changed since the last landing is a fair test too, just unasked.
+  const tested = flight.test ?? fairTest(save.last, save.rocket)
+  party.found = !!tested && addNote(save.notes, noteFrom(tested))
+  // ...and marks that single nose, tank or fins steady ━ or wobbly 〰️ in the tray
+  party.learned = tested ? learnParts(save.known, tested) : []
+  if (party.learned.length) save.notesNew = true
   if (party.found) save.notesNew = true
+  if (flight.test) save.guessRun = verdict(flight.test).matched ? save.guessRun + 1 : 0
+  save.landed = d
+  // Only a flight that lands counts as flown (one left mid-air never claims a landing)
+  save.last = partsOf(save.rocket)
+  save.flown.add(save.rocket.booster)
+  save.flights++
+  // A mission flight is checked against its card and the child's guess; the tier follows how they are doing
+  party.mission = null
+  if (flight.mission) {
+    const m = flight.mission
+    const check = checkMission(m, { rocket: save.rocket, dest: d })
+    m.flew = true
+    // The "as it is" guess made when the card was picked up is what counts toward the next tier
+    const matched = m.diag !== null && !!m.diagOk
+    let next = afterFlight(save.mission, check.done, matched, check, save.rocket)
+    if (next === 'nearer') {
+      // A nearer card only when there is a different planet one booster size away; otherwise the
+      // same card stays and the finger shows the booster to try (never "a new card" that is not)
+      const card = makeMission(1, save.rocket, save.visited, { near: m.dest })
+      if (card.dest === m.dest) {
+        Object.assign(save.mission, { card: m, on: true, near: null })
+        next = 'help'
+      } else Object.assign(save.mission, { card, near: null })
+    }
+    let say = missionVerdict(m, check, { dest: d, turbo: flight.used, turboReady: flight.ready, rocket: save.rocket, next, flown: save.flown, known: Object.keys(save.known).length })
+    // The same advice twice in a visit: the short line instead (the picture card shows the rest)
+    if (!check.done && next !== 'step' && next !== 'hint') {
+      if (toldMiss.has(say)) say = missionShort(m, check, d) || say
+      else toldMiss.add(say)
+    }
+    party.mission = { m, check, say, matched, next }
+  }
   persist()
   audio.fanfare()
   audio.playSong('dance')
@@ -1704,6 +2023,9 @@ function startParty() {
     if (game.state === 'party') showReward()
   }, 2200)
 }
+
+/** Mission advice already said this visit (said again, it is the short line). */
+const toldMiss = new Set()
 
 /** The one soft moment on landing: a few pale sparkles drift up around the pilot and the flag, once. */
 function confetti() {
@@ -1732,6 +2054,12 @@ function showReward() {
     setTimeout(() => audio.unlock1(i), 300 + i * 180)
   })
   renderTest()
+  renderMissionResult()
+  // A missed mission card that is still on: the same rocket would land the same, so 🔧 is the way on
+  // (unless it stopped one short and the turbo could carry it, which is a real plan to try again)
+  const pm = party.mission
+  const turboFix = pm && pm.check.fix && party.dest + 1 === pm.m.dest && flight.canTurbo
+  show('again', !(pm && !pm.check.done && save.mission.on && !turboFix))
   show('reward')
   rewardAt = performance.now()
 }
@@ -1749,7 +2077,7 @@ function renderTest() {
   const race = flightRace(test, rocketThumb)
   const row = document.createElement('div')
   row.className = 'ft-verdict'
-  row.append(guessPicture(test.guess, rocketThumb(test.before), rocketThumb(test.now)))
+  row.append(testChip(test, rocketThumb))
   const mark = document.createElement('b')
   mark.className = 'ft-mark-result'
   row.append(mark)
@@ -1772,10 +2100,37 @@ function renderTest() {
 }
 let rewardAt = 0
 
+/** The mission card again, each thing it asked for marked ✔ or 💡, and one sentence from Robot. */
+function renderMissionResult() {
+  const box = $('reward-mission')
+  box.replaceChildren()
+  show('reward-mission', !!party.mission)
+  if (!party.mission) return
+  const { m, check, say, next } = party.mission
+  box.classList.toggle('done', check.done)
+  const why = document.createElement('p')
+  why.className = 'ft-why'
+  why.setAttribute('role', 'status')
+  why.textContent = say
+  const pic = missionPicture(m, { rocketThumb, marks: check })
+  box.append(pic, why)
+  let more = { easier: ' Let’s try a different mission next.', nearer: ' Robot has a new card for you, one booster size away.', help: ' Let’s try it together!', hint: ' Have a look!' }[next] ?? ''
+  // Reaching the top tier opens the workshop's race challenge: said once, ever
+  if (next === 'done' && save.mission.tier >= TIERS && !save.raceTold) {
+    save.raceTold = true
+    persist()
+    more += ' Robot left you a race challenge in the test workshop. Open your notebook, then the test tube!'
+  }
+  setTimeout(() => { if (game.state === 'party') voice.say(say + more) }, 700)
+}
+
 /** The stars caught, counted in fives: a gold 5, 10, 15… then the stars left over. */
 function renderRewardStars() {
   const el = $('reward-stars')
   el.replaceChildren()
+  // Stars are only shown where they could buy something: a flight with no turbo keeps no tally
+  // (and not on a mission flight where the turbo would only have carried it past the card's planet)
+  if (!flight.canTurbo || !turboRelevant()) return el.removeAttribute('aria-label')
   const fives = Math.floor(flight.stars / 5) * 5
   if (fives) {
     const chip = document.createElement('span')
@@ -1838,6 +2193,8 @@ function updateParty(dt) {
 
 function backToGarage(thenLaunch = false) {
   if (game.busy) return
+  const hint = party.mission?.next === 'hint'
+  const help = party.mission?.next === 'help' ? party.mission.m : null
   game.busy = true
   voice.hush()
   clearTimeout(raceTimer)
@@ -1845,8 +2202,8 @@ function backToGarage(thenLaunch = false) {
   audio.click()
   $('finger').classList.add('hidden')
   // Head to the tab with something new, so it is easy to find
-  const fresh = SLOTS.find((s) => PARTS[s.id].some((p) => save.fresh.has(`${s.id}:${p.id}`)))
-  if (fresh) game.tab = fresh.id
+  const fresh = [...save.fresh].pop()?.split(':')[0]
+  if (fresh) game.tab = fresh
   wipe('🔧', () => {
     toGarage({ snap: true })
     if (thenLaunch) {
@@ -1855,7 +2212,31 @@ function backToGarage(thenLaunch = false) {
     }
   }).then(() => {
     game.busy = false
-    if (thenLaunch) launch()
+    if (thenLaunch) {
+      launch()
+      // A launch that stopped for a question (or did not start) brings the tray and GO back
+      if (game.state !== 'countdown') backToBuilding()
+      return
+    }
+    // The second miss on a tier-1 card: the notebook opens on where each booster went, by itself
+    // only the first time; after that the 📓 is framed for the child to open
+    if (hint && save.flown.size) {
+      if (save.hinted) return $('notebook-btn').classList.add('look')
+      save.hinted = true
+      save.notesNew = false
+      persist()
+      renderNotebookButton()
+      notebook.show({ look: 'flown' })
+    }
+    // The third miss with no nearer planet: the booster tab, and the finger on the boosters to try
+    if (help) {
+      const needed = PARTS.booster.find((p) => isUnlocked(p, save.visited) && Math.min(DESTS.length - 1, p.power) === help.dest)
+      if (!needed || needed.id === save.rocket.booster) return
+      helpBooster = needed.id
+      setTab('booster')
+      hintStep()
+      voice.say(needed.id === 'none' ? 'Try it with no boosters!' : `Try the ${BOOSTER_WORDS[needed.id]}!`)
+    }
   })
 }
 $('to-garage').addEventListener('click', () => backToGarage(false))
@@ -1928,6 +2309,7 @@ addEventListener('keydown', (e) => {
     return toGarage()
   }
   if (game.state === 'garage') {
+    if (game.look) return
     const i = SLOTS.findIndex((s) => s.id === game.tab)
     if (k === 'Enter' || k === ' ') {
       e.preventDefault()
@@ -1951,9 +2333,13 @@ addEventListener('keydown', (e) => {
     }
     return
   }
+  if (game.state === 'flight' && (k === 'Enter' || k === ' ' || k === 't' || k === 'T')) {
+    e.preventDefault()
+    return useTurbo()
+  }
   if (game.state === 'party' && (k === 'Enter' || k === ' ')) {
     e.preventDefault()
-    return backToGarage(true)
+    return backToGarage(!$('again').classList.contains('hidden'))
   }
   keys.add(k)
   if (k.startsWith('Arrow') || k === ' ') e.preventDefault()
@@ -2014,6 +2400,8 @@ function updateGarage(dt) {
   robot.spin = Math.max(0, robot.spin - dt)
   robot.obj.rotation.y = robot.turn + (1 - robot.spin) * (robot.spin > 0 ? Math.PI * 2 : 0) + Math.sin(t * 1.2) * 0.08
   robot.obj.position.y = Math.abs(Math.sin(t * 3)) * 0.04
+  updatePadSway(dt)
+  renderPadTag()
   // Roof hatch and gantry arm move aside for take-off
   doors.l.position.x = damp(doors.l.position.x, -doors.open * 2.4, 3, dt)
   doors.r.position.x = damp(doors.r.position.x, doors.open * 2.4, 3, dt)
@@ -2084,4 +2472,4 @@ load()
   })
 
 // Handy for testing: ?debug exposes the game state in the console
-if (new URLSearchParams(location.search).has('debug')) window.rg = { probe(x, y) { ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.intersectObjects(scene.children, true).slice(0, 5).map((h) => `${h.object.type}:${h.object.name}:${h.object.material?.name}:${h.object.visible}`) }, land(d) { clearFlight(); flight.target = d; flight.stars = 7; setupLanding() }, debug, predictor, notebook, ghost, get pendingTest() { return pendingTest }, step(sec = 1) { for (let i = 0; i < sec * 30; i++) tick(1 / 30) }, keys, game, save, flight, party, choose, launch, surprise, toGarage, backToGarage, get rocket() { return rocket } }
+if (new URLSearchParams(location.search).has('debug')) window.rg = { probe(x, y) { ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.intersectObjects(scene.children, true).slice(0, 5).map((h) => `${h.object.type}:${h.object.name}:${h.object.material?.name}:${h.object.visible}`) }, land(d) { clearFlight(); flight.target = d; flight.stars = 7; setupLanding() }, debug, predictor, notebook, ghost, get pendingTest() { return pendingTest }, step(sec = 1) { for (let i = 0; i < sec * 30; i++) tick(1 / 30) }, keys, game, save, flight, party, choose, launch, surprise, toGarage, backToGarage, useTurbo, missionCard, renderMission, where, items, spawnPattern, get rocket() { return rocket } }

@@ -1,7 +1,7 @@
 import { createDelivery } from './delivery.js'
 import { createAdventure } from './adventure.js'
 import { createVoice } from './speech.js'
-import { createTown, drawMapCar, drawTownMap, townMapLayout } from './town.js'
+import { TOP_TIER, createTown, drawMapCar, drawTownMap, townMapLayout } from './town.js'
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
@@ -11,6 +11,7 @@ import { Audio } from './audio.js'
 import { Bot } from './bot.js'
 import { CAR_MODELS, Car, TURBO_COOLDOWN, carColour, prepareTemplate } from './car.js'
 import { CITIES, buildCity, seeThrough } from './cities.js'
+import { createGates } from './gates.js'
 import { Debris } from './damage.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
@@ -22,7 +23,6 @@ const params = new URLSearchParams(location.search)
 const DEBUG = params.has('debug')
 const $ = (id) => document.getElementById(id)
 const FIXED_DT = 1 / 60
-const SMASH_SECONDS = 120
 /** Once the first child finishes, everyone else has this long before the podium. */
 const FINALE_SECONDS = 20
 /** How long the host waits for slow devices to build the city before starting anyway. */
@@ -32,11 +32,11 @@ const RESPAWN_GHOST = 2
 const RESET_COOLDOWN = 3
 /** Delivery Town: a slow, steady top speed (about 47 km/h) and how long the car rests at a doorstep. */
 const TOWN_TOP_SPEED = 13
+/** Easy-mode racing stays at the calm cruise (about 72 km/h), even holding 🚀: no turbo, no burst of speed. */
+const EASY_RACE_TOP = 20
 const HANDOVER_SECONDS = 2.4
 const FIX_COOLDOWN = 8
 const PLAYER_EMOJI = ['🦊', '🐼', '🐸', '🐯', '🐵', '🐰', '🐶', '🐨']
-const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']
-const MEDAL = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅', '🏅', '🏅']
 
 // --- Renderer, scene, physics -------------------------------------------------
 
@@ -148,7 +148,8 @@ const game = {
   state: 'loading', // loading | menu | waiting | syncing | countdown | race | results
   city: 'ubud',
   mode: 'town', // town (Delivery Town, the calm default) | race | smash
-  townHold: 0, // race time until which the car rests at a doorstep while a parcel is handed over
+  townHold: 0, // race time until which the car rests (at a door, handing a parcel over, or turning round)
+  turning: null, // Delivery Town: a U-turn in progress (see uTurn)
   scores: new Map(), // id -> smash points
   laps: 2,
   players: new Map(), // id -> { id, emoji, model }
@@ -233,84 +234,471 @@ const delivery = createDelivery(scene, () => {
 const deliveryOn = () => game.mode === 'race' && !!adventure.option.goal
 
 // --- Delivery Town ------------------------------------------------------------------
-// The calm default: no race, no bots. Four picture parcels go to four picture
-// houses placed out of the parcel list's order; the child picks a parcel, finds
-// its house on the big map and drives there. See town.js.
+// The calm default: no race, no bots. Picture parcels go to picture houses placed
+// out of the parcel list's order. The child packs the van, finds the house on the
+// big map, drives there and asks the car to stop at it. See town.js.
 
 const town = createTown(scene)
 const townOn = () => game.mode === 'town'
 
-/** The parcels in the van, as big picture buttons: tap one to choose where to go next. */
+/**
+ * How this drive is going, for the harder tier and an honest ending. The car
+ * stops at a house only when the child asks it to, and every handover is the
+ * child's own tap at the door. A parcel offered at the wrong door is turned
+ * away kindly and the car rolls on, so a guess costs a trip round the block
+ * (and, in tier 1, lights that parcel's house on the map). No buzzer, no
+ * failure. A parcel taken the short way is noticed at the end.
+ */
+let townRun = null
+const TIER_KEY = 'crash-racers-town-tier'
+/** How many careful drives in a row this device has had (two bring the harder tier). */
+const CAREFUL_KEY = 'crash-racers-town-careful'
+/** How long the car waits at a door the child stopped at (➡️ or 🚀 drives on sooner). */
+const DOOR_SECONDS = 8
+/** After a parcel is turned away: a moment to hear the question, then the car rolls on. */
+const TURNED_AWAY_SECONDS = 2.6
+/** How far ahead (metres) a house's stop button shows up. */
+const STOP_AHEAD = 34
+/** A short, slow U-turn instead of a jump to the other way. */
+const U_TURN_SECONDS = 1.1
+function stored(key, fallback) {
+  try {
+    return localStorage.getItem(key) ?? fallback
+  } catch {
+    return fallback
+  }
+}
+function store(key, value) {
+  try {
+    localStorage.setItem(key, String(value))
+  } catch {}
+}
+/** The tier this device plays: 1 (one easy parcel per house), 2 (pairs to sort, road works) or 3 (pairs, a one-way street), from how the last drives went. */
+const townTier = () => clamp(Math.round(Number(stored(TIER_KEY, '1'))) || 1, 1, TOP_TIER)
+function newTownRun() {
+  townRun = {
+    tier: townTier(),
+    wrong: new Set(), // "house:parcel" pairs offered at the wrong door
+    misses: new Map(), // parcel -> wrong tries
+    hinted: new Set(), // houses that glow on the map
+    help: 0, // times the game helped (map glow, the turn-round hint)
+    trips: new Map(), // parcel -> { shortest, driven } from when it was packed
+    stops: [], // { house, parcel, short, visit } in delivery order
+    planned: { driven: 0, shortest: 0 }, // metres over every delivered parcel's trip, against the shortest ways
+    door: -1, // the house the car is stopped at, where a tap on a parcel offers it
+    visit: 0, // counts door visits, so a pair handed over together can be told apart
+    ahead: -1, // the waiting house coming up, whose stop button shows
+    stopFor: -1, // the house the child asked to stop at
+    turnedAway: -1, // the house that just turned a parcel away (no stopping again until the car has gone)
+    turnHint: false,
+    switches: 0, // parcels unpacked or swapped before delivering
+    asked: 0, // "Who would like…?" is said for the first two parcels only
+    questions: new Set(), // wrong-offer questions said this drive (each once, four at most)
+    total: 0, // metres driven along the road this drive
+    lastDist: null, // where along the loop the car was last tick
+    blocks: 0, // times the car came up to the cones or the ⛔ end of the one-way street
+    best: 0, // the shortest whole route from the start, round the road works or along the arrows (see bestRoute)
+    plan: [], // that route as [x, z] points, drawn faintly under the child's route on the recap
+  }
+}
+newTownRun()
+const lower = (name) => name[0].toLowerCase() + name.slice(1)
+/** "Who would like a bone?": the question a parcel asks; its answer is a house on the map. */
+const whoWants = (gift) => `Who would like ${lower(gift.name)}?`
+const houseOf = (p) => town.parcels[p].house
+/** The house the map rings in gold: only a parcel the child has struggled with gets this help. */
+const mapHint = () => town.load.map(houseOf).find((h) => townRun.hinted.has(h)) ?? -1
+function hintMap(house) {
+  if (townRun.hinted.has(house)) return
+  townRun.hinted.add(house)
+  townRun.help++
+}
+
+/** How far along the road (metres, the way the car faces) to `dist`. */
+function aheadOf(car, proj, dist) {
+  const L = game.track.length
+  return ((((dist - proj.dist) * travelDir(car, proj)) % L) + L) % L
+}
+
+const loopMod = (d) => ((d % game.track.length) + game.track.length) % game.track.length
+/** Do two stretches of the loop (each a start and a length, measured down the loop) overlap? */
+const overlap = (a, la, b, lb) => loopMod(b - a) < la || loopMod(a - b) < lb
+/** Is loop distance `d` on tier 3's one-way street? */
+const onOneWay = (d) => !!town.oneWay && loopMod(d - town.oneWay.from) < town.oneWay.span
+
+/**
+ * Metres from loop distance `a` to `b` driving in direction `dir` (1 down the
+ * loop, -1 back up it), or Infinity when the road works (tier 2) or the
+ * one-way street's arrows (tier 3) forbid that way.
+ */
+function legLength(a, b, dir) {
+  const len = loopMod((b - a) * dir)
+  if (town.closed != null && loopMod((town.closed - a) * dir) < len) return Infinity
+  const one = town.oneWay
+  if (one && dir !== one.dir && overlap(dir > 0 ? a : a - len, len, one.from, one.span)) return Infinity
+  return len
+}
+
+/**
+ * The shortest way from where the car is to house `i`, and how far it is each
+ * way. Past road works (tier 2) or against the arrows of a one-way street
+ * (tier 3) a way is closed, so the short way is the open one.
+ */
+function townWay(i) {
+  const car = game.player
+  const proj = car && projOf(car)
+  if (!proj) return null
+  const dir = travelDir(car, proj)
+  const ahead = legLength(proj.dist, town.houses[i].dist, dir)
+  const behind = legLength(proj.dist, town.houses[i].dist, -dir)
+  return { ahead, behind, shortest: Math.min(ahead, behind) }
+}
+
+/** A wrong match: the first time this parcel goes astray in tier 1 (the second in tier 2), its house glows on the map. */
+function missed(p, key) {
+  if (townRun.wrong.has(key)) return
+  townRun.wrong.add(key)
+  const n = (townRun.misses.get(p) ?? 0) + 1
+  townRun.misses.set(p, n)
+  if (n >= townRun.tier) hintMap(houseOf(p))
+}
+
+/** A big round tile: a picture, an optional corner badge, and what it says to a screen reader. */
+function tile(className, picture, label, onclick, tint) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = className
+  button.innerHTML = `<span class="picture">${picture}</span>`
+  button.setAttribute('aria-label', label)
+  if (tint) button.style.setProperty('--tint', tint)
+  button.onclick = onclick
+  return button
+}
+
+/**
+ * The parcels, as big picture buttons showing what is inside. Driving, a tap
+ * packs or unpacks one (the van holds `town.carry`), and the house coming up
+ * shows as a stop button at the end of the row. Stopped at a door, the house's
+ * picture leads the row, then the packed parcels to offer it, and ➡️ to drive on.
+ */
 function renderParcels() {
   const el = $('parcels')
+  renderStop()
   if (!townOn()) return el.replaceChildren()
-  el.replaceChildren(
-    ...town.tray.map((i) => {
-      const { kind } = town.houses[i]
-      const delivered = town.order.includes(i)
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.className = 'parcel'
-      button.classList.toggle('chosen', i === town.chosen)
-      button.classList.toggle('delivered', delivered)
-      button.disabled = delivered
-      button.style.setProperty('--tint', kind.colour)
-      button.innerHTML = `<span class="picture">${kind.emoji}</span>${delivered ? '<span class="tick">✓</span>' : ''}`
-      button.setAttribute('aria-label', `${kind.parcel}${delivered ? ', delivered' : `, for ${kind.house}`}`)
-      button.setAttribute('aria-pressed', String(i === town.chosen))
-      button.onclick = () => chooseParcel(i)
-      return button
-    }),
-  )
+  const door = townRun.door
+  el.classList.toggle('at-door', door >= 0)
+  el.classList.toggle('many', town.parcels.length > 6)
+  const shown = door >= 0 ? town.load : town.tray
+  const tiles = shown.map((p) => {
+    const { gift, house } = town.parcels[p]
+    const delivered = town.isDelivered(p)
+    const packed = town.load.includes(p)
+    const doing = door >= 0 ? `, give to ${town.houses[door].kind.house}` : packed ? ', in the van' : ''
+    const button = tile('parcel', gift.emoji, `${gift.name}${delivered ? `, delivered to ${town.houses[house].kind.house}` : doing}`, () => tapParcel(p))
+    button.classList.toggle('chosen', packed && door < 0)
+    button.classList.toggle('delivered', delivered)
+    button.disabled = delivered
+    // Delivered, the tile shows where it went, so the match can be seen afterwards.
+    if (delivered) button.insertAdjacentHTML('beforeend', `<span class="tick">${town.houses[house].kind.emoji}</span>`)
+    button.setAttribute('aria-pressed', String(packed))
+    return button
+  })
+  if (door < 0) return el.replaceChildren(...tiles)
+  const house = document.createElement('span')
+  house.className = 'door-house'
+  house.style.setProperty('--tint', town.houses[door].kind.colour)
+  house.textContent = town.houses[door].kind.emoji
+  house.setAttribute('aria-hidden', 'true')
+  el.replaceChildren(house, ...tiles, tile('parcel drive-on', '➡️', 'Drive on', () => driveOn()))
 }
 
-/** The child picked a parcel: it rides on the roof, its house glows on the map, and the voice says where it goes. */
-function chooseParcel(i) {
-  if (!townOn() || game.state !== 'race' || !game.player || town.order.includes(i)) return
+/**
+ * The house coming up the road, as a big round button above the pedals: a tap
+ * asks the car to stop at its door. It shows for every waiting house in turn,
+ * so it says nothing about which one is right: that is the child's to know.
+ */
+function renderStop() {
+  const stop = $('stop-here')
+  const ahead = townOn() && game.state === 'race' && townRun.door < 0 && town.load.length ? townRun.ahead : -1
+  stop.classList.toggle('hidden', ahead < 0)
+  if (ahead < 0) return
+  const { kind } = town.houses[ahead]
+  stop.style.setProperty('--tint', kind.colour)
+  stop.querySelector('.picture').textContent = kind.emoji
+  stop.setAttribute('aria-label', `Stop at ${kind.house}`)
+  stop.classList.toggle('asked', townRun.stopFor === ahead)
+  stop.onclick = () => askToStop(ahead)
+}
+
+/** A tap on a parcel: at a door it is offered to that house; driving, it is packed into the van or taken out again. */
+function tapParcel(p) {
+  if (!townOn() || game.state !== 'race' || !game.player || town.isDelivered(p)) return
   audio.unlock()
-  // Already parked at the right house: hand it straight over.
-  if (town.at === i) {
-    town.choose(i, game.player)
-    return deliverTo(i)
-  }
+  if (townRun.door >= 0) return town.load.includes(p) && offer(p, townRun.door)
   audio.beep()
-  town.choose(i, game.player)
-  renderParcels()
-  const { kind } = town.houses[i]
-  voice.sayNow(`${kind.parcel} goes to ${kind.house}. Can you find it on the map?`)
-}
-
-/** The car reached a house's doorstep (once per visit). */
-function townArrive(i) {
-  const here = town.houses[i].kind
-  if (town.order.includes(i)) return town.waveAt(i)
-  if (town.chosen === i) return deliverTo(i)
-  if (town.chosen >= 0) {
-    // The wrong house: say kindly whose house it is and where the parcel goes.
-    const wanted = town.houses[town.chosen].kind
-    banner(`🏠 ${here.emoji}  ·  📦 ${wanted.emoji}`, 2000)
-    voice.sayNow(`This is ${here.house}. ${wanted.parcel} goes to ${wanted.house}.`)
-    return
+  let load = town.load.slice()
+  if (load.includes(p)) {
+    // Unpacked again: a change of mind.
+    load = load.filter((q) => q !== p)
+    townRun.switches++
+  } else {
+    // A full van swaps out the parcel packed first.
+    if (load.length >= town.carry) {
+      load.shift()
+      townRun.switches++
+    }
+    load.push(p)
+    const way = townWay(houseOf(p))
+    if (way) townRun.trips.set(p, { shortest: way.shortest, driven: 0 })
   }
-  // No parcel chosen yet: the car rests here a moment so the child can find the matching parcel.
-  game.townHold = game.raceTime + HANDOVER_SECONDS
-  banner(`🏠 ${here.emoji}`, 2000)
-  voice.sayNow(`This is ${here.house}. Which parcel goes here?`)
+  town.pack(load, game.player)
+  for (const q of townRun.trips.keys()) if (!load.includes(q) && !town.isDelivered(q)) townRun.trips.delete(q)
+  if (townRun.stopFor >= 0 && !load.length) townRun.stopFor = -1
+  renderParcels()
+  setTurnHint(false)
+  if (!load.includes(p)) return
+  // Swapping parcel after parcel: the map helps with this one.
+  if (townRun.switches >= 4) findHelp(houseOf(p))
+  // The question is asked for the first two parcels; after that the picture speaks for itself.
+  if (townRun.asked < 2) {
+    townRun.asked++
+    const { gift } = town.parcels[p]
+    // Queued, so packing a second parcel quickly never cuts the first question off.
+    voice.say(`${gift.name}. ${whoWants(gift)}`)
+  }
 }
 
-/** A calm handover: the car rests, the parcel hops to the doorstep, a doorbell, and the resident waves. */
-function deliverTo(i) {
-  const { kind } = town.houses[i]
-  game.townHold = game.raceTime + HANDOVER_SECONDS
-  town.deliver(i, game.player)
-  audio.doorbell()
+/** The child tapped the house coming up: the car eases to a stop at its door. */
+function askToStop(i) {
+  if (!townOn() || game.state !== 'race' || townRun.door >= 0 || !town.load.length) return
+  // A house that just turned a parcel away (or has everything it wanted) is not asked again on this visit.
+  if (i === townRun.turnedAway || town.complete(i)) return
+  audio.unlock()
+  audio.beep()
+  townRun.stopFor = i
   renderParcels()
-  banner(`${kind.resident} 👋 ${kind.emoji}`, 2400)
-  voice.sayNow(kind.thanks)
+  if (town.at === i) atDoor(i)
+}
+
+/** Stopped at house `door`, the child offers parcel `p`: the right one is handed over; another is kindly turned away and the car rolls on. */
+function offer(p, door) {
+  if (houseOf(p) === door) return deliverTo(p)
+  const { gift } = town.parcels[p]
+  const { kind } = town.houses[door]
+  missed(p, `${door}:${p}`)
+  // The door closes for this visit: the question to think about, and on we go.
+  townRun.turnedAway = door
+  townRun.stopFor = -1
+  townRun.door = -1
+  // Its stop button goes with it: this visit is over, so it cannot be asked again until the car has driven on.
+  townRun.ahead = -1
+  game.townHold = game.raceTime + TURNED_AWAY_SECONDS
+  renderParcels()
+  banner(`${kind.resident} 🤔 ${gift.emoji}`, 2200)
+  // The question is the lesson, said once for each parcel and door (and four a drive at most: then the pictures carry it).
+  const question = `${gift.name} for ${kind.house}? Hmm. ${kind.ask}`
+  if (townRun.questions.size < 4 && !townRun.questions.has(question)) {
+    townRun.questions.add(question)
+    voice.sayNow(question)
+  }
+}
+
+/** The car reached the house the child asked to stop at: it waits at the door for the handover. */
+function atDoor(i) {
+  const { kind } = town.houses[i]
+  townRun.door = i
+  townRun.stopFor = -1
+  townRun.visit++
+  game.townHold = Math.max(game.townHold, game.raceTime + DOOR_SECONDS)
+  renderParcels()
+  banner(`🏠 ${kind.emoji}`, 1600)
+  voice.sayOnce('Tap your parcel to hand it over.')
+}
+
+/** Leaves the door: the parcels go back to packing, and the car drives on. */
+function leaveDoor() {
+  townRun.door = -1
+  renderParcels()
+}
+function driveOn() {
+  if (game.turning) return
+  game.townHold = Math.min(game.townHold, game.raceTime)
+  leaveDoor()
+}
+
+/** The child has been looking a long while for this house: it glows on the map, and the voice says so once. */
+function findHelp(house) {
+  if (townRun.hinted.has(house)) return
+  hintMap(house)
+  // Said once a drive, however many parcels need it: the glow does the rest.
+  voice.sayOnce('Look at the map: the house for your parcel is glowing.')
+}
+
+/** The turn-round button is suggested: as tier 1 help once a drive, and at road works (the only way on). */
+function setTurnHint(on) {
+  $('turn-btn').classList.toggle('suggest', on)
+}
+
+/** The waiting house coming up the road (or the one the car is beside), whose stop button shows; -1 for none. */
+function houseAhead(car, proj) {
+  let best = -1, near = STOP_AHEAD
+  town.houses.forEach((h, i) => {
+    if (town.complete(i) || i === townRun.turnedAway) return
+    const d = town.at === i ? 0 : aheadOf(car, proj, h.dist)
+    if (d < near) {
+      near = d
+      best = i
+    }
+  })
+  return best
+}
+
+function watchTheWay(dt) {
+  const car = game.player
+  const proj = projOf(car)
+  if (townRun.door >= 0 && town.at !== townRun.door) leaveDoor()
+  // Gone from the house that turned a parcel away: it may be visited again next time round.
+  if (townRun.turnedAway >= 0 && town.at !== townRun.turnedAway) townRun.turnedAway = -1
+  roadworksAhead(car, proj)
+  // Distance is measured along the road (as the best plan is), so a careful drive matches the plan and corner-cutting does not count.
+  const moved = proj && townRun.lastDist != null ? Math.abs(game.track.offset(proj.dist, townRun.lastDist)) : 0
+  if (proj) townRun.lastDist = proj.dist
+  townRun.total += moved
+  for (const p of town.load) {
+    const trip = townRun.trips.get(p)
+    if (trip) trip.driven += moved
+  }
+  if (game.townHold > game.raceTime || game.turning) return
+  if (proj && townRun.door < 0) {
+    const ahead = houseAhead(car, proj)
+    if (townRun.stopFor >= 0 && townRun.stopFor !== ahead) townRun.stopFor = -1
+    if (ahead !== townRun.ahead) {
+      townRun.ahead = ahead
+      renderParcels()
+      if (ahead >= 0 && town.load.length) voice.sayOnce('Is this the house? Tap it to stop.')
+    }
+    // Holding 🐢 to a stop beside a waiting house asks to stop there too.
+    if (ahead >= 0 && ahead === town.at && town.load.length && car.speed < 1.5 && input.read().brake > 0) askToStop(ahead)
+  }
+  for (const p of town.load) {
+    // Round the whole loop and more without finding it: gentle help, once.
+    if ((townRun.trips.get(p)?.driven ?? 0) > game.track.length * 1.2) findHelp(houseOf(p))
+  }
+  const first = town.load[0]
+  const trip = townRun.trips.get(first)
+  // Never as a house comes up or at a door: then the stop button is the question.
+  if (!trip || townRun.tier > 1 || townRun.turnHint || trip.driven < 60 || car.speed < 3 || townRun.ahead >= 0 || town.at >= 0 || townRun.stopFor >= 0) return
+  const way = townWay(houseOf(first))
+  if (way && way.ahead > way.behind + 40) {
+    townRun.turnHint = true
+    townRun.help++
+    setTurnHint(true)
+    voice.sayOnce('Look at the map. Is the other way shorter?')
+  }
+}
+
+/** Metres to the road works, or to the wrong end of the one-way street, coming up the way the car faces (Infinity if none). */
+function blockAhead(car, proj) {
+  let near = town.closed != null ? aheadOf(car, proj, town.closed) : Infinity
+  const one = town.oneWay
+  // A car put back on the road inside the one-way street drives out of it, whichever way it faces.
+  if (one && travelDir(car, proj) !== one.dir && !onOneWay(proj.dist)) near = Math.min(near, aheadOf(car, proj, one.dir > 0 ? one.from + one.span : one.from))
+  return near
+}
+
+/**
+ * Tier 2 and 3: the car comes up to the cones (or to the ⛔ end of the one-way
+ * street) and stops. The child sees the way is shut and turns round (↩️,
+ * which is suggested); the voice says why once.
+ */
+function roadworksAhead(car, proj) {
+  const was = game.townBlocked
+  game.townBlocked = false
+  if ((town.closed == null && !town.oneWay) || game.turning || !proj) return
+  if (blockAhead(car, proj) > 14) return
+  game.townBlocked = true
+  if (was) return
+  townRun.blocks++
+  setTurnHint(true)
+  if (town.closed != null) {
+    banner('🚧', 1600)
+    voice.sayOnce('Road works! This road is closed. Tap the turn-round arrow.')
+  } else {
+    banner('⛔', 1600)
+    voice.sayOnce('No entry! The arrows go the other way. Tap the turn-round arrow.')
+  }
+}
+
+/**
+ * Turns the car to face the other way round the loop: a slow swing on the spot
+ * (instant under reduced motion), with the car resting until it is done.
+ */
+function uTurn(car) {
+  const proj = projOf(car)
+  if (!proj) return
+  const s = game.track.sampleAt(proj.dist)
+  const half = game.track.width / 2 - 1.5
+  const at = s.p.clone().addScaledVector(s.side, clamp(proj.lateral, -half, half))
+  const to = game.track.headingAt(s) + (travelDir(car, proj) > 0 ? Math.PI : 0)
+  setTurnHint(false)
+  townRun.stopFor = -1
+  if (!game.room.solo) setGhost(car, true)
+  audio.whoosh()
+  if (reducedMotion.matches) return car.place(at, to)
+  const nose = car.body.quaternion.vmult(NOSE_AXIS, headingScratch)
+  const from = Math.atan2(-nose.x, -nose.z)
+  const swing = Math.atan2(Math.sin(to - from), Math.cos(to - from))
+  game.turning = { car, at, from, swing, t: 0 }
+  game.townHold = Math.max(game.townHold, game.raceTime + U_TURN_SECONDS)
+}
+/** Each tick of a U-turn: the car swings round on the spot, easing in and out. */
+function turnStep(dt) {
+  const turn = game.turning
+  if (!turn) return
+  turn.t = Math.min(1, turn.t + dt / U_TURN_SECONDS)
+  const ease = turn.t * turn.t * (3 - 2 * turn.t)
+  turn.car.place(turn.at, turn.from + turn.swing * ease)
+  if (turn.t >= 1) game.turning = null
+}
+
+/** The car reached a house's doorstep (once per visit): it stops only if the child asked it to. */
+function townArrive(i) {
+  if (town.complete(i)) return town.waveAt(i)
+  if (game.turning) return
+  if (townRun.stopFor === i) atDoor(i)
+}
+
+/** A calm handover: the parcel hops to the doorstep, a doorbell, and the resident waves. */
+function deliverTo(p) {
+  const { gift, house } = town.parcels[p]
+  const { kind } = town.houses[house]
+  const trip = townRun.trips.get(p)
+  // The second of a pair handed over on the same visit: the doorbell and the wave say thank you this time.
+  const pairDone = townRun.stops.some((s) => s.house === house && s.visit === townRun.visit)
+  // The short way: no wrong offers for this parcel, and no more than a little over the shortest drive from where it was packed.
+  townRun.stops.push({ house, parcel: p, visit: townRun.visit, short: trip ? !townRun.misses.has(p) && trip.driven <= trip.shortest * 1.2 + 15 : null })
+  if (trip) {
+    townRun.planned.driven += trip.driven
+    townRun.planned.shortest += trip.shortest
+    townRun.trips.delete(p)
+  }
+  setTurnHint(false)
+  town.deliver(p, game.player)
+  audio.doorbell()
+  // Something else packed for this house too (tier 2): the door stays open for it.
+  const more = town.load.some((q) => houseOf(q) === house)
+  if (!more) {
+    townRun.door = -1
+    if (town.complete(house)) townRun.ahead = -1
+  }
+  game.townHold = more ? Math.max(game.townHold, game.raceTime + HANDOVER_SECONDS + 2) : game.raceTime + HANDOVER_SECONDS
+  renderParcels()
+  banner(`${kind.resident} 👋 ${gift.emoji}`, 2400)
+  if (!pairDone) voice.sayNow(gift.thanks)
   later(() => {
     if (!game.raceOn || !townOn()) return
     if (town.done) finishTown()
-    else if (town.chosen < 0) voice.say('Which parcel next? Tap a parcel, then find its house on the map.')
+    else if (!town.load.length) voice.sayOnce('Which parcel next?')
   }, 3400)
 }
 
@@ -347,20 +735,242 @@ function finishTown() {
   // Alone (or the last friend home): the drive is over now, not after the race's pause.
   if (allFinished()) game.raceOn = false
   game.state = 'results'
+  renderStop()
   renderResults()
   show('results')
-  voice.say(`You delivered ${town.order.length} parcels! You read the map to find every house.`)
+  voice.say(townEnding())
+  adaptTier()
   onCarFinished(car.id)
 }
 
-/** The results screen in Delivery Town: the map, the way the child drove, and each stop numbered in the order they chose. */
+/**
+ * The shortest whole drive from where the car starts: every order of the
+ * houses, each leg the open way round (past the road works, along the arrows).
+ * With the road closed the loop is a line with two ends, and the best plan
+ * visits the nearer end first; with a one-way street the short way may be
+ * forbidden. Returns its metres and its path as [x, z] points for the recap.
+ */
+function bestRoute() {
+  const car = game.player
+  const proj = car && projOf(car)
+  if (!proj) return { length: 0, plan: [] }
+  let best = { length: Infinity, legs: [] }
+  const walk = (at, left, length, legs) => {
+    if (length >= best.length) return
+    if (!left.length) return (best = { length, legs })
+    for (const i of left) {
+      for (const dir of [1, -1]) {
+        const len = legLength(at, town.houses[i].dist, dir)
+        if (Number.isFinite(len)) walk(town.houses[i].dist, left.filter((j) => j !== i), length + len, [...legs, { from: at, len, dir }])
+      }
+    }
+  }
+  walk(proj.dist, town.houses.map((h, i) => i), 0, [])
+  const plan = []
+  for (const leg of best.legs) {
+    for (let d = 0; d <= leg.len; d += 3) {
+      const p = game.track.sampleAt(leg.from + leg.dir * d).p
+      plan.push([p.x, p.z])
+    }
+  }
+  return { length: Number.isFinite(best.length) ? best.length : 0, plan }
+}
+
+/** Tier 2: the houses whose two parcels were handed over on the same visit (packed together as a pair). */
+function pairsTogether() {
+  return town.houses.filter((h, i) => {
+    const visits = townRun.stops.filter((s) => s.house === i).map((s) => s.visit)
+    return visits.length === 2 && visits[0] === visits[1]
+  }).length
+}
+
+/** Tiers 2 and 3: the whole drive was within a little of the best plan from the start (greedy nearest-first often is not). */
+const plannedWell = () => townRun.best > 0 && townRun.total <= townRun.best * 1.12 + 30
+
+/** One honest closing line: praise for sorting and reading the map only when the child really did. */
+function townEnding() {
+  const n = town.parcels.length
+  if (townRun.tier > 1) {
+    const pairs = pairsTogether()
+    if (pairs < town.houses.length) return `All ${n} parcels delivered. You packed ${pairs ? `${pairs} pair${pairs > 1 ? 's' : ''} together` : 'one at a time'}. Next time, which two parcels go to the same house?`
+    const arrows = townRun.tier > 2
+    if (townRun.wrong.size === 0 && plannedWell()) return `All ${n} parcels delivered. You packed every pair and planned the whole way ${arrows ? 'along the arrows' : 'round the road works'}!`
+    // Stopped by the cones or the ⛔: the signs were the trouble. Otherwise the order was: the gold road on the recap shows a shorter one.
+    if (townRun.blocks) return `All ${n} parcels delivered, every pair together. Next time, ${arrows ? 'look at the arrows on the map: which way may you go?' : 'look at the cones on the map: which end should you visit first?'}`
+    return `All ${n} parcels delivered, every pair together. Look at the gold road on your map: it visits the houses in a shorter order.`
+  }
+  const short = townRun.stops.filter((s) => s.short).length
+  const planned = townRun.stops.filter((s) => s.short != null).length
+  if (planned && short === planned && townRun.wrong.size === 0) return `All ${n} parcels delivered. You read the map and went the short way every time!`
+  if (short) return `All ${n} parcels delivered. You found the short way ${['', 'once', 'twice'][short] ?? `${short} times`}.`
+  return `All ${n} parcels delivered. Next time, look at the map: which way is shorter?`
+}
+
+/**
+ * The harder tier follows how the child is doing, not a gate, and only on
+ * evidence. In tier 1 a careful drive is one where every parcel went the short
+ * way, with no wrong offers and no help (no glowing house or turn-round hint);
+ * in tiers 2 and 3, every pair packed together, no wrong offers, no help, and
+ * the whole drive close to the best plan. Two careful drives in a row bring the
+ * next tier. A tier goes back one after two or more wrong offers, most pairs
+ * split up, or trips over two and a half times the shortest ways.
+ */
+function adaptTier() {
+  const planned = townRun.stops.filter((s) => s.short != null)
+  const clean = townRun.wrong.size === 0 && townRun.help === 0
+  const careful = townRun.tier > 1 ? clean && pairsTogether() === town.houses.length && plannedWell() : planned.length >= 2 && planned.every((s) => s.short) && clean
+  const streak = careful ? Number(stored(CAREFUL_KEY, '0')) + 1 : 0
+  const { driven, shortest } = townRun.planned
+  const struggling = townRun.wrong.size >= 2 || driven > shortest * 2.5 + 60 || (townRun.tier > 1 && pairsTogether() < town.houses.length / 2)
+  let tier = townRun.tier
+  if (tier < TOP_TIER && streak >= 2) tier++
+  else if (tier > 1 && struggling) tier--
+  store(CAREFUL_KEY, tier === townRun.tier ? streak : 0)
+  store(TIER_KEY, tier)
+  townRun.done = true
+}
+
+/** The results screen in Delivery Town: the map, the way the child drove, and each stop with what was handed over there. */
 function renderRecap() {
   const map = $('recap-map')
-  drawTownMap(map.getContext('2d'), map.width, game.track, town.houses, { route: town.route, order: town.order })
+  drawTownMap(map.getContext('2d'), map.width, game.track, town.houses, { route: town.route, plan: townRun.plan, order: town.order, closed: town.closed, oneWay: town.oneWay })
+  renderWays()
   $('recap-stops').innerHTML = town.order
-    .map((i, n) => `<span class="stop" style="--tint:${town.houses[i].kind.colour}"><b>${n + 1}</b>${town.houses[i].kind.emoji}</span>`)
+    .map((i, n) => {
+      const { kind } = town.houses[i]
+      const given = townRun.stops.filter((s) => s.house === i)
+      const short = given.every((s) => s.short)
+      const gifts = given.map((s) => `<i>${town.parcels[s.parcel].gift.emoji}</i>`).join('')
+      // The match the child made, big enough to read: the house, and below it what was handed over there.
+      return `<span class="stop${short ? ' short' : ''}" style="--tint:${kind.colour}" title="${given.map((s) => town.parcels[s.parcel].gift.name).join(' and ')} → ${kind.house}"><span class="house"><b>${n + 1}</b>${kind.emoji}</span><span class="gifts">${gifts}</span></span>`
+    })
     .join('<span class="arrow">→</span>')
   map.setAttribute('aria-label', `Your route: ${town.order.map((i, n) => `${n + 1}, ${town.houses[i].kind.house}`).join('; ')}`)
+}
+
+/**
+ * Two ribbons under the recap map: how far the child drove (🚚, pink, like the
+ * route) beside the short plan (⭐, gold, like the band on the map). A careful
+ * drive's ribbons are nearly the same length; extra loops and wrong stops show
+ * as a longer pink ribbon. No numbers and no score: the picture is the lesson.
+ */
+function renderWays() {
+  const el = $('recap-ways')
+  const best = townRun.best, drove = townRun.total
+  el.classList.toggle('hidden', !(best > 0 && drove > 0))
+  if (!(best > 0 && drove > 0)) return
+  const longest = Math.max(best, drove)
+  el.querySelector('.mine i').style.width = `${Math.max(8, (drove / longest) * 100)}%`
+  el.querySelector('.short i').style.width = `${Math.max(8, (best / longest) * 100)}%`
+  const times = drove / best
+  el.setAttribute('aria-label', times < 1.15 ? 'Your drive was as short as the short way.' : `Your drive was about ${times < 1.75 ? 'one and a half times' : `${Math.round(times)} times`} as long as the short way.`)
+}
+
+// --- Present gates (Race and Bumpers) ------------------------------------------------
+// The matching lesson of Delivery Town, inside the race: a house on the gate,
+// a present over each lane, and the child picks the lane (see gates.js).
+
+const gates = createGates(scene)
+/** How far the car slows to through a puddle lane (m/s), and for how long. */
+const PUDDLE_SPEED = 10
+const PUDDLE_SECONDS = 1.4
+const newGateRun = () => ({ ahead: null, lane: 0, last: new Map(), passed: [], asked: 0 })
+
+/** Each tick in Race and Bumpers: shows the gate coming up, and notices the car going under one. */
+function watchGates() {
+  const car = game.player
+  const proj = game.progress.get(car.id)?.proj
+  const run = game.gateRun
+  if (!proj || !run) return
+  const L = game.track.length
+  let next = null, nextAhead = Infinity
+  for (const g of gates.gates) {
+    const ahead = loopMod(g.dist - proj.dist)
+    const was = run.last.get(g)
+    run.last.set(g, ahead)
+    // Under it: just ahead a moment ago, just behind now.
+    if (was != null && was < 15 && ahead > L - 15) passGate(g, car, proj)
+    else if (ahead < nextAhead) {
+      nextAhead = ahead
+      next = g
+    }
+  }
+  const showing = nextAhead < 120 ? next : null
+  if (showing === run.ahead) return
+  run.ahead = showing
+  run.lane = 0
+  renderGatePick()
+  if (showing) voice.sayOnce(input.easyGas ? 'A gate! Who lives there? Tap the present they would like.' : 'A gate! Who lives there? Drive under the present they would like.')
+}
+
+/** Under gate `g`: the lane the car is in is the child's answer. */
+function passGate(g, car, proj) {
+  const run = game.gateRun
+  const side = proj.lateral >= 0 ? 1 : -1
+  const gift = g.lanes[side]
+  const right = side === g.side
+  run.ahead = null
+  run.lane = 0
+  // Straight down the middle, under the house: no present chosen, so nothing happens (and nothing is counted).
+  if (Math.abs(proj.lateral) < 0.6) {
+    gates.redress(g)
+    return renderGatePick()
+  }
+  run.passed.push({ kind: g.kind, gift, right })
+  if (right) {
+    audio.doorbell()
+    banner(`${g.kind.resident} 👋 ${gift.emoji}`, 1400)
+  } else {
+    // The other lane has a soft puddle: a splash and a moment slower, and the house's question to think about.
+    audio.splash()
+    effects.splashAt(new THREE.Vector3(car.body.position.x, 0.3, car.body.position.z), 8)
+    car.puddleUntil = game.raceTime + PUDDLE_SECONDS
+    banner(`${g.kind.resident} 🤔 ${gift.emoji}`, 1600)
+    if (run.asked < 2 && voice.sayOnce(`${gift.name} for ${g.kind.house}? ${g.kind.ask}`)) run.asked++
+  }
+  gates.redress(g)
+  renderGatePick()
+}
+
+/** Easy mode: the two presents of the gate coming up, as big buttons either side of its house; a tap picks that lane. */
+function renderGatePick() {
+  const el = $('gate-pick')
+  const g = game.gateRun?.ahead
+  const on = !!g && input.easyGas && !townOn() && game.state === 'race'
+  el.classList.toggle('hidden', !on)
+  if (!on) return
+  const house = el.querySelector('.gate-house')
+  house.textContent = g.kind.emoji
+  house.style.setProperty('--tint', g.kind.colour)
+  for (const side of [-1, 1]) {
+    const button = el.querySelector(side < 0 ? '.lane-left' : '.lane-right')
+    button.querySelector('.picture').textContent = g.lanes[side].emoji
+    button.setAttribute('aria-label', `${g.lanes[side].name}: the ${side < 0 ? 'left' : 'right'} lane`)
+    button.classList.toggle('chosen', game.gateRun.lane === side)
+    button.onclick = () => pickLane(side)
+  }
+}
+function pickLane(side) {
+  if (!game.gateRun?.ahead || game.state !== 'race') return
+  audio.unlock()
+  audio.beep()
+  game.gateRun.lane = side
+  renderGatePick()
+}
+
+/** The results: each gate driven under, as the house and the present chosen (the right ones ringed in gold), and one honest line. */
+function renderGateRecap() {
+  const el = $('gate-recap')
+  const passed = townOn() ? [] : (game.gateRun?.passed ?? []).slice(-8)
+  el.classList.toggle('hidden', !passed.length)
+  el.innerHTML = passed.map((p) => `<span class="gate${p.right ? ' right' : ''}" style="--tint:${p.kind.colour}" title="${p.gift.name} for ${p.kind.house}"><b>${p.kind.emoji}</b><i>${p.gift.emoji}</i></span>`).join('')
+  el.setAttribute('aria-label', `Gates: ${passed.map((p) => `${p.gift.name} for ${p.kind.house}${p.right ? '' : ', not quite'}`).join('; ')}`)
+}
+function gateEnding() {
+  const passed = game.gateRun?.passed ?? []
+  if (townOn() || !passed.length) return
+  const right = passed.filter((p) => p.right).length
+  voice.say(right === passed.length ? 'You matched every present at the gates!' : right ? 'Next time at the gates, look at the house first: what would they like?' : 'At the gates, look at the house: which present is for them?')
 }
 
 const isHost = () => game.room && game.hostId === game.room.selfId
@@ -379,6 +989,8 @@ function later(fn, ms) {
 /** Every way out of a race (new city, Race again, the host's menu) passes here: its words and timers stop together. */
 function clearTimers() {
   voice.hush()
+  // The results' paper petals belong to the results: never over the next drive's road.
+  document.querySelector('.party')?.remove()
   for (const id of game.timers) clearTimeout(id)
   game.timers.clear()
 }
@@ -815,14 +1427,19 @@ function startRace(setup) {
   game.laps = clamp(Number(setup.laps) || 2, 1, 5)
   game.mode = ['smash', 'town'].includes(setup.mode) ? setup.mode : 'race'
   game.townHold = 0
+  game.townBlocked = false
+  game.turning = null
   // A friend's device follows the host's mode: the racing mission only runs in Race.
   renderModeChoice()
   game.raceOn = false
   game.finaleAt = 0
   game.confetti = false
+  game.waveNamed = false
   game.scores = new Map(setup.entries.map((e) => [e.id, 0]))
   $('lap').classList.toggle('hidden', game.mode === 'smash')
-  $('timer').classList.toggle('hidden', game.mode !== 'smash')
+  // Smash has no clock: the host (or a child alone) parks when they have had enough bumping.
+  $('hud').classList.toggle('smash', game.mode === 'smash' && (isHost() || game.room.solo))
+  $('hud').classList.toggle('easy', input.easyGas)
   // Tear down the previous race
   for (const car of game.cars.values()) car.dispose()
   game.cars.clear()
@@ -846,7 +1463,17 @@ function startRace(setup) {
   adventure.begin()
   delivery.configure(game.track)
   town.clear()
-  if (townOn()) town.configure(game.track, setup.seed)
+  // A harder drive left unfinished after the map had to help: the next one is the easier tier again.
+  if (townRun.tier > 1 && !townRun.done && townRun.help >= 2) store(TIER_KEY, townRun.tier - 1)
+  newTownRun()
+  setTurnHint(false)
+  renderStop()
+  if (townOn()) town.configure(game.track, setup.seed, townRun.tier)
+  // Race and Bumpers: the present gates, with each house's harder present once Delivery Town has moved on a tier.
+  if (townOn()) gates.clear()
+  else gates.configure(game.track, setup.seed, { harder: townTier() >= 2 })
+  game.gateRun = newGateRun()
+  renderGatePick()
   $('hud').classList.toggle('town', townOn())
   $('parcels').classList.toggle('hidden', !townOn())
   // The town map is drawn bigger and sharper than the racing minimap.
@@ -980,8 +1607,15 @@ function runCountdown() {
     game.raceOn = true
     show(null)
     renderParcels()
-    banner(`📦 × ${town.houses.length}`, 2400)
-    voice.say(`${town.houses.length} parcels to deliver! Tap a parcel, then find its house on the map.`)
+    banner(`📦 × ${town.parcels.length}`, 2400)
+    voice.newRound()
+    if (town.carry > 1) voice.say(`${town.parcels.length} parcels, two for each house. Pack two that go together, and find their house on the map.`)
+    else voice.say(`${town.parcels.length} parcels to deliver. Tap a parcel, think who would like it, and find their house on the map.`)
+    if (town.closed != null) voice.say('One road is closed today. Find the cones, and plan your way.')
+    if (town.oneWay) voice.say('One street is one way today. Find the arrows on the map, and plan your way.')
+    const best = bestRoute()
+    townRun.best = best.length
+    townRun.plan = best.plan
     return
   }
   if (game.player) banner(`You drive ${game.player.spec.emoji} ${game.player.spec.name}!`, 2600)
@@ -1040,7 +1674,8 @@ function sendStats() {
 
 /** Boost pads, and a moment of slow motion at the top of the player's big jumps. */
 function stunts(car, proj) {
-  const pad = proj && !townOn() ? game.track.boostPadAt(proj) : null
+  // Boost pads are turbo: not in town, and not for a child in Easy mode.
+  const pad = proj && !townOn() && !(car.isPlayer && input.easyGas) ? game.track.boostPadAt(proj) : null
   if (pad && car.boostPad !== pad) {
     car.boost({ free: true, seconds: 1.6 })
     if (car.isPlayer) audio.whoosh()
@@ -1079,8 +1714,9 @@ function onLanding(car, { airTime, flips, upright }) {
   effects.addShake(Math.min(0.5, airTime * 0.3))
   audio.thump(Math.min(1, airTime * 0.8))
   if (airTime < 0.8 && !flips) return
-  // Says what happened (a flip, or turbo filled up), without hype words or a cheer jingle.
-  banner(flips ? `🌀 ${flips > 1 ? `${flips} flips` : 'Flip'} · 🔥 ready` : '🔥 Turbo ready', 1400)
+  // Says what happened (a flip, or turbo filled up), without hype words or a cheer jingle. Easy mode has no turbo.
+  const ready = input.easyGas ? '' : '🔥 ready'
+  if (flips || ready) banner([flips && `🌀 ${flips > 1 ? `${flips} flips` : 'Flip'}`, ready].filter(Boolean).join(' · '), 1400)
   car.turboCooldown = 0
   if (game.mode === 'smash' && game.raceOn && flips) addScore(car, 2 * flips)
 }
@@ -1126,23 +1762,22 @@ const pickPoint = new THREE.Vector3()
 const RAINBOW = ['#ff6b9d', '#ffbe0b', '#8ac926', '#2ec4b6', '#6c63ff']
 /** What happens when a car touches a star or a mystery box (see Pickups.collect). */
 const PICKUP_HANDLERS = {
-  onStar(car, star, streak) {
+  onStar(car) {
+    // Stars are quiet scenery to drive through: no chime, no sparkle, no tally.
     addStat(car, 'stars')
-    if (car.isPlayer) {
-      effects.sparkle(pickPoint.set(star.x, star.y, star.z))
-      audio.coin(streak)
-    }
   },
   onBox: openBox,
 }
 
-/** Mystery box: a turbo, a honk that pushes everything nearby away, a repair or five stars. Never a bad thing. */
+/** Mystery box: a turbo, a honk that pushes everything nearby away, or a repair. Never a bad thing. */
 function openBox(car, box) {
   addStat(car, 'boxes')
   let prize = box.prize
   // Bots don't get the shockwave (it would only ever push children around), and a car that's fine doesn't need fixing.
   if (prize === 'wave' && car.isBot) prize = 'turbo'
-  if (prize === 'fix' && car.damage.level < 0.12) prize = car.isBot ? 'turbo' : 'stars'
+  if (prize === 'fix' && car.damage.level < 0.12) prize = car.isBot ? 'turbo' : 'wave'
+  // Easy mode has no turbo: its box is a honk wave instead.
+  if (prize === 'turbo' && car.isPlayer && input.easyGas) prize = 'wave'
   if (car.isPlayer) {
     effects.sparkle(pickPoint.set(box.x, box.y, box.z), RAINBOW)
     audio.box()
@@ -1157,13 +1792,14 @@ function openBox(car, box) {
   } else if (prize === 'wave') {
     shockwave(p.x, p.z, car.id)
     send({ t: 'wave', r: raceId(), id: car.id, x: +p.x.toFixed(2), z: +p.z.toFixed(2) })
-    if (car.isPlayer) banner('🎁 📯 Honk wave', 1300)
+    // Named once a race: after that the soft ring says it.
+    if (car.isPlayer && !game.waveNamed) {
+      game.waveNamed = true
+      banner('🎁 📯', 1300)
+    }
   } else if (prize === 'fix') {
     repairCar(car)
     if (car.isPlayer) banner('🎁 🔧 All fixed!', 1100)
-  } else {
-    addStat(car, 'stars', 5)
-    if (car.isPlayer) banner('🎁 ⭐ 5 stars', 1100)
   }
 }
 
@@ -1304,18 +1940,23 @@ const ACTIONS = {
   },
   camera: () => (game.cameraMode = (game.cameraMode + 1) % 3),
   turbo,
-  // Delivery Town: turn round on the spot, for a house that is quicker to reach the other way.
+  // Smash: no clock. Whoever runs the game parks everyone when they are ready.
+  park: () => {
+    if (game.mode === 'smash' && (isHost() || game.room.solo)) endSmash()
+  },
+  // Delivery Town: a slow U-turn, for a house that is quicker to reach the other way. Taps during one (or just after) are ignored.
   turn: () => {
     const car = game.player
-    if (!car || game.resetCooldown > 0 || game.townHold > game.raceTime) return
-    const proj = projOf(car)
-    const s = game.track.sampleAt(proj.dist)
-    const half = game.track.width / 2 - 1.5
-    const lateral = clamp(proj.lateral, -half, half)
-    car.place(s.p.clone().addScaledVector(s.side, lateral), game.track.headingAt(s) + (travelDir(car, proj) > 0 ? Math.PI : 0))
-    if (!game.room.solo) setGhost(car, true)
-    game.resetCooldown = 1.2
-    audio.whoosh()
+    if (!car || game.turning || game.resetCooldown > 0 || game.townHold > game.raceTime) return
+    // Tier 3: no turning round half way along the one-way street; the arrows lead out of it.
+    if (onOneWay(projOf(car).dist)) {
+      audio.bump(0.6)
+      banner('⬆️', 1300)
+      voice.sayOnce('This is a one-way street. Follow the arrows to the end.')
+      return
+    }
+    uTurn(car)
+    game.resetCooldown = U_TURN_SECONDS + 0.5
   },
 }
 const KEYS = { r: 'reset', f: 'fix', h: 'horn', c: 'camera', shift: 'turbo', u: 'turn' }
@@ -1324,13 +1965,14 @@ const TOWN_ACTIONS = new Set(['reset', 'turn'])
 function act(name) {
   audio.unlock()
   if (game.state !== 'race') return
-  if (townOn() ? !TOWN_ACTIONS.has(name) : name === 'turn') return
+  if (townOn() ? !TOWN_ACTIONS.has(name) : name === 'turn' || (name === 'park' && game.mode !== 'smash')) return
   ACTIONS[name]?.()
 }
 input.on('key', (k) => (k === 'm' ? setMuted(!audio.muted) : act(KEYS[k])))
 input.on('button', act)
 
 function turbo() {
+  if (input.easyGas) return
   if (game.player?.boost()) {
     audio.whoosh()
     banner('🔥 Turbo', 700)
@@ -1358,7 +2000,7 @@ function updateProgress(id, car) {
       prog.lap++
       pickups.newLap(id)
       if (car.isPlayer && prog.lap < game.laps) {
-        banner(prog.lap === game.laps - 1 ? '🔔 Last lap! ⭐ Stars are back!' : `Lap ${prog.lap + 1}! ⭐ Stars are back!`)
+        banner(prog.lap === game.laps - 1 ? '🔔 Last lap' : `Lap ${prog.lap + 1}`)
         audio.cheer()
       }
       if (prog.lap >= game.laps) finishCar(id, car)
@@ -1381,7 +2023,7 @@ function finishCar(id, car) {
   }
   if (car.isPlayer) {
     audio.cheer()
-    banner('🏁 FINISH!', 2000)
+    banner('🏁 Home', 2000)
     later(() => {
       if (game.state !== 'race') return
       game.state = 'results'
@@ -1425,7 +2067,8 @@ function endRace() {
 
 function standings() {
   const entries = game.setup.entries.map((e) => ({ ...e, prog: game.progress.get(e.id), time: game.finishTimes.get(e.id), score: game.scores.get(e.id) ?? 0, left: game.left.has(e.id) }))
-  if (game.mode === 'smash') return entries.sort((a, b) => a.left - b.left || b.score - a.score)
+  // Smash has no winner: everyone is listed in the order they lined up.
+  if (game.mode === 'smash') return entries.sort((a, b) => a.left - b.left)
   return entries.sort((a, b) => {
     if (a.left !== b.left) return a.left - b.left
     if (a.time != null && b.time != null) return a.time - b.time
@@ -1437,18 +2080,14 @@ function standings() {
 
 /** Everyone gets an award: each goes to whoever did the most of it and has no award yet (children first on a tie). */
 const AWARDS = [
-  { title: '✈️ Sky Star', stat: (s) => s.air, min: 0.5, text: (n) => `${n.toFixed(1)}s flying` },
-  { title: '🌀 Flip Wizard', stat: (s) => s.flips, text: (n) => `${n} flip${n > 1 ? 's' : ''}` },
-  { title: '⭐ Star Catcher', stat: (s) => s.stars, text: (n) => `${n} star${n === 1 ? '' : 's'}` },
-  { title: '🚧 Cone Crusher', stat: (s) => s.cones, text: (n) => `${n} knocked over` },
-  { title: '🎁 Lucky Dip', stat: (s) => s.boxes, text: (n) => `${n} mystery box${n > 1 ? 'es' : ''}` },
+  { title: '✈️ Sky Star', stat: (s) => s.air, min: 0.5 },
+  { title: '🌀 Flip Wizard', stat: (s) => s.flips },
+  { title: '🎁 Lucky Dip', stat: (s) => s.boxes },
 ]
 const KIND_AWARDS = ['😇 Careful Driver', '💪 Never Gave Up', '🌈 Happy Racer', '🎉 Super Fun']
 function giveAwards(rows) {
   const out = new Map()
   const statsOf = (id) => game.stats.get(id) ?? newStats()
-  if (game.mode === 'race' && rows[0]?.time != null) out.set(rows[0].id, '🏆 Speed Champ')
-  if (game.mode === 'smash' && rows[0]?.score > 0) out.set(rows[0].id, '💥 Smash Champ')
   for (const award of AWARDS) {
     let best = null
     let bestN = award.min ?? 0
@@ -1460,7 +2099,8 @@ function giveAwards(rows) {
         bestN = n
       }
     }
-    if (best) out.set(best.id, `${award.title} · ${award.text(bestN)}`)
+    // A name for what the car did, never a tally.
+    if (best) out.set(best.id, award.title)
   }
   let k = 0
   for (const r of rows) if (!out.has(r.id) && !r.left) out.set(r.id, KIND_AWARDS[k++ % KIND_AWARDS.length])
@@ -1470,24 +2110,28 @@ function giveAwards(rows) {
 function renderResults() {
   if (!game.setup || !game.track) return
   const inTown = townOn()
-  $('results-title').textContent = inTown ? '📦 All delivered!' : '🏁 Finish!'
-  $('again').textContent = inTown ? '🔁 Deliver again' : '🔁 Race again'
+  $('results-title').textContent = inTown ? '📦 All delivered!' : game.mode === 'smash' ? '🅿️ Parked' : '🏁 Finish!'
+  $('again').textContent = inTown ? '🔁 Deliver again' : game.mode === 'smash' ? '🔁 Again' : '🔁 Race again'
   $('podium').classList.toggle('hidden', inTown)
   $('recap').classList.toggle('hidden', !inTown)
   if (inTown) renderRecap()
+  renderGateRecap()
+  // Awards go by what each car did; the list itself is the child's own car first, then the order everyone lined up in (no places).
+  const self = game.room.selfId
+  const lineUp = new Map(game.setup.entries.map((e, i) => [e.id, i]))
   const rows = inTown ? [] : standings()
   const awards = giveAwards(rows)
-  const self = game.room.selfId
+  rows.sort((a, b) => a.left - b.left || (b.id === self) - (a.id === self) || lineUp.get(a.id) - lineUp.get(b.id))
   $('podium').innerHTML = rows
-    .map((e, i) => {
+    .map((e) => {
       const car = CAR_MODELS[validModel(e.model) ? e.model : CAR_IDS[0]]
-      const extra =
-        game.mode === 'smash' ? `💥 ${e.score}` : e.left ? '👋 left' : e.time != null ? `${e.time.toFixed(1)}s` : e.prog?.dnf ? '🏁 almost!' : '🏎️ still racing'
+      // Calm results: no medals, places or times; each car simply says where it is and what it did best.
+      const extra = e.left ? '👋' : game.mode === 'smash' ? '🅿️' : e.time != null ? '🏁' : '🏎️'
       const award = awards.get(e.id)
-      return `<div class="place ${e.id === self ? 'me' : ''}"><span class="medal">${MEDAL[i]}</span>
+      return `<div class="place ${e.id === self ? 'me' : ''}">
       ${carPic(validModel(e.model) ? e.model : CAR_IDS[0], 'pic podium-pic')}
       <span class="who"><span>${escapeHtml(e.emoji)} ${car.name}</span>${award ? `<span class="award">${award}</span>` : ''}</span>
-      <span class="extra">${extra}<small>⭐ ${game.stats.get(e.id)?.stars ?? 0}</small></span></div>`
+      <span class="extra">${extra}</span></div>`
     })
     .join('')
   // In a race with friends, the next one starts once everyone is home.
@@ -1499,6 +2143,7 @@ function renderResults() {
   if (!game.confetti) {
     game.confetti = true
     softFinish()
+    gateEnding()
   }
 }
 
@@ -1507,8 +2152,6 @@ function updateResultsWait() {
   const text = game.raceOn
     ? townOn()
       ? '🚚 Friends are still delivering…'
-      : game.finaleAt
-      ? `⏱️ ${Math.max(0, Math.ceil(game.finaleAt - game.raceTime))} — everyone else is finishing…`
       : '🏎️ Everyone else is finishing…'
     : 'Waiting for the host to start the next race…'
   if (el.textContent !== text) el.textContent = text
@@ -1520,7 +2163,7 @@ function endSmash() {
   game.state = 'results'
   if (isHost()) send({ t: 'end', r: raceId() })
   audio.cheer()
-  banner('🏁 Time to park', 1800)
+  banner('🅿️ Time to park', 1800)
   later(() => {
     renderResults()
     show('results')
@@ -1569,9 +2212,14 @@ const BRAKE = { steer: 0, throttle: 0, brake: 1, hold: true }
 /** The child at this device: keyboard, touch or gamepad, with Easy mode's helpers. */
 const humanController = {
   update(car, dt) {
-    // Delivery Town: the car rests at a doorstep while a parcel is handed over.
-    if (townOn() && game.townHold > game.raceTime) return (car.controls = PARKED)
     const controls = input.read()
+    // Delivery Town: the car rests at a door, while a parcel is handed over, or while it turns round. 🚀 at a door drives on.
+    if (townOn() && game.townHold > game.raceTime) {
+      if (townRun.door >= 0 && !game.turning && controls.throttle > 0 && !controls.cruise) driveOn()
+      else return (car.controls = PARKED)
+    }
+    // At the road works the car waits for the child to turn round.
+    if (townOn() && game.townBlocked && !game.turning) return (car.controls = PARKED)
     if (!input.easyGas) return (car.controls = govern(car, controls))
     const gentle = { ...controls, steer: rampSteer(car, controls.steer, dt) * fastSteer(car) }
     car.controls = govern(car, backOut(car, steeringHelper(car, controls.cruise ? cruise(car, gentle) : gentle), dt))
@@ -1579,10 +2227,27 @@ const humanController = {
 }
 const PARKED = { steer: 0, throttle: 0, brake: 1, hold: true }
 
-/** Delivery Town: never faster than a gentle town speed, even holding 🚀. */
+/** Delivery Town never goes faster than a gentle town speed, and Easy-mode racing than the calm cruise, even holding 🚀. */
 function govern(car, controls) {
-  if (!townOn() || car.speed <= TOWN_TOP_SPEED) return controls
-  return { ...controls, throttle: 0, brake: car.speed > TOWN_TOP_SPEED + 2 ? 0.4 : 0 }
+  let top = townOn() ? TOWN_TOP_SPEED : input.easyGas ? EASY_RACE_TOP : Infinity
+  // Through a gate's puddle lane: a soft slow-down for a moment, never a stop.
+  if (car.puddleUntil > game.raceTime) top = Math.min(top, PUDDLE_SPEED)
+  if (car.speed <= top) return controls
+  return { ...controls, throttle: 0, brake: car.speed > top + 2 ? 0.6 : 0 }
+}
+
+/**
+ * Easy mode: the calm cruise holds in the air and after landings too. A bump,
+ * a jump or a push can carry the car past the cap where the brakes cannot
+ * reach; past the cap the speed is trimmed back after each physics step.
+ */
+function holdEasyCap(car) {
+  const v = car.body.velocity
+  const flat = Math.hypot(v.x, v.z)
+  const cap = EASY_RACE_TOP + 1
+  if (flat <= cap) return
+  v.x *= cap / flat
+  v.z *= cap / flat
 }
 
 /**
@@ -1655,9 +2320,11 @@ function cruise(car, controls) {
   const proj = game.progress.get(car.id)?.proj
   if (!proj) return controls
   if (townOn()) {
-    // A steady town pace, slower round bends and slower still beside a house still waiting, so its sign can be read.
-    const nearHouse = town.houses.some((h, i) => !town.order.includes(i) && Math.hypot(h.x - car.body.position.x, h.z - car.body.position.z) < 26)
-    const target = clamp(TOWN_TOP_SPEED - game.track.bendAt(proj.dist, 25) * 25, 7, nearHouse ? 8 : TOWN_TOP_SPEED)
+    // A steady town pace, slower round bends and slower still beside a house still waiting, so its sign can be read
+    // (and the child has time to ask to stop). Asked to stop, the car eases right down to the door.
+    const nearHouse = town.houses.some((h, i) => !town.complete(i) && Math.hypot(h.x - car.body.position.x, h.z - car.body.position.z) < 26)
+    const works = blockAhead(car, proj) < 34
+    const target = townRun.stopFor >= 0 || works ? 4 : clamp(TOWN_TOP_SPEED - game.track.bendAt(proj.dist, 25) * 25, 7, nearHouse ? 8 : TOWN_TOP_SPEED)
     if (car.speed > target + 1.5) return { ...controls, throttle: 0, brake: 0.25 }
     return { ...controls, throttle: car.speed < target ? 0.8 : 0.25 }
   }
@@ -1673,7 +2340,9 @@ function botController(bot) {
   return {
     update(car, dt) {
       const proj = projOf(car)
-      if (game.mode === 'smash') bot.update(dt, proj, Bot.nearest(car, game.cars.values()))
+      // Easy-mode bumper cars: the bots potter round the road at a gentle pace instead of hunting the nearest car.
+      if (game.mode === 'smash' && input.easyGas) bot.update(dt, proj, null, 100, game.cars.values())
+      else if (game.mode === 'smash') bot.update(dt, proj, Bot.nearest(car, game.cars.values()))
       else bot.update(dt, proj, null, leadOverLastHuman(car), game.cars.values())
     },
   }
@@ -1712,8 +2381,11 @@ function step(dt) {
   }
   world.step(dt)
   for (const car of game.cars.values()) if (!car.remote) car.afterStep(dt)
+  // After the physics (the wheels would otherwise push the speed straight back): the Easy cap holds on the ground and in the air.
+  if (game.player && input.easyGas && !townOn() && game.raceOn) holdEasyCap(game.player)
 }
 
+const laneAim = new THREE.Vector3()
 /**
  * Easy mode's steering helper: leans the wheel towards the road ahead, less so
  * the more the child is steering themselves. It never fights a deliberate turn.
@@ -1722,7 +2394,10 @@ function steeringHelper(car, controls) {
   const proj = game.progress.get(car.id)?.proj
   if (!proj) return controls
   const target = game.track.sampleAt(proj.dist + (8 + car.speed * 0.6) * travelDir(car, proj))
-  const help = clamp(car.angleTo(target.p.x, target.p.z) * 1.6, -0.8, 0.8) * (1 - Math.abs(controls.steer) * 0.7)
+  // A present gate coming up and a lane picked: lean towards that lane instead of the middle of the road.
+  const lane = !townOn() && game.gateRun?.ahead ? game.gateRun.lane * (game.track.width / 4) : 0
+  laneAim.copy(target.p).addScaledVector(target.side, lane)
+  const help = clamp(car.angleTo(laneAim.x, laneAim.z) * 1.6, -0.8, 0.8) * (1 - Math.abs(controls.steer) * 0.7)
   return { ...controls, steer: clamp(controls.steer + help, -1, 1) }
 }
 
@@ -1730,8 +2405,7 @@ function steeringHelper(car, controls) {
 function tick(dt, realDt) {
   if (game.raceOn) {
     game.raceTime += dt
-    if (game.mode === 'smash' && game.raceTime >= SMASH_SECONDS) endSmash()
-    else if (game.finaleAt && game.raceTime >= game.finaleAt) endRace()
+    if (game.finaleAt && game.raceTime >= game.finaleAt) endRace()
   }
   game.fixCooldown = Math.max(0, game.fixCooldown - realDt)
   game.resetCooldown = Math.max(0, game.resetCooldown - realDt)
@@ -1751,12 +2425,15 @@ function tick(dt, realDt) {
   game.track.update(dt)
   if (game.raceOn && deliveryOn() && game.player) delivery.update(game.player.body.position, Math.max(8, game.track.width * 0.6))
   if (townOn() && game.raceOn && game.player && !game.progress.get(game.player.id)?.finished) {
+    turnStep(dt)
     hopRampBackwards(game.player)
     town.record(game.player.body.position)
     // Noticed a few metres early, so the car comes to rest with the house still in view.
     const at = town.arrive(game.player.body.position, game.track.width / 2 + 9)
     if (at >= 0) townArrive(at)
+    watchTheWay(dt)
   }
+  if (!townOn() && game.raceOn && game.player && !game.progress.get(game.player.id)?.finished) watchGates()
   town.update(dt)
   scrapeAndSkid(dt)
   offRoadEffects(dt)
@@ -1896,25 +2573,17 @@ function setCooldown(el, fraction) {
   el.style.setProperty('--cool', v)
 }
 
-let placeUpdatedAt = 0
+let waitUpdatedAt = 0
 function updateHud(now) {
   const p = game.player
   if (!p || !game.setup) return
-  // Standings sort every car, so only a few times a second.
-  if (now - placeUpdatedAt > 200) {
-    placeUpdatedAt = now
-    const place = standings().findIndex((e) => e.id === p.id)
-    setText('position', `${MEDAL[place]} ${ORDINAL[place]}`)
+  // The results line only changes when a friend gets home: a few checks a second is plenty.
+  if (now - waitUpdatedAt > 200) {
+    waitUpdatedAt = now
     if (game.state === 'results') updateResultsWait()
   }
   const prog = game.progress.get(p.id)
   setText('lap', `Lap ${Math.min(game.laps, (prog?.lap ?? 0) + 1)}/${game.laps}`)
-  setText('stars', `⭐ ${game.stats.get(p.id)?.stars ?? 0}`)
-  if (game.mode === 'smash') {
-    setText('crashes', `💥 ${game.scores.get(p.id) ?? 0}`)
-    const left = Math.max(0, SMASH_SECONDS - game.raceTime)
-    setText('timer', `⏱️ ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`)
-  } else setText('crashes', `💥 ${game.stats.get(p.id)?.crashes ?? 0}`)
   setCooldown($('turbo-btn'), (p.turboCooldown - now) / TURBO_COOLDOWN)
   setCooldown($('fix-btn'), game.fixCooldown / FIX_COOLDOWN)
   // A battered car (or one missing a wheel): 🔧 stays highlighted until it's tapped.
@@ -1924,14 +2593,8 @@ function updateHud(now) {
     $('fix-btn').classList.toggle('needed', broken)
   }
   setCooldown($('reset-btn'), game.resetCooldown / RESET_COOLDOWN)
-  // The finale: a big countdown for whoever is still racing.
-  const finale = game.raceOn && game.finaleAt && game.state === 'race'
-  $('finale').classList.toggle('hidden', !finale)
-  if (finale) {
-    const left = Math.max(0, Math.ceil(game.finaleAt - game.raceTime))
-    setText('finale', `🏁 ${left}`)
-  }
-  setText('speed', String(Math.round(p.speed * 3.6)))
+  // The finale: once a friend is home, a calm flag (no ticking seconds) for whoever is still racing.
+  $('finale').classList.toggle('hidden', !(game.raceOn && game.finaleAt && game.state === 'race'))
   drawMinimap()
 }
 
@@ -1946,12 +2609,15 @@ function drawMinimap() {
     // Delivery Town: a big paper map with every house as its picture and the van as an arrow.
     const canvas = $('minimap')
     const size = canvas.width
-    const { houses, chosen, order } = town
+    const { houses } = town
+    const order = town.finished
+    // The gold ring is help, not the answer: only a parcel already looked for in the wrong place gets it.
+    const chosen = mapHint()
     if (townMap?.track !== t || townMap.houses !== houses || townMap.size !== size || townMap.chosen !== chosen || townMap.delivered !== order.length) {
       const background = document.createElement('canvas')
       background.width = background.height = size
       const layout = townMapLayout(size, t, houses)
-      drawTownMap(background.getContext('2d'), size, t, houses, { chosen, order, layout })
+      drawTownMap(background.getContext('2d'), size, t, houses, { chosen, order, layout, closed: town.closed, oneWay: town.oneWay })
       townMap = { track: t, houses, size, chosen, delivered: order.length, layout, background, g: canvas.getContext('2d') }
     }
     const { g, layout } = townMap
@@ -2034,6 +2700,7 @@ function drawMinimap() {
 function frame(now) {
   delivery.show(game.state === 'race' && deliveryOn())
   town.show(townOn() && ['race', 'results', 'syncing', 'countdown'].includes(game.state))
+  gates.show(!townOn() && ['race', 'results', 'syncing', 'countdown'].includes(game.state))
   const realDt = Math.min(0.1, (now - last) / 1000)
   last = now
   game.timeScale = now < game.slowmoUntil ? 0.28 : damp(game.timeScale, 1, 5, realDt)
@@ -2164,7 +2831,7 @@ if (DEBUG) {
     },
   }
   window.__adventure = { mission: adventure, game, delivery }
-  window.__town = { town, game, chooseParcel, finishTown, act }
+  window.__town = { town, game, tapParcel, driveOn, askToStop, finishTown, act, way: townWay, run: () => townRun }
 }
 
 boot()

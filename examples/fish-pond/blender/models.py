@@ -19,8 +19,8 @@ Names the game relies on
 ------------------------
 creatures.glb top-level nodes (each faces +X, its "nose", and sits on its origin):
   goldfish, bluefish, clownfish, pufferfish, crab, octopus, turtle, trout,
-  jellyfish, narwhal, boot, duck, chest, goldenfish, whale
-  <id>_tail        tail pivot (fish, whale, narwhal, turtle): the game wags it
+  jellyfish, narwhal, boot, duck, chest, goldenfish, whale, frog, crayfish, snail
+  <id>_tail        tail pivot (fish, whale, narwhal, turtle, crayfish): the game wags it
   pufferfish_spikes the spikes, scaled up when the puffer puffs
   chest_lid        lid pivot on the back hinge: rotate about Z to open
 Materials:
@@ -648,19 +648,41 @@ def creature_octopus(m):
         f.eye(f"octo_eye{s}", *Face.ray((0, 0, 0.32), (1, s * 0.38, 0.22)), 0.1)
         f.cheek(f"octo_cheek{s}", *Face.ray((0, 0, 0.32), (1, s * 0.75, -0.2)), 0.06)
     f.arc("octo_smile", *Face.ray((0, 0, 0.32), (1, 0, -0.25)), 0.09, 0.05, 0.02)
-    for k in range(8):
-        a = TAU * (k + 0.5) / 8
+    # Eight arms fanned out side to side below the head, so from the front every arm tip shows, spaced
+    # apart, for counting one by one (a flat ring hid three arms behind the head). The four front arms
+    # hang a little lower; the four back arms reach out between them, higher, with tips curling up.
+    # look.js octoArms repeats this path to put a count spot near each tip.
+    for k, (bx, by, tx, ty, tz) in enumerate(octo_arm_ends()):
         pts, radii = [], []
         for i in range(9):
             u = i / 8
-            r = 0.2 + u * 0.38
-            curl = u * u * 1.6
-            pts.append((math.cos(a) * r + math.cos(a + 1.5) * 0.06 * math.sin(u * 5),
-                        math.sin(a) * r + math.sin(a + 1.5) * 0.06 * math.sin(u * 5),
-                        0.1 - u * 0.24 + curl * 0.12 * u))
+            e = 1 - (1 - u) ** 2
+            pts.append((bx + (tx - bx) * u, by + (ty - by) * e, 0.1 + (tz - 0.1) * u + 0.16 * u ** 3 - 0.06 * math.sin(math.pi * u)))
             radii.append(0.085 * (1 - u * 0.75))
         tube(f"octo_arm{k}", pts, 0.08, pink, rt, sides=8, radii=radii)
     return rt
+
+
+# Arm tips (side, height) from left to right: back arms reach out high and wide, front arms hang below
+OCTO_TIPS = [(-0.98, -0.1), (-0.62, -0.46), (-0.8, 0.3), (-0.2, -0.5), (0.2, -0.5), (0.8, 0.3), (0.62, -0.46), (0.98, -0.1)]
+
+
+def octo_arm_ends():
+    """Base (x, y) on a ring under the head and tip (x, y, z) for each of the eight arms: the tips go round
+    the lower half of the head like a star, every one clear of the head and of each other."""
+    out = []
+    for k in range(8):
+        a = TAU * (k + 0.5) / 8
+        front = math.cos(a) > 0
+        out.append((math.cos(a) * 0.2, math.sin(a) * 0.2, a, front))
+    # Back arms outermost on both sides: back, front, back, front | front, back, front, back
+    order = sorted(range(8), key=lambda k: (round(out[k][1], 3), out[k][3] if out[k][1] < 0 else not out[k][3]))
+    ends = [None] * 8
+    for rank, k in enumerate(order):
+        bx, by, a, front = out[k]
+        ty, tz = OCTO_TIPS[rank]
+        ends[k] = (bx, by, 0.2 if front else -0.1, ty, tz)
+    return ends
 
 
 def creature_turtle(m):
@@ -684,10 +706,16 @@ def creature_turtle(m):
         fh.eye(f"turtle_eye{s}", *Face.ray((0.58, 0, 0.08), (1, s * 0.75, 0.5)), 0.05, squash=0.45)
         fh.cheek(f"turtle_cheek{s}", *Face.ray((0.58, 0, 0.08), (0.8, s * 0.9, -0.1)), 0.035)
     fh.arc("turtle_smile", *Face.ray((0.58, 0, 0.08), (1, 0, -0.15)), 0.06, 0.03, 0.013)
+    # A pond turtle walks on stubby legs with little claws (2026-10-11: these were long sea-turtle flippers,
+    # which didn't match its fresh-water home or its facts)
+    claw = material("turtle_claw", "#f4ecd2", roughness=0.5)
     for sx in (1, -1):
         for s in (-1, 1):
-            sphere(f"turtle_flipper{sx}{s}", 0.12, (sx * 0.3, s * 0.45, -0.03), skin, rt, scale=(1.4, 0.8, 0.35), segs=12, rings=6,
-                   rot=Matrix.Rotation(s * sx * 0.5, 3, "Z"))
+            leg = Vector((sx * 0.3, s * 0.44, -0.07))
+            sphere(f"turtle_leg{sx}{s}", 0.1, leg, skin, rt, scale=(0.95, 1.05, 0.75), segs=12, rings=8)
+            for t in (-1, 0, 1):
+                sphere(f"turtle_claw{sx}{s}{t}", 0.022, leg + Vector((t * 0.045 + sx * 0.03, s * 0.095, -0.03)), claw, rt,
+                       scale=(1, 1.3, 0.8), segs=6, rings=4)
     piv = pivot("turtle_tail", rt, (-0.5, 0, 0.0))
     cylinder("turtle_tailcone", 0.06, 0.0, 0.16, (-0.56, 0, 0.0), skin, piv, segs=8, rot=Matrix.Rotation(-math.pi / 2, 3, "Y"))
     return rt
@@ -780,6 +808,128 @@ def creature_whale(m):
     return rt
 
 
+def creature_frog(m):
+    """A pond frog: green with dark spots (like a leopard frog), big eyes on top, strong webbed back legs."""
+    rt = root("frog")
+    green = material("frog_green", "#56b847", roughness=0.4)
+    belly = material("frog_belly", "#e4f5b8", roughness=0.5)
+    spot = material("frog_spot", "#2c6e34", roughness=0.5)
+    web = material("frog_web", "#8fd46a", roughness=0.45)
+    body = sphere("frog_body", 0.3, (0, 0, 0.04), green, rt, scale=(1.3, 1.0, 0.68), segs=24, rings=14)
+    sphere("frog_belly", 0.27, (0.02, 0, -0.03), belly, rt, scale=(1.25, 0.92, 0.5), segs=18, rings=10)
+    f = Face(body, m, rt)
+    # Dark spots on its back and sides (leopard frogs are spotted)
+    for k, (x, y) in enumerate([(-0.12, 0.0), (0.05, 0.1), (0.05, -0.1), (-0.22, 0.13), (-0.22, -0.13), (-0.02, 0.2),
+                                (-0.02, -0.2), (0.16, 0.0), (-0.3, 0.0)]):
+        loc, n = f.hit((x, y, 2), (0, 0, -1))
+        sphere(f"frog_spot{k}", 0.045, loc, spot, rt, scale=(1.2, 1, 0.3), segs=10, rings=5, rot=n.to_track_quat("Z", "Y"))
+    # Eyes sit up on top of the head, so a frog can peek out of the water
+    for s in (-1, 1):
+        sphere(f"frog_eyebump{s}", 0.1, (0.24, s * 0.13, 0.2), green, rt, segs=14, rings=8)
+        sphere(f"frog_eyeball{s}", 0.075, (0.27, s * 0.14, 0.24), m["white"], rt, segs=14, rings=8)
+        sphere(f"frog_pupil{s}", 0.045, (0.32, s * 0.15, 0.255), m["eye"], rt, scale=(0.6, 1, 1.1), segs=10, rings=6)
+        sphere(f"frog_shine{s}", 0.016, (0.345, s * 0.135, 0.285), m["shine"], rt, segs=6, rings=4)
+        f.cheek(f"frog_cheek{s}", *Face.ray((0, 0, 0.04), (1, s * 0.75, -0.05)), 0.05)
+        # Front legs: short, under the chin
+        tube(f"frog_arm{s}", [(0.2, s * 0.16, -0.06), (0.26, s * 0.24, -0.14), (0.32, s * 0.26, -0.17)], 0.035, green, rt,
+             sides=6, radii=[0.04, 0.032, 0.025])
+        # Back legs: a long folded thigh, shin and a big webbed foot
+        hip, knee, ankle = Vector((-0.24, s * 0.2, 0.0)), Vector((-0.02, s * 0.36, -0.04)), Vector((-0.3, s * 0.42, -0.1))
+        tube(f"frog_thigh{s}", [hip, (hip + knee) / 2 + Vector((0, s * 0.03, 0.03)), knee], 0.07, green, rt, sides=8,
+             radii=[0.085, 0.075, 0.055])
+        tube(f"frog_shin{s}", [knee, (knee + ankle) / 2 + Vector((0, s * 0.02, 0.0)), ankle], 0.05, green, rt, sides=8,
+             radii=[0.055, 0.045, 0.035])
+        slab(f"frog_foot{s}", [(0.0, 0.03), (-0.12, 0.08), (-0.2, 0.05), (-0.2, -0.05), (-0.12, -0.08), (0.0, -0.03)],
+             0.012, 0.025, web, rt, center=(-0.1, 0), xf=T((-0.32, s * 0.44, -0.11), rx=math.pi / 2, rz=s * 0.25))
+    f.arc("frog_smile", *Face.ray((0, 0, 0.04), (1, 0, -0.08)), 0.12, 0.04, 0.016)
+    return rt
+
+
+def creature_crayfish(m):
+    """A fresh-water crayfish: a hard shell, two big claws, long feelers and a fan tail it flips to dart backwards.
+    Olive brown, as wild crayfish in streams and ponds usually are (they only turn red when cooked), so it never
+    reads as orange next to the goldfish: a colour riddle must match what the child sees."""
+    rt = root("crayfish")
+    shell = material("cray_shell", "#9a8150", roughness=0.4)
+    dark = material("cray_dark", "#64512f", roughness=0.45)
+    light = material("cray_light", "#d8c79a", roughness=0.5)
+    body = sphere("crayfish_body", 0.2, (0.08, 0, 0.0), shell, rt, scale=(1.35, 0.9, 0.75), segs=20, rings=12)
+    sphere("crayfish_under", 0.18, (0.08, 0, -0.05), light, rt, scale=(1.25, 0.8, 0.5), segs=16, rings=8)
+    f = Face(body, m, rt)
+    # Tail: five shell plates getting smaller, then the fan
+    piv = pivot("crayfish_tail", rt, (-0.16, 0, 0.0))
+    for k in range(5):
+        x = -0.2 - k * 0.075
+        r = 0.13 - k * 0.016
+        sphere(f"crayfish_seg{k}", r, (x, 0, -0.01 - k * 0.01), shell if k % 2 == 0 else dark, piv, scale=(0.75, 1.0, 0.7),
+               segs=14, rings=8)
+    for k, a in enumerate((-0.7, -0.35, 0, 0.35, 0.7)):
+        slab(f"crayfish_fan{k}", [(0.0, 0.04), (-0.13, 0.07), (-0.19, 0.0), (-0.13, -0.07), (0.0, -0.04)], 0.01, 0.02, dark, piv,
+             center=(-0.06, 0), xf=T((-0.55, math.sin(a) * 0.04, -0.05), rx=math.pi / 2, rz=a))
+    for s in (-1, 1):
+        # Eyes on short stalks, and two long feelers
+        between(f"crayfish_stalk{s}", (0.3, s * 0.06, 0.06), (0.34, s * 0.09, 0.13), 0.02, 0.018, shell, rt)
+        sphere(f"crayfish_eyeball{s}", 0.055, (0.35, s * 0.09, 0.16), m["white"], rt, segs=12, rings=8)
+        sphere(f"crayfish_pupil{s}", 0.033, (0.39, s * 0.1, 0.17), m["eye"], rt, scale=(0.6, 1, 1.1), segs=10, rings=6)
+        tube(f"crayfish_feeler{s}", [(0.34, s * 0.04, 0.02), (0.55, s * 0.14, 0.1), (0.75, s * 0.3, 0.16), (0.88, s * 0.5, 0.12)],
+             0.012, dark, rt, sides=5, radii=[0.014, 0.011, 0.008, 0.005])
+        f.cheek(f"crayfish_cheek{s}", *Face.ray((0.08, 0, 0), (1, s * 0.8, 0.0)), 0.04)
+        # Big claws held out in front
+        tube(f"crayfish_arm{s}", [(0.2, s * 0.12, -0.03), (0.32, s * 0.24, -0.02), (0.44, s * 0.28, 0.0)], 0.035, shell, rt, sides=8)
+        claw = Vector((0.56, s * 0.3, 0.01))
+        sphere(f"crayfish_claw{s}", 0.115, claw, shell, rt, scale=(1.4, 0.75, 0.6), segs=14, rings=8)
+        sphere(f"crayfish_pincer_a{s}", 0.065, claw + Vector((0.16, s * 0.01, 0.03)), shell, rt, scale=(1.7, 0.6, 0.55), segs=10, rings=6,
+               rot=Matrix.Rotation(-0.35, 3, "Y"))
+        sphere(f"crayfish_pincer_b{s}", 0.058, claw + Vector((0.15, s * 0.01, -0.03)), dark, rt, scale=(1.6, 0.6, 0.55), segs=10,
+               rings=6, rot=Matrix.Rotation(0.35, 3, "Y"))
+        # Four walking legs a side
+        for k in range(4):
+            x = 0.16 - k * 0.075
+            tube(f"crayfish_leg{s}_{k}", [(x, s * 0.12, -0.06), (x - 0.02, s * 0.24, -0.04), (x - 0.04, s * 0.3, -0.14)], 0.018, dark, rt,
+                 sides=5, radii=[0.02, 0.016, 0.01])
+    f.arc("crayfish_smile", *Face.ray((0.08, 0, 0), (1, 0, -0.15)), 0.06, 0.03, 0.012)
+    return rt
+
+
+def creature_snail(m):
+    """A ramshorn pond snail: a brown shell coiled flat like a cinnamon roll (the spiral faces the camera), a soft
+    grey foot, and two thin feelers. Ramshorn snails are fresh-water snails that come up to breathe air."""
+    rt = root("snail")
+    shell = material("snail_shell", "#7a5134", roughness=0.35)
+    band = material("snail_band", "#c9a27a", roughness=0.4)
+    skin = material("snail_skin", "#a9a99a", roughness=0.55)
+    # The foot: long, low and soft, rising into the head at the front
+    foot = sphere("snail_foot", 0.2, (0.02, 0, -0.1), skin, rt, scale=(1.75, 0.62, 0.42), segs=22, rings=12)
+    head = sphere("snail_head", 0.12, (0.3, 0, -0.02), skin, rt, scale=(1.1, 0.95, 1.0), segs=18, rings=10)
+    # The coiled shell: a tube that grows as it winds out, two and a half turns, ending at the opening by the foot
+    cx, cz = -0.06, 0.14
+    turns = 2.6
+    n = 70
+    r0, r1 = 0.026, 0.235
+    b = math.log(r1 / r0) / (turns * TAU)
+    end = -math.pi / 2 - 0.35
+    pts, radii = [], []
+    for i in range(n + 1):
+        th = turns * TAU * i / n
+        r = r0 * math.exp(b * th)
+        a = end - (turns * TAU - th)
+        pts.append((cx + math.cos(a) * r, 0, cz + math.sin(a) * r))
+        radii.append(r * 0.56)
+    tube("snail_shell", pts, 0.1, shell, rt, sides=14, radii=radii)
+    # A pale band along the coil, on the camera side, so the spiral reads at a glance
+    tube("snail_band", [(x, -rr * 0.86, z) for (x, _, z), rr in zip(pts, radii)], 0.02, band, rt, sides=6,
+         radii=[rr * 0.22 for rr in radii])
+    f = Face(head, m, rt)
+    for s in (-1, 1):
+        f.eye(f"snail_eye{s}", *Face.ray((0.3, 0, -0.02), (1, s * 0.5, 0.25)), 0.05)
+        f.cheek(f"snail_cheek{s}", *Face.ray((0.3, 0, -0.02), (1, s * 0.8, -0.15)), 0.035)
+        # Two thin feelers that feel and smell the way
+        tube(f"snail_feeler{s}", [(0.34, s * 0.05, 0.06), (0.42, s * 0.1, 0.16), (0.5, s * 0.16, 0.22)], 0.015, skin, rt, sides=6,
+             radii=[0.022, 0.016, 0.01])
+    f.arc("snail_smile", *Face.ray((0.3, 0, -0.02), (1, 0, -0.3)), 0.05, 0.025, 0.012)
+    return rt
+
+
 def creature_boot(m):
     rt = root("boot")
     leather = material("boot_leather", "#9b6a43", roughness=0.7)
@@ -867,7 +1017,8 @@ def build_creatures():
     m = face_mats()
     return [creature_goldfish(m), creature_bluefish(m), creature_clownfish(m), creature_pufferfish(m), creature_crab(m),
             creature_octopus(m), creature_turtle(m), creature_trout(m), creature_jellyfish(m), creature_narwhal(m),
-            creature_boot(m), creature_duck(m), creature_chest(m), creature_goldenfish(m), creature_whale(m)]
+            creature_boot(m), creature_duck(m), creature_chest(m), creature_goldenfish(m), creature_whale(m),
+            creature_frog(m), creature_crayfish(m), creature_snail(m)]
 
 
 # --- Bear, boat, rod ------------------------------------------------------------------

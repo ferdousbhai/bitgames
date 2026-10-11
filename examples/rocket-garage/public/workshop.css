@@ -22,7 +22,7 @@
 #workshop button:active { transform: translateY(3px); box-shadow: 0 1px 0 #c3b4dc; }
 #workshop button:disabled { opacity: 0.45; box-shadow: none; }
 #workshop button[aria-pressed=true] { background: #ffd375; box-shadow: 0 0 0 4px #d99b32; }
-#workshop button.nudge:not(:disabled) { animation: workshop-nudge 1s ease-in-out infinite; }
+#workshop button.nudge:not(:disabled) { animation: workshop-nudge 1s ease-in-out 2; }
 /* A glowing ring (not a size change) so the button never moves under a finger */
 @keyframes workshop-nudge { 50% { box-shadow: 0 0 0 6px #ffd23f, 0 0 18px 6px #ffd23faa; } }
 
@@ -67,7 +67,7 @@
 
 .workshop-finger {
   position: absolute; left: 0; top: 0; font-size: 40px; pointer-events: none; opacity: 0; z-index: 2;
-  filter: drop-shadow(0 3px 3px rgba(0,0,0,.25)); animation: workshop-tap .9s ease-in-out infinite; transition: opacity .3s;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,.25)); animation: workshop-tap .9s ease-in-out 4; transition: opacity .3s;
 }
 .workshop-finger.show { opacity: 1; }
 @keyframes workshop-tap { 0%, 100% { translate: 0 12px; } 50% { translate: 0 0; } }
@@ -121,7 +121,7 @@
 
 /* --- Pass 3 --- */
 /* "Which rocket will fly farther?": A, = and B glow one after another, so no answer looks like the right one */
-#workshop .workshop-prediction.choose button:not(:disabled) { animation: workshop-nudge 1.5s ease-in-out infinite; }
+#workshop .workshop-prediction.choose button:not(:disabled) { animation: workshop-nudge 1.5s ease-in-out 1; }
 #workshop .workshop-prediction.choose button:nth-child(2) { animation-delay: .5s; }
 #workshop .workshop-prediction.choose button:nth-child(3) { animation-delay: 1s; }
 /* The pointing hand may hang below the card (under 🔧 and ▶) instead of being cut off */
@@ -202,3 +202,12 @@
   .workshop-race { --lane: 46px; }
 }
 @media (prefers-reduced-motion: reduce) { .workshop-ship, .workshop-rail::before { transition: none; } }
+
+/* The open race challenge (from tier 4): two pictures, the same planet steady ━ and wobbly 〰️ */
+#workshop .workshop-goal { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 16px; background: #fff8e9; border: 3px dashed #c9b6ff; min-height: 48px; }
+#workshop .workshop-goal.met { border: 3px solid #2ec4b6; background: #e6fbf7; }
+.workshop-goal-tag { font-size: 20px; }
+.workshop-goal-bit { display: flex; align-items: center; gap: 1px; background: #fff; border-radius: 10px; padding: 2px 4px; }
+.workshop-goal-bit span { font-size: 24px; line-height: 1; }
+.workshop-goal-bit b { font-size: 18px; color: #3a2a7a; }
+@media (max-height: 500px) { #workshop .workshop-goal { min-height: 40px; padding: 2px 6px; } .workshop-goal-bit span { font-size: 18px; } }

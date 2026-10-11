@@ -1,11 +1,11 @@
 import { createAdventure } from './adventure.js'
-import { createVoice, listWords } from './speech.js'
+import { createVoice } from './speech.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
-import { Particles, Popups, makeGlowTexture } from './effects.js'
-import { CONSTELLATIONS, Sky } from './sky.js'
+import { Particles, Popups, makeGlowTexture, numberTexture } from './effects.js'
+import { Sky } from './sky.js'
 import { STOPS, World } from './world.js'
 
 const $ = (id) => document.getElementById(id)
@@ -58,11 +58,12 @@ scene.add(rim)
 
 const audio = new Audio()
 audio.muted = store.get('star-catcher-muted', false)
+audio.musicOn = store.get('star-catcher-music', true)
 const particles = new Particles(scene)
 const popups = new Popups($('popups'), camera)
 const glowTex = makeGlowTexture(false)
 // The constellation panel and the night sky at home (runtime geometry, drawn over the scene)
-const sky = new Sky({ reducedMotion, onLit: (n, total, data) => starLit(n, total, data), onComplete: (def) => arrive(def) })
+const sky = new Sky({ reducedMotion, onLit: (n, total, data) => starLit(n, total, data), onComplete: (def) => startJoin(def) })
 
 // --- Game state ----------------------------------------------------------------------
 
@@ -73,13 +74,13 @@ const FULL_H = Math.tan((50 * Math.PI) / 360) * 16
 const view = { w: 10, h: 7.5, k: 1, xMin: -9, xMax: 9, yMin: -6, yMax: 1, hudY: 5 }
 const game = {
   state: 'loading', // loading | title | play | finale
-  // On each leg: 'build' (catching stars to light the constellation), 'arrive' (Kitty at the
-  // planet while the constellation is named) or 'homeward' (the last flight home)
+  // On each leg: 'build' (catching stars to light the constellation), 'join' (joining its dots in
+  // counting order), 'arrive' (Kitty at the planet while the constellation is named), 'choose'
+  // (picking the next shape) or 'homeward' (the last flight home)
   phase: 'build',
   phaseTime: 0,
   stops: 0, // planets reached, one finished constellation each
   spawnTimer: 1,
-  magnet: 0,
   dizzy: 0,
   roll: 0,
   joy: 0,
@@ -87,50 +88,111 @@ const game = {
   time: 0,
   idle: 0, // seconds since the player last steered (see the nudge in frame)
   factSaid: false, // the planet's fact has been spoken (see arrive)
-}
-// The star-counting mission draws its progress as Cassiopeia's W (five stars, the first
-// constellation of the trip), joining each caught star to the one before it.
-const W_DEPTH = Math.max(...CONSTELLATIONS[0].shape.map(([, v]) => v))
-const CONSTELLATION = CONSTELLATIONS[0].shape.map(([u, v]) => [Math.round(10 + u * 130), Math.round(7 + (v / W_DEPTH) * 21)])
-function drawConstellation(el, count) {
-  const ns = 'http://www.w3.org/2000/svg'
-  const svgEl = (tag, attrs) => {
-    const node = document.createElementNS(ns, tag)
-    for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value)
-    return node
-  }
-  const svg = svgEl('svg', { viewBox: '0 0 150 38', width: 150, height: 38, 'aria-label': `Constellation with ${count} of five stars` })
-  CONSTELLATION.forEach(([x, y], i) => {
-    if (i && i < count) {
-      const [px, py] = CONSTELLATION[i - 1]
-      svg.append(svgEl('line', { x1: px, y1: py, x2: x, y2: y, stroke: '#c49d45', 'stroke-width': 2 }))
-    }
-    const star = svgEl('text', { x, y: y + 5, 'text-anchor': 'middle', fill: i < count ? '#946418' : '#bdb9a8' })
-    star.textContent = i < count ? '★' : '☆'
-    svg.append(star)
-  })
-  el.append(svg)
+  level: 0, // see LEVELS; follows how the child is doing
+  misses: 0, // stars caught with the wrong number on this constellation
+  right: 0, // stars caught with the right number on this constellation
+  history: [], // { right, misses } of the constellations built at this level (see adapt)
+  hints: 0, // spoken wrong-number hints on this constellation (at most one)
+  counting: false, // this constellation's numbers are said aloud one by one (the trip's first, when matching)
+  values: [], // the number each star of this constellation carries
+  row: 0, // the row of stars now falling (each row is one choice)
+  rowTimer: 1, // seconds until the next row, counted once the sky is clear
+  streak: 0, // wrong picks in a row for the star needed now
+  joinHint: false, // the join-the-dots hint was said on this constellation
+  joinTold: false, // "Join the dots!" was said on this trip
+  offered: false, // the cards offered two different ways of counting
+  climbed: false, // the last shape moved the level up (see offerLevels)
+  made: [], // the level id each constellation of this trip was counted with (see the home sky)
 }
 
-function drawGemProgress(el, count, target) {
-  const gems = document.createElement('span')
-  gems.className = 'gem-steps'
-  for (let i = 0; i < target; i++) {
-    const gem = document.createElement('span')
-    gem.textContent = '💎'
-    gem.className = i < count ? 'done' : i === count ? 'next' : ''
-    gems.append(gem)
+/**
+ * Stars come down in rows of two or three, side by side, and each row is one choice: the star
+ * with the needed number lights the next star of the constellation, and once any star of the row
+ * is caught the others fade. A wrong pick floats away and the next row comes after a calm pause,
+ * so careful steering builds the shape far sooner than sweeping. Every sequence starts somewhere
+ * new each time, so it has to be worked out, not remembered. The numbers follow how the child is
+ * doing (never a gate), easiest first:
+ *  match: the panel shows the number to find (two stars a row)
+ *  next: count on from 2 to 8 (the panel shows the last number and a "?")
+ *  back: count back from 8 to 15
+ *  twos, fives: skip counting from a different place each time
+ *  big: counting on from 12 to 41, where 31 sits beside 13 (both digits matter)
+ *  tens: jumps of ten from any number (7, 17, 27): only the tens digit changes
+ *  pattern: the panel shows the last two numbers; the jump is the puzzle (2 or 5 first, then 3,
+ *    4 or 2 down, then 5 or 10 down too)
+ *  leap: patterns with big jumps (9, 11, 12 and 20 up, 3, 4, 9 and 11 down), where both digits move
+ * Each level's `near` lists its mix-ups worth noticing, in order: the number already lit, the one
+ * skipped, counting by ones instead of in steps, or the digits swapped. `rule` is the short words
+ * the panel and the choice cards show for it; `ask` is how the home sky asks about it; `tip`
+ * marks a `say` line that adds more than the rule's name (said even when the rule was just picked).
+ */
+const seq = (from, step) => (n) => Array.from({ length: n }, (_, k) => from + k * step)
+const between = (a, b) => a + ((Math.random() * (b - a + 1)) | 0)
+const swapDigits = (v) => Number(String(v).split('').reverse().join(''))
+/** The pattern level's jump for this constellation (see LEVELS), kept so its mix-ups fit it. */
+let jump = 3
+let patterns = 0 // pattern constellations on this trip, so the jumps grow harder in turn
+/** A jump from `tiers` (easiest first, one tier further each time) that keeps `n` numbers under 100, never the same as the last. */
+function pickJump(tiers, n) {
+  const list = tiers[Math.min(patterns++, tiers.length - 1)].filter((j) => j !== jump && Math.abs(j) * (n - 1) <= 90)
+  jump = list[between(0, list.length - 1)]
+  return jump
+}
+/** A pattern of `n` numbers with jump `j`, all between 1 and 99. */
+const patternOf = (j, n) => seq(j > 0 ? between(1, Math.min(20, 99 - j * (n - 1))) : -j * (n - 1) + between(1, Math.min(30, 99 + j * (n - 1))), j)(n)
+const LEVELS = [
+  { id: 'match', labels: 'all', choices: 2, values: seq(1, 1), near: (v) => [v + 1, v - 1, v + 2], tag: () => 'Match the numbers', rule: 'Match 1, 2, 3', say: 'Catch the star with the same number as the sky. Find number 1!' },
+  { id: 'next', labels: 'ask', choices: 3, values: (n) => seq(between(2, 8), 1)(n), near: (v) => [v - 1, v + 1, v + 2], tag: (v) => `What comes next? ${v[0]}, ?`, rule: 'Count on +1', ask: 'Which one did we count on, one more each time?', say: 'Which number comes next? Catch it!' },
+  { id: 'back', labels: 'ask', choices: 3, values: (n) => seq(between(Math.max(8, n + 1), 15), -1)(n), near: (v) => [v + 1, v - 1, v - 2], tag: (v) => `Count back from ${v[0]}`, rule: 'Count back −1', ask: 'Which one did we count back, like a rocket?', say: 'Now we count back, like a rocket!' },
+  { id: 'twos', labels: 'ask', choices: 3, values: (n) => seq(2 * between(1, 5), 2)(n), near: (v) => [v - 2, v - 1, v + 2, v + 1], tag: (v) => `Count by twos from ${v[0]}`, rule: 'By twos +2', by: 'twos', ask: 'Which one did we count by twos?', say: 'Now we count by twos!' },
+  { id: 'fives', labels: 'ask', choices: 3, values: (n) => seq(5 * between(1, 4), 5)(n), near: (v) => [v - 4, v + 5, v - 5, v + 1, v + 10], tag: (v) => `Count by fives from ${v[0]}`, rule: 'By fives +5', by: 'fives', ask: 'Which one did we count by fives?', say: 'Now we count by fives!' },
+  {
+    id: 'big', labels: 'ask', choices: 3,
+    // Never 11, 22, 33… or a ten, so the swapped digits always make a different number (a ten passed on the way, like 20, is mixed up with 10 instead of 2)
+    values: (n) => { let a; do a = between(12, 41); while (a % 11 === 0 || a % 10 === 0); return seq(a, 1)(n) },
+    near: (v) => [v % 10 ? swapDigits(v) : v - 10, v + 1, v - 1, v + 10], tag: (v) => `Big numbers from ${v[0]}`, rule: 'Big numbers +1', ask: 'Which one had the big numbers?', tip: true, say: 'Now the big numbers! Look at both digits.',
+  },
+  { id: 'tens', labels: 'ask', choices: 3, values: (n) => seq(between(1, 9), 10)(n), near: (v) => [v - 9, v + 10, v - 10, v + 1], tag: (v) => `Jump by tens from ${v[0]}`, rule: 'By tens +10', by: 'tens', ask: 'Which one did we count by tens?', tip: true, say: 'Now we jump by tens! Only the first digit changes.' },
+  {
+    id: 'pattern', labels: 'ask2', choices: 3,
+    // The jumps grow harder in turn, and never repeat twice in a row, so each one is worked out afresh
+    values: (n) => patternOf(pickJump([[2, 5], [3, -2, 4], [4, -5, -10, 3]], n), n),
+    // The one skipped, the one already lit, a jump of one from the last, one off
+    near: (v) => [v + jump, v - jump, v - jump + 1, v + 1, v - 1], tag: () => 'Find the pattern', rule: 'Find the jump', ask: 'Which one had a number pattern?', tip: true, say: 'Now find the pattern! Look at the last two numbers.',
+  },
+  {
+    id: 'leap', labels: 'ask2', choices: 3,
+    values: (n) => patternOf(pickJump([[9, 11, -3], [20, -4, -11], [12, -9, 11, -11]], n), n),
+    // The one skipped, then the tens or the ones moved by one: the mix-ups of a two-digit jump
+    near: (v) => [v + jump, v - 10, v - 1, v + 1, v + 10, v - jump], tag: () => 'Big jumps', rule: 'Big jumps', ask: 'Which one had the big jumps?', tip: true, say: 'Big jumps now! Look at the tens and the ones.',
+  },
+]
+/** The gentle mission keeps to matching numbers, at its slower pace, until its five stars are caught. */
+const missionHeld = () => Boolean(adventure.option.goal) && !adventure.complete
+const level = () => LEVELS[missionHeld() ? 0 : game.level]
+/**
+ * The words for one more step from `prev`, named with its rule (a "What comes after 2?" on the
+ * twos level would point a child at 3). `older` is the number before `prev`, for the patterns.
+ */
+function stepHint(prev, older) {
+  const L = level()
+  if (L.labels === 'ask2' && older != null) {
+    const d = prev - older
+    const word = d > 0 ? 'more' : 'less'
+    return `From ${older} to ${prev} is ${Math.abs(d)} ${word}. What is ${Math.abs(d)} ${word} than ${prev}?`
   }
-  el.append(gems)
+  if (L.by) return `Counting by ${L.by}, what comes after ${prev}?`
+  if (L.id === 'back') return `Count back one from ${prev}.`
+  return `What comes after ${prev}?`
+}
+/** The number on the star that lights next, or null when every star is already on its way. */
+function neededValue() {
+  return game.phase === 'build' && !sky.full ? game.values[sky.claimed] : null
 }
 
+// The sky panel already draws the stars being lit, so the mission card is just its words
 function renderMissionProgress(el, option, count) {
-  el.replaceChildren()
-  const caption = document.createElement('span')
-  caption.textContent = `${option.constellation ? '⭐ Catch stars' : '💎 Catch gems'} · ${count} / ${option.target}`
-  el.append(caption)
-  if (option.constellation) drawConstellation(el, count)
-  else drawGemProgress(el, count, option.target)
+  el.textContent = `⭐ Catch stars · ${count} / ${option.target}`
 }
 
 /** Speaks to pre-readers (respecting mute). Words wait their turn; taps and counts interrupt. */
@@ -157,8 +219,8 @@ const adventure = createAdventure({
   renderProgress: renderMissionProgress,
   options: [
     { emoji: '🚀', label: 'Free space flight', caption: 'Free flight' },
-    { label: 'Gentle star counting', pictures: '⭐ ⭐ ⭐ ⭐ ⭐', caption: 'Count 5 stars', pace: 0.6, goal: 'Catch 5 stars', target: 5, constellation: true, accept: (it) => ['star', 'pink', 'rainbow'].includes(it.kind), reward: 'Five stars for a new constellation!' },
-    { label: 'Three-gem mission', pictures: '💎 💎 💎', caption: 'Catch 3 gems', gems: true, pace: 0.65, goal: 'Catch 3 gems', target: 3, accept: (it) => it.kind === 'gem', reward: 'Three gems on your space journey!' },
+    // Slower, and always matching the numbers 1 to 5: for the youngest pilots
+    { label: 'Gentle star counting', pictures: '⭐ ⭐ ⭐ ⭐ ⭐', caption: 'Count 5 stars', pace: 0.6, goal: 'Catch stars 1 to 5', target: 5, reward: 'Five stars for a new constellation!' },
   ],
 })
 
@@ -170,33 +232,21 @@ let models = {}
 let world = null
 let rocket = null
 
-/** How the trip feels on the way to stop `i`: a gentle ramp for little hands. */
+/** How the trip feels on the way to stop `i`: a constant gentle pace; later planets add a sleepy rock or a passing UFO, never speed. */
 function leg(i) {
   return {
-    // A constant gentle pace: later planets add variety, never speed
     speed: 2.3,
-    interval: 1.0,
-    gem: i >= 1 || adventure.option.gems ? 0.14 : 0,
-    pink: i >= 2 ? 0.14 : 0,
-    rainbow: i >= 3 ? 0.05 : 0,
-    power: i >= 2 ? 0.05 : 0,
     rock: i >= 3 ? 0.06 : 0,
-    wave: i >= 1 ? 0.1 : 0.04,
     ufo: i >= 1,
   }
 }
 
-// Every star (plain, pink or lilac) lights exactly one star of the constellation, so counting
-// stays one-to-one; a gem adds a small blue twinkle beside it. There are no points.
+// Falling things: numbered stars (one of them lights the next star of the constellation) and
+// sleepy rocks to steer around. There are no points, power-ups or bonus colours.
 const KINDS = {
-  star: { model: 'star', scale: 0.55, r: 0.55, glow: '#ffd23f', colors: ['#fff3a0', '#ffd23f', '#ffffff'] },
-  pink: { model: 'star', scale: 0.6, r: 0.6, glow: '#ff6bb5', colors: ['#ff8fc7', '#ffd1e8', '#ffffff'] },
-  rainbow: { model: 'star', scale: 0.7, r: 0.7, glow: '#ffffff', colors: ['#ff6b6b', '#ffd23f', '#8ef0c8', '#7cc6fe', '#c9b6ff'] },
-  gem: { model: 'gem', scale: 0.65, r: 0.55, glow: '#4cc9f0', colors: ['#7cc6fe', '#bdeaff', '#ffffff'] },
-  magnet: { model: 'magnet', scale: 0.62, r: 0.6, glow: '#ff5c7a', colors: ['#ff5c7a', '#ffffff', '#ffd23f'] },
+  star: { model: 'star', scale: 0.62, r: 0.6, glow: '#ffd23f', colors: ['#fff3a0', '#ffd23f', '#ffffff'] },
   rock: { model: 'rock', scale: 0.8, r: 0.6, glow: null, colors: ['#c9b6ff', '#ffffff'] },
 }
-
 
 // --- Assets -------------------------------------------------------------------------
 
@@ -204,24 +254,9 @@ async function load() {
   const gltf = await new GLTFLoader().loadAsync('./models/space.glb')
   for (const child of [...gltf.scene.children]) models[child.name] = child
 
-  // Star variants share the star mesh but swap its paint
-  const body = models.star.getObjectByName('star_body')
-  const pinkMat = body.material.clone()
-  pinkMat.color.set('#ff7eb9')
-  pinkMat.emissive.set('#ff2e88')
-  pinkMat.emissiveIntensity = 0.35
-  // A steady pearly lilac: special without cycling colours
-  const rainbowMat = body.material.clone()
-  rainbowMat.color.set('#c9b6ff')
-  rainbowMat.emissive.set('#8f6bff')
-  rainbowMat.emissiveIntensity = 0.35
-
   for (const [kind, k] of Object.entries(KINDS)) {
     const g = new THREE.Group()
     const m = models[k.model].clone()
-    if (kind === 'pink' || kind === 'rainbow') {
-      m.getObjectByName('star_body').material = kind === 'pink' ? pinkMat : rainbowMat
-    }
     m.name = 'model'
     g.add(m)
     if (k.glow) {
@@ -257,18 +292,13 @@ function buildRocket() {
   glow.position.set(0, -1.35, -0.2)
   glow.scale.setScalar(2.6)
   model.add(glow)
-  // Magnet badge riding on the nose while the magnet works
-  const badge = models.magnet.clone()
-  badge.scale.setScalar(0.45)
-  badge.position.set(0, 2.2, 0)
-  badge.visible = false
-  model.add(badge)
   scene.add(root)
-  rocket = { root, model, flame, pilot, pilotZ: pilot.position.z, nozzle, glow, badge, vel: new THREE.Vector2(), target: new THREE.Vector2(0, -3), nozzleWorld: new THREE.Vector3() }
+  rocket = { root, model, flame, pilot, pilotZ: pilot.position.z, nozzle, glow, vel: new THREE.Vector2(), target: new THREE.Vector2(0, -3), nozzleWorld: new THREE.Vector3() }
   root.position.set(0, -view.h * 0.62, 0)
 }
 
-const ufo = { obj: null, lights: null, lightMats: [], active: false, timerLeft: 12, dir: 1, dropTimer: 0, t: 0 }
+// A friendly UFO glides past now and then: scenery only, it drops nothing
+const ufo = { obj: null, lights: null, lightMats: [], active: false, timerLeft: 12, dir: 1, t: 0 }
 function buildUfo() {
   ufo.obj = models.ufo.clone()
   ufo.obj.scale.setScalar(0.9)
@@ -298,7 +328,29 @@ function spawn(kind, x, y, vy, extra = {}) {
   obj.scale.setScalar(k.scale)
   obj.visible = true
   scene.add(obj)
-  items.push({ obj, kind, k, x, vy, t: Math.random() * 10, sway: kind === 'rock' ? 0 : rand(0.15, 0.45), pulled: false, bounced: false, vx: 0, spin: 0, ...extra })
+  const it = { obj, kind, k, x, vy, t: Math.random() * 10, sway: kind === 'rock' ? 0 : rand(0.15, 0.45), bounced: false, fading: false, vx: 0, spin: 0, value: null, ...extra }
+  if (kind === 'star') labelStar(it)
+  items.push(it)
+}
+
+/** Each star wears its number on a little sprite of its own, in front of the star and never spinning. */
+function labelStar(it) {
+  let label = it.obj.userData.label
+  if (!label) {
+    // Drawn over its own star even while the star tilts, so a two-digit number is never half hidden
+    label = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false }))
+    label.position.set(0, 0, 0.9)
+    label.renderOrder = 2
+    it.obj.add(label)
+    it.obj.userData.label = label
+  }
+  const tex = numberTexture(String(it.value))
+  if (label.material.map !== tex) {
+    label.material.map = tex
+    label.material.needsUpdate = true
+  }
+  label.material.opacity = 1
+  label.scale.set(1.45 * tex.userData.aspect, 1.45, 1)
 }
 
 function recycle(i) {
@@ -308,30 +360,50 @@ function recycle(i) {
   items.splice(i, 1)
 }
 
-function spawnSomething() {
-  const L = leg(game.stops)
-  const x = rand(view.xMin + 0.5, view.xMax - 0.5)
-  const y = view.h + 1.5
-  const vy = -L.speed * view.k * rand(0.85, 1.15)
-  const r = Math.random()
-  let acc = 0
-  if (r < (acc += L.wave)) return spawnWave(L)
-  if (r < (acc += L.rock)) return spawn('rock', x, y, vy * 0.75)
-  if (r < (acc += L.power) && game.magnet <= 0) return spawn('magnet', x, y, vy * 0.8)
-  if (r < (acc += L.rainbow)) return spawn('rainbow', x, y, vy * 0.9)
-  if (r < (acc += L.gem)) return spawn('gem', x, y, vy)
-  if (r < (acc += L.pink)) return spawn('pink', x, y, vy)
-  spawn('star', x, y, vy)
+/** The needed number and its mix-ups for this level: two or three stars, in a shuffled row. */
+function rowValues(need) {
+  const L = level()
+  const near = [...new Set(L.near(need))].filter((v) => v > 0 && v !== need)
+  // At the first level the one mix-up is any near number; later the first ones are the telling ones
+  if (L.id === 'match') near.sort(() => Math.random() - 0.5)
+  // Two wrong picks in a row for this star: the next rows offer just two stars until it is found
+  const choices = game.streak >= 2 ? 2 : L.choices
+  const values = [need, ...near.slice(0, choices - 1)]
+  return values.map((v) => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(([, v]) => v)
 }
 
-/** A wiggly line of stars: lovely to swoop through. */
-function spawnWave(L) {
-  const n = 5
-  const amp = Math.min(1.6, (view.xMax - view.xMin) * 0.2)
-  const x0 = rand(view.xMin + amp + 0.5, view.xMax - amp - 0.5)
-  const vy = -L.speed * view.k
-  const phase = Math.random() * 6
-  for (let i = 0; i < n; i++) spawn('star', x0 + Math.sin(phase + i * 0.9) * amp, view.h + 1.5 + i * 1.15, vy, { sway: 0 })
+/** One choice: a row of numbered stars side by side, spread across the sky so each is easy to reach alone. */
+function spawnRow() {
+  const need = neededValue()
+  if (need == null) return
+  const values = rowValues(need)
+  const span = view.xMax - view.xMin
+  const lane = span / values.length
+  const vy = -leg(game.stops).speed * view.k * 0.85
+  game.row++
+  values.forEach((value, i) => {
+    const x = view.xMin + lane * (i + 0.5) + rand(-0.15, 0.15) * lane
+    spawn('star', x, view.h + 1.5 + rand(-0.25, 0.25), vy, { value, row: game.row, sway: Math.min(0.2, lane * 0.08) })
+  })
+  // If the row drifts past untouched, the next one follows soon: nothing is lost
+  game.rowTimer = 0.4
+}
+
+/** A star of the row was caught: the rest of the row fades, and the next row waits a moment (longer after a wrong pick). */
+function resolveRow(it, right) {
+  for (const other of items) {
+    if (other === it || other.row !== it.row) continue
+    other.fading = true
+    // After a wrong pick the right star stays a moment longer (it can't be caught now): "this was the one"
+    if (!right && other.value === game.values[sky.claimed]) other.reveal = 1.3
+  }
+  game.rowTimer = right ? 0.45 : 1.8
+}
+
+function spawnRock() {
+  const L = leg(game.stops)
+  if (Math.random() >= L.rock * 4) return
+  spawn('rock', rand(view.xMin + 0.5, view.xMax - 0.5), view.h + 1.5, -L.speed * view.k * 0.7)
 }
 
 // --- Catching ---------------------------------------------------------------------------
@@ -345,39 +417,94 @@ function toScreen(pos) {
   return { x: (tmp.x * 0.5 + 0.5) * innerWidth, y: (-tmp.y * 0.5 + 0.5) * innerHeight }
 }
 
+/** Kitty touches a star. Returns true when the star is used up (it flies to the panel). */
 function catchItem(it) {
-  const pos = it.obj.position.clone()
-  if (it.kind === 'magnet') {
-    game.magnet = 9
-    audio.powerUp()
-    particles.burst(pos, it.k.colors, 10, 3, 0.8)
-    renderPowers()
-    // The cheer pops out beside its timer bar, not over Kitty: it shows what the bar means
-    const pill = $('powers').children[0]
-    if (pill) {
-      const r = pill.getBoundingClientRect()
-      popups.showAt(r.right + 8, r.top + r.height / 2, '🧲 Magnet!')
-    }
-    game.joy = 0.6
-    return
+  const pos = it.obj.position
+  const need = neededValue()
+  if (need != null && it.value !== need) {
+    wrongStar(it, need)
+    return false
   }
-  // A star the mission counted is counted aloud by the mission's own voice, so the sky stays quiet
-  const counted = adventure.event(it)
   // The note follows where the star was caught (left is low, right is high), so it never climbs into a frenzy
   const across = clamp((pos.x - view.xMin) / Math.max(view.xMax - view.xMin, 1), 0, 1)
-  audio.catch(Math.round(across * 5), it.kind === 'gem' ? 'gem' : it.kind === 'rainbow' ? 'rainbow' : 'star')
-  particles.burst(pos, it.k.colors, it.kind === 'star' ? 6 : 10, 2.5, 0.6)
+  audio.catch(Math.round(across * 5))
+  particles.burst(pos.clone(), it.k.colors, 6, 2.5, 0.6)
   game.joy = 0.35
-  if (game.phase !== 'build') return
+  resolveRow(it, true)
+  if (need == null) return true
+  game.right++
+  game.streak = 0
+  // A star the mission counted is counted aloud by the mission's own voice, so the sky stays quiet
+  const counted = adventure.event(it)
   const at = toScreen(pos)
-  if (it.kind === 'gem') sky.twinkle(at.x, at.y)
-  else sky.claim(at.x, at.y, { quiet: counted === 'counted' || counted === 'done' })
+  sky.claim(at.x, at.y, { quiet: counted === 'counted' || counted === 'done' })
+  // A "?" that was opened up as a hint closes again for the next star
+  sky.labels = level().labels
+  renderRule()
+  return true
 }
 
-/** A star has landed in the panel: a soft bell, and the count spoken aloud. */
+/**
+ * The wrong number: the star does not light anything. It floats gently back up and away with the
+ * rest of its row, the next star's ring brightens, and the next row waits a calm moment. Once per
+ * constellation the voice names the number caught and asks again; after two wrong picks the
+ * panel shows the number itself instead of "?".
+ */
+function wrongStar(it, need) {
+  it.bounced = true
+  it.fading = true // it shrinks away as it floats up
+  it.vx = rand(-0.6, 0.6)
+  it.vy = 2.2
+  it.spin = rand(-1, 1)
+  resolveRow(it, false)
+  audio.notThis()
+  sky.call()
+  game.misses++
+  game.streak++
+  game.idle = 0
+  if (game.misses >= 2) sky.labels = 'all'
+  renderRule()
+  if (game.hints >= 1) return
+  game.hints++
+  const prev = game.values[sky.claimed - 1]
+  let line = `That one is ${it.value}. Find ${need}.`
+  if (level().labels !== 'all' && prev != null) {
+    const ask = stepHint(prev, game.values[sky.claimed - 2])
+    line = it.value === prev ? `We have ${prev} already. ${ask}` : `That one is ${it.value}. ${ask}`
+  }
+  // Queued, never cutting into a number still being said (or cut off by one)
+  voice.say(line)
+}
+
+/**
+ * The rule stays on screen under the panel while a shape is built, with the numbers in their
+ * order: "By fives · 15 → ?" or, for a pattern, "15 → 13 → ?" (the jump is the puzzle, so only
+ * the order shows). The panel's own labels sit beside the stars; this line says which came first.
+ */
+function renderRule() {
+  const el = $('sky-rule')
+  const L = level()
+  const n = sky.claimed
+  const v = game.values
+  if (game.phase !== 'build' || n >= v.length) {
+    el.textContent = ''
+    return
+  }
+  const open = sky.view?.labels === 'all'
+  if (L.labels === 'all') el.textContent = `Find ${v[n]}`
+  else {
+    const known = L.labels === 'ask2' ? 2 : 1
+    const shown = [...v.slice(Math.max(0, n - known), n), n < known || open ? v[n] : '?']
+    const words = L.labels === 'ask2' ? (n === 0 ? `${L.rule} · ` : '') : `${L.rule} · `
+    el.textContent = words + shown.join(' → ')
+  }
+}
+
+/** A star has landed in the panel: a soft bell, and on the trip's first matching constellation its number said aloud. */
 function starLit(n, total, data) {
   audio.light(n)
-  if (!data?.quiet) voice.sayNow(String(n))
+  // The bells and the panel carry the count; the whole row of numbers is said once, at the planet
+  if (!data?.quiet && game.counting) voice.count(game.values[n - 1], { interrupt: false })
   renderJourney()
 }
 
@@ -397,6 +524,140 @@ function bumpRock(it) {
   }
 }
 
+/**
+ * The constellation's stars are all lit: at the planet its shape moves into a big card with its
+ * stars numbered, and the child joins the dots by tapping the stars in counting order (the order
+ * they were caught, so counting back or by fives is joined the same way). Each line appears once
+ * both its stars are joined, so the picture is drawn by the child's own number order. A tap out
+ * of order just plays the soft "hmm" and rings the star that comes next.
+ * Above matching, one number (two from jumps of ten) hides as "?": when the join reaches it, the
+ * child picks the missing number from three, so the rule caught in flight is used once more.
+ */
+function startJoin(def) {
+  game.phase = 'join'
+  game.phaseTime = 0
+  game.joinHint = false
+  for (const it of items) if (it.kind === 'star') it.fading = true
+  const box = $('join')
+  $('join-cap').textContent = 'Join the dots ✨'
+  box.classList.remove('hidden')
+  // The youngest (matching) see a ring on every next star; later the ring shows only the start
+  const L = level()
+  sky.join($('join-card'), L.labels === 'all', hiddenStars(L, game.values.length))
+  renderRule()
+  if (!game.joinTold) {
+    game.joinTold = true
+    voice.say(`Join the dots! Tap the stars in order. Start at ${game.values[0]}.`)
+  }
+  renderJourney()
+}
+
+/** Which stars hide their number in the join card: none when matching, one, or two from jumps of ten. */
+function hiddenStars(L, n) {
+  const count = L.labels === 'all' ? 0 : LEVELS.indexOf(L) >= LEVELS.findIndex((l) => l.id === 'tens') ? 2 : 1
+  const pool = Array.from({ length: n - 1 }, (_, k) => k + 1).sort(() => Math.random() - 0.5)
+  const out = []
+  // Never two side by side, so each missing number sits between two that are shown
+  for (const i of pool) if (out.length < count && !out.some((j) => Math.abs(j - i) < 2)) out.push(i)
+  return out
+}
+
+/** The join has reached a hidden number: three numbers to pick from (the one missing and two telling mix-ups). */
+function openPicker() {
+  const at = sky.view.joinCount
+  const need = game.values[at]
+  // Mix-ups already on the card would be too easy to rule out, so they are left out
+  // (the digits swapped, or ten or three away, fill in when every telling one is on the card)
+  const near = [...new Set([...level().near(need), need % 10 ? swapDigits(need) : need - 10, need + 10, need - 10, need + 3, need - 3])].filter((v) => v > 0 && !game.values.includes(v))
+  const values = [need, ...near.slice(0, 2)].sort(() => Math.random() - 0.5)
+  const box = $('join-pick')
+  const buttons = values.map((v) => {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = v
+    b.setAttribute('aria-label', `Number ${v}`)
+    b.addEventListener('pointerdown', (e) => e.stopPropagation())
+    b.addEventListener('click', () => pickHidden(v, b))
+    return b
+  })
+  box.replaceChildren(...buttons)
+  box.classList.remove('hidden')
+  $('join-cap').classList.add('hidden')
+  sky.picking = true
+  buttons[0].focus({ preventScroll: true })
+  voice.sayOnce('A number is hiding. Which one is it?')
+}
+
+function pickHidden(value, button) {
+  if (game.phase !== 'join' || !sky.picking) return
+  audio.unlock()
+  const at = sky.view.joinCount
+  if (value === game.values[at]) {
+    game.right++
+    sky.picking = false
+    $('join-pick').classList.add('hidden')
+    $('join-cap').classList.remove('hidden')
+    joinStar(at)
+    return
+  }
+  // The wrong number fades; the ring on the "?" brightens and the voice names the rule once
+  game.misses++
+  button.disabled = true
+  audio.notThis()
+  sky.call()
+  if (game.joinHint) return
+  game.joinHint = true
+  voice.say(`That one is ${value}. ${stepHint(game.values[at - 1], game.values[at - 2])}`)
+}
+
+/** Star `i` is joined: its line grows, and the next hidden number (or the planet) follows. */
+function joinStar(i) {
+  audio.light(sky.view.joinCount + 1)
+  if (sky.joinStar(i)) {
+    game.phase = 'joined'
+    missionTimers.push(setTimeout(() => game.phase === 'joined' && arrive(sky.def), reducedMotion ? 300 : 800))
+  } else if (sky.hiddenNext()) openPicker()
+}
+
+function joinTap(e) {
+  const i = sky.starAt(e.clientX, e.clientY)
+  if (i >= 0) joinAt(i)
+}
+
+/** The join card by keyboard or switch: the arrow keys move a soft ring from star to star, Enter or Space joins it. */
+function joinKey(e) {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, Tab: e.shiftKey ? -1 : 1 }[e.key]
+  if (step) sky.moveFocus(step)
+  else if (e.key === 'Enter' || e.key === ' ') {
+    if (sky.view.focus < 0) sky.moveFocus(1)
+    else joinAt(sky.view.focus)
+  } else return false
+  e.preventDefault()
+  game.idle = 0
+  return true
+}
+
+/** A tap (or Enter) on star `i` of the join card. */
+function joinAt(i) {
+  if (game.state !== 'play' || game.phase !== 'join' || sky.picking) return
+  audio.unlock()
+  const at = sky.view.joinCount
+  if (i === at) {
+    game.right++
+    joinStar(i)
+    return
+  }
+  if (sky.view.joinedAt[i] >= 0) return // already joined: nothing to undo or scold
+  game.misses++
+  audio.notThis()
+  sky.call()
+  if (game.joinHint) return
+  game.joinHint = true
+  const v = game.values
+  const shown = (k) => (sky.view.hidden.includes(k) ? 'a hidden number' : v[k])
+  voice.say(at === 0 ? `That one is ${shown(i)}. Start at ${v[0]}.` : `That one is ${shown(i)}. ${stepHint(v[at - 1], v[at - 2])}`)
+}
+
 const ARRIVE_HOLD = 6 // seconds at least at each planet while its constellation is named
 const HOME_TIME = 4.5 // the last calm flight home
 
@@ -407,13 +668,18 @@ function arrive(def) {
   game.phase = 'arrive'
   game.phaseTime = 0
   game.roll = reducedMotion ? 0 : 1
-  const name = $('sky-name')
-  name.textContent = def.name
-  name.classList.add('show')
-  banner(`${stop.emoji} ${def.name}`, def.short, 5600)
+  // The name sits under the shape the child just joined (the banner would cover the card)
+  $('join-cap').textContent = `${stop.emoji} ${def.name}`
+  $('sky-name').textContent = def.name
   audio.constellation()
   game.factSaid = false
-  voice.say(`You made ${def.spoken}! ${def.fact}`, { onend: () => (game.factSaid = true) })
+  // The numbers are said once, all together, as a little counting rhyme (unless they were just counted aloud)
+  const rhyme = game.counting ? '' : `${game.values.join(', ')}! `
+  const last = game.stops >= STOPS.length ? ' Time to fly home!' : ''
+  voice.say(rhyme + def.fact + last, { onend: () => (game.factSaid = true) })
+  // How it was counted, for the home sky's questions ("Which one did we count by fives?")
+  game.made.push(level().id)
+  adapt()
   // One soft moment: a few slow, pale sparkles drift up around Kitty
   const p = rocket.root.position
   for (let i = 0; i < 12; i++) {
@@ -423,61 +689,216 @@ function arrive(def) {
   renderJourney()
 }
 
-/** After the name and fact: on to the next planet, or home after the last constellation. */
-function nextLeg() {
+/**
+ * The two ways of counting offered with the next shapes: the level the child has reached and the
+ * one above it (a stretch), or, just after a climb, the level before it and the new one, so the
+ * child decides whether to keep the new step. While the gentle mission runs both cards match.
+ */
+function offerLevels() {
+  if (missionHeld()) return [0, 0]
+  const L = game.level
+  if (game.climbed || L === LEVELS.length - 1) return [L - 1, L]
+  return [L, L + 1]
+}
+
+/** How each way of counting is offered aloud at the cards. */
+const SPOKEN_RULE = { match: 'Match the numbers', next: 'count on', back: 'count back', twos: 'count by twos', fives: 'count by fives', big: 'big numbers', tens: 'jump by tens', pattern: 'find the pattern', leap: 'big jumps' }
+
+/**
+ * After the name and fact: the child picks the next shape, or Kitty flies home after the last one.
+ * Each card carries its way of counting, and the shape with more stars carries the harder one, so
+ * the choice is a real one: a short, steady shape or a longer stretch.
+ */
+function afterArrival() {
+  $('join').classList.add('hidden')
+  sky.unjoin($('sky-panel'))
+  $('sky-name').classList.add('show')
+  if (game.stops >= STOPS.length) return flyHome()
+  const offer = sky.offer()
+  if (offer.length < 2) return nextLeg(offer[0], game.level)
+  game.phase = 'choose'
   game.phaseTime = 0
-  $('sky-name').classList.remove('show')
+  const levels = offerLevels()
+  // The harder way goes with the bigger shape (or either, when they are the same size)
+  const harderFirst = offer[0].stars.length > offer[1].stars.length || (offer[0].stars.length === offer[1].stars.length && Math.random() < 0.5)
+  if (harderFirst) levels.reverse()
+  const box = $('choose')
+  const cells = [...box.querySelectorAll('.choose-cell')]
+  cells.forEach((cell, i) => {
+    const def = offer[i]
+    const L = LEVELS[levels[i]]
+    cell.querySelector('span').textContent = def.short
+    cell.querySelector('b').textContent = `${def.stars.length} ⭐ · ${L.rule}`
+    cell.setAttribute('aria-label', `${def.short}. ${def.stars.length} stars, ${L.rule}`)
+    cell.onclick = () => chooseNext(def, levels[i])
+  })
+  box.classList.remove('hidden')
+  // Keyboard and switch users start on the first card (Tab moves to the other, Enter picks)
+  cells[0].focus({ preventScroll: true })
+  sky.showChoice(offer, cells)
+  // The cards are the question: the voice names the two ways of counting (each pair once a trip)
+  const [a, b] = [...levels].sort((x, y) => x - y)
+  game.offered = a !== b
+  if (a === b) voice.sayOnce('Which shape shall we make next? Tap one.')
+  else voice.sayOnce(`${SPOKEN_RULE[LEVELS[a].id]}, or ${SPOKEN_RULE[LEVELS[b].id]}? Pick a shape.`.replace(/^./, (c) => c.toUpperCase()))
+}
+
+/** The child chose the next constellation (and its way of counting): off to the next planet to build it. */
+function chooseNext(def, lvl) {
+  if (game.phase !== 'choose') return
+  audio.unlock()
+  audio.click()
+  $('choose').classList.add('hidden')
+  // The two cards offered two different ways of counting, so the choice was heard
+  nextLeg(def, lvl, game.offered)
+}
+
+function flyHome() {
+  game.phaseTime = 0
+  game.phase = 'homeward'
   const planet = world.current()
-  if (game.stops >= CONSTELLATIONS.length) {
-    game.phase = 'homeward'
-    if (planet) planet.userData.leaving = 0
-    // Home is under a deep, quiet night sky (the world eases toward these colours)
-    world.top.set('#060824')
-    world.bottom.set('#1b1446')
-    world.nebulae.forEach((n, i) => n.material.color.set(i % 2 ? '#3a2a8a' : '#24407a'))
-    banner('🏠 Time to fly home!', `${game.stops} constellations made`)
-    voice.say('Time to fly home!')
-    renderJourney()
-    return
-  }
-  game.phase = 'build'
-  world.setStop(game.stops)
-  sky.begin(game.stops, $('sky-panel'))
-  const next = STOPS[game.stops]
-  banner(`Next stop: ${next.emoji} ${next.name}`)
-  voice.say(`Off to the ${next.name}!`)
+  if (planet) planet.userData.leaving = 0
+  // Home is under a deep, quiet night sky (the world eases toward these colours)
+  world.top.set('#060824')
+  world.bottom.set('#1b1446')
+  world.nebulae.forEach((n, i) => n.material.color.set(i % 2 ? '#3a2a8a' : '#24407a'))
+  banner('🏠 Time to fly home!', `${game.stops} constellations made`)
   renderJourney()
 }
 
-/** Home: the night sky with every constellation the child built, named and tappable. */
+function nextLeg(def, lvl, picked = false) {
+  game.phaseTime = 0
+  if (!missionHeld() && lvl !== game.level) {
+    game.level = lvl
+    game.history = []
+    if (!adventure.option.goal) store.set('star-catcher-level', lvl)
+  }
+  $('sky-name').classList.remove('show')
+  sky.pick(def)
+  game.phase = 'build'
+  world.setStop(game.stops)
+  const changed = beginConstellation(game.stops)
+  renderRule()
+  const next = STOPS[game.stops]
+  banner(`Next stop: ${next.emoji} ${next.name}`, level().tag(game.values), changed ? 4200 : 2600)
+  // A rule the child just picked at the cards (and heard there) is not said again, unless its line adds a tip
+  if (changed && !(picked && !level().tip)) voice.sayOnce(level().say)
+  renderJourney()
+}
+
+/**
+ * After each constellation the numbers follow how the child did, judged by the share of picks
+ * (catches and dot-joining taps) that were wrong, so a lucky sweep can't climb and one slip can't
+ * stall: at most about one wrong pick in six on this constellation (and across the last two)
+ * moves up a level, and a flawless shape moves up two, so a steady 7-year-old meets skip
+ * counting by the second or third shape. Two wrong picks in five, across the last two, move back
+ * down. The gentle mission matches numbers until its five stars are caught, then climbs gently.
+ */
+function adapt() {
+  game.climbed = false
+  if (missionHeld()) return
+  game.history.push({ right: game.right, misses: game.misses })
+  const recent = game.history.slice(-2)
+  const share = (list) => list.reduce((a, h) => a + h.misses, 0) / Math.max(1, list.reduce((a, h) => a + h.misses + h.right, 0))
+  const was = game.level
+  const flawless = game.misses === 0 && game.right >= 8
+  // Once the gentle mission is done its pilot climbs one step at a time
+  const up = flawless && !adventure.option.goal ? 2 : 1
+  if (share([recent.at(-1)]) <= 0.17 && share(recent) <= 0.2) game.level = Math.min(LEVELS.length - 1, game.level + up)
+  else if (share(recent) >= 0.4) game.level = Math.max(0, game.level - 1)
+  game.climbed = game.level > was
+  if (game.level !== was) game.history = []
+  // A younger child's gentle mission never changes where the free flights start
+  if (!adventure.option.goal) store.set('star-catcher-level', game.level)
+}
+
+/** Numbers the stars of constellation `i` for the current level and puts it in the panel. Returns true when the level changed. */
+let levelShown = -1
+function beginConstellation(i) {
+  Object.assign(game, { misses: 0, right: 0, hints: 0, streak: 0, rowTimer: 1, joinHint: false })
+  const L = level()
+  game.values = L.values(sky.trip[i].stars.length)
+  // Only the trip's first matching constellation is counted aloud star by star
+  game.counting = L.id === 'match' && i === 0
+  sky.begin(i, $('sky-panel'), game.values)
+  sky.labels = L.labels
+  const changed = levelShown !== LEVELS.indexOf(L)
+  levelShown = LEVELS.indexOf(L)
+  return changed
+}
+
+/**
+ * Home: the night sky with every constellation the child built. The names are hidden at first:
+ * the voice asks for each one by its shape ("Find the W."), or, every other time, by how it was
+ * counted ("Which one did we count by fives?") when no other shape was counted that way, so the
+ * home sky revisits the numbers too. A card shows its name once the child finds it. A wrong card
+ * says its own name and the wanted one glows softly once, so every tap teaches something.
+ */
+const finale = { cells: [], order: [], at: 0, riddles: [] }
 function showFinale() {
   game.state = 'finale'
   clearPlayfield()
-  const box = $('finale-sky')
+  // Nothing drifts behind the riddle and the cards at home
+  world.calm(true)
   const made = sky.done
-  const cells = made.map(({ def }, i) => {
+  finale.order = made.map((_, i) => i).sort(() => Math.random() - 0.5)
+  finale.at = 0
+  finale.riddles = made.map(({ def }) => def.riddle)
+  finale.order.forEach((i, k) => {
+    const id = game.made[i]
+    const ask = LEVELS.find((L) => L.id === id)?.ask
+    if (k % 2 === 1 && ask && game.made.filter((m) => m === id).length === 1) finale.riddles[i] = ask
+  })
+  finale.cells = made.map(({ def }, i) => {
     const cell = document.createElement('button')
     cell.className = 'finale-cell'
-    cell.textContent = def.name
-    cell.setAttribute('aria-label', `${def.name}: ${def.fact}`)
-    cell.addEventListener('click', () => {
-      audio.unlock()
-      audio.light(def.stars.length)
-      sky.highlight(i)
-      voice.sayNow(`${def.name}. ${def.fact}`)
-    })
+    cell.setAttribute('aria-label', 'A constellation you made')
+    cell.addEventListener('click', () => tapSky(i))
     return cell
   })
-  box.replaceChildren(...cells)
-  const lit = made.reduce((n, d) => n + d.def.stars.length, 0)
-  $('finale-count').textContent = `⭐ ${lit} stars · ${made.length} constellations`
+  $('finale-sky').replaceChildren(...finale.cells)
   const screen = $('finale')
   screen.classList.remove('hidden')
   requestAnimationFrame(() => screen.classList.remove('fade'))
-  sky.showFinale(cells)
+  showRiddle()
+  sky.showFinale(finale.cells)
   audio.fanfare()
-  const names = made.map((d) => d.def.spoken)
-  voice.say(`Welcome home! You lit ${lit} stars and made ${made.length} constellations: ${listWords.format(names)}. Tap one to hear about it.`)
+  voice.say(`Welcome home! Here is your night sky. ${finale.riddles[finale.order[0]]}`)
+}
+
+function showRiddle() {
+  const i = finale.order[finale.at]
+  $('finale-count').textContent = i == null ? '✨ You found them all' : `🔎 ${finale.riddles[i]}`
+  // A longer or shorter riddle moves the cards a little: the drawn constellations follow them
+  sky.layout()
+}
+
+function tapSky(i) {
+  audio.unlock()
+  const { def } = sky.done[i]
+  const cell = finale.cells[i]
+  const want = finale.order[finale.at]
+  if (i === want) {
+    sky.highlight(i)
+    audio.light(def.stars.length)
+    cell.textContent = def.name
+    cell.classList.add('found')
+    cell.setAttribute('aria-label', `${def.name}: ${def.fact}`)
+    finale.at++
+    showRiddle()
+    const next = finale.order[finale.at]
+    // One line per find: the fact, then the next riddle
+    voice.sayNow(`Yes! ${def.fact} ${next == null ? 'You know your whole night sky.' : finale.riddles[next]}`)
+    return
+  }
+  audio.light(3)
+  if (want == null || cell.classList.contains('found')) {
+    sky.highlight(i)
+    return voice.sayNow(def.fact)
+  }
+  // The wanted card glows once, softly: the next tap can find it
+  sky.highlight(want)
+  voice.sayNow(`That one is ${def.spoken}. ${finale.riddles[want]}`)
 }
 
 // --- HUD ----------------------------------------------------------------------------
@@ -509,16 +930,18 @@ let journeyShip = null
 function renderJourney() {
   const at = game.stops
   const homeward = game.phase === 'homeward'
+  // Joining the dots happens just before the planet is reached (it counts as the end of the track)
+  const building = game.phase === 'build' || game.phase === 'join' || game.phase === 'joined'
   // The rocket rides the track being flown, or rests at the planet it just reached
-  const ship = game.phase === 'build' ? at : homeward ? STOPS.length : at - 1
-  const fills = STOPS.map((s, i) => (i < at ? 1 : i === at && game.phase === 'build' ? legProgress() : 0))
+  const ship = building ? at : homeward ? STOPS.length : at - 1
+  const fills = STOPS.map((s, i) => (i < at ? 1 : i === at && building ? legProgress() : 0))
   // Rounded, so the bar is only touched when it visibly moves
   fills.push(homeward ? Math.round(Math.min(game.phaseTime / HOME_TIME, 1) * 500) / 500 : 0)
   // The stops and tracks are rebuilt only when the trip moves on; every frame just moves the bars
   const key = `${at}:${homeward}:${ship}`
   if (key !== journeyKey) {
     journeyKey = key
-    const track = (i) => `<span class="track"><b></b>${i === ship ? '<span class="ship">🚀</span>' : ''}</span>`
+    const track = (i) => (i === ship ? '<span class="track on"><b></b><span class="ship">🚀</span></span>' : '<span class="track"><b></b></span>')
     const parts = ['<span class="stop done">🏠</span>']
     STOPS.forEach((s, i) => {
       parts.push(track(i))
@@ -543,30 +966,21 @@ function renderJourney() {
   })
 }
 
-// Runs every frame while a power is active, so it only touches the DOM when something shows a change
-let powersKey = ''
-let powerBars = [] // { el, shown } for each timer bar on screen
-function renderPowers() {
-  const list = []
-  if (game.magnet > 0) list.push(['🧲', game.magnet])
-  const keyNow = list.map((p) => p[0]).join('')
-  if (keyNow !== powersKey) {
-    powersKey = keyNow
-    const el = $('powers')
-    el.innerHTML = list.map(([e]) => `<div class="power">${e}<i><b></b></i></div>`).join('')
-    powerBars = [...el.querySelectorAll('.power b')].map((b) => ({ el: b, shown: -1 }))
-  }
-  list.forEach(([, left], i) => {
-    const bar = powerBars[i]
-    const fill = Math.round((left / 9) * 100) / 100
-    if (fill === bar.shown) return
-    bar.shown = fill
-    bar.el.style.transform = `scaleX(${fill})`
-  })
-}
-
 function renderSound() {
   $('sound').textContent = audio.muted ? '🔇' : '🔊'
+  // The music switch only changes the music; the bells, voice and sound effects stay
+  for (const id of ['music', 'finale-music']) {
+    const el = $(id)
+    el.classList.toggle('off', !audio.musicOn)
+    el.setAttribute('aria-pressed', String(audio.musicOn))
+  }
+}
+
+function toggleMusic() {
+  audio.unlock()
+  audio.setMusic(!audio.musicOn)
+  store.set('star-catcher-music', audio.musicOn)
+  renderSound()
 }
 
 function toggleSound() {
@@ -628,9 +1042,11 @@ addEventListener('pointercancel', () => (pointerDown = false))
 addEventListener('keydown', (e) => {
   audio.unlock()
   if (e.key === 'm' || e.key === 'M') return toggleSound()
+  if (e.key === 'n' || e.key === 'N') return toggleMusic()
   if (e.key === 'Escape') return goHome()
   if (game.state === 'finale' && e.key === 'Enter') return flyAgain()
   if (game.state === 'title' && (e.key === 'Enter' || e.key === ' ')) return start()
+  if (game.state === 'play' && game.phase === 'join' && !sky.picking && joinKey(e)) return
   keys.add(e.key)
   game.idle = 0
   if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault()
@@ -649,6 +1065,7 @@ $('sound').addEventListener('pointerdown', (e) => {
   e.stopPropagation()
   toggleSound()
 })
+for (const id of ['music', 'finale-music']) $(id).addEventListener('click', toggleMusic)
 
 function start() {
   if (game.state !== 'title') return
@@ -657,6 +1074,7 @@ function start() {
   audio.unlock()
   audio.click()
   game.state = 'play'
+  world.calm(false)
   $('start').classList.add('fade')
   missionTimers.push(setTimeout(() => $('start').classList.add('hidden'), 400))
   $('hud').classList.remove('hidden')
@@ -665,10 +1083,20 @@ function start() {
   game.idle = 0
   game.phase = 'build'
   game.phaseTime = 0
-  banner(`🚀 Blast off!`, `Fly to ${STOPS[0].emoji} ${STOPS[0].name}`)
-  voice.sayNow(adventure.option.goal || 'Catch the stars to light up the sky!')
+  // A new trip starts one level below the last one reached: a warm-up, and kind to a younger sibling
+  // The gentle mission starts at matching whatever was reached before (a younger child plays it)
+  game.level = adventure.option.goal ? 0 : clamp((store.get('star-catcher-level', 0) | 0) - 1, 0, LEVELS.length - 1)
+  game.history = []
+  game.made = []
+  patterns = 0
+  game.joinTold = false
+  levelShown = -1
+  voice.newRound()
   resize() // the HUD is on screen now, so the band that things fade in below can be measured
-  sky.begin(0, $('sky-panel'))
+  beginConstellation(0)
+  renderRule()
+  banner(`🚀 Blast off!`, level().tag(game.values))
+  voice.sayNow(adventure.option.goal ? `${adventure.option.goal}!` : level().say)
   renderJourney()
 }
 $('go').addEventListener('click', start)
@@ -682,6 +1110,7 @@ function goHome() {
   requestAnimationFrame(() => screen.classList.remove('fade'))
 }
 $('home').addEventListener('click', goHome)
+$('join').addEventListener('pointerdown', joinTap)
 $('finale-home').addEventListener('click', goHome)
 
 /** From the night sky at home straight into a new trip. */
@@ -701,8 +1130,7 @@ function hideUfo() {
 /** Clears the play: falling things, power-ups, the UFO, the nudge, the banner and the HUD. */
 function clearPlayfield() {
   for (let i = items.length - 1; i >= 0; i--) recycle(i)
-  Object.assign(game, { magnet: 0, dizzy: 0, roll: 0 })
-  renderPowers()
+  Object.assign(game, { dizzy: 0, roll: 0 })
   hideUfo()
   nudgeEl.classList.remove('show')
   $('banner').classList.remove('show')
@@ -720,7 +1148,13 @@ function resetTrip() {
   nudgeShown = false
   nudgeUsed = false
   world.setStop(0)
+  // The title is calm: no planets drift behind the words, and the first planet waits low
+  world.calm(true, { title: true })
   sky.reset()
+  $('choose').classList.add('hidden')
+  $('join').classList.add('hidden')
+  $('join-pick').classList.add('hidden')
+  $('join-cap').classList.remove('hidden')
   $('sky-name').classList.remove('show')
   const finale = $('finale')
   finale.classList.add('hidden', 'fade')
@@ -770,13 +1204,16 @@ addEventListener('resize', resize)
 // Muted warm tones: the particles glow additively, so darker colours give a softer trail
 const EXHAUST_COLORS = ['#a8862a', '#a5672c', '#8f4f4f', '#a89f6a'].map((c) => new THREE.Color(c))
 const exhaust = { vx: 0, vy: 0, spread: 0.35, life: 0.55, size: 0, endSize: 0.05, color: EXHAUST_COLORS[0], drag: 1.5 }
-const sparkle = { vy: 0.6, spread: 0.5, life: 0.7, size: 0.4, endSize: 0, color: '#ffffff', drag: 1 }
 const trail = { vy: -2, spread: 0.4, life: 0.6, size: 0.35, color: new THREE.Color('#ffffff'), drag: 1 }
 
 function updateRocket(dt) {
   const r = rocket
   const playing = game.state === 'play'
-  if (playing) {
+  // At a planet the cards are the thing to look at: Kitty waits low, clear of them (to the side on wide screens)
+  const waiting = playing && ['join', 'joined', 'arrive', 'choose'].includes(game.phase)
+  if (waiting) {
+    r.target.set(camera.aspect > 1.2 ? view.xMax - 0.4 : 0, view.yMin - 0.3 + Math.sin(game.time * 1.3) * 0.15)
+  } else if (playing) {
     const dx = (keys.has('ArrowRight') || keys.has('d') || keys.has('D') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('a') || keys.has('A') ? 1 : 0)
     const dy = (keys.has('ArrowUp') || keys.has('w') || keys.has('W') ? 1 : 0) - (keys.has('ArrowDown') || keys.has('s') || keys.has('S') ? 1 : 0)
     r.target.x += dx * 11 * dt
@@ -785,11 +1222,14 @@ function updateRocket(dt) {
     // On wide screens Kitty waits beside the title instead of hiding behind the Fly button
     const side = camera.aspect > 1.3 ? view.w * 0.68 : 0
     // At home Kitty rests low in the corner, clear of the night sky cards
-    if (game.state === 'finale') r.target.set(view.w * 0.78, -view.h + (camera.aspect > 1.3 ? 1.3 : 0.2) + Math.sin(game.time * 1.3) * 0.15)
+    // (high enough that the whole rocket stays on screen). Narrow phones have no free corner, so
+    // Kitty waits beside the last card, in the gap the five cards leave on the left.
+    const narrow = camera.aspect < 0.6
+    if (game.state === 'finale') r.target.set(narrow ? -view.w + 1.3 : view.w - 1.6, (narrow ? -view.h * 0.5 : -view.h + 2.2) + Math.sin(game.time * 1.3) * 0.15)
     else r.target.set(side + Math.sin(game.time * 0.7) * Math.min(side ? 0.8 : 2, view.w * 0.3), -view.h * 0.62 + Math.sin(game.time * 1.3) * 0.3)
   }
   r.target.x = clamp(r.target.x, view.xMin, view.xMax)
-  r.target.y = clamp(r.target.y, playing ? view.yMin : -view.h, playing ? view.yMax : 3)
+  r.target.y = clamp(r.target.y, playing && !waiting ? view.yMin : -view.h, playing ? view.yMax : 3)
   // Springy follow: responsive but smooth; wobbly when dizzy
   const stiff = game.dizzy > 0 ? 18 : 60
   const damping = game.dizzy > 0 ? 6 : 13
@@ -843,13 +1283,6 @@ function updateRocket(dt) {
     particles.emit(p.x + rand(-0.4, 0.4), p.y + rand(-0.5, 0.5), 0.2, trail)
   }
 
-  // Power-up visuals
-  r.badge.visible = game.magnet > 0
-  if (r.badge.visible) {
-    r.badge.position.y = 2.25 + Math.sin(game.time * 2) * 0.08
-    r.badge.rotation.z = Math.sin(game.time * 1.5) * 0.15
-  }
-
   rocketCenter.set(p.x, p.y + 0.3, 0)
 }
 
@@ -859,60 +1292,47 @@ function updateItems(dt) {
     const o = it.obj
     it.t += dt
     if (it.bounced) {
-      it.vy -= 3 * dt
+      // A bumped rock tumbles away; a wrong-number star just floats softly back up
+      if (it.kind === 'rock') it.vy -= 3 * dt
       it.x += it.vx * dt
       o.position.y += it.vy * dt
       o.rotation.z += it.spin * dt
     } else {
-      o.position.y += it.vy * dt * (game.state === 'play' ? adventure.pace : 1)
-      // The magnet pulls every goodie (not rocks) toward the rocket
-      if (game.magnet > 0 && it.kind !== 'rock' && game.state === 'play') {
-        tmp.subVectors(rocketCenter, o.position)
-        const d = tmp.length()
-        if (d < 7.5) {
-          it.pulled = true
-          const pull = Math.min(d, (14 / Math.max(d, 1)) * dt + 6 * dt)
-          tmp.multiplyScalar(pull / Math.max(d, 0.001))
-          it.x += tmp.x
-          o.position.y += tmp.y
-        }
-      }
+      o.position.y += it.vy * dt * (game.state === 'play' && missionHeld() ? adventure.pace : 1)
     }
-    o.position.x = it.x + (it.pulled ? 0 : Math.sin(it.t * 1.7) * it.sway)
+    o.position.x = it.x + Math.sin(it.t * 1.7) * it.sway
 
-    // Each kind moves in its own cheerful way
+    // Each kind moves in its own gentle way
     const model = o.children[0]
-    if (it.kind === 'gem') model.rotation.y += dt * 2.2
-    else if (it.kind === 'rock') {
+    if (it.kind === 'rock') {
       if (!it.bounced) o.rotation.z = Math.sin(it.t * 0.9) * 0.25
-    } else if (it.kind === 'magnet') {
-      model.rotation.y = Math.sin(it.t * 2) * 0.4
     } else {
       model.rotation.y = Math.sin(it.t * 2.2) * 0.55
       model.rotation.z = Math.sin(it.t * 1.4) * 0.2
-      // Special stars leave a faint, occasional sparkle so they stand out from plain ones
-      if (it.kind !== 'star' && !it.bounced) {
-        if (Math.random() < dt * 2.5) {
-          sparkle.color = it.k.colors[(Math.random() * it.k.colors.length) | 0]
-          sparkle.size = rand(0.4, 0.7)
-          particles.emit(o.position.x + rand(-0.35, 0.35), o.position.y + rand(0, 0.4), 0.1, sparkle)
-        }
-      }
     }
 
     // Things grow in just below the HUD band instead of sliding through the panel and mission card
-    const grow = it.bounced ? 1 : clamp((view.hudY - o.position.y) / 0.8 + 0.001, 0, 1)
-    o.visible = grow > 0
-    if (!it.bounced) o.scale.setScalar(it.k.scale * grow)
+    const grow = it.bounced && !it.fading ? 1 : clamp((view.hudY - o.position.y) / 0.8 + 0.001, 0, 1)
+    // Stars no longer needed (or caught with the wrong number) shrink quietly away
+    if (it.reveal > 0) it.reveal -= dt
+    else if (it.fading) {
+      it.fade = (it.fade ?? 1) - dt * 1.1
+      if (it.fade <= 0) {
+        recycle(i)
+        continue
+      }
+    }
+    const size = grow * (it.fading ? it.fade ?? 1 : 1)
+    o.visible = size > 0
+    if (!it.bounced || it.fading) o.scale.setScalar(it.k.scale * size)
 
     // Catch!
-    if (game.state === 'play' && !it.bounced && grow >= 1) {
+    if (game.state === 'play' && !it.bounced && !it.fading && grow >= 1) {
       const d = Math.hypot(o.position.x - rocketCenter.x, o.position.y - rocketCenter.y)
       if (d < 0.95 + it.k.r * 0.9) {
         if (it.kind === 'rock') {
           if (game.dizzy <= 0) bumpRock(it)
-        } else {
-          catchItem(it)
+        } else if (catchItem(it)) {
           recycle(i)
           continue
         }
@@ -933,8 +1353,7 @@ function updateUfo(dt) {
     ufo.active = true
     ufo.dir = Math.random() < 0.5 ? 1 : -1
     ufo.t = 0
-    ufo.dropTimer = 0.8
-    ufo.obj.visible = true
+        ufo.obj.visible = true
     ufo.obj.position.set(-ufo.dir * (view.w + 3), view.hudY - 1.4, -1)
     audio.whoosh(1.4)
     return
@@ -947,12 +1366,6 @@ function updateUfo(dt) {
   o.rotation.x = 0.3
   o.rotation.z = -ufo.dir * 0.15 + Math.sin(ufo.t * 3) * 0.05
   o.rotation.y += dt * 0.8
-  ufo.dropTimer -= dt
-  if (ufo.dropTimer <= 0 && game.phase === 'build' && o.position.x > view.xMin && o.position.x < view.xMax) {
-    ufo.dropTimer = 0.75
-    spawn(Math.random() < 0.2 ? 'gem' : 'star', o.position.x, o.position.y - 0.8, -leg(game.stops).speed * view.k * 0.9, { sway: 0.2 })
-    audio.tone(900 + Math.random() * 200, { dur: 0.2, vol: 0.03, slide: 0.7, echo: false })
-  }
   if (Math.abs(o.position.x) > view.w + 3.5 && ufo.t > 1) {
     ufo.active = false
     o.visible = false
@@ -967,7 +1380,7 @@ let nudgeUsed = false // one quiet hint per flight, after a long rest
 function updateNudge(dt) {
   game.idle += dt
   if (nudgeShown && game.idle < 1) nudgeUsed = true
-  const show = !nudgeUsed && game.idle > 30 && !pointerDown
+  const show = !nudgeUsed && game.idle > 30 && !pointerDown && game.phase === 'build'
   if (show !== nudgeShown) {
     nudgeShown = show
     nudgeEl.classList.toggle('show', show)
@@ -1001,23 +1414,25 @@ function frame() {
     game.phaseTime += dt
     // Stars fall only while a constellation is being built: arriving and flying home are calm
     if (game.phase === 'build') {
+      // One row of stars at a time: the next comes once the sky is clear of the last choice
+      if (!items.some((it) => it.kind === 'star' && !it.bounced && !it.fading)) {
+        game.rowTimer -= dt
+        if (game.rowTimer <= 0) spawnRow()
+      }
       game.spawnTimer -= dt
       if (game.spawnTimer <= 0) {
-        spawnSomething()
-        game.spawnTimer = L.interval * rand(0.8, 1.2)
+        spawnRock()
+        game.spawnTimer = 4 * rand(0.8, 1.2)
       }
     } else if (game.phase === 'arrive') {
       // Stay at the planet until its name and fact have been spoken. A hush (mute, home) drops
       // the words' onend, so the trip also goes on once nothing is left to say.
-      if (game.phaseTime > ARRIVE_HOLD && (game.factSaid || !voice.speaking)) nextLeg()
+      if (game.phaseTime > ARRIVE_HOLD && (game.factSaid || !voice.speaking)) afterArrival()
     } else if (game.phase === 'homeward') {
       renderJourney()
       if (game.phaseTime > HOME_TIME) showFinale()
     }
     game.dizzy = Math.max(0, game.dizzy - dt)
-    const hadPower = game.magnet > 0
-    if (game.magnet > 0 && (game.magnet -= dt) <= 0) audio.powerDown()
-    if (hadPower) renderPowers()
     updateNudge(dt)
   }
 
@@ -1053,6 +1468,7 @@ load()
   .then(() => {
     resize()
     game.state = 'title'
+    world.calm(true, { title: true })
     const go = $('go')
     go.disabled = false
     go.textContent = '🚀 Fly!'
@@ -1063,4 +1479,4 @@ load()
     $('go').disabled = false
     $('go').onclick = () => location.reload()
   })
-if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game, sky, items, camera }
+if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game, sky, items, camera, neededValue, level, LEVELS, finale, tapSky, chooseNext, joinTap, joinAt, pickHidden }

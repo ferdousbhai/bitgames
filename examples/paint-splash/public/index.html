@@ -37,7 +37,7 @@
   </div>
   <div class="go-row">
     <button id="go" class="big-go">🎨 Let's paint!</button>
-    <button id="mode" class="mode-btn" aria-pressed="false" aria-label="Quick round with a clock" title="Quick round with a clock"><span class="ico">⏱️</span><span class="lbl">Quick</span></button>
+    <button id="mode" class="mode-btn" aria-pressed="false" aria-label="Quick free painting with a clock" title="Quick free painting with a clock"><span class="ico">⏱️</span><span class="lbl">Quick</span></button>
   </div>
   <div class="menu-extras">
     <button id="colour-open" class="extra-btn" aria-label="Mix my colours"><span class="ico">🔴🟡🔵</span><span class="lbl">Mix my colours</span></button>
@@ -64,6 +64,8 @@
     <div id="timer" class="pill timer hidden">⏱️ 75</div>
     <div class="together-bar" aria-hidden="true"><span class="hands">🤝</span><div id="bar" class="cover-bar"><i></i></div><span class="goal">🖼️</span></div>
     <div id="found-row" class="found-row"></div>
+    <button id="job" class="job-card hidden" aria-live="polite"></button>
+    <div id="mix-note" class="mix-note hidden" aria-live="polite"></div>
   </div>
   <button id="finish" class="finish-btn hidden" aria-label="Finished!" title="Finished!"><span class="ico">🖼️</span><span class="lbl">Finished!</span></button>
   <div id="finish-ask" class="finish-ask hidden" role="dialog" aria-label="Is your picture finished?">
@@ -75,8 +77,8 @@
     <button class="pot" data-pot="2" aria-label="Yellow paint" style="--c:#f8d64e"></button>
     <button class="pot" data-pot="4" aria-label="Blue paint" style="--c:#4e8ad5"></button>
   </div>
-  <div id="mix-note" class="mix-note hidden" aria-live="polite"></div>
   <button id="voice" class="voice-btn" title="Say hello! (Space)">📣</button>
+  <div id="job-arrow" class="job-arrow" aria-hidden="true"><span class="tip">➜</span><span class="shape"></span></div>
   <div id="hint" class="drag-hint hidden"><span class="finger">👆</span></div>
 </div>
 

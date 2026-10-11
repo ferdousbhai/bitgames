@@ -7,7 +7,7 @@ import { clamp } from './util.js'
  *
  * Scenery entries are [model, weight, minScale, maxScale].
  */
-export const BIOME_LENGTH = 210
+export const BIOME_LENGTH = 240
 export const START_X = 16 // first carrots and logs appear after this
 
 export const BIOMES = [
@@ -34,9 +34,9 @@ export const BIOMES = [
     dust: '#f0dcb4', // the puffs kicked up by Pip's feet
     hillTrees: ['tree_pine', 'tree_round'], // dotted on the near hills (picked at random)
     butterflies: 3,
-    obstacles: ['log', 'rock', 'log'],
     rows: [2, 3], // how many carrots in each counted row (grows place by place)
-    rhythms: [['log', 'rock']], // repeating obstacle patterns: one is picked per place
+    // the three obstacles this place builds its patterns from (see Course.shapeRhythm)
+    kinds: ['log', 'rock', 'stump'],
     near: [['grass', 4, 0.9, 1.4], ['flower', 3, 0.8, 1.2]],
     side: [['fence', 3, 1, 1], ['bush', 2, 0.7, 1], ['flower', 2, 1, 1.3]],
     mid: [['tree_round', 5, 0.8, 1.15], ['bush', 2, 1, 1.4], ['tree_pine', 1, 0.8, 1]],
@@ -65,9 +65,8 @@ export const BIOMES = [
     dust: '#f0dcb4', // the puffs kicked up by Pip's feet
     hillTrees: [], // dotted on the near hills (picked at random)
     butterflies: 2,
-    obstacles: ['toadstool', 'stump', 'toadstool'],
     rows: [3, 5],
-    rhythms: [['toadstool', 'toadstool', 'stump'], ['toadstool', 'stump', 'stump']],
+    kinds: ['toadstool', 'stump', 'rock'],
     near: [['grass', 3, 0.9, 1.3], ['flower', 2, 0.8, 1.1], ['toadstool', 1, 0.35, 0.55]],
     side: [['toadstool', 3, 0.5, 0.9], ['bush', 1, 0.7, 1], ['stump', 1, 0.8, 1]],
     mid: [['mushroom_red', 4, 0.8, 1.3], ['mushroom_blue', 4, 0.9, 1.4], ['tree_round', 2, 0.9, 1.1]],
@@ -96,9 +95,8 @@ export const BIOMES = [
     dust: '#f0dcb4', // the puffs kicked up by Pip's feet
     hillTrees: ['tree_pine', 'tree_round'], // dotted on the near hills (picked at random)
     butterflies: 2,
-    obstacles: ['pumpkin', 'log', 'stump'],
     rows: [4, 7],
-    rhythms: [['pumpkin', 'log', 'stump'], ['pumpkin', 'pumpkin', 'log']],
+    kinds: ['pumpkin', 'log', 'stump'],
     near: [['grass', 4, 0.9, 1.3], ['pumpkin', 1, 0.4, 0.6]],
     side: [['pumpkin', 3, 0.6, 0.9], ['fence', 2, 1, 1], ['bush', 2, 0.7, 1]],
     mid: [['tree_round', 6, 0.85, 1.2], ['tree_pine', 2, 0.9, 1.1]],
@@ -128,9 +126,8 @@ export const BIOMES = [
     dust: '#ffffff', // the puffs kicked up by Pip's feet
     hillTrees: ['tree_pine_snow', 'tree_pine_snow', 'tree_round_snow'], // dotted on the near hills (picked at random)
     butterflies: 0,
-    obstacles: ['snowman', 'rock', 'snowman'],
-    rows: [6, 10],
-    rhythms: [['snowman', 'rock', 'rock'], ['snowman', 'snowman', 'rock']],
+    rows: [5, 9],
+    kinds: ['snowman', 'rock', 'log'],
     near: [['grass', 3, 0.8, 1.2], ['rock', 1, 0.35, 0.5], ['snowman', 1, 0.4, 0.5]],
     side: [['snowman', 2, 0.6, 0.85], ['rock', 2, 0.6, 1], ['tree_pine_snow', 1, 0.4, 0.55]],
     mid: [['tree_pine_snow', 6, 0.8, 1.25], ['tree_round_snow', 2, 0.9, 1.1]],
@@ -145,9 +142,10 @@ export function biomeIndexAt(x) {
   return clamp(Math.floor(x / BIOME_LENGTH), 0, BIOMES.length - 1)
 }
 
-/** What each obstacle is called aloud, and its own soft note (semitones above C5) so a rhythm sounds like a tune. */
-export const OBSTACLE_NAMES = { log: 'log', rock: 'rock', stump: 'stump', toadstool: 'toadstool', pumpkin: 'pumpkin', snowman: 'snowman' }
-export const OBSTACLE_NOTES = { log: 0, pumpkin: 2, stump: 4, rock: 7, toadstool: 9, snowman: 12 }
+/** What each step of a pattern is called aloud, and its own soft note (semitones above C5) so a rhythm sounds like a tune. */
+// A carrot growing in the grass is a step of a pattern too (stay down and munch it), with its own note.
+export const OBSTACLE_NAMES = { log: 'log', rock: 'rock', stump: 'stump', toadstool: 'toadstool', pumpkin: 'pumpkin', snowman: 'snowman', carrot: 'carrot' }
+export const OBSTACLE_NOTES = { log: 0, pumpkin: 2, stump: 4, carrot: 5, rock: 7, toadstool: 9, snowman: 12 }
 
 /** Hop-over obstacles: half width along the path and height, for the (forgiving) hit test. */
 export const OBSTACLES = {
@@ -157,4 +155,14 @@ export const OBSTACLES = {
   toadstool: { w: 0.3, h: 0.75 },
   pumpkin: { w: 0.45, h: 0.6 },
   snowman: { w: 0.3, h: 0.85 },
+}
+
+/**
+ * The wild flowers Pip can pick on the way (staying down as one comes; a hop sails over it), to
+ * plant in a pattern by his door at home. Three colours, each with its own note (a C major triad).
+ */
+export const FLOWERS = {
+  blue: { hex: '#5aa9ff', note: 0, glyph: '#3f8fe8' },
+  yellow: { hex: '#ffd23f', note: 4, glyph: '#e9b400' },
+  pink: { hex: '#ff6b9d', note: 7, glyph: '#ef4f86' },
 }

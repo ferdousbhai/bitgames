@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { makeGlowTexture } from './effects.js'
 
+const restAt = new THREE.Vector3()
+
 /** The planets visited, in order. Each one tints the sky. */
 export const STOPS = [
   { model: 'planet_moon', emoji: '🌙', name: 'Moon', top: '#120c3a', bottom: '#3d2c86', nebula: ['#7b5cff', '#ff8fc7'] },
@@ -134,7 +136,9 @@ export class World {
       const holder = new THREE.Group()
       holder.add(p)
       holder.visible = false
-      holder.userData = { side: 1, leaving: -1, spin: p, boop: 0 }
+      // How far the model reaches from its centre (rings included), so it can be kept below the HUD
+      const size = new THREE.Box3().setFromObject(p).getSize(new THREE.Vector3())
+      holder.userData = { side: 1, leaving: -1, spin: p, boop: 0, reach: Math.max(size.x, size.y) / 2 }
       scene.add(holder)
       return holder
     })
@@ -161,6 +165,7 @@ export class World {
     const next = this.planets[index % STOPS.length]
     next.visible = true
     next.userData.leaving = -1
+    next.userData.snap = true // it appears in its place, then eases between places (see update)
     // Alternate sides by trip count (five planets, so index parity would repeat a side at the wrap)
     next.userData.side = index % 2 === 0 ? 1 : -1
     this.shown = 0
@@ -186,11 +191,23 @@ export class World {
     const o = this.models[name].clone()
     const z = -34 - Math.random() * 16
     const depthScale = (16 - z) / 16
-    o.scale.setScalar(1.1 + Math.random() * 0.8)
-    o.position.set((Math.random() * 2 - 1) * view.w * depthScale * 0.95, view.h * depthScale + 3, z)
-    o.userData = { speed: 0.5 + Math.random() * 0.4, spin: (Math.random() - 0.5) * 0.6, limit: -view.h * depthScale - 4 }
+    const size = 1.1 + Math.random() * 0.8
+    const reach = (new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3()).x / 2) * size
+    // It fades in (grows from nothing) just below the HUD band, never drifting behind the buttons or the panel
+    o.scale.setScalar(0.001)
+    o.position.set((Math.random() * 2 - 1) * view.w * depthScale * 0.8, view.hudY * depthScale - reach * 1.2, z)
+    o.userData = { size, grow: 0, speed: 0.5 + Math.random() * 0.4, spin: (Math.random() - 0.5) * 0.6, limit: -view.h * depthScale - 4 }
     this.scene.add(o)
     this.drifters.push(o)
+  }
+
+  /** At home the sky is still: drifting planets leave and no more come, so nothing sits behind the cards. */
+  calm(on, { title = false } = {}) {
+    this.still = on
+    this.title = on && title
+    if (!on) return
+    for (const d of this.drifters) this.scene.remove(d)
+    this.drifters = []
   }
 
   /** `cruise` is how fast the rocket is flying; `progress` 0..1 toward the next planet. */
@@ -225,14 +242,25 @@ export class World {
       } else p.scale.setScalar(scale)
       p.userData.spin.rotation.y = Math.sin(this.time * 0.25 + i) * 0.35
       const x = p.userData.side * view.w * depth * 0.6
+      // Its top (rings included) stays below the HUD band: planets never pass behind the panel or buttons
+      const rest = Math.min(view.h * depth * 0.1, view.hudY * depth - p.userData.reach * scale * 1.05)
       if (p.userData.leaving >= 0) {
         p.userData.leaving += dt
         const t = p.userData.leaving
-        p.position.set(x, view.h * depth * 0.1 - t * t * 4 - t * 3, z - 3)
+        p.position.set(x, rest - t * t * 4 - t * 3, z - 3)
         if (p.position.y < -view.h * depth - scale * 2) p.visible = false
       } else if (i === this.stop % STOPS.length) {
+        // The next planet waits in its place and comes closer (grows) as the constellation is lit
         const e = this.shown
-        p.position.set(x, view.h * depth * (1.05 - 0.95 * e) + scale * (1 - e), z)
+        const grow = 0.3 + 0.7 * e
+        p.scale.multiplyScalar(grow)
+        // On the title it waits low on the left, clear of the words and of Kitty
+        const to = this.still && this.title
+          ? restAt.set(-view.w * depth * 0.62, -view.h * depth * 0.42, z)
+          : restAt.set(x, Math.min(view.h * depth * 0.1, view.hudY * depth - p.userData.reach * scale * grow * 1.05), z)
+        if (p.userData.snap) p.position.copy(to)
+        else p.position.lerp(to, 1 - Math.exp(-dt * 2.5))
+        p.userData.snap = false
       } else {
         p.visible = false
       }
@@ -240,12 +268,14 @@ export class World {
 
     // Drifters
     this.drifterTimer -= dt
-    if (this.drifterTimer <= 0 && this.drifters.length < 2) {
+    if (this.drifterTimer <= 0 && this.drifters.length < 2 && !this.still) {
       this.addDrifter(view)
       this.drifterTimer = 7 + Math.random() * 6
     }
     for (let i = this.drifters.length - 1; i >= 0; i--) {
       const d = this.drifters[i]
+      d.userData.grow = Math.min(1, d.userData.grow + dt / 2.5)
+      d.scale.setScalar(Math.max(0.001, d.userData.size * d.userData.grow))
       d.position.y -= dt * cruise * d.userData.speed * 0.35
       d.rotation.y += dt * d.userData.spin
       d.rotation.z += dt * d.userData.spin * 0.5

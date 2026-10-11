@@ -30,7 +30,7 @@ Node names the game relies on:
   prop_blocks, prop_ball, prop_rings, prop_crayons, prop_bear
                          toys the game sets around the board; origin at the base
 
-Animal names: dog cat frog lion panda pig bunny chick elephant fox penguin cow
+Animal names: dog cat frog lion panda pig bunny chick elephant fox penguin cow fish
 """
 import math
 import os
@@ -644,7 +644,51 @@ def cow():
     return finish_animal("cow", B, H)
 
 
-ANIMALS = [dog, cat, frog, lion, panda, pig, bunny, chick, elephant, fox, penguin, cow]
+def fish():
+    """A clownfish leaping from a little splash: side on, as children draw fish, turned a little
+    toward the child; orange with white bands."""
+    skin, fin = mat("fish_skin", "#ff8a2a"), mat("fish_fin", "#ff9f43")
+    water, foam = mat("fish_water", "#8fd8ff", rough=0.15), mat("fish_foam", "#e6f7ff", rough=0.3)
+    B, H = Part(), Part()
+    bc, br = Vector((0.06, 0, 0.42)), (0.3, 0.16, 0.24)
+    B.sphere(skin, bc, br, segs=24, rings=14)
+    for x, h in ((0.17, 0.245), (0.33, 0.15)):  # white bands
+        B.sphere(M("white"), (x, 0, 0.42), (0.06, 0.162, h), segs=18, rings=12)
+    for a in (-34, 34):  # the tail fans out behind
+        tilt = Euler((0, math.radians(a), 0)).to_matrix()
+        B.sphere(fin, Vector((0.44, 0, 0.42)) + tilt @ Vector((0.07, 0, 0)), (0.13, 0.03, 0.085), rot=tilt, segs=16, rings=10)
+    B.sphere(fin, (0.1, 0, 0.64), (0.19, 0.03, 0.08), rot=(0, 8, 0), segs=16, rings=10)
+    B.sphere(fin, (0.08, 0, 0.21), (0.11, 0.025, 0.05), rot=(0, -10, 0), segs=14, rings=8)
+    for s in (-1, 1):
+        B.sphere(fin, (-0.04, s * 0.15, 0.36), (0.09, 0.025, 0.06), rot=(0, 25, s * 15), segs=14, rings=8)
+    # The splash it jumps from, so it stands on the card like the others
+    B.sphere(water, (0.04, 0, 0.02), (0.3, 0.26, 0.022), segs=24, rings=8)
+    B.tube(foam, [(0.04 + 0.3 * math.cos(t), 0.26 * math.sin(t), 0.035) for t in [k * math.pi / 12 for k in range(24)]], 0.018, segs=8, closed=True)
+    B.cone(water, (0.06, 0, 0.02), (0, 0, 1), 0.12, 0.06, 0.18, segs=18, sharp=80)
+    for p, r in (((-0.2, -0.18, 0.16), 0.035), ((-0.28, -0.1, 0.28), 0.025), ((0.28, -0.16, 0.12), 0.03)):
+        B.sphere(foam, p, r, segs=10, rings=8)
+    # The head is the front of the fish; its eyes and mouth face the child's side
+    hc, hr = Vector((-0.14, 0, 0.43)), (0.2, 0.17, 0.22)
+    H.sphere(skin, hc, hr, segs=28, rings=16)
+    H.sphere(M("white"), (-0.06, 0, 0.43), (0.06, 0.18, 0.25), segs=18, rings=12)
+    for s in (-1, 1):
+        p = surf(hc, hr, (-0.55, s, 0.35))
+        n = surf_normal(hc, hr, p)
+        H.sphere(M("eye"), p - n * 0.008, (0.05, 0.062, 0.034), rot=face_rot(n), segs=16, rings=10)
+        H.sphere(M("shine"), p + n * 0.022 + Vector((0, 0, 0.024)), 0.016, segs=8, rings=6)
+        c = surf(hc, hr, (-0.3, s, -0.25))
+        H.sphere(M("blush"), c, (0.05, 0.034, 0.012), rot=face_rot(surf_normal(hc, hr, c)), segs=14, rings=8)
+    lips = surf(hc, hr, (-1, 0, -0.2))
+    H.tube(mat("fish_lip", "#e8642a"), [lips + Vector((0, 0.035 * math.cos(a), 0.028 * math.sin(a))) for a in [k * math.pi / 6 for k in range(12)]], 0.014, segs=8, closed=True)
+    H.sphere(M("mouth"), lips + Vector((0.004, 0, 0)), (0.012, 0.028, 0.02), segs=10, rings=6)
+    root = finish_animal("fish", B, H)
+    # Turn the face a little toward the child (three.js +Z is Blender -Y)
+    turn = Matrix.Rotation(math.radians(28), 4, "Z")
+    for part in root.children:
+        part.data.transform(turn)
+    return root
+
+ANIMALS = [dog, cat, frog, lion, panda, pig, bunny, chick, elephant, fox, penguin, cow, fish]
 
 
 # --- Card and setting --------------------------------------------------------------------
@@ -828,9 +872,9 @@ def preview(out_dir, animals, card_root, setting_objs):
         bpy.ops.render.render(write_still=True)
 
     for half in (0, 1):
-        group = animals[half * 6:half * 6 + 6]
+        group = animals[half * 7:half * 7 + 7]
         for i, root in enumerate(group):
-            root.location = (i - 2.5) * 0.95, 0, 0
+            root.location = (i - 3) * 0.95, 0, 0
         vis = [o for r in group for o in (r, *r.children)]
         shoot(f"animals_{half}.png", vis, (0, -7.6, 3.2), (0, 0, 0.45))
     for i, root in enumerate(animals[:4]):

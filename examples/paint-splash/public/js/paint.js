@@ -56,9 +56,10 @@ const RAINBOW_BITS = [RED, RED | YELLOW, YELLOW, YELLOW | BLUE, BLUE, RED | BLUE
 export const RAINBOW = RAINBOW_BITS.map((mask) => MIXES[mask].hex)
 /**
  * Paint stays wet this long. A different paint rolled over wet paint mixes with it;
- * over dry paint it simply paints over the top, as with real paint.
+ * over dry paint it simply paints over the top, as with real paint. Long enough to lay a
+ * whole coat of each paint over a big shape (three coats for brown) before the first dries.
  */
-export const WET_MS = 8000
+export const WET_MS = 12000
 
 /**
  * Every cell remembers when each paint last touched it and when water last
@@ -71,14 +72,22 @@ export class PaintMap {
     const n = NX * NZ
     this.times = PRIMARIES.map(() => new Uint32Array(n))
     this.washed = new Uint32Array(n)
+    /** Painted request shapes are kept safe from this game time on (0 = open to paint). */
+    this.locked = new Uint32Array(n)
     this.mix = new Uint8Array(n)
     this.mask = new Uint8Array(n)
+    /** Cells shown softened (dry paint off the shapes): display only, the paint itself is unchanged. */
+    this.soft = new Uint8Array(n)
     this.rgba = new Uint8Array(n * 4)
     /** When each cell was last painted (tenths of a second, two bytes: red high, green low), for the wet shine. */
     this.wetData = new Uint8Array(n * 2)
     this.counts = new Int32Array(8)
     /** The cell where each colour last appeared (to show where a new mix was found). */
     this.lastAt = new Int32Array(8).fill(-1)
+    /** Cells each colour gained from this device's child's own roller (`mine` is their seat, `who` the painter now). */
+    this.mineCounts = new Int32Array(8)
+    this.mine = -1
+    this.who = -1
     this.paintable = n
     this.texture = dataTexture(this.rgba, THREE.RGBAFormat, true)
     this.wetTexture = dataTexture(this.wetData, THREE.RGFormat, false)
@@ -91,11 +100,14 @@ export class PaintMap {
   reset(obstacles) {
     for (const t of this.times) t.fill(0)
     this.washed.fill(0)
+    this.locked.fill(0)
     this.mix.fill(0)
     this.rgba.fill(0)
     this.wetData.fill(0)
     this.mask.fill(0)
+    this.soft.fill(0)
     this.lastAt.fill(-1)
+    this.mineCounts.fill(0)
     for (const o of obstacles) this.cells(o.x, o.z, o.r + 0.05, (i) => (this.mask[i] = 1))
     let masked = 0
     for (let i = 0; i < this.mask.length; i++) masked += this.mask[i]
@@ -125,7 +137,7 @@ export class PaintMap {
 
   /** Lays paint `bits` on a cell at game time t (bits 0 = a water wash). */
   write(i, t, bits) {
-    if (this.mask[i]) return
+    if (this.mask[i] || (this.locked[i] && t > this.locked[i] + 1)) return
     if (!bits) {
       if (t <= this.washed[i]) return
       this.washed[i] = t
@@ -157,11 +169,16 @@ export class PaintMap {
     this.wetData[kw] = wet >> 8
     this.wetData[kw + 1] = wet & 255
     this.dirty = true
-    if (mix === before) return
-    this.counts[before]--
-    this.counts[mix]++
-    this.lastAt[mix] = i
-    this.mix[i] = mix
+    if (mix === before && !this.soft[i]) return
+    if (mix !== before) {
+      this.counts[before]--
+      this.counts[mix]++
+      this.lastAt[mix] = i
+      if (this.who >= 0 && this.who === this.mine) this.mineCounts[mix]++
+      this.mix[i] = mix
+    }
+    // Fresh paint shows in its true colour again.
+    this.soft[i] = 0
     const c = MIXES[mix].rgb
     const k = i * 4
     this.rgba[k] = c[0]
@@ -224,6 +241,34 @@ export class PaintMap {
 
   wash(t, x, z, seed) {
     this.blob(t, 0, x, z, WASH_R, seed, 5)
+  }
+
+  /**
+   * Softens paint that is not part of a painted shape: its colour fades toward the ground by
+   * `amountAt(x, z)` (0 keeps it bright), so the coloured-in shapes stand out. Only paint last laid at
+   * or before game time `before` softens (so wet paint stays true while it can still mix), and only
+   * the colour shown changes, never the paint itself. Fresh paint on a cell shows bright again.
+   */
+  soften(amountAt, before = Infinity) {
+    const [R, Y, B] = this.times
+    for (let i = 0; i < this.mix.length; i++) {
+      if (!this.mix[i] || this.locked[i] || this.soft[i]) continue
+      if (Math.max(R[i], Y[i], B[i]) > before) continue
+      const { x, z } = this.cellCentre(i)
+      const amount = amountAt(x, z)
+      if (!(amount > 0)) continue
+      const k = i * 4
+      for (let c = 0; c < 3; c++) this.rgba[k + c] = Math.round(this.rgba[k + c] + (244 - this.rgba[k + c]) * amount)
+      this.soft[i] = 1
+      this.dirty = true
+    }
+  }
+
+  /** The cell index at a point, or -1 outside the playground. */
+  index(x, z) {
+    const i = Math.floor((x + HALF_W) / CELL)
+    const j = Math.floor((z + HALF_D) / CELL)
+    return i < 0 || j < 0 || i >= NX || j >= NZ ? -1 : j * NX + i
   }
 
   /** The paint bits at a point: 0 bare, 1..7 a colour, or -1 outside / under an obstacle. */

@@ -2,7 +2,7 @@
   "id": "memory-match",
   "title": "Memory Match",
   "tagline": "Flip the cards and find the matching animal twins!",
-  "howToPlay": "Tap two cards to turn them over and hear each animal's name. Find all the matching pairs! Choose how they match: 🐶🐶 twins, 🐮🔊 an animal and its sound (listen carefully, the speaker card only makes the noise), or 🐮 and its baby (a cow's baby is a calf). Tap 👀 once a round to peek at a pair. Start with 2 pairs and grow up to 10.",
+  "howToPlay": "Tap two cards to turn them over and hear each animal's name. Find all the matching pairs! Choose how they match: 🐶🐶 twins (on the big boards some twins wear a 🎀 bow or a 🧢 hat, so look closely), 🐮🔊 an animal and its sound (the speaker card says \"Moo!\": who says that?), 🐮 and its baby (a cow's baby is a calf; on the bigger boards the babies sleep in baskets and you only hear and see their name, so find whose baby it is), or 🐮🐷🐥 Homes for older children: keep turning over the animals that live together on the farm, at home, wild on land or in the water. Tap 👀 once a round to peek. Boards grow from 2 pairs to 10, and the next board follows how carefully you remembered. 📖 My animals keeps what you found out about each animal: its sound, its baby and its home.",
   "emoji": "🧩",
   "color": "#2ec4b6",
   "category": "puzzle",
@@ -13,5 +13,5 @@
     2,
     8
   ],
-  "learning": "Visual and auditory memory, animal names and baby animal words"
+  "learning": "Visual and auditory memory, looking closely, animal names and the sounds they make, baby animal words (and which parent each belongs to), and sorting animals by where they live (including that some fit more than one home)"
 }

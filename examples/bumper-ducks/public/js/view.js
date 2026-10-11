@@ -104,6 +104,25 @@ const colourBubbles = BUBBLE_COLOURS.map(({ hex }) => ({
   bead: new THREE.MeshStandardMaterial({ color: hex, roughness: 0.35, emissive: hex, emissiveIntensity: 0.4 }),
 }))
 const beadGeometry = new THREE.SphereGeometry(0.36, 16, 12)
+// A ten raft: ten little bubbles held in a floating ten-frame (two rows of five), so a ten looks like ten.
+const raftBoard = new THREE.MeshStandardMaterial({ color: '#fff4d6', roughness: 0.7 })
+const raftRim = new THREE.MeshStandardMaterial({ color: '#ffb04d', roughness: 0.6 })
+const raftBead = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.25, emissive: '#bfe6ff', emissiveIntensity: 0.35 })
+const raftBoardGeometry = new THREE.BoxGeometry(2.3, 0.16, 1.05)
+const raftRimGeometry = new THREE.BoxGeometry(2.46, 0.12, 1.21)
+const raftBeadGeometry = new THREE.SphereGeometry(0.19, 14, 10)
+function makeRaft() {
+  const raft = new THREE.Group()
+  const rim = new THREE.Mesh(raftRimGeometry, raftRim)
+  rim.position.y = -0.03
+  raft.add(rim, new THREE.Mesh(raftBoardGeometry, raftBoard))
+  for (let i = 0; i < 10; i++) {
+    const b = new THREE.Mesh(raftBeadGeometry, raftBead)
+    b.position.set(((i % 5) - 2) * 0.44, 0.2, (Math.floor(i / 5) - 0.5) * 0.46)
+    raft.add(b)
+  }
+  return raft
+}
 const bubbleGeometry = new THREE.SphereGeometry(0.55, 20, 14)
 const shieldGeometry = new THREE.SphereGeometry(1, 24, 16)
 
@@ -251,7 +270,10 @@ export class ItemView {
     this.item = item
     this.root = new THREE.Group()
     this.root.position.set(item.x, 0, item.z)
-    if (item.k === 'bubble' && colourBubbles[item.c]) {
+    if (item.k === 'ten') {
+      this.body = makeRaft()
+      this.base = 0.25
+    } else if (item.k === 'bubble' && colourBubbles[item.c]) {
       const look = colourBubbles[item.c]
       this.body = new THREE.Mesh(bubbleGeometry, look.shell)
       this.body.add(new THREE.Mesh(beadGeometry, look.bead))
@@ -269,9 +291,20 @@ export class ItemView {
       this.base = 0.15
     }
     this.root.add(this.body)
-    this.root.add(blobShadow(item.k === 'bubble' ? 1.1 : 1.8))
+    this.root.add(blobShadow(item.k === 'bubble' ? 1.1 : item.k === 'ten' ? 2.6 : 1.8))
     this.phase = Math.random() * 10
     this.age = 0
+  }
+
+  /**
+   * Glides to where the simulation says it is (a bubble that bobbed away from a duck). `lift` raises a
+   * bubble stuck on a lily pad, the mama duck's back or a paper boat; it drops to the water when freed.
+   */
+  follow(x, z, dt, lift = 0) {
+    const k = Math.min(1, dt * 5)
+    this.root.position.x += (x - this.root.position.x) * k
+    this.root.position.z += (z - this.root.position.z) * k
+    this.lift = (this.lift ?? lift) + (lift - (this.lift ?? lift)) * Math.min(1, dt * 4)
   }
 
   update(t, dt, effects) {
@@ -280,8 +313,13 @@ export class ItemView {
     const grow = pop < 1 ? 1 + Math.sin(pop * Math.PI) * 0.4 : 1
     const s = pop * grow
     const k = this.item.k
-    this.body.position.y = this.base + Math.sin(t * 2 + this.phase) * (k === 'gift' ? 0.08 : 0.18)
+    this.body.position.y = this.base + (this.lift ?? 0) + Math.sin(t * 2 + this.phase) * (k === 'gift' ? 0.08 : 0.18)
     if (k === 'bubble') this.body.scale.setScalar(s * (1 + Math.sin(t * 3 + this.phase) * 0.05))
+    else if (k === 'ten') {
+      this.body.scale.setScalar(s)
+      this.body.rotation.y = Math.sin(t * 0.5 + this.phase) * 0.25
+      this.body.rotation.z = Math.sin(t * 1.3 + this.phase) * 0.04
+    }
     else if (k === 'star') {
       this.body.scale.setScalar(0.85 * s)
       this.body.rotation.y = Math.sin(t * 1.5 + this.phase) * 0.9

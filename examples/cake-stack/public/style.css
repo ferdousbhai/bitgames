@@ -421,6 +421,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .pips.order .pip.want.next { opacity: 1; filter: none; box-shadow: 0 0 0 3px #fff, 0 0 0 6px #ff8fb8; transform: scale(1.12); }
 .pips.order .pip.want.ask { transform: scale(1.4); }
 .pips.order .pip.unit { margin-left: 10px; }
+/* The end of a pattern, still to be worked out: a plain dashed "?" dot */
+.pips.order .pip.want.mystery { color: #b04a7a; font-weight: 900; opacity: .9; filter: none; }
 #hud .progress { pointer-events: auto; }
 .mover-tag {
   position: fixed; left: 0; top: 0; pointer-events: none; font-size: 34px; line-height: 1; padding: 6px 8px; border-radius: 999px;
@@ -452,7 +454,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .share-faces { font-size: 34px; letter-spacing: 2px; }
 .share-plates { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .share-plate {
-  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 96px; min-height: 96px; padding: 6px 8px 8px;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 96px; min-height: 96px; padding: 6px 8px 8px;
   border-radius: 28px; background: var(--plate); border: 4px solid #fff; box-shadow: 0 5px 0 rgba(113, 91, 122, .3);
   transition: transform .2s, box-shadow .2s;
 }
@@ -463,14 +465,15 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   border-radius: 999px; background: rgba(255, 255, 255, .85);
 }
 .share-plate .slice { width: 30px; height: 30px; }
-.share-plate .slice.arrive { animation: pop-in .35s cubic-bezier(.2, 1.8, .4, 1); }
-/* The friends still waiting for a slice: a steady ring, not a pulse */
-.share-plate.waiting { box-shadow: 0 5px 0 rgba(113, 91, 122, .3), 0 0 0 4px #ffd23f; }
+.share-plate .slice-btn.arrive { animation: pop-in .35s cubic-bezier(.2, 1.8, .4, 1); }
 .share-plate.nudge { animation: nudge .5s ease-in-out; }
 @keyframes nudge { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 .share-plates.fair .share-plate { box-shadow: 0 5px 0 rgba(113, 91, 122, .3), 0 0 0 4px #8ce99a; }
+/* The baker's plate sits a little apart from the friends': it takes only the slices that cannot go round */
+.share-plate.baker { margin-left: 12px; border-style: dashed; }
 .share-say { min-height: 1.3em; font-size: 26px; font-weight: 900; text-align: center; }
-.card-share { font-size: 24px; letter-spacing: 1px; }
+.card-share { font-size: 24px; letter-spacing: 1px; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 14px; }
+.card-share span { white-space: nowrap; }
 .card-share:empty { display: none; }
 @media (min-aspect-ratio: 6/5) {
   .share-wrap { align-items: center; justify-content: flex-end; padding-right: calc(24px + env(safe-area-inset-right)); }
@@ -497,7 +500,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .card-share { font-size: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .share-card, .share-plate .slice.arrive, .share-plate.nudge { animation: none; }
+  .share-card, .share-plate .slice-btn.arrive, .share-plate .slice-btn.wobble, .share-plate.nudge { animation: none; }
   .share-cake .wedge, .pip { transition: opacity .3s; }
 }
 @media (min-width: 768px) and (min-height: 700px) {
@@ -511,3 +514,91 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .share-say { font-size: 32px; }
   .card-share { font-size: 28px; }
 }
+
+/* --- 2026-10-11: the recipe studio's controls are pictures, so pre-readers can use them; they get a bigger, touch-sized face --- */
+#birthday-studio #recipe-tab, #birthday-studio #share-tab, #birthday-studio #recipe-undo, #birthday-studio #recipe-check, #birthday-studio #recipe-next,
+#birthday-studio #share-size, #birthday-studio #share-undo, #birthday-studio #share-reset, #birthday-studio #share-check {
+  font-size: 24px; min-width: 56px; min-height: 48px; line-height: 1;
+}
+@media (max-height: 420px) {
+  #birthday-studio #recipe-tab, #birthday-studio #share-tab, #birthday-studio #recipe-undo, #birthday-studio #recipe-check, #birthday-studio #recipe-next,
+  #birthday-studio #share-size, #birthday-studio #share-undo, #birthday-studio #share-reset, #birthday-studio #share-check {
+    font-size: 18px; min-width: 44px; min-height: 40px;
+  }
+}
+
+/* --- 2026-10-11 round 2: the pantry, a wrong layer waiting to be taken off, and a share the child checks --- */
+/* The pantry: the child's own choice of flavour (free stacking, counting, and every "?" of a pattern) */
+.pantry {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom)); pointer-events: auto;
+  display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 999px; background: rgba(255, 255, 255, .7);
+  box-shadow: 0 4px 0 rgba(176, 74, 122, .2); max-width: calc(100vw - 24px);
+}
+.pantry.ask::before { content: '?'; font: 900 26px/1 ui-rounded, system-ui, sans-serif; color: #b04a7a; padding: 0 4px; }
+.pantry .pick {
+  flex: none; width: 58px; height: 58px; border-radius: 50%; font-size: 30px; line-height: 1; display: grid; place-items: center;
+  background: var(--icing); border: 3px solid #fff; border-bottom: 7px solid var(--sponge); box-shadow: 0 3px 0 rgba(113, 91, 122, .25);
+  transition: transform .15s;
+}
+.pantry .pick:active { transform: translateY(3px); }
+.pantry .pick.picked { box-shadow: 0 0 0 4px #ff8fb8, 0 3px 0 rgba(113, 91, 122, .25); transform: scale(1.08); }
+.pantry .pick:disabled { opacity: .3; filter: grayscale(.8); cursor: default; }
+@media (min-width: 768px) and (min-height: 700px) {
+  .pantry { bottom: calc(92px + env(safe-area-inset-bottom)); gap: 14px; }
+  .pantry .pick { width: 72px; height: 72px; font-size: 38px; }
+}
+@media (max-width: 560px) {
+  .pantry { gap: 6px; padding: 6px 8px; bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .pantry .pick { width: 46px; height: 46px; font-size: 24px; border-bottom-width: 5px; }
+}
+/* Sideways screens: the pantry stands up along the left edge, clear of the cake and its stand */
+@media (min-aspect-ratio: 6/5) {
+  .pantry { left: calc(14px + env(safe-area-inset-left)); bottom: auto; top: 50%; transform: translateY(-50%); flex-direction: column; padding: 10px 8px; border-radius: 40px; max-height: calc(100vh - 150px); }
+}
+@media (max-height: 420px) {
+  .pantry { gap: 4px; padding: 6px; }
+  .pantry .pick { width: 38px; height: 38px; font-size: 20px; border-bottom-width: 4px; }
+  .pantry.ask::before { font-size: 20px; }
+}
+/* A wrong layer on the cake shows on its dot, tilted, until the child takes it off */
+.pips.order .pip.want.oops { opacity: 1; filter: none; transform: rotate(-14deg) scale(1.05); border-style: dashed; border-color: #c27a95; background: #fff; }
+/* The plates are not counted on screen until a child has checked twice and still finds it tricky */
+#hud.carding .progress, #hud.carding .pantry { display: none; }
+.share-plate .give { display: flex; flex-direction: column; align-items: center; background: none; padding: 0; position: relative; }
+.share-plate .count {
+  display: none; position: absolute; right: -14px; top: -4px; min-width: 26px; height: 26px; border-radius: 999px; padding: 0 6px;
+  background: #fff; color: #8a3a62; font: 900 17px/26px ui-rounded, system-ui, sans-serif; box-shadow: 0 2px 0 rgba(113, 91, 122, .3);
+}
+.share-card.counting .share-plate .count { display: block; }
+.share-plate .slice-btn { background: none; padding: 0; line-height: 0; border-radius: 8px; }
+.share-plate .slice-btn.wobble { animation: slice-wobble .7s ease-in-out; }
+@keyframes slice-wobble { 0% { transform: scale(0); } 30% { transform: scale(1) rotate(-14deg); } 55% { transform: rotate(10deg); } 80% { transform: rotate(-5deg); } 100% { transform: none; } }
+.share-card.checking .share-say { color: #8a3a62; }
+/* Portrait: one plate row with a smaller baker's plate, so the birthday friend stays in view above the card */
+@media (max-aspect-ratio: 6/5) {
+  .share-card { max-width: min(760px, 100%); gap: 8px; padding-top: 12px; }
+  .share-plates { flex-wrap: nowrap; }
+  .share-plate.baker { margin-left: 4px; min-width: 0; padding-left: 4px; padding-right: 4px; }
+  .share-plate.baker .face { font-size: .8em; }
+}
+@media (min-width: 768px) and (min-height: 700px) and (max-aspect-ratio: 6/5) {
+  .share-cake { width: 130px; }
+  .share-plate { min-width: 112px; min-height: 112px; }
+  .share-plate .face { font-size: 42px; }
+  .share-plate .on-plate { min-width: 84px; max-width: 132px; }
+  .share-plate .slice { width: 34px; height: 34px; }
+  .share-plate.baker .face { font-size: 34px; }
+}
+/* Counting: only the layers on the cake have dots; the friend's count makes each one grow in turn */
+.pip.ghost { display: none; }
+.pip.counted { transform: scale(1.45); box-shadow: 0 0 0 3px #fff, 0 0 0 6px #ff8fb8; }
+/* The pantry, the first time it asks: a soft steady ring around all the choices, never a pulse */
+.pantry.invite { box-shadow: 0 0 0 4px #fff, 0 0 0 8px #ff8fb8, 0 4px 0 rgba(176, 74, 122, .2); }
+
+/* --- 2026-10-11 round 4: choosing the cut (hardest tier) --- */
+.share-card.cutting .share-plate { opacity: .55; }
+.cut-choice { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; border: 0; border-radius: 22px; padding: 6px 10px 8px; background: #fff7fb; box-shadow: 0 4px 0 rgba(176, 74, 122, .25); font: 900 24px/1 ui-rounded, system-ui, sans-serif; color: #b04a7a; cursor: pointer; }
+.cut-choice:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(176, 74, 122, .25); }
+.cut-choice .share-cake { width: clamp(84px, 17vmin, 130px); }
+/* A made-up pattern: the part the child chooses shows as empty dashed dots until it is stacked */
+.pips.order .pip.want.design { opacity: 1; filter: none; background: #fff; border-style: dashed; border-color: #d9a7c0; }

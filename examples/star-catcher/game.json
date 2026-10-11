@@ -2,7 +2,7 @@
   "id": "star-catcher",
   "title": "Star Catcher",
   "tagline": "Fly Kitty’s rocket past friendly planets and catch the falling stars!",
-  "howToPlay": "Drag your finger or mouse, or use the arrow keys, to fly Kitty's rocket. Every star you catch lights one star of a real constellation: build Cassiopeia, the Southern Cross, Orion, the Little Dipper and the Big Dipper, one at each planet, and hear each one's name and a true fact. Gems add a little twinkle and a magnet pulls stars in. Sleepy space rocks just make you dizzy. After five constellations, fly home to see your whole night sky.",
+  "howToPlay": "Drag your finger or mouse, or use the arrow keys, to fly Kitty's rocket. Stars fall in little rows, each carrying a number: steer to the one that comes next to light the next star of a real constellation. The rule stays under the sky panel with the numbers in order. A wrong pick floats away and the right star shows itself, so careful choices build the sky sooner. At each planet your child joins the dots in counting order (tap, or arrow keys and Enter); above the first level a number or two hides as \"?\" and your child picks the missing one. Then they choose the next shape, and each card carries its own way of counting, so they choose to stay steady or take a stretch. Each sequence starts somewhere new, and as your child gets steady the numbers move from matching to counting on and back, twos, fives, big numbers where 13 sits beside 31, jumps of ten, finding the pattern, and big jumps like 9 or 11. At home, find each constellation again by its shape or by how it was counted.",
   "emoji": "⭐",
   "color": "#6c63ff",
   "category": "space",
@@ -13,5 +13,5 @@
     3,
     8
   ],
-  "learning": "Counting, real constellations and star patterns"
+  "learning": "Number order, counting on and back, skip counting, missing numbers in a sequence, place value with tens, number patterns and two-digit jumps, reading two-digit numbers, real constellations and star patterns"
 }

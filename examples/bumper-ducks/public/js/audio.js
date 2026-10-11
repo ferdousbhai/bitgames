@@ -181,6 +181,11 @@ export class Audio {
     this.tone({ freq: note(Math.min(run, 12), 784), type: 'triangle', gain: 0.1, decay: 0.2, delay: 0.03 })
   }
 
+  /** A bubble the jar can't take: a soft two-note "uh-uh" that says not this one, never a buzzer. */
+  nope() {
+    this.tone({ freq: 440, type: 'sine', gain: 0.1, decay: 0.16 })
+    this.tone({ freq: 370, type: 'sine', gain: 0.09, decay: 0.22, delay: 0.17 })
+  }
   star() {
     for (let i = 0; i < 6; i++) this.tone({ freq: note(5 + i * 2), type: 'triangle', gain: 0.12, decay: 0.3, delay: i * 0.05 })
   }

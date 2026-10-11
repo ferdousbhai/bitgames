@@ -31,7 +31,9 @@
     <p class="tag">Look, count and pop!</p>
     <div class="friends"><span>🎈</span><span>💖</span><span>👑</span><span>🐰</span><span>⭐</span><span>🌈</span></div>
     <button id="play" class="big-go">▶ Play</button>
+    <button id="easy" class="easy-go hidden" title="Start with numbered slots again">🌱 Start easy</button>
     <div class="scores"><span id="last" class="hidden"></span></div>
+    <div id="title-picnic" class="picnic-row hidden" aria-label="The friends you helped, with their balloons"></div>
   </div>
 </div>
 
@@ -49,9 +51,14 @@
     <div class="bar"><div id="bar-fill"></div></div>
   </div>
   <div id="sky" class="sky" hidden role="status" aria-live="polite">
-    <div id="sky-caption" class="sky-caption"></div>
-    <div id="sky-slots" class="sky-slots"></div>
+    <div id="sky-friend" class="sky-friend" aria-hidden="true"></div>
+    <div class="sky-body">
+      <div id="sky-caption" class="sky-caption"></div>
+      <div id="sky-slots" class="sky-slots"></div>
+    </div>
+    <button id="give" class="sky-give" title="Give the basket (G)"><span aria-hidden="true">🧺</span>Give</button>
   </div>
+  <div id="picnic" class="picnic picnic-row" hidden aria-label="The friends you helped"></div>
   <div id="mission-reward" class="mission-reward" role="status" aria-live="polite"></div>
   <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div><div id="intro-sub"></div></div>
 </div>

@@ -19,8 +19,13 @@ export const WORLDS = [
     rock: { rock: '#a99bc9', rock_grass: '#7bd14b' },
     obstacles: ['windmill', 'rock'],
     gem: 'blue',
-    // numbered rings, 1 to 5, one at a time (8 rings ahead, so a missed number can wait)
-    goal: { type: 'rings', target: 5, groups: [1, 1, 1, 1, 1, 1, 1, 1] },
+    // two numbered rings at a time: fly through the number that comes next.
+    // Tiers (chosen from how the last ring world went): 1 to 5; counting down to land; counting on from a middle number.
+    goal: { type: 'rings', tiers: [
+      { start: 1, step: 1, size: [4, 5], decoy: 'far' },
+      { down: true, size: [5, 7], decoy: 'down' },
+      { start: [3, 6], step: 1, size: [5, 6], decoy: 'near' },
+    ] },
     lanterns: 0,
     waterfalls: 0.25,
     speed: CALM_SPEED,
@@ -36,9 +41,11 @@ export const WORLDS = [
     hoop: { hoop_cloud: { color: '#ffc2e2', emissive: '#ffc2e2', emissiveIntensity: 0.35 } },
     rock: { rock: '#c49bff', rock_grass: '#ff9ecf' },
     obstacles: ['lollipop', 'rock'],
-    gem: 'pink',
-    // two colours of heart float in pairs; bring home four pink ones
-    goal: { type: 'gather', want: 'pink', count: 4, kinds: ['pink', 'blue'], groups: 7 },
+    // gold gems, so nothing along the way looks like the pink or blue hearts being gathered
+    gem: 'gold',
+    // two colours of heart float in pairs; the basket takes only what was asked for.
+    // Tiers: one colour; two colours at once; a total split the child chooses, with more of one colour than the other
+    goal: { type: 'gather', kinds: ['pink', 'blue'], groups: 8, tiers: [{ wants: [[3, 5]] }, { wants: [[2, 3], [2, 4]] }, { total: [5, 7] }] },
     lanterns: 0,
     waterfalls: 0.35,
     speed: CALM_SPEED,
@@ -55,8 +62,12 @@ export const WORLDS = [
     rock: { rock: '#b48ab0', rock_grass: '#8fcf5a' },
     obstacles: ['tower', 'rock'],
     gem: 'gold',
-    // numbered rings 1 to 10, in little runs of two or three (14 rings, so missed numbers can wait)
-    goal: { type: 'rings', target: 10, groups: [3, 3, 2, 2, 2, 2] },
+    // counting on past five, where the nearest wrong number is only one away; then by twos; then by threes or fives
+    goal: { type: 'rings', tiers: [
+      { start: 1, step: 1, size: [7, 10], decoy: 'near' },
+      { start: 2, step: 2, size: [6, 8], decoy: 'skip' },
+      { step: [3, 5], size: [5, 6], decoy: 'skip' },
+    ] },
     lanterns: 0.35,
     waterfalls: 0.3,
     speed: CALM_SPEED,
@@ -73,8 +84,8 @@ export const WORLDS = [
     rock: { rock: '#7a74b0', rock_grass: '#3f8f8a' },
     obstacles: ['rock', 'tower'],
     gem: 'blue',
-    // three shapes, all one colour, float in threes; bring home three stars
-    goal: { type: 'gather', want: 'star', count: 3, kinds: ['star', 'moon', 'heart'], groups: 7 },
+    // three shapes, all one colour, float in threes; then two shapes at once; then a total with more of one shape
+    goal: { type: 'gather', kinds: ['star', 'moon', 'heart'], groups: 8, tiers: [{ wants: [[3, 4]] }, { wants: [[2, 3], [2, 3]] }, { total: [5, 7] }] },
     lanterns: 0.75,
     waterfalls: 0.2,
     night: true,

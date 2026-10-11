@@ -13,6 +13,10 @@
 //   reefs      https://oceanservice.noaa.gov/education/tutorial_corals/coral05_distribution.html (warm, shallow)
 //   snow crab  https://www.fisheries.noaa.gov/species/alaska-snow-crab (Bering, Beaufort and Chukchi Seas)
 //   whale      https://ocean.si.edu/ocean-life/marine-mammals/whales
+//   frog       https://en.wikipedia.org/wiki/Frog (tadpoles grow into frogs; adults breathe air)
+//   crayfish   https://en.wikipedia.org/wiki/Crayfish (fresh water; relatives of lobsters and crabs)
+//   snail      https://en.wikipedia.org/wiki/Planorbidae (ramshorn snails: fresh water, graze on algae on
+//              water plants, breathe air at the surface)
 const NOTES = {
   goldfish: 'Real goldfish live in fresh water. People keep them in ponds and fish tanks.',
   bluefish: 'Blue Fish is a made-up friend who visits all our pretend waters.',
@@ -28,6 +32,9 @@ const NOTES = {
   narwhal: 'Real narwhals are whales from the icy Arctic Ocean. The long tusk is a tooth!',
   goldenfish: 'Golden Fish is a magic pretend fish. It is very hard to find!',
   chest: 'Treasure! A pretend surprise, not an animal.',
+  frog: 'Real frogs start life as tadpoles in ponds. Then they grow legs and breathe air.',
+  crayfish: 'Real crayfish live in streams and ponds. They are cousins of crabs and lobsters.',
+  snail: 'Pond snails creep under lily pads, nibbling the green slime. Look by the lily pads!',
   whale: 'Real whales live in the ocean. They breathe air through a blowhole on top.',
 }
 

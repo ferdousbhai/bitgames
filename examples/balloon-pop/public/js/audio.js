@@ -8,7 +8,7 @@ export class Audio {
   constructor() {
     this.ctx = null
     this.muted = false
-    this.musicOn = true
+    this.musicOn = false // the music box starts off; the 🎵 button turns it on
     this.nextBeat = 0
     this.beat = 0
   }
@@ -94,6 +94,16 @@ export class Audio {
   /** A counted balloon in the counting sky: one soft bell note that climbs with the count. */
   count(n) {
     this.tone({ freq: note(Math.min(n - 1, 14), 392), type: 'sine', gain: 0.1, decay: 0.7, delay: 0.08, attack: 0.02 })
+  }
+
+  /** A balloon the friend did not ask for: one low, soft "boop", no words. */
+  boop() {
+    this.tone({ freq: 233, type: 'sine', gain: 0.08, decay: 0.22, delay: 0.1, slide: -40, attack: 0.02 })
+  }
+
+  /** A balloon let go from the basket: a soft rising whistle as it floats off. */
+  release() {
+    this.tone({ freq: note(2, 392), type: 'sine', gain: 0.07, decay: 0.5, slide: 260, attack: 0.03 })
   }
 
   sparkle() {
@@ -197,6 +207,11 @@ export class Audio {
     while (this.nextBeat < ctx.currentTime + 0.25) {
       const b = this.beat++
       const t = this.nextBeat - ctx.currentTime
+      // Every other phrase is a rest, so the music box breathes and leaves room for the voice.
+      if (Math.floor(b / 32) % 2 === 1) {
+        this.nextBeat += 0.3
+        continue
+      }
       if (b % 2 === 0) this.tone({ freq: note(MELODY[(b / 2) % 16], 523.25), type: 'sine', gain: 0.14, decay: 0.7, delay: t, out: this.musicBus })
       if (b % 4 === 0) this.tone({ freq: note(BASS[(b / 4) % 8], 130.8), type: 'triangle', gain: 0.22, decay: 1.1, delay: t, out: this.musicBus })
       // Calm pass: a slow music box (was 0.19 s per step, about 158 bpm).

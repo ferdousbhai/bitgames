@@ -10,7 +10,8 @@ import { Bot } from './bot.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
 import { ITEM_KINDS, Items } from './items.js'
-import { HALF_D, HALF_W, MIXED, MIXES, PRIMARIES, PaintMap, RAINBOW, SEAT_COLORS, SEAT_PAINT, mixWords } from './paint.js'
+import { Job, SHAPES, chooseJob, fits, reachOf } from './jobs.js'
+import { HALF_D, HALF_W, MIXED, MIXES, PRIMARIES, PaintMap, RAINBOW, ROLLER_R, SEAT_COLORS, SEAT_PAINT, WET_MS, mixWords } from './paint.js'
 import { ANIMALS, ANIMAL_IDS, COLLIDE_AHEAD, COLLIDE_R, MAX_SPEED, Painter, newStats } from './painter.js'
 import { clamp, damp, easeInOut, store } from './util.js'
 import { createVoice, listWords } from './speech.js'
@@ -43,14 +44,58 @@ const MODES = {
   calm: { painters: 3, items: ['bucket'] },
   timed: { painters: 4, items: ['bucket', 'water', 'rainbow'] },
 }
-/** The picture is "nearly all painted" here: the bar is full and the host asks if it's finished. */
-const CALM_DONE = (DEBUG && Number(params.get('done'))) || 0.85
 /** A mixed colour counts as found once it covers about this many cells (a roller's width square). */
 const FOUND_CELLS = 150
-/** After 🖌️ keep painting, ask again only once this much more is painted. */
-const ASK_AGAIN = 0.05
 /** Time between spoken discoveries, so each one is heard. */
 const NOTE_MS = 4200
+/**
+ * Paint requests climb from pictured recipes (0) to hidden recipes (1) to two-part shapes and brown (2)
+ * to rules with more than one right answer ("a mix of blue and one more paint", 3) to rules on two-part
+ * shapes and rules with two conditions ("a mix with blue but no red", 4), following how the child does.
+ */
+const TOP_TIER = 4
+/** From this step recipes stay hidden and a slip just names the colour. */
+const RULE_TIER = 3
+/** A request with no mix in it yet after this long shows its recipe (tiers 1 and 2; the top tier keeps it hidden). */
+const HELP_MS = 35000
+/** Rolling one paint of the recipe over a shape this long without mixing brings a "roll over the shiny paint" tip. */
+const WET_TIP_MS = 14000
+/** A child with nothing right on the shape this long (or after two slips) sees a soft ring round the pot to use next. */
+const RESCUE_MS = 20000
+/** Still stuck this long: a still picture of the two paints crossing appears on the shape. */
+const GHOST_MS = 45000
+/** A part nearly painted (STALL_SHARE) that stops growing this long is finished for the child, if nothing wrong is on it. */
+const STALL_MS = 8000
+const STALL_SHARE = 0.45
+/** How long the camera eases over to show a request chalked out of sight. */
+const GLANCE_MS = 2800
+/** A quiet pause after a shape is painted before the next shapes are offered. */
+const NEXT_JOB_MS = 6000
+/** Every REST_EVERY shapes the pause is this much longer: time to paint freely and look at the page. */
+const REST_MS = 10000
+/**
+ * After the first shape the child picks the next one from a few chalk shapes on the card (the game
+ * still picks its colour or rule). Every REST_EVERY shapes the card simply waits for that pick: a rest
+ * to paint freely or look at the picture. A child who doesn't pick gets one after PICK_WAIT_MS (REST_PICK_MS at a rest).
+ */
+const PICK_N = 3
+const REST_EVERY = 4
+const PICK_WAIT_MS = 16000
+/** At a rest the card waits much longer before choosing (a child free painting is never hurried). */
+const REST_PICK_MS = 60000
+/** A careful, unhelped shape in coats moves the requests up this much; a slip moves them down SLIP_STEP. */
+const SKILL_STEP = 0.25
+const SLIP_STEP = 0.5
+/** Steps carried to the next visit: the top steps are earned again each visit, so a lucky run never strands a young child there. */
+const CARRY_SKILL = 2
+/**
+ * With no clock the playground is a page with a frame: requests are chalked inside, and the robot
+ * friends paint only the frame (this wide, in metres), so the coloured-in shapes stand out on clean ground.
+ */
+const FRAME = 2.6
+const inFrame = (x, z) => Math.abs(x) > HALF_W - FRAME + ROLLER_R || Math.abs(z) > HALF_D - FRAME + ROLLER_R
+/** Pots are named aloud only in the first round of a visit; after that the drip and the colour are enough. */
+const potsNamed = new Set()
 /** Seats start in the four corners, facing the middle. Seat 0 is nearest the camera on the left. */
 const START = [[-11, 6.5], [11, 6.5], [-11, -6.5], [11, -6.5]]
 
@@ -174,9 +219,19 @@ const game = {
   mode: 'calm', // the menu choice: calm (no clock) | timed (the quick 75 s round)
   found: [], // mixed colours found this round, in order
   notes: [], // discoveries waiting to be said
-  noteAt: 0,
-  askAt: Infinity, // the coverage at which the host next asks "Is your picture finished?"
+  noteAt: -Infinity,
+  jobs: [], // paint requests this round (chalk shapes on the ground), the last one is the current one
+  job: null,
+  jobsDone: [], // [shape, ...targets] of each painted shape, for the results
+  history: [], // { shape, targets } of every request this round, so they keep changing
+  pageFull: false, // no room for another shape: the next 🖌️ turns to a fresh page
+  told: new Set(),
+  /** How the child is doing with requests: its whole part is the tier (kept between visits). */
+  skill: clamp(Number(store.get('paint-splash-skill', 0)) || 0, 0, CARRY_SKILL),
+  offer: null, // { options: [{ spec, spot }], tier, rest }: the shapes the child may pick next (host)
 }
+// Tests may start at any step (?debug&skill=4); a real visit starts at most at CARRY_SKILL.
+if (DEBUG && params.has('skill')) game.skill = clamp(Number(params.get('skill')) || 0, 0, TOP_TIER + 0.5)
 const modeOf = () => (game.setup?.mode === 'timed' ? 'timed' : 'calm')
 
 // Opening (or closing) the gallery or colour studio lets go of the roller so the animal stops.
@@ -346,13 +401,19 @@ function buildMenu() {
     audio.unlock()
     audio.click()
     setMode(game.mode === 'timed' ? 'calm' : 'timed')
-    voice.sayNow(game.mode === 'timed' ? 'A quick round, with a clock.' : 'No clock. Paint until you are finished.')
+    voice.sayNow(game.mode === 'timed' ? 'A quick free paint, with a clock.' : 'No clock. Paint until you are finished.')
   }
   setMode('calm')
   for (const el of document.querySelectorAll('[data-pot]')) el.onclick = () => choosePot(Number(el.dataset.pot))
   $('finish').onclick = () => askFinished()
   $('finish-yes').onclick = () => finishPicture()
-  $('finish-no').onclick = () => closeFinishAsk(true)
+  $('finish-no').onclick = () => {
+    // Keep painting on a full page: it goes into My pictures and a fresh page comes.
+    if (game.pageFull && isHost() && game.state === 'play') {
+      closeFinishAsk()
+      turnPage()
+    } else closeFinishAsk(true)
+  }
   $('home').onclick = () => goHome()
   $('music').onclick = () => {
     audio.unlock()
@@ -370,6 +431,13 @@ function buildMenu() {
     updateToggles()
   }
   $('voice').onclick = () => say()
+  // Tapping the request card says it again.
+  // Tapping a chalk shape on the card picks the next request.
+  $('job').onclick = (e) => {
+    const opt = e.target.closest?.('[data-opt]')
+    if (opt && game.offer) return pickJob(Number(opt.dataset.opt))
+    if (game.job && !game.job.done) voice.sayNow(requestWords(game.job))
+  }
   // The finished picture is kept by itself; 🖼️ shows it in My pictures (keeping it first if it's early).
   $('results-save').onclick = () => {
     audio.unlock()
@@ -410,7 +478,11 @@ function choosePot(bits) {
     // Paint already rolled keeps its colour; the next stroke starts here in the new paint.
     emitStrokes(true)
     audio.studio('drip', PRIMARIES.indexOf(bits))
-    voice.sayNow(MIXES[bits].word[0].toUpperCase() + MIXES[bits].word.slice(1))
+    // Each pot says its name the first time in a visit; after that the drip and the colour are enough.
+    if (!potsNamed.has(bits)) {
+      potsNamed.add(bits)
+      voice.sayNow(capital(MIXES[bits].word))
+    }
   }
   updatePots()
 }
@@ -436,8 +508,12 @@ function askFinished(words = 'Is your picture finished?') {
   game.askTimer = setTimeout(() => closeFinishAsk(), 12000)
 }
 
+/** While the ✅ / 🖌️ question is showing, the waiting lines and the next request hold back. */
+const asking = () => !$('finish-ask').classList.contains('hidden')
+
 function closeFinishAsk(spoken = false) {
   clearTimeout(game.askTimer)
+  if (asking()) game.noteAt = now() - NOTE_MS + 1500 // a short pause before anything waiting is said
   $('finish-ask').classList.add('hidden')
   if (spoken && game.state === 'play') voice.sayNow('Keep painting!')
 }
@@ -567,7 +643,7 @@ function migrateHost() {
   else if (game.state === 'results') renderResults()
 }
 
-const ROUND_MESSAGES = new Set(['s', 'e', 'item', 'grab', 'gone', 'ready', 'go', 'end', 'stats', 'final', 'say', 'finish'])
+const ROUND_MESSAGES = new Set(['s', 'e', 'item', 'grab', 'gone', 'ready', 'go', 'end', 'stats', 'final', 'say', 'finish', 'job'])
 
 function onMessage(msg, from) {
   if (ROUND_MESSAGES.has(msg.t)) {
@@ -647,6 +723,9 @@ function onMessage(msg, from) {
     case 'end':
       if (from === game.hostId && game.state === 'play') endRound()
       break
+    case 'job':
+      if (from === game.hostId && !isHost()) onJob(msg)
+      break
     case 'finish':
       // A friend says the picture is finished: the host ends it for everyone.
       if (isHost() && game.state === 'play' && modeOf() === 'calm') endRound()
@@ -654,6 +733,8 @@ function onMessage(msg, from) {
     case 'stats':
       if (!isHost()) return
       for (const [seat, s] of Array.isArray(msg.list) ? msg.list : []) if (s && typeof s === 'object') game.stats.set(seat, cleanStats(s))
+      // A friend's own mixes join the colours we found.
+      for (const m of Array.isArray(msg.found) ? msg.found : []) if (MIXED.includes(m) && !game.found.includes(m)) game.found.push(m)
       break
     case 'final':
       if (from === game.hostId && Array.isArray(msg.rows)) {
@@ -713,7 +794,17 @@ function stopRound() {
   game.roundQueue = []
   game.found = []
   game.notes = []
-  game.askAt = CALM_DONE
+  for (const job of game.jobs) job.dispose()
+  game.jobs = []
+  game.job = null
+  game.jobsDone = []
+  game.history = []
+  game.offer = null
+  game.pageFull = false
+  game.glance = null
+  game.told = new Set() // recipes and tips already said this round
+  suggestPot(0)
+  $('job').classList.add('hidden')
   closeFinishAsk()
   $('mix-note').classList.add('hidden')
   input.enabled = false
@@ -779,6 +870,8 @@ function buildRound(setup) {
   }
   seatCache = null
   game.me = game.painters.get(game.room.selfId) ?? null
+  // Only this child's own roller names a new colour.
+  paint.mine = game.me?.seat ?? -1
   if (game.me) {
     meMarker.userData.mat.color.set(game.me.color)
     meMarker.userData.mat.emissive.set(game.me.color)
@@ -793,6 +886,8 @@ function buildRound(setup) {
   $('timer').textContent = `⏱️ ${game.setup.seconds}`
   $('timer').classList.toggle('hidden', modeOf() !== 'timed')
   $('finish').classList.toggle('hidden', modeOf() !== 'calm')
+  // The picture is what is painted, not how much ground is covered: no coverage bar in either round.
+  document.querySelector('.together-bar').classList.add('hidden')
   // Everyone builds the playground at their own pace; the host says go once all are ready.
   game.state = 'syncing'
   show(null)
@@ -856,11 +951,10 @@ function startPainting() {
   // The dragging finger shows straight away, and again whenever the child stops rolling for a while.
   game.lastMoveAt = now() - IDLE_HINT_MS
   updatePots()
-  if (modeOf() === 'calm') {
-    // The goal, in pictures and words: two paints and a question mark.
-    showNote(`${dot(MIXES[1].hex)}<b>+</b>${dot(MIXES[2].hex)}<b>=</b><span class="q">❓</span>`, 5000)
-    later(() => voice.sayNow('Roll your paint. Roll a new colour over wet, shiny paint to mix!'), 600)
-  }
+  voice.newRound()
+  game.noteAt = -Infinity
+  // With no clock, the host chalks the first shape to paint.
+  if (modeOf() === 'calm' && isHost()) later(() => nextJob(), 500)
 }
 
 /** The picture is finished (or the time is up): everyone stops and the camera swoops up to look at it. */
@@ -870,6 +964,15 @@ function endRound() {
   noticeMixes()
   game.notes = []
   $('mix-note').classList.add('hidden')
+  // A shape still waiting for paint leaves the picture; the painted ones stay, inked.
+  if (game.job && !game.job.done) {
+    game.job.dispose()
+    game.jobs = game.jobs.filter((j) => j !== game.job)
+    game.job = null
+  }
+  softenPage()
+  $('job').classList.add('hidden')
+  suggestPot(0)
   game.state = 'reveal'
   game.revealAt = now()
   input.enabled = false
@@ -893,7 +996,7 @@ function endRound() {
     send({ t: 'end', r: roundId() })
     later(sendFinal, 1800)
   } else {
-    send({ t: 'stats', r: roundId(), list: mine.map((p) => [p.seat, p.stats]) })
+    send({ t: 'stats', r: roundId(), list: mine.map((p) => [p.seat, p.stats]), found: game.found })
     // If the host never sends the results, work them out here.
     later(() => {
       if (!game.final) {
@@ -917,7 +1020,7 @@ function endRound() {
 function computeFinal() {
   noticeMixes()
   const total = Math.round(paint.coverage() * 100)
-  return { t: 'final', r: roundId(), total, found: [...game.found], rows: game.setup.entries.map((e) => ({ seat: e.seat })) }
+  return { t: 'final', r: roundId(), total, found: [...game.found], jobs: [...game.jobsDone], rows: game.setup.entries.map((e) => ({ seat: e.seat })) }
 }
 
 function sendFinal() {
@@ -936,17 +1039,22 @@ function showResults() {
   if (first) {
     later(() => keepFinishedPicture(true), AUTO_KEEP_MS)
     // The natural ending names what was learned.
-    later(() => voice.sayNow(resultWords(foundOf(game.final))), 900)
+    later(() => voice.sayNow(resultWords(foundOf(game.final), jobsOf(game.final))), 900)
   }
 }
 
 /** The mixed colours in a final message (the host's list, checked). */
 const foundOf = (final) => (Array.isArray(final?.found) ? final.found.filter((m) => MIXED.includes(m)) : [])
 
-function resultWords(found) {
+function resultWords(found, jobs = []) {
+  // A few shapes are named; a long list is counted, with its colours.
+  if (jobs.length > 4) return `We painted ${jobs.length} shapes, in ${listWords.format([...new Set(jobs.flatMap(([, ...t]) => t))].map((m) => MIXES[m].word))}!`
+  if (jobs.length) return `We painted ${listWords.format(jobs.map(([shape, ...targets]) => jobName(shape, targets)))}!`
   if (!found.length) return 'What a picture! Next time, roll a new colour over wet paint to mix.'
-  return `We made ${listWords.format(found.map((m) => MIXES[m].word))}! ` + found.map(mixWords).join(' ')
+  return `We made ${listWords.format(found.map((m) => MIXES[m].word))}!`
 }
+/** The painted shapes in a final message (checked). */
+const jobsOf = (final) => (Array.isArray(final?.jobs) ? final.jobs.filter((j) => Array.isArray(j) && Object.hasOwn(SHAPES, j[0]) && j.slice(1).every((m) => MIXED.includes(m))) : [])
 
 /** Where the playground is on screen (CSS pixels), a little wider than 4:3 like the gallery frames. */
 function pictureRect() {
@@ -978,6 +1086,9 @@ function keepFinishedPicture(announce) {
   btn.classList.add('kept')
 }
 
+/** The results show at most this many shape chips (the last one says how many more). */
+const SHAPE_CHIPS = 8
+
 function renderResults() {
   const final = game.final
   if (!final) return
@@ -985,17 +1096,25 @@ function renderResults() {
   $('together').textContent = '🤝 We painted it together!'
   // The colours found by mixing, each with its recipe: ● + ● = ●.
   const found = foundOf(final)
-  $('found').innerHTML = found.length
+  const jobs = jobsOf(final)
+  // The shapes painted (each with its colours), then the colours found by mixing.
+  // A long round shows its first shapes and how many more, so the results read as a picture, not a tally.
+  const shown = jobs.length > SHAPE_CHIPS ? jobs.slice(0, SHAPE_CHIPS - 1) : jobs
+  $('found').innerHTML = shown.map(([shape, ...targets], i) => `<div class="recipe shape-chip" style="animation-delay:${0.15 * i}s" title="${jobName(shape, targets)}"><span class="shape">${SHAPES[shape].emoji}</span>${targets.map((m) => dot(MIXES[m].hex)).join('')}</div>`).join('')
+    + (jobs.length > shown.length ? `<div class="recipe shape-chip more" title="${jobs.length - shown.length} more shapes">+${jobs.length - shown.length}</div>` : '') + (found.length
     ? found.map((m, i) => `<div class="recipe" style="animation-delay:${0.2 * i}s" title="${mixWords(m)}">${recipe(m)}</div>`).join('')
-    : `<div class="recipe none">${PRIMARIES.map((b) => dot(MIXES[b].hex)).join('')}<span class="hint-mix">➕💧</span></div>`
-  $('found').setAttribute('aria-label', resultWords(found))
+    : `<div class="recipe none">${PRIMARIES.map((b) => dot(MIXES[b].hex)).join('')}<span class="hint-mix">➕💧</span></div>`)
+  $('found').setAttribute('aria-label', resultWords(found, jobs))
+  // Lots to show: smaller chips, so the picture keeps its room.
+  $('found').classList.toggle('many', Math.min(jobs.length, SHAPE_CHIPS) + Math.max(1, found.length) > 5)
   // The painters who made it, each with their colour: nobody is ranked or scored.
   $('cards').innerHTML = final.rows
     .map((row, i) => {
       const entry = game.setup.entries.find((e) => e.seat === row.seat)
       if (!entry) return ''
       const animal = validAnimal(entry.animal) ? ANIMALS[entry.animal].emoji : '🙂'
-      return `<div class="card${entry.id === self ? ' me' : ''}" style="--c:${paintersBySeat()[row.seat]?.color ?? SEAT_COLORS[row.seat] ?? '#999'}; animation-delay:${0.15 * i}s">
+      // Each painter's own seat colour (the ring they wore), not the last pot they dipped in.
+      return `<div class="card${entry.id === self ? ' me' : ''}" style="--c:${SEAT_COLORS[row.seat] ?? '#999'}; animation-delay:${0.15 * i}s">
         <span class="who">${animal}${entry.bot ? '<small>🤖</small>' : ''}${entry.id === self ? '<small>⭐</small>' : ''}</span>
         <span class="swatch" aria-hidden="true"></span></div>`
     })
@@ -1011,11 +1130,17 @@ function renderResults() {
 function freeSpot() {
   const painters = [...game.painters.values()]
   for (let k = 0; k < 40; k++) {
-    const x = -HALF_W + 2.5 + Math.random() * (2 * HALF_W - 5)
-    const z = -HALF_D + 2.5 + Math.random() * (2 * HALF_D - 5)
+    let x = -HALF_W + 2.5 + Math.random() * (2 * HALF_W - 5)
+    let z = -HALF_D + 2.5 + Math.random() * (2 * HALF_D - 5)
+    // With no clock the bucket waits in the frame, so its big splash decorates the edge, not the page.
+    if (modeOf() === 'calm') {
+      if (Math.random() < HALF_W / (HALF_W + HALF_D)) z = Math.sign(z) * (HALF_D - 1.4)
+      else x = Math.sign(x) * (HALF_W - 1.4)
+    }
     if (game.arena.obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 2)) continue
     if (painters.some((p) => Math.hypot(p.x - x, p.z - z) < 3.5)) continue
     if ([...items.values()].some((it) => Math.hypot(it.x - x, it.z - z) < 4)) continue
+    if (game.jobs.some((job) => job.near(x, z, 6))) continue
     return { x, z }
   }
   return null
@@ -1107,10 +1232,17 @@ function applyEvent(e) {
   if (!(seat >= 0 && seat < 4) || !Number.isInteger(t) || t < 1 || !e.slice(3, kind === 0 ? 7 : 6).every(Number.isFinite)) return
   const x = e[3] / 100, z = e[4] / 100
   const bits = PRIMARIES.includes(e[kind === 0 ? 7 : 6]) ? e[kind === 0 ? 7 : 6] : SEAT_PAINT[seat]
-  if (kind === 0) return paint.stroke(t, bits, x, z, e[5] / 100, e[6] / 100, !!e[8])
+  if (kind === 0) {
+    paint.who = seat
+    paint.stroke(t, bits, x, z, e[5] / 100, e[6] / 100, !!e[8])
+    paint.who = -1
+    return
+  }
   const near = game.me ? clamp(1 - Math.hypot(game.me.x - x, game.me.z - z) / 30, 0.3, 1) : 1
   if (kind === 1) {
+    paint.who = seat
     paint.splat(t, bits, x, z, e[5] >>> 0)
+    paint.who = -1
     if (game.state === 'play') {
       effects.splash(x, z, MIXES[bits].hex, 60, 1.2)
       audio.splash(near)
@@ -1137,8 +1269,15 @@ function emitStrokes(force = false) {
     const r = p.rollerAt()
     const from = p.strokeFrom
     if (Math.hypot(r.x - from.x, r.z - from.z) < 0.04) continue
+    if (modeOf() === 'calm' && robot(p) && !inFrame(r.x, r.z)) {
+      // Robots roll over the page with their roller lifted, and paint only the frame.
+      p.strokeFrom = { x: r.x, z: r.z }
+      continue
+    }
     const e = [0, p.seat, t, q(from.x), q(from.z), q(r.x), q(r.z), p.paint, p.rainbow ? 1 : 0]
     emit(e)
+    // The host notes each change of paint the child rolls onto the request, to see if it went on in coats.
+    if (p === game.me && !p.rainbow && isHost() && game.job && !game.job.done) game.job.roll(paint, t, r.x, r.z, p.paint)
     p.strokeFrom = { x: e[5] / 100, z: e[6] / 100 }
   }
 }
@@ -1148,6 +1287,10 @@ function flushOutbox() {
   send({ t: 'e', r: roundId(), e: game.outbox })
   game.outbox = []
 }
+
+/** A robot friend (not a child, nor a child's painter on autopilot in tests). */
+const robot = (p) => p.bot && p !== game.me
+const NO_ITEMS = { has: () => false, values: () => [] }
 
 // --- Moving painters ----------------------------------------------------------------------------------
 
@@ -1195,7 +1338,9 @@ function updatePainters(dt, t) {
     game.me.controls = { x: v.x, z: v.y }
     if (Math.hypot(v.x, v.y) > 0.05 || input.stick.id !== null || game.me.bot || gallery.open) game.lastMoveAt = t
   }
-  const world = { paint, items, obstacles: game.arena.obstacles, painters: [...game.painters.values()] }
+  // With no clock the robots paint the frame round the page and leave the bucket to the child.
+  const calm = modeOf() === 'calm'
+  const world = { paint, items: calm ? NO_ITEMS : items, obstacles: game.arena.obstacles, painters: [...game.painters.values()], shapes: game.jobs, frame: calm ? FRAME : 0 }
   if (playing) for (const bot of game.bots) if (bot.p.local && game.painters.has(bot.p.id)) bot.update(dt, world)
   for (const p of game.painters.values()) {
     if (p.local) {
@@ -1213,14 +1358,14 @@ function updatePainters(dt, t) {
       // Happy hops while everyone admires the picture.
       if (p.body) p.body.position.y = Math.abs(Math.sin(t / 220 + p.seat * 0.8)) * 0.35
     }
-    if (p.speed > 1 && Math.random() < dt * 6) {
+    if (p.speed > 1 && Math.random() < dt * 6 && !(calm && robot(p) && !inFrame(p.x, p.z))) {
       const r = p.rollerAt()
       effects.drip(r.x, r.z, p.rainbow ? RAINBOW[Math.floor(Math.random() * 6)] : p.color)
     }
     if (p.rainbow && Math.random() < dt * 3) effects.sparkle(p.x, 1.2, p.z, RAINBOW[Math.floor(Math.random() * 6)], 1, 1.6)
   }
   if (playing) {
-    for (const p of game.painters.values()) if (p.local) tryGrab(p)
+    for (const p of game.painters.values()) if (p.local && !(calm && robot(p))) tryGrab(p)
     emitStrokes()
   }
   if (game.me && playing) audio.roll(clamp(game.me.speed / MAX_SPEED, 0, 1))
@@ -1235,14 +1380,22 @@ const tmpPos = new THREE.Vector3()
 const tmpLook = new THREE.Vector3()
 
 /** Follow view: from above and behind (south), never turning, so up on the screen is always the same way. */
-function followTarget(pos, look) {
+function followTarget(pos, look, glance = true) {
   const me = game.me
+  let fx = me?.x ?? 0, fz = me?.z ?? 0
+  // A new request chalked out of sight: the camera eases most of the way over to show it, then comes back.
+  const g = game.glance
+  if (glance && g && now() < g.until) [fx, fz] = [fx + (g.x - fx) * 0.75, fz + (g.z - fz) * 0.75]
   const aspect = innerWidth / innerHeight
   const k = aspect < 0.8 ? 1.55 : aspect < 1.3 ? 1.25 : 1
-  const tx = clamp(me?.x ?? 0, -HALF_W + 7 * Math.min(aspect, 1.6) / 1.6, HALF_W - 7 * Math.min(aspect, 1.6) / 1.6)
-  const tz = clamp(me?.z ?? 0, -HALF_D + 3, HALF_D - 4)
+  const tx = clamp(fx, -HALF_W + 7 * Math.min(aspect, 1.6) / 1.6, HALF_W - 7 * Math.min(aspect, 1.6) / 1.6)
+  // The near edge of the playground (and its flower beds) stays at the bottom of the screen, so a
+  // tall screen shows more of the picture instead of the ground beyond it.
+  const h = 15 * k, back = 11.5 * k
+  const nearRay = back - h / Math.tan(Math.atan2(h, back) + THREE.MathUtils.degToRad(camera.fov / 2))
+  const tz = clamp(fz, -HALF_D + 3, Math.max(-HALF_D + 3, Math.min(HALF_D - 4, HALF_D + 1.6 - nearRay)))
   look.set(tx, 0, tz)
-  pos.set(tx, 15 * k, tz + 11.5 * k)
+  pos.set(tx, h, tz + back)
 }
 
 /** Top view that fits the whole picture between the title and the cards. */
@@ -1291,10 +1444,9 @@ function updateCamera(dt, t) {
 
 // --- HUD -------------------------------------------------------------------------------------------
 
-/** One "together" fill: how much of the picture everyone has painted, full when it's nearly all painted. */
+/** One "together" fill (quick round): how much of the playground everyone has painted. */
 function updateBar() {
-  const full = modeOf() === 'calm' ? CALM_DONE : 1
-  $('bar').firstElementChild.style.width = `${(clamp(paint.coverage() / full, 0, 1) * 100).toFixed(1)}%`
+  $('bar').firstElementChild.style.width = `${(clamp(paint.coverage(), 0, 1) * 100).toFixed(1)}%`
 }
 
 const dot = (hex) => `<i class="dab" style="background:${hex}"></i>`
@@ -1320,26 +1472,557 @@ function showNote(html, ms) {
 /** Looks for mixed colours appearing on the ground for the first time this round. */
 function noticeMixes() {
   for (const m of MIXED) {
-    if (game.found.includes(m) || paint.counts[m] < FOUND_CELLS) continue
+    if (game.found.includes(m) || paint.mineCounts[m] < FOUND_CELLS) continue
     game.found.push(m)
-    if (game.state === 'play') game.notes.push(m)
+    if (game.state !== 'play') continue
+    // With no clock the requests do the talking: a new colour just joins the row of dabs quietly.
+    // In the quick round its recipe card shows for a moment, without a word.
+    renderFoundRow()
+    if (modeOf() === 'timed') game.notes.push({ mix: m })
   }
 }
 
-/** Says each new colour once, one at a time: "Red and yellow made orange!" */
+/**
+ * Says what's waiting, one line at a time so each is heard: a new colour ("Red and yellow
+ * made orange!", once per round) or a request line (a new shape, a painted shape, a tip).
+ */
 function sayNextMix(t) {
-  if (!game.notes.length || t - game.noteAt < NOTE_MS) return
-  const m = game.notes.shift()
+  if (!game.notes.length || t - game.noteAt < NOTE_MS || asking()) return
+  const note = game.notes.shift()
   game.noteAt = t
+  if (note.words) {
+    voice.sayNow(note.words)
+    return
+  }
+  const m = note.mix
   renderFoundRow()
   showNote(recipe(m), NOTE_MS - 400)
-  voice.sayNow(mixWords(m))
-  audio.studio('keep')
+  audio.studio('drip', 2)
   const at = paint.lastAt[m]
   if (at >= 0) {
     const c = paint.cellCentre(at)
     effects.sparkle(c.x, 0.6, c.z, MIXES[m].hex, 8, 1.2)
   }
+}
+
+// --- Paint requests (no-clock rounds) ------------------------------------------------------------
+
+const capital = (w) => w[0].toUpperCase() + w.slice(1)
+const article = (w) => (/^[aeiou]/.test(w) ? 'an' : 'a')
+/** "a green fish", "a green and brown tree" */
+function jobName(shape, targets) {
+  const words = [...new Set(targets.map((m) => MIXES[m].word))]
+  return `${article(words[0])} ${listWords.format(words)} ${SHAPES[shape].name}`
+}
+/** "Yellow and blue make green." */
+const recipeWords = (m) => `${capital(listWords.format(MIXES[m].recipe.map((b) => MIXES[b].word)))} make ${MIXES[m].word}.`
+const tierOf = () => clamp(Math.floor(game.skill), 0, TOP_TIER)
+/**
+ * A rule in words, saying exactly what counts: "a mix of blue and one more paint" (green or purple),
+ * "a mix of two paints with no yellow" (purple), "a mix with blue but no red" (green), "any colour you can mix".
+ */
+function ruleWords(rule) {
+  const w = (b) => MIXES[b].word
+  if (rule.any) return 'any colour you can mix'
+  if (rule.with && rule.without) return `a mix with ${w(rule.with)} but no ${w(rule.without)}`
+  return rule.with ? `a mix of ${w(rule.with)} and one more paint` : `a mix of two paints with no ${w(rule.without)}`
+}
+/** Why a colour breaks a rule, truthfully: "That's brown. It has all three paints in it. Use just two." */
+function ruleSlip(rule, got) {
+  const w = (b) => MIXES[b].word
+  if (got === BROWN) return `That's brown. It has all three paints in it. Use just two.`
+  if (rule.without && got === rule.without) return `That's ${w(got)}. This one needs no ${w(got)}.`
+  if (rule.without && got & rule.without) return `That's ${w(got)}. It has ${w(rule.without)} in it.`
+  if (rule.with && !(got & rule.with)) return `That's ${w(got)}. It has no ${w(rule.with)} in it.`
+  return `That's ${w(got)}.`
+}
+const BROWN = 7
+const partColour = (part) => (part.rule ? ruleWords(part.rule) : MIXES[part.target].word)
+
+/** The request in words: "Paint the fish green!", "Paint the fish a colour with blue in it!", or for two parts "Paint the tree: green leaves, a brown trunk!" */
+function requestWords(job) {
+  const def = SHAPES[job.shape]
+  if (job.parts.length === 1) return `Paint the ${def.name} ${partColour(job.parts[0])}!`
+  // "green leaves", "a brown trunk", then a part with a rule: "the petals a mix with blue but no red"
+  const named = job.parts.filter((p) => !p.rule).map((p) => `${p.word.endsWith('s') ? '' : article(MIXES[p.target].word) + ' '}${MIXES[p.target].word} ${p.word}`)
+  const ruled = job.parts.filter((p) => p.rule).map((p) => `the ${p.word} ${ruleWords(p.rule)}`)
+  if (!ruled.length) return `Paint the ${def.name}: ${listWords.format(named)}!`
+  return `Paint the ${def.name}: ${[...named, ...ruled].join(', and ')}!`
+}
+
+/**
+ * The part of the screen a child can see the ground through: below the request card and above the
+ * pots, in pixels. The card may be hidden between requests, so room is kept for it.
+ */
+function clearView() {
+  const top = $('found-row').getBoundingClientRect().bottom + 74
+  const bottom = Math.min(innerHeight - 12, $('pots').getBoundingClientRect().top - 8)
+  return { left: 12, right: innerWidth - 12, top: Math.min(top, innerHeight * 0.4), bottom: Math.max(bottom, innerHeight * 0.6) }
+}
+
+const probeCam = new THREE.PerspectiveCamera()
+const probePos = new THREE.Vector3()
+const probeLook = new THREE.Vector3()
+/** Screen pixels of a ground point, seen from where the follow camera is heading (not where it is now). */
+function screenPoint(cam, x, z, v = new THREE.Vector3()) {
+  v.set(x, 0, z).project(cam)
+  return { x: (v.x + 1) * innerWidth / 2, y: (1 - v.y) * innerHeight / 2 }
+}
+
+/** Points the probe camera where the follow camera is heading (without any glance). */
+function aimProbe() {
+  followTarget(probePos, probeLook, false)
+  probeCam.copy(camera)
+  probeCam.position.copy(probePos)
+  probeCam.lookAt(probeLook)
+  probeCam.updateMatrixWorld()
+}
+
+/** The pots and the 📣 button sit over the ground: a point under them can't be seen. */
+function underButtons(p) {
+  for (const id of ['pots', 'voice']) {
+    const b = $(id).getBoundingClientRect()
+    if (b.width && p.x > b.left - 8 && p.x < b.right + 8 && p.y > b.top - 8 && p.y < b.bottom + 8) return true
+  }
+  return false
+}
+const inView = (p, view) => p.x > view.left && p.x < view.right && p.y > view.top && p.y < view.bottom && !underButtons(p)
+
+/** How much of a shape (its outline circle and middle) is in the clear part of the screen, 0..1. */
+function shownShare(shape, x, z, scale, view) {
+  const r = reachOf(shape, scale) * 0.92
+  let n = 0
+  for (let k = 0; k <= 12; k++) {
+    const a = (k / 12) * Math.PI * 2
+    const p = k === 12 ? screenPoint(probeCam, x, z) : screenPoint(probeCam, x + Math.cos(a) * r, z + Math.sin(a) * r)
+    if (inView(p, view)) n++
+  }
+  return n / 13
+}
+
+/**
+ * Where a shape goes: near the child, inside the page and clear of everything else. It must be wholly
+ * on screen (where the camera is heading), so a child never hunts for it; only when no such spot is
+ * left does a shape go partly off screen (an arrow at the edge then points to it). Null: no room left.
+ */
+function placeSpot(shape) {
+  const me = game.me ?? { x: 0, z: 0 }
+  aimProbe()
+  const view = clearView()
+  // A child still finding their feet gets smaller shapes; when the page fills up, smaller shapes fit the gaps.
+  const scales = game.skill < 0.5 ? [0.85, 0.7, 0.55] : [1, 0.8, 0.65, 0.55]
+  for (const strict of [true, false]) {
+    for (const scale of scales) {
+      let best = null, bestScore = -Infinity
+      for (let k = 0; k < 300; k++) {
+        const x = -HALF_W + Math.random() * 2 * HALF_W, z = -HALF_D + Math.random() * 2 * HALF_D
+        if (!fits(shape, x, z, game.arena.obstacles, game.jobs, scale, FRAME + 0.2)) continue
+        const shown = shownShare(shape, x, z, scale, view)
+        if (strict && shown < 1) continue
+        // Close to the child but not under them, and as much on screen as can be.
+        const d = Math.hypot(x - me.x, z - me.z)
+        const score = shown * 20 - Math.abs(d - 6) + Math.random()
+        if (score > bestScore) [best, bestScore] = [{ x, z, scale }, score]
+      }
+      if (best) return best
+    }
+  }
+  return null
+}
+
+/**
+ * The host's next request. The first shape of a round is chalked straight away; after that the card
+ * offers a few chalk shapes and the child picks one (the game picks its colour or rule, which is the
+ * puzzle). Only shapes that still fit are offered; when none does, the page is full.
+ */
+function nextJob() {
+  if (!isHost() || game.state !== 'play' || modeOf() !== 'calm' || game.pageFull || game.offer) return
+  // A question is waiting for an answer: ask nothing new until it's answered.
+  if (asking()) return void later(() => nextJob(), 1500)
+  const tier = tierOf()
+  const options = []
+  for (let k = 0; k < 12 && options.length < (game.jobsDone.length ? PICK_N : 1); k++) {
+    const spec = chooseJob(tier, game.history)
+    if (options.some((o) => o.spec.shape === spec.shape)) continue
+    const spot = placeSpot(spec.shape)
+    if (spot) options.push({ spec, spot })
+  }
+  if (!options.length) {
+    // No room left for another shape: the page is full. 🖌️ keeps painting on a fresh page.
+    game.pageFull = true
+    askFinished('Your page is full! Is your picture finished?')
+    return
+  }
+  if (!game.jobsDone.length) return chalkJob(options[0], tier)
+  // Every few shapes the card just waits: a rest to paint freely or admire, until the child picks.
+  const rest = game.jobsDone.length % REST_EVERY === 0
+  const offer = { options, tier, rest }
+  game.offer = offer
+  renderJob()
+  audio.studio('drip', 0)
+  if (!game.told.has('pick')) {
+    game.told.add('pick')
+    game.notes.push({ words: 'Which shape next? Tap one.' })
+  }
+  later(() => game.offer === offer && pickJob(Math.floor(Math.random() * options.length)), rest ? REST_PICK_MS : PICK_WAIT_MS)
+}
+
+/** The child tapped shape `k` on the card (or the game picked it for them): it is chalked near them. */
+function pickJob(k) {
+  const offer = game.offer
+  const chosen = offer?.options[k]
+  if (!chosen || game.state !== 'play') return
+  game.offer = null
+  audio.unlock()
+  audio.click()
+  // Placed again where the child is now; the spot found when it was offered if there's no room here.
+  chalkJob({ spec: chosen.spec, spot: placeSpot(chosen.spec.shape) ?? chosen.spot }, offer.tier)
+}
+
+function chalkJob({ spec, spot }, tier) {
+  const job = { ...spec, x: Math.round(spot.x * 100) / 100, z: Math.round(spot.z * 100) / 100, scale: spot.scale, i: game.history.length, show: tier === 0, t0: gameTime() }
+  game.history.push({ shape: spec.shape, targets: spec.targets })
+  send({ t: 'job', r: roundId(), job })
+  addJob(job, tier)
+}
+
+/**
+ * A soft, still arrow at the screen edge pointing to the request when it is off screen (the child
+ * rolled away from it), with the shape beside it. It fades in and out; it never moves on its own.
+ */
+const arrowAt = new THREE.Vector3()
+function updateJobArrow() {
+  const el = $('job-arrow')
+  const job = game.job
+  let show = false
+  if (game.state === 'play' && job && !job.done && !gallery.open && !colourStudio.open) {
+    const part = job.parts.find((p) => !p.done) ?? job.parts[0]
+    const c = centreOf(part)
+    const view = clearView()
+    const p = screenPoint(camera, c.x, c.z, arrowAt)
+    // Off screen, or hidden under the request card: the middle of the part can't be seen.
+    const top = $('hud').querySelector('.hud-top').getBoundingClientRect().bottom
+    if (p.x < 16 || p.x > innerWidth - 16 || p.y < top + 8 || p.y > innerHeight - 16 || underButtons(p)) {
+      show = true
+      // From the middle of the clear view toward the shape, stopped just inside the edge.
+      const mx = (view.left + view.right) / 2, my = (view.top + view.bottom) / 2
+      const dx = p.x - mx, dy = p.y - my
+      const hw = (view.right - view.left) / 2 - 46, hh = (view.bottom - view.top) / 2 - 46
+      const k = Math.min(hw / Math.max(Math.abs(dx), 1e-3), hh / Math.max(Math.abs(dy), 1e-3), 1)
+      el.style.transform = `translate(${(mx + dx * k).toFixed(0)}px, ${(my + dy * k).toFixed(0)}px)`
+      el.firstElementChild.style.transform = `rotate(${Math.atan2(dy, dx).toFixed(3)}rad)`
+      if (el.dataset.shape !== job.shape) {
+        el.dataset.shape = job.shape
+        el.lastElementChild.textContent = job.def.emoji
+      }
+    }
+  }
+  el.classList.toggle('shown', show)
+}
+
+/** A rule from a friend's device: any colour, or a paint it must have and/or one it must not (two different paints). */
+const validRule = (r) => r == null || (typeof r === 'object' && (r.any === 1 || (
+  (r.with == null || PRIMARIES.includes(r.with)) && (r.without == null || PRIMARIES.includes(r.without)) && (r.with ?? r.without) != null && r.with !== r.without)))
+const cleanRule = (r) => (!r ? null : r.any === 1 ? { any: 1 } : { ...(r.with ? { with: r.with } : {}), ...(r.without ? { without: r.without } : {}) })
+
+/** A friend's device follows the host's requests: a new shape, a part that was painted (at game time `at`, in colour `mix`), or a fresh page. */
+function onJob({ job, done, part, at, mix, page }) {
+  if (game.state !== 'play') return
+  if (Number.isInteger(page) && page > 0) return void freshPage(page)
+  const prev = game.jobs.find((j) => j.i === done)
+  const p = prev?.parts[part]
+  if (p && !p.done && Number.isInteger(at) && at > 0) partPainted(prev, p, at, p.rule ? (p.ok.includes(mix) ? mix : p.ok[0]) : p.target)
+  if (!job || !Object.hasOwn(SHAPES, job.shape) || !Number.isFinite(job.x) || !Number.isFinite(job.z) || game.jobs.some((j) => j.i === job.i)) return
+  const n = SHAPES[job.shape].parts.length
+  const targets = Array.isArray(job.targets) ? job.targets : []
+  const rules = Array.isArray(job.rules) ? job.rules.slice(0, n) : []
+  if (targets.length !== n || !rules.every(validRule) || !targets.every((m, k) => MIXED.includes(m) || rules[k])) return
+  addJob({
+    shape: job.shape, targets, rules: rules.map(cleanRule), tilt: clamp(Number(job.tilt) || 0, -0.5, 0.5),
+    x: clamp(job.x, -HALF_W, HALF_W), z: clamp(job.z, -HALF_D, HALF_D), scale: clamp(Number(job.scale) || 1, 0.5, 1), i: job.i | 0, show: !!job.show, t0: Math.max(1, job.t0 | 0),
+  })
+}
+
+function addJob(spec, tier = 0) {
+  const job = new Job(spec, paint, scene)
+  job.started = now()
+  job.tier = tier
+  job.helped = false // a recipe, tip or rescue was given
+  job.slipped = false // a colour went in that the wanted colour can't come from
+  job.slips = 0
+  job.rescue = 0 // 1: a ring round the next pot; 2: a still picture of the two paints crossing
+  job.told = new Set() // tips already given for this shape
+  job.best = 0 // how far the shape has got (parts painted plus the share of the rest), and when it last grew
+  job.bestAt = job.started
+  game.jobs.push(job)
+  game.job = job
+  renderJob()
+  // Out of sight (a full page leaves room only far away): the camera glances over to show where it is.
+  aimProbe()
+  if (shownShare(spec.shape, spec.x, spec.z, job.scale, clearView()) < 0.7) game.glance = { x: spec.x, z: spec.z, until: now() + GLANCE_MS }
+  // The first steps also say the recipe (once a round each); harder ones leave it to the child.
+  let words = requestWords(job)
+  if (spec.show) for (const m of new Set(job.parts.filter((p) => !p.rule).map((p) => p.target))) if (!game.told.has(m)) {
+    game.told.add(m)
+    words += ' ' + recipeWords(m)
+  }
+  game.notes.push({ words })
+}
+
+/** The request card under the bar: the shape and its colour, and the recipe when it's shown (a rule shows its paint: ● + ❓, or ⃠●). */
+function renderJob() {
+  const job = game.job
+  const el = $('job')
+  el.classList.toggle('offer', !!game.offer)
+  if (game.offer) {
+    // The next shapes, in chalk: the child taps the one to paint.
+    el.classList.remove('hidden')
+    el.innerHTML = game.offer.options.map((o, k) => `<span class="opt" data-opt="${k}" role="button" aria-label="${SHAPES[o.spec.shape].name}">${SHAPES[o.spec.shape].emoji}</span>`).join('')
+    el.setAttribute('aria-label', `Pick the next shape: ${listWords.format(game.offer.options.map((o) => SHAPES[o.spec.shape].name)).replace(' and ', ' or ')}`)
+    return
+  }
+  if (!job || job.done) return el.classList.add('hidden')
+  el.classList.remove('hidden')
+  const q = '<span class="q">❓</span>'
+  el.innerHTML = `<span class="shape">${job.def.emoji}</span>` + job.parts.map((p) => {
+    if (p.rule) {
+      // ● + ❓ (a paint and one more), ⃠● (not this paint), both for a two-part rule, or 🎨 for the child's own choice.
+      const no = p.rule.without ? `<span class="no">${dot(MIXES[p.rule.without].hex)}</span>` : ''
+      const how = p.rule.any ? '<span class="pick">🎨</span>' : p.rule.with ? `${dot(MIXES[p.rule.with].hex)}<b>+</b>${q}${no ? `<i class="gap"></i>${no}` : ''}` : no
+      return `<span class="part rule${p.done ? ' done' : ''}">${p.done ? dot(MIXES[p.target].hex) : '<span class="q big">❓</span>'}<span class="how">${how}</span></span>`
+    }
+    const how = MIXES[p.target].recipe.map((b) => (job.show ? dot(MIXES[b].hex) : q)).join('<b>+</b>')
+    return `<span class="part${p.done ? ' done' : ''}">${dot(MIXES[p.target].hex)}<span class="how">${how}</span></span>`
+  }).join('')
+  el.setAttribute('aria-label', requestWords(job))
+}
+
+/** Tells the recipe (and shows it on the card) for one part of the request. */
+function giveRecipe(job, part, lead = '') {
+  job.helped = true
+  job.show = true
+  game.told.add(part.target)
+  renderJob()
+  game.notes.push({ words: `${lead}${recipeWords(part.target)}` })
+}
+
+/** The paint a part needs next: the one of its recipe not on it yet (for a rule, its own paint first). */
+function nextPaint(job, part) {
+  const colour = part.rule ? part.ok.reduce((a, b) => (part.byMix[b] > part.byMix[a] ? b : a)) : part.target
+  let order = MIXES[colour].recipe
+  if (part.rule?.with) order = [part.rule.with, ...order.filter((b) => b !== part.rule.with)]
+  const n = part.cells.length || 1
+  const on = (b) => {
+    let k = 0
+    for (let m = 1; m < 8; m++) if (m & b && Job.fits(part, m)) k += part.byMix[m]
+    return k / n > 0.08
+  }
+  return order.find((b) => !on(b)) ?? order.at(-1)
+}
+
+/** A soft, still ring round one pot (0: none): the rescue for a child who is stuck. */
+function suggestPot(bits) {
+  for (const el of document.querySelectorAll('[data-pot]')) el.classList.toggle('suggest', Number(el.dataset.pot) === bits)
+}
+
+/** The host watches the current shape: tips when they help, then the next shape once it's painted. */
+function checkJob(t) {
+  const job = game.job
+  if (!job || job.done || !isHost()) return
+  const { finished, wrong, active } = job.check(paint)
+  if (wrong) {
+    // A colour that can't become the wanted one: say what it is and why, and how to fix it (once a round).
+    job.slipped = true
+    job.slips++
+    const got = MIXES[job.wrongColour(wrong)].word
+    if (wrong.rule) {
+      game.notes.push({ words: ruleSlip(wrong.rule, job.wrongColour(wrong)) })
+    } else if (job.tier >= RULE_TIER) game.notes.push({ words: `That's ${got}, not ${MIXES[wrong.target].word}.` })
+    else giveRecipe(job, wrong, `That's ${got}. `)
+    if (!game.told.has('fix')) {
+      game.told.add('fix')
+      game.notes.push({ words: 'Let it dry, then roll over it.' })
+    }
+  }
+  if (active) {
+    // Progress counts the wanted colour, and (half) a coat that can still become it: laying the first coats of brown is progress too.
+    const progress = job.parts.reduce((sum, p) => sum + (p.done ? 1 : p.share + p.near * 0.5), 0)
+    if (progress > job.best + 0.02) [job.best, job.bestAt] = [progress, t]
+    const still = t - job.bestAt
+    const recipeBits = active.rule ? [] : MIXES[active.target].recipe
+    const have = recipeBits.filter((b) => active.byMix[b] > active.cells.length * 0.2)
+    if (!active.rule && still > WET_TIP_MS && have.length === 1 && active.share < 0.05 && recipeBits.length === 2 && !job.told.has('wet')) {
+      // One paint of the recipe sits on the shape and nothing is mixing: roll the other over it while it shines.
+      job.told.add('wet')
+      job.helped = true
+      const other = recipeBits.find((b) => !have.includes(b))
+      game.notes.push({ words: `Roll ${MIXES[other].word} over the shiny ${MIXES[have[0]].word}!` })
+    } else if (active.rule?.with && still > WET_TIP_MS && active.share < 0.05 && active.byMix[active.rule.with] > active.cells.length * 0.2 && !game.told.has('friend')) {
+      // Plain blue on "a mix of blue and one more paint": blue alone isn't a mix (said once a round).
+      game.told.add('friend')
+      job.told.add('wet')
+      const w = MIXES[active.rule.with].word
+      game.notes.push({ words: `${capital(w)} alone is not a mix. ${capital(w)} needs a friend!` })
+    } else if (!active.rule && job.tier < RULE_TIER && still > HELP_MS && !job.show && active.share < 0.15) {
+      giveRecipe(job, active)
+    }
+    // The rescue for a child who is stuck: a still ring round the pot to use next, then a picture of the mix.
+    // (A tip just said gets a few seconds to work before the ring comes.)
+    const stuck = active.share < 0.05 && (still > RESCUE_MS + (job.told.has('wet') ? 8000 : 0) || job.slips >= 2)
+    if (stuck && job.rescue < 1) {
+      job.rescue = 1
+      job.helped = true
+      game.notes.push({ words: `Try the ${MIXES[nextPaint(job, active)].word} pot.` })
+    }
+    if (job.rescue >= 1) suggestPot(active.share < 0.3 ? nextPaint(job, active) : 0)
+    if (job.rescue === 1 && active.share < 0.05 && still > GHOST_MS) {
+      job.rescue = 2
+      job.ghost(active, visiblePoint(active))
+      const paints = MIXES[active.rule ? active.ok[0] : active.target].recipe.map((b) => MIXES[b].word)
+      game.notes.push({ words: `Look: ${paints.slice(0, -1).join(', ')}, then ${paints.at(-1)} on top while it shines.` })
+    }
+    if (job.rescue === 2 && active.share > 0.2 && job.ghostGroup) job.ghost(null)
+    // Nearly painted and nothing wrong on it, but the last bits are hard to reach: that's painted.
+    if (!finished.includes(active) && active.share >= STALL_SHARE && still > STALL_MS && active.wrong < 0.05) finished.push(active)
+  }
+  for (const part of finished) {
+    const at = gameTime()
+    const mix = job.chosen(part)
+    send({ t: 'job', r: roundId(), done: job.i, part: job.parts.indexOf(part), at, mix })
+    partPainted(job, part, at, mix)
+  }
+  if (!job.done) return
+  suggestPot(0)
+  // Painted! Careful, unhelped painting in coats (one paint all over, then the next on top while it
+  // shines) moves the requests up a small step; a slip moves them gently down. Swapping pots back and
+  // forth while scrubbing still paints the shape, but it is not yet the painter's way, so it moves nothing.
+  // A shape in the child's own choice of colour is for making, not a test: it moves nothing up.
+  const coats = job.parts.every((p) => Job.layered(p))
+  const clean = !job.slipped && !job.helped && !job.parts.some((p) => p.rule?.any)
+  game.skill = clamp(game.skill + (clean && coats ? SKILL_STEP : job.slipped ? -SLIP_STEP : 0), 0, TOP_TIER + 0.5)
+  store.set('paint-splash-skill', game.skill)
+  // Once a round, the painter's way is named: as praise the first time it is done, or as a tip for a scrubber.
+  if (clean && coats && !game.told.has('coats')) {
+    game.told.add('coats')
+    game.notes.push({ words: 'One coat, then the next on top while it shines. Just like a painter!' })
+  } else if (clean && !coats && !game.told.has('scrub')) {
+    game.told.add('scrub')
+    const first = job.parts.find((p) => !Job.layered(p)) ?? job.parts[0]
+    const [a, ...rest] = MIXES[first.target].recipe.map((m) => MIXES[m].word)
+    game.notes.push({ words: `Next time, try ${a} all over first, then ${rest.join(', then ')} on top.` })
+  }
+  later(() => nextJob(), NEXT_JOB_MS + (game.jobsDone.length % REST_EVERY ? 0 : REST_MS))
+}
+
+/** One part is painted: it is tidied inside its lines and kept, its outline turns to ink; the last part finishes the shape. */
+function partPainted(job, part, at, colour) {
+  job.fill(part, paint, at, colour)
+  job.draw()
+  const c = centreOf(part)
+  effects.sparkle(c.x, 0.6, c.z, MIXES[part.target].hex, 10, 1.6)
+  if (job.done) finishJob(job)
+  else {
+    audio.studio('drip', 1)
+    renderJob()
+  }
+}
+
+/** A point of a part the child can see (for the still picture of the mix), or null to use its middle. */
+function visiblePoint(part) {
+  const view = clearView()
+  const c = centreOf(part)
+  const v = new THREE.Vector3()
+  let best = null, bestD = Infinity
+  for (let k = 0; k < part.cells.length; k += 7) {
+    const { x, z } = paint.cellCentre(part.cells[k])
+    if (!inView(screenPoint(camera, x, z, v), view)) continue
+    const d = Math.hypot(x - c.x, z - c.z)
+    if (d < bestD) [best, bestD] = [{ x, z }, d]
+  }
+  return best
+}
+
+function centreOf(part) {
+  let x = 0, z = 0
+  for (const [a, b] of part.poly) { x += a; z += b }
+  return { x: x / part.poly.length, z: z / part.poly.length }
+}
+
+/** A shape is painted: one soft chime and the ink outline say so (its name waits for the ending). */
+function finishJob(job) {
+  game.jobsDone.push([job.shape, ...job.parts.map((p) => p.target)])
+  audio.studio('keep')
+  // The child's own choice of colour: say back what they chose and how they made it.
+  const own = job.parts.find((p) => p.rule?.any)
+  if (own) game.notes.push({ words: `${capital(MIXES[own.target].word)}! ${recipeWords(own.target)}` })
+  effects.sparkle(job.x, 0.8, job.z, MIXES[job.parts[0].target].hex, 16, 2)
+  renderJob()
+}
+
+/**
+ * A fresh page at game time `at` (every device): the full page goes into My pictures, then the
+ * ground is washed clean and the shapes' ink lines go. The painted shapes still count in the results.
+ */
+function freshPage(at) {
+  softenPage()
+  keepWholePage()
+  for (const job of game.jobs) job.dispose()
+  game.jobs = []
+  game.job = null
+  game.pageFull = false
+  game.offer = null
+  suggestPot(0)
+  paint.locked.fill(0)
+  for (let i = 0; i < paint.mix.length; i++) paint.write(i, at, 0)
+  renderJob()
+  audio.studio('keep')
+  game.notes = [{ words: 'Your picture is in My pictures. Here is a fresh page!' }]
+}
+
+function turnPage() {
+  const at = gameTime()
+  send({ t: 'job', r: roundId(), page: at })
+  freshPage(at)
+  later(() => nextJob(), NEXT_JOB_MS + 1500)
+}
+
+/**
+ * With no clock the shapes are the picture. Paint off the shapes softens toward the ground once it
+ * is dry (halfway on the page, a little in the frame), so trails and the robots' frame never compete
+ * with the inked shapes. Wet paint stays true while it can still mix, and paint on a shape still being
+ * painted is left alone. Display only: the paint itself, and every device's picture, are unchanged.
+ */
+const PAGE_SOFT = 0.55
+const FRAME_SOFT = 0.3
+function softAmount(x, z) {
+  if (Math.abs(x) > HALF_W - FRAME || Math.abs(z) > HALF_D - FRAME) return FRAME_SOFT
+  for (const job of game.jobs) if (!job.done && job.near(x, z, 0.4)) return 0
+  return PAGE_SOFT
+}
+/** At the reveal, everything off the shapes softens, wet or dry. */
+function softenPage() {
+  if (modeOf() === 'calm' && game.jobsDone.length) paint.soften(softAmount)
+}
+/** During play, dry paint softens (checked once a second). */
+function softenDry(t) {
+  if (modeOf() !== 'calm' || t - (game.softAt ?? 0) < 1000) return
+  game.softAt = t
+  paint.soften(softAmount, gameTime() - WET_MS - 200)
+}
+
+/** Keeps the whole playground, seen from straight above, in My pictures, then puts the camera back. */
+function keepWholePage() {
+  const pos = camera.position.clone()
+  const fov = THREE.MathUtils.degToRad(camera.fov)
+  const pxPerM = Math.min(innerHeight / (2 * HALF_D + 1.5), innerWidth / (2 * HALF_W + 2))
+  const h = innerHeight / (pxPerM * 2 * Math.tan(fov / 2))
+  camera.position.set(0, h, h * 0.12)
+  camera.lookAt(0, 0, 0)
+  camera.updateMatrixWorld()
+  gallery.keep(pictureRect())
+  camera.position.copy(pos)
+  camera.lookAt(camLook)
+  camera.updateMatrixWorld()
 }
 
 function say() {
@@ -1357,7 +2040,9 @@ function updateHud(t) {
   if (game.state !== 'play') return
   $('hint').classList.toggle('hidden', t - game.lastMoveAt < IDLE_HINT_MS)
   noticeMixes()
+  checkJob(t)
   sayNextMix(t)
+  softenDry(t)
   if (modeOf() !== 'timed') return
   const left = Math.max(0, Math.ceil(game.setup.seconds - (t - game.roundStart) / 1000))
   // The time just counts down quietly: no hurry colour, pulse or ticking at the end.
@@ -1377,15 +2062,13 @@ function step(dt, realDt, t) {
         const elapsed = (t - game.roundStart) / 1000
         if (isHost() && elapsed >= game.setup.seconds) endRound()
         else if (!isHost() && elapsed >= game.setup.seconds + 3) endRound()
-      } else if (isHost() && paint.coverage() >= game.askAt) {
-        // Nearly all painted: the host asks (never ends it alone). After 🖌️, the next question waits for another 5%.
-        game.askAt = paint.coverage() + ASK_AGAIN
-        askFinished('The playground is nearly all painted! Is your picture finished?')
       }
+      // With no clock the host asks only when the page is full of shapes (nextJob); the child can say Finished any time.
     }
     items.update(dt, t)
     updateCamera(realDt, t)
     updateHud(t)
+    updateJobArrow()
     if (game.me && (game.state === 'play' || game.state === 'countdown' || game.state === 'syncing')) {
       meMarker.visible = true
       meMarker.position.set(game.me.x, 2.6 + Math.sin(t / 700) * 0.12, game.me.z)
@@ -1446,10 +2129,18 @@ async function boot() {
 
 if (DEBUG) {
   window.__paint = {
-    game, paint, items, audio, effects, camera, renderer, scene, THREE, gallery, colourStudio,
+    game, paint, items, audio, effects, camera, renderer, scene, THREE, gallery, colourStudio, input,
     end: () => (isHost() ? endRound() : null),
     finish: () => finishPicture(),
     pot: (bits) => choosePot(bits),
+    /** Picks shape k from the card's offer (for tests). */
+    pick: (k) => pickJob(k),
+    /** Chalks a shape where asked (for tests): `targets` per part (0 where `rules` has a rule), `paint` true paints it at once. */
+    chalk(shape, x, z, targets, paintIt = false, rules = []) {
+      const job = { shape, targets, rules, tilt: 0, x, z, scale: 1, i: 900 + game.jobs.length, show: !rules.length, t0: gameTime() }
+      addJob(job)
+      if (paintIt) for (const part of game.job.parts) partPainted(game.job, part, gameTime(), part.target)
+    },
     /** Lets a bot drive this child's painter (for tests). */
     autopilot(on = true) {
       const me = game.me

@@ -24,6 +24,7 @@
 </div>
 
 <div id="menu" class="overlay hidden">
+  <button id="book" class="round book-btn" aria-label="My animal book">📖</button>
   <div class="menu-top">
     <div class="logo"><span>M</span><span>e</span><span>m</span><span>o</span><span>r</span><span>y</span> <span>M</span><span>a</span><span>t</span><span>c</span><span>h</span></div>
     <p id="menu-hint" class="hint">Find the animal twins! Tap an animal to say hello.</p>
@@ -34,10 +35,20 @@
         <button class="mode" data-mode="twins" aria-label="Twins: two of the same animal"><span class="pic">🐶🐶</span><span class="word">Twins</span></button>
         <button class="mode" data-mode="sound" aria-label="Sounds: an animal and its sound"><span class="pic">🐮<b>🔊</b></span><span class="word">Sounds</span></button>
         <button class="mode" data-mode="baby" aria-label="Babies: an animal and its baby"><span class="pic">🐮<small>🐮</small></span><span class="word">Babies</span></button>
+        <button class="mode" data-mode="groups" aria-label="Homes: animals that live together"><span class="pic trio">🐮🐷🐥</span><span class="word">Homes</span></button>
       </div>
       <button id="play" class="big-go">▶ Play</button>
     </div>
     <div id="levels" class="levels"></div>
+  </div>
+</div>
+
+<div id="book-page" class="overlay book hidden" role="dialog" aria-label="My animal book">
+  <div class="book-card">
+    <h2>My animals</h2>
+    <p class="hint">What you found out about each animal</p>
+    <div id="book-grid" class="book-grid"></div>
+    <div class="row"><button id="book-close" class="big-go alt" aria-label="Back">◀</button></div>
   </div>
 </div>
 
@@ -60,6 +71,7 @@
     <h1 id="win-title">Hooray!</h1>
     <div id="win-stars" class="stars" role="img"></div>
     <p id="win-text" class="hint"></p>
+    <p id="win-next" class="hint next-note"></p>
     <div class="row">
       <button id="next" class="big-go">Next ▶</button>
       <button id="again" class="big-go alt">🔁</button>

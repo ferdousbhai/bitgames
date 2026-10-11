@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { BIOMES, HOME_X, biomeIndexAt } from './biomes.js'
+import { BIOMES, FLOWERS, HOME_X, OBSTACLES, biomeIndexAt } from './biomes.js'
 import { copy } from './models.js'
 import { keepWhere, pick, rand } from './util.js'
 
@@ -123,7 +123,10 @@ export class World {
     this.palette = this.paletteOf(BIOMES[0])
     this.target = this.paletteOf(BIOMES[0])
     this.items = []
+    // (x) => true where a pattern is hopped: no scenery logs, pumpkins or snowmen there to mix up with it
+    this.quiet = () => false
     this.butterflies = []
+    this.flutterAhead = Infinity // how far ahead of Pip butterflies drift (less on the narrow portrait menu)
     this.butterflyBiome = -1
     this.box = new THREE.Box3()
     this.v = new THREE.Vector3()
@@ -154,6 +157,7 @@ export class World {
     this.resetX = x
     this.hillX = [x - 80, x - 90]
     this.home = null
+    this.planted = []
     for (const f of this.butterflies) this.scene.remove(f)
     this.butterflies = []
     this.butterflyBiome = -1
@@ -184,7 +188,13 @@ export class World {
     let total = 0
     for (const c of choices) total += c[1]
     let r = Math.random() * total
-    const [name, , s0, s1] = choices.find((c) => (r -= c[1]) < 0) ?? choices[0]
+    let [name, , s0, s1] = choices.find((c) => (r -= c[1]) < 0) ?? choices[0]
+    // beside a pattern, a scenery pumpkin could pass for the hidden obstacle: grow something else
+    if (name in OBSTACLES && layer.key !== 'mid' && layer.key !== 'back' && this.quiet(x)) {
+      const other = choices.find((c) => !(c[0] in OBSTACLES))
+      if (!other) return 0
+      ;[name, , s0, s1] = other
+    }
     const obj = copy(this.templates[name], { recolor: b.recolor, shadow: layer.shadow })
     obj.scale.setScalar(rand(s0, s1))
     obj.position.set(x, 0, rand(layer.z[0], layer.z[1]))
@@ -237,14 +247,39 @@ export class World {
     home.position.set(HOME_X + 1.6, 0, -2.7)
     this.tag(home, 'burrow')
     this.add(home)
+    // a few wild flowers on the lawn, which make way for the row the child plants
+    this.homeFlowers = []
     for (let k = 0; k < 8; k++) {
       const f = copy(this.templates.flower, { recolor: BIOMES[0].recolor })
+      this.homeFlowers.push(f)
       f.position.set(HOME_X - 3 + k * 0.9 + rand(-0.2, 0.2), 0, rand(-1.2, -1.6))
       f.userData.sway = rand(0, 6)
       this.tag(f, 'flower')
       this.add(f)
     }
     this.home = home
+  }
+
+  /**
+   * The flowers the child plants at home, in a row along the front of the burrow's lawn (petal
+   * colours from FLOWERS). Called again with the whole row each time one is planted or taken back.
+   */
+  plantRow(colors) {
+    for (const f of this.planted ?? []) {
+      this.scene.remove(f)
+      const i = this.items.indexOf(f)
+      if (i >= 0) this.items.splice(i, 1)
+    }
+    for (const f of this.homeFlowers ?? []) f.visible = !colors.length
+    this.planted = colors.map((color, k) => {
+      const f = copy(this.templates.flower, { recolor: { petal: [FLOWERS[color].hex] }, shadow: true })
+      f.position.set(HOME_X - 2.9 + k * 0.78, 0, -0.55)
+      f.scale.setScalar(1.15)
+      f.rotation.y = rand(-0.4, 0.4)
+      f.userData.sway = k
+      this.tag(f, 'flower')
+      return this.add(f)
+    })
   }
 
   /** Scenery a tap can poke: it remembers what it is and its size, for the wobble. */
@@ -333,8 +368,9 @@ export class World {
     keepWhere(this.butterflies, (f) => {
       const u = f.userData
       if (!u.leaving) u.x += moved
-      // flutter along with the bunny, a little ahead, drifting about
-      const goal = u.leaving ? f.position.x - 1 : bunnyX + u.ox + Math.sin(time * 0.4 + u.phase) * 2
+      // flutter along with the bunny, a little ahead, drifting about (close by Pip when the view is narrow)
+      const near = this.flutterAhead
+      const goal = u.leaving ? f.position.x - 1 : bunnyX + Math.min(u.ox, near) + Math.sin(time * 0.4 + u.phase) * Math.min(2, near / 2)
       u.x = THREE.MathUtils.damp(u.x, goal, u.leaving ? 0.2 : 1.2, dt)
       if (u.leaving) u.rise += dt * 2
       // a poked butterfly darts up in a little loop, then settles back

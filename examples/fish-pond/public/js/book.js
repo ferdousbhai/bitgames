@@ -4,6 +4,9 @@ import { CREATURES } from './creatures.js'
 import { PLACES } from './world.js'
 import { fieldNote } from './field-guide.js'
 
+/** Animals that keep to one spot: the book's hint for them says where in the water to look. */
+const HIDES = { snail: 'Pond snails hide under lily pads.' }
+
 /**
  * The collection book: one sticker per creature. Caught ones show in full
  * colour with how many you have; the rest are mystery silhouettes with the
@@ -61,7 +64,7 @@ export class Book {
     const shadow = new THREE.MeshBasicMaterial({ color: '#46507e' })
     for (const c of CREATURES) {
       const m = this.creatures.make(c.id, 1.05)
-      const face = ['pufferfish', 'octopus', 'jellyfish', 'duck', 'chest', 'boot', 'crab'].includes(c.id) ? -1.0 : -0.4
+      const face = ['pufferfish', 'octopus', 'jellyfish', 'duck', 'chest', 'boot', 'crab', 'crayfish'].includes(c.id) ? -1.0 : -0.4
       m.group.rotation.set(0.1, face, 0)
       scene.add(m.group)
       r.render(scene, cam)
@@ -128,6 +131,11 @@ export class Book {
           const where = Object.keys(c.places)
           this.note.textContent = `❓ Not found yet! Look here: ${where.map((p) => PLACES[p].emoji).join(' ')}`
           this.audio.bubbles()
+          // Where in the water, for an animal that hides (knowing where it lives tells you where to cast)
+          if (HIDES[c.id]) {
+            this.note.textContent += ` ${HIDES[c.id]}`
+            return this.voice.sayNow(`Not found yet! ${HIDES[c.id]}`)
+          }
           this.voice.sayNow(where.length === Object.keys(PLACES).length ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`)
         }
       })

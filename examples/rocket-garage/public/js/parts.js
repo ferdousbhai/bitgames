@@ -105,12 +105,15 @@ export function reach(rocket) {
   return Math.min(DESTS.length - 1, part('booster', rocket.booster).power ?? 0)
 }
 
-/** 0 = rock steady, about 1 = a gloriously silly wobble. */
+/**
+ * Two kinds of flight, plain to see: 0.05 is rock steady (no wobbly nose, tank or fins), and any
+ * wobbly part starts at 0.5 so it always sways clearly, wobblier parts a little more. Boosters
+ * never change the wobble: only the parts the notebook names do.
+ */
 export function wobble(rocket) {
-  let w = 0.12
-  for (const slot of ['nose', 'tank', 'fins']) w += part(slot, rocket[slot]).wobble ?? 0
-  if (rocket.booster === 'none') w += 0.08
-  return Math.min(w, 1)
+  let extra = 0
+  for (const slot of ['nose', 'tank', 'fins']) extra += part(slot, rocket[slot]).wobble ?? 0
+  return extra ? Math.min(0.5 + extra * 0.6, 1) : 0.05
 }
 
 export function isUnlocked(p, visited) {
@@ -136,4 +139,9 @@ export function sanitize(r, visited) {
     for (const k in out.colors) if (COLORS.includes(r.colors[k])) out.colors[k] = r.colors[k]
   }
   return out
+}
+
+/** Steady means no wobbly nose, tank or fins: the parts the notebook says make the wobble. */
+export function isSteady(rocket) {
+  return ['nose', 'tank', 'fins'].every((slot) => !part(slot, rocket[slot]).wobble)
 }

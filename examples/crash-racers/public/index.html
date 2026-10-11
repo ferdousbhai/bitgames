@@ -32,7 +32,7 @@
   <div class="modes">
     <button data-mode="town" class="mode on" aria-label="Delivery Town: drive slowly and deliver picture parcels"><span>📦</span>Deliver</button>
     <button data-mode="race" class="mode"><span>🏁</span>Race</button>
-    <button data-mode="smash" class="mode"><span>💥</span>Smash!</button>
+    <button data-mode="smash" class="mode" aria-label="Bumper cars: gentle bumping, park when you like"><span>🎪</span>Bumpers</button>
   </div>
   <h2>Pick your car 🚗</h2>
   <div id="cars" class="car-row"></div>
@@ -57,21 +57,23 @@
 
 <div id="hud" class="hidden">
   <div class="hud-top">
-    <div id="position" class="pill big">1st</div>
     <div id="lap" class="pill">Lap 1/2</div>
-    <div id="crashes" class="pill">💥 0</div>
-    <div id="stars" class="pill">⭐ 0</div>
-    <div id="timer" class="pill hidden">⏱️ 2:00</div>
   </div>
   <div id="parcels" class="parcels hidden" role="group" aria-label="Parcels in the van"></div>
+  <button id="stop-here" type="button" class="stop-here hidden" aria-label="Stop here"><span class="picture"></span><span class="hand" aria-hidden="true">✋</span></button>
+  <div id="gate-pick" class="gate-pick hidden" role="group" aria-label="Which lane at the gate">
+    <button type="button" class="lane-pick lane-left"><span class="picture"></span><span class="way" aria-hidden="true">◀</span></button>
+    <span class="gate-house" aria-hidden="true"></span>
+    <button type="button" class="lane-pick lane-right"><span class="picture"></span><span class="way" aria-hidden="true">▶</span></button>
+  </div>
   <canvas id="minimap" width="160" height="160"></canvas>
-  <div id="speed" class="speed">0<small>km/h</small></div>
   <div id="banner" class="banner"></div>
   <div class="hud-buttons">
     <button data-touch="turbo" title="Turbo (Shift)" id="turbo-btn">🔥</button>
     <button data-touch="fix" title="Fix my car (F)" id="fix-btn">🔧</button>
     <button data-touch="reset" title="Back on the road (R)" id="reset-btn">🔄</button>
     <button data-touch="turn" title="Turn round (U)" id="turn-btn" aria-label="Turn round">↩️</button>
+    <button data-touch="park" title="Park and finish" id="park-btn" aria-label="Park and finish">🅿️</button>
     <button data-touch="horn" title="Horn (H)">📯</button>
     <button data-touch="camera" title="Camera (C)">🎥</button>
     <button id="sound-btn" title="Sound (M)">🔊</button>
@@ -88,14 +90,21 @@
   </div>
 </div>
 
-<div id="finale" class="finale hidden">🏁 20</div>
+<div id="finale" class="finale hidden" aria-label="A friend is home">🏁</div>
 <div id="countdown" class="countdown hidden"></div>
 
 <div id="results" class="screen hidden">
   <h1 id="results-title">🏁 Finish!</h1>
   <div id="podium" class="podium"></div>
+  <div id="gate-recap" class="gate-recap hidden" role="img"></div>
   <div id="recap" class="recap hidden">
-    <canvas id="recap-map" width="560" height="560" aria-label="Your delivery route"></canvas>
+    <div class="recap-left">
+      <canvas id="recap-map" width="560" height="560" aria-label="Your delivery route"></canvas>
+      <div id="recap-ways" class="recap-ways hidden" role="img">
+        <span class="way mine"><b aria-hidden="true">🚚</b><span class="bar"><i></i></span></span>
+        <span class="way short"><b aria-hidden="true">⭐</b><span class="bar"><i></i></span></span>
+      </div>
+    </div>
     <div id="recap-stops" class="recap-stops"></div>
   </div>
   <div class="row">
