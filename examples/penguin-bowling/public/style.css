@@ -465,3 +465,53 @@ body.veiled .rack > div, body.veiled #pin-discovery { visibility: hidden; }
 /* The rack map, veiled, asks too. */
 body.veiled .rack::before { content: '?'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; font-weight: 900; color: #9fc4e8; }
 body.veiled .plan-pill { display: none; }
+
+/* Round 5. Tier 1: after tapping every pin, the child says how many ("?" in the bond, the numbers over the pins tucked away). */
+.bond.guess-total #bond-standing-n { background: #fff; border-radius: 10px; box-shadow: inset 0 0 0 2px #9fc4e8; padding: 2px 6px; }
+/* Tier 3 plans name only what is left standing: upright dots, no knocked gaps to count. */
+.ten.stand i { background: #4cc9f0; }
+
+/* Round 6 (2026-10-11). Results read as a picture on a tablet: bigger pins, the ways met solid with a
+   warm edge, the ways not met yet clearly paler and flat, the ways worked out with a strong green edge. */
+.bonds { max-width: 660px; }
+.way { background: #fff3c4; box-shadow: 0 3px 0 rgba(43,74,138,.25), inset 0 0 0 2px #f0c75e; }
+.way.faint { opacity: .5; background: rgba(255,255,255,.35); box-shadow: inset 0 0 0 2px rgba(159,196,232,.55); }
+.way.faint .way-pins i { filter: grayscale(1); }
+.way.self { background: #dcf6e3; box-shadow: 0 3px 0 rgba(46,157,91,.4), inset 0 0 0 3px #3fbf6a; }
+.key-self { background: #dcf6e3; box-shadow: inset 0 0 0 3px #3fbf6a; }
+@media (min-width: 700px) and (min-height: 521px) {
+  .way-pins { height: 28px; }
+  .way-pins i { font-size: 21px; width: 20px; }
+  .way-pins i:nth-child(5) { margin-right: 7px; }
+  .way b { font-size: 20px; }
+}
+
+/* Round 7 (2026-10-11). After a wrong "how many fell?" only the card's fallen pins come out to count;
+   the "?" stays until the right number is picked. Tier 3's curved plans carry a small curve mark. */
+.bond.guess-fallen.show-fallen .fallen .pin-ic { visibility: visible; }
+.plan-curve { font-size: 12px; font-weight: 900; color: #8a5a00; background: #ffe7a8; border-radius: 999px; padding: 0 6px; line-height: 1.4; }
+#bonds-key-self[hidden] { display: none; }
+
+/* Round 8 (2026-10-11). The bond reads on one line: every part's number sits on the same baseline,
+   whatever the height of its pin group; while "how many fell?" is open the hidden fallen pins take no room,
+   so its "?" sits level with the standing number ("? + 1 = 10"). */
+.bond { align-items: flex-end; }
+.bond-op { padding-bottom: 1px; }
+.bond-whole b { margin-bottom: -10px; }
+.bond.guess-fallen:not(.show-fallen) .fallen .bond-pins { display: none; }
+/* Sideways tablets: the "where?" and plan cards sit over the left snow bank, beside the lane, so the
+   penguin and the spot it stands on stay in view while the child plans where to stand. */
+@media (orientation: landscape) and (min-height: 521px) {
+  .where { left: calc(14px + env(safe-area-inset-left)); top: 42%; bottom: auto; transform: none; max-width: 236px; white-space: normal; text-align: center; }
+}
+/* Sideways phones: the same, as a compact column at the left edge. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .where { left: calc(8px + env(safe-area-inset-left)); top: 30%; bottom: auto; transform: none; flex-direction: column; padding: 6px; }
+  .where .where-row { flex-direction: column; gap: 6px; }
+  .where.plan .where-row { flex-direction: column; }
+}
+/* Tier 1's picture plan: ten dots, a few or most lying down, with the words under them. */
+.plan button.rough { min-width: 76px; gap: 4px; }
+.plan button.rough small { font-size: 14px; font-weight: 900; line-height: 1; }
+.plan button.rough .ten { grid-template-columns: repeat(5, 10px); gap: 3px; }
+.plan button.rough .ten i { width: 10px; height: 10px; }

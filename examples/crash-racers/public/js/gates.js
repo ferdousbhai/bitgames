@@ -3,7 +3,7 @@ import { KINDS, pictureTexture } from './town.js'
 import { rng } from './util.js'
 
 /**
- * Present gates for Race and Bumpers: twice round each loop a white gantry
+ * Present gates for Race and Bumpers: three times round each loop a white gantry
  * spans the road. A house's picture sits on top (🐶), and over each lane hangs
  * a present (🦴 over one, 📖 over the other). The child steers (or, in Easy
  * mode, taps the present) to drive under the one that house would like. It is
@@ -29,18 +29,35 @@ export function createGates(scene) {
   let gates = []
   let r = Math.random
   let hard = false
+  let recent = [] // the houses the last few gates had, so the same pair does not come straight back
+  let recentWrong = [] // the houses whose presents were the wrong ones lately, so each gate brings a new distractor
+
+  /** A fair, seeded shuffle of the house indices (Fisher–Yates). */
+  function shuffled() {
+    const order = KINDS.map((k, i) => i)
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(r() * (i + 1))
+      ;[order[i], order[j]] = [order[j], order[i]]
+    }
+    return order
+  }
 
   /** A new house and two presents for gate `g`: one the house would like, one from another house, on a random side. */
   function dress(g) {
-    const kinds = KINDS.map((k, i) => i).sort(() => r() - 0.5)
+    const kinds = shuffled()
     // Never a house that is on a gate now (this one's last, or the other gate's), so each gate brings someone new.
-    const pick = kinds.find((k) => k !== g.kindIndex && gates.every((o) => o.kindIndex !== k))
-    const other = kinds.find((k) => k !== pick)
+    const pick = kinds.find((k) => k !== g.kindIndex && gates.every((o) => o.kindIndex !== k) && !recent.includes(k)) ?? kinds.find((k) => k !== g.kindIndex && gates.every((o) => o.kindIndex !== k))
+    recent = [pick, ...recent].slice(0, 2)
+    // The wrong present comes from a house that has not lent one lately (never the same distractor twice running).
+    const other = kinds.find((k) => k !== pick && !recentWrong.includes(k)) ?? kinds.find((k) => k !== pick)
+    recentWrong = [other, ...recentWrong].slice(0, 2)
     // The harder tier uses each house's second present (pears, candles): sorting by kind, not by look.
     const gift = KINDS[pick].gifts[hard ? 1 : 0]
     const wrong = KINDS[other].gifts[hard ? (r() < 0.5 ? 0 : 1) : 0]
     g.kindIndex = pick
     g.kind = KINDS[pick]
+    g.tapped = 0 // the present the child tapped for this gate (Easy mode), kept until the car goes under it
+    g.hard = hard
     g.side = r() < 0.5 ? -1 : 1 // the lane (road's left -1, right 1) with the present the house would like
     g.lanes = g.side > 0 ? { [-1]: wrong, [1]: gift } : { [-1]: gift, [1]: wrong }
     g.house.material.map = pictureTexture(g.kind.emoji, g.kind.colour)
@@ -60,15 +77,17 @@ export function createGates(scene) {
     show(value) { group.visible = value },
     clear,
 
-    /** Two gates a third and two thirds of the way round, clear of ramps and jumps. Deterministic in `seed`. */
+    /** Three gates spread round the loop, clear of ramps and jumps. Deterministic in `seed`. */
     configure(track, seed, { harder = false } = {}) {
       clear()
+      recent = []
+      recentWrong = []
       r = rng((seed ^ 0x6a7e) >>> 0)
       // A small seed's first numbers lean one way: let the generator settle, so the right lane is a true coin toss.
       for (let i = 0; i < 16; i++) r()
       hard = harder
       const L = track.length
-      for (const at of [0.36, 0.7]) {
+      for (const at of [0.27, 0.53, 0.8]) {
         const dist = track.clearOfRamps(L * at, 16)
         const f = track.frameAt(dist)
         const half = track.width / 2 + 0.6
@@ -97,6 +116,12 @@ export function createGates(scene) {
         gates.push(g)
       }
     },
+
+    /** The harder presents (pears, candles) from the next gate dressed on, or the easier ones again. */
+    setHard(value) {
+      hard = value
+    },
+    get hard() { return hard },
 
     /** The car has gone under gate `g`: it gets a new house and new presents for next time round. */
     redress(g) {

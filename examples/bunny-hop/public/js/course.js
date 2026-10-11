@@ -69,6 +69,7 @@ export const BEAT = 8
 const GAP = 18 // quiet path between one row or rhythm and the next
 const UNITS = 3 // a rhythm plays its pattern three times; the third time stops to ask what comes next
 const RHYTHM_MAX = 9 // the longest rhythm (three repeats of three, or the growing pattern): path is kept for it
+const RHYTHM_LEN = (RHYTHM_MAX - 1) * BEAT
 /**
  * Spare carrots in a basket row: they grow with the order (a 4-basket row has 6), so a child who
  * hops at everything catches too many, and only stopping when the basket is full comes out right.
@@ -185,6 +186,8 @@ export class Course {
     const segments = []
     const golds = []
     const flowers = []
+    this.answers = [] // the answers to this trip's "What comes next?", so no answer comes three times running
+    this.shapes = [] // the pattern shapes hopped this trip (AB, A🥕🥕…), so each place's pattern is new
     let x = x0 + START_X + 14 // a couple of seconds of plain hopping first, while the tap hint shows
     let first = true
     for (let b = biomeIndexAt(x0); b < BIOMES.length; b++) {
@@ -193,6 +196,15 @@ export class Course {
       x = Math.max(x, b * BIOME_LENGTH + 12)
       const [lo, hi] = biome.rows
       const sizes = [randInt(lo, hi), randInt(lo, hi)].map((n) => Math.min(n, maxRow)).sort((p, q) => p - q)
+      // every place keeps room for its pattern: when two long basket rows and the rhythm don't all
+      // fit, the rows give up spare carrots first (down to two), then carrots, never the pattern
+      const rooms = sizes.map((n) => n + (baskets ? spares(n) : EXTRA))
+      const most = Math.floor((end - x - RHYTHM_LEN - 2 * GAP) / ROW_STEP) + 2 // the rows' rooms together
+      const trim = (i) => (rooms[i] - sizes[i] > (baskets ? 2 : 0) ? (rooms[i]--, true) : sizes[i] > 1 ? (sizes[i]--, rooms[i]--, true) : false)
+      while (rooms[0] + rooms[1] > most) {
+        const i = rooms[1] >= rooms[0] ? 1 : 0 // the longer row gives first
+        if (!trim(i) && !trim(1 - i)) break
+      }
       const add = (seg, len) => {
         if (x + len > end) return false
         Object.assign(seg, { x, end: x + len, biome: b })
@@ -200,12 +212,14 @@ export class Course {
         x += len + GAP
         return true
       }
-      const row = (n) => {
-        // a row too long for what's left of this place shrinks to fit; `room` is how many carrots fit
-        const fit = Math.floor((end - x) / ROW_STEP) + 1
+      let rhythmLaid = false
+      const row = (n, wanted) => {
+        // a row too long for what's left of this place (and its pattern, if still to come) shrinks to
+        // fit; `room` is how many carrots fit
+        const fit = Math.floor((end - (rhythmLaid ? 0 : RHYTHM_LEN + GAP) - x) / ROW_STEP) + 1
         n = Math.min(n, fit)
         if (n < 1) return
-        const room = Math.min(n + (baskets ? spares(n) : EXTRA), fit)
+        const room = Math.min(wanted, fit)
         // the trip's first row all hangs up high (hop to catch); after that about two in five grow in
         // the grass, never three in a row, so a row asks for looking, not hopping at everything
         const low = []
@@ -214,7 +228,8 @@ export class Course {
       }
       const rhythm = () => {
         // a rhythm's pattern is chosen when it comes into view (shapeRhythm), from how the child is doing
-        if (!add({ kind: 'rhythm', passed: 0, got: 0, missed: 0, bumps: 0 }, (RHYTHM_MAX - 1) * BEAT)) return
+        if (!add({ kind: 'rhythm', passed: 0, got: 0, missed: 0, bumps: 0 }, RHYTHM_LEN)) return
+        rhythmLaid = true
         golds.push(x - GAP / 2)
         // after the pattern, two wild flowers of different colours grow in the grass, either side of
         // the golden carrot: stay down to pick one for Pip's door, or hop on by
@@ -224,7 +239,7 @@ export class Course {
       // each place tells its story in its own order, so no two trips feel the same
       const order = pick([[row, rhythm, row], [rhythm, row, row], [row, row, rhythm]])
       let r = 0
-      for (const step of order) step === row ? row(sizes[r++]) : rhythm()
+      for (const step of order) step === row ? (row(sizes[r], rooms[r]), r++) : rhythm()
     }
     this.segments = segments
     this.golds = golds
@@ -260,6 +275,12 @@ export class Course {
     obj.position.set(x, 0, 0)
     obj.scale.setScalar(1.5)
     obj.rotation.y = rand(-0.4, 0.4)
+    // on a little mound of earth, like a carrot in the grass: something on a mound is Pip's to pick
+    // by staying down (the meadow's own flowers grow straight from the grass, and keep clear of these)
+    const m = mound()
+    m.position.y = 0
+    m.scale.multiplyScalar(1.25 / 1.5)
+    obj.add(m)
     this.scene.add(obj)
     const item = { kind: 'flower', color, obj, x, y: GRASS_Y, phase: rand(0, 6) }
     this.items.push(item)
@@ -295,48 +316,112 @@ export class Course {
   }
 
   /**
+   * The fewest carrots Pip could be asked for across the whole trip, whatever tier the child moves to
+   * on the way: each row's order as a whole row or as a basket (which may ask for fewer, to leave room
+   * for spares). Patterns count none, as some patterns are all obstacles. Perfect play always brings
+   * home at least this many, so a winter goal set below it can always be met.
+   */
+  surest() {
+    return this.segments.reduce((sum, seg) => {
+      if (seg.kind !== 'row') return sum
+      let n = seg.planned
+      if (seg.room >= 4) while (n > 2 && seg.room - n < spares(n)) n--
+      return sum + Math.min(seg.planned, n)
+    }, 0)
+  }
+
+  /**
    * The pattern ladder. Every pattern mixes the place's obstacles (hop!) with carrots growing in the
    * grass (stay down and munch), so a pattern is also a rhythm of hops and rests.
-   * Tier 0: AB or AAB (a carrot is one of the two), two answers. Tier 1: ABC or ABB, with all three
-   * as answers. Tier 2: a growing pattern, where repeating the last group is not the answer:
-   * AB, AAB, AAA? (one more a) or AB, AAB, AAA then ? (the b that closes it), or AB, ABB, ABB? (b).
-   * Tiers 0 and 1 ask in the second repeat; the rest of the pattern then waits under mist.
+   * Tier 0: two answers, from eight shapes so the places don't all sound alike: with a carrot (A🥕,
+   * 🥕A, AA🥕, A🥕🥕, A🥕A) or, at most once a trip, two obstacles (AB, AAB); a shape comes once a trip
+   * while there are others left (`this.shapes`). Tier 1: ABC, ACB, ABB or ACC,
+   * with all three as answers. Tier 2: a growing pattern, where repeating the last group is not the
+   * answer: AB, AAB, AAA? (one more a) or AB, AAB, AAA then ? (the b that closes it), or AB, ABB, ABB? (b).
+   * Tiers 0 and 1 ask about any step of the pattern: one of the second go, once the whole pattern and
+   * the start of its repeat have gone by, or the first step of the third go, after two whole goes.
+   * The answer is a carrot about half the time, and never the same thing three times running
+   * (`this.answers`), so the pattern has to be read: no one picture is usually right.
    */
   shapeRhythm(seg, tier) {
     seg.kinds ??= kindsOf(seg.biome) // kept if the rhythm is shaped again, so its first obstacle never changes
     const [a, b] = seg.kinds
     const c = 'carrot'
-    let groups
-    seg.growing = null
+    // every way this rhythm could go at this tier, weighted so each pattern is equally likely
+    const options = []
     if (tier >= 2) {
-      const growB = Math.random() < 0.4
-      const [p, q] = pick([[a, c], [a, c], [a, b]])
-      groups = growB ? [[p, q], [p, q, q], [p, q, q, q]] : [[p, q], [p, p, q], [p, p, p, q]]
-      seg.unit = [p, q]
-      seg.growing = growB ? q : p
-      seg.ask = growB ? 8 : pick([7, 8])
-      seg.choices = shuffled([a, b, c])
+      for (const [p, q] of [[a, c], [a, b]]) {
+        const growA = [[p, q], [p, p, q], [p, p, p, q]]
+        options.push({ groups: growA, unit: [p, q], growing: p, ask: 7, w: 0.3 }, { groups: growA, unit: [p, q], growing: p, ask: 8, w: 0.3 })
+        options.push({ groups: [[p, q], [p, q, q], [p, q, q, q]], unit: [p, q], growing: q, ask: 8, w: 0.4 })
+      }
     } else {
-      const unit = pick(tier ? [[a, b, c], [a, c, b], [a, c, c]] : [[a, c], [a, a, c], [a, c, c]])
-      groups = Array.from({ length: UNITS }, () => unit)
-      seg.unit = unit
-      // ask about a step of the second repeat once the whole pattern and the start of its repeat have
-      // gone by, so what comes next can always be read from the first time round
-      seg.ask = unit.length + randInt(1, unit.length - 1)
-      seg.choices = shuffled(tier ? [a, b, c] : [...new Set(unit)])
+      // [unit, weight]: the two-obstacle shapes are a little rarer, as a pattern of hops and rests is the heart of it
+      const units = tier
+        ? [[a, b, c], [a, c, b], [a, b, b], [a, c, c]].map((u) => [u, 1])
+        : [[[a, c], 1], [[c, a], 1], [[a, a, c], 1], [[a, c, c], 1], [[a, c, a], 1], [[a, b], 0.7], [[a, a, b], 0.7]]
+      for (const [unit, w] of units) {
+        const n = unit.length
+        for (let ask = n + 1; ask <= 2 * n; ask++) options.push({ groups: Array.from({ length: UNITS }, () => unit), unit, growing: null, ask, w: w / n })
+      }
     }
+    for (const o of options) {
+      o.answer = o.groups.flat()[o.ask]
+      // the shape, with the carrot kept apart from the obstacles: A🥕🥕 and ABB are different shapes
+      const letters = new Map()
+      o.shape = o.unit.map((k) => (k === c ? 'c' : letters.get(k) ?? (letters.set(k, 'AB'[letters.size]), letters.get(k)))).join('') + (o.growing ? `+${o.growing === o.unit[0] ? 1 : 2}@${o.ask}` : '')
+    }
+    const [p1, p2] = this.answers?.slice(-2) ?? []
+    const shapes = this.shapes ?? []
+    const keep = (o) =>
+      !(p1 && p1 === p2 && o.answer === p1) &&
+      !shapes.includes(o.shape) &&
+      !(o.unit.every((k) => k !== c) && !o.growing && shapes.some((sh) => !sh.includes('c'))) &&
+      // shaped again (the child's tier changed as it was cued): the first step in view stays as it was
+      !(seg.first && o.groups[0][0] !== seg.first)
+    const pool = [keep, (o) => !(seg.first && o.groups[0][0] !== seg.first), () => true].map((f) => options.filter(f)).find((l) => l.length)
+    let r = Math.random() * pool.reduce((sum, o) => sum + o.w, 0)
+    const chosen = pool.find((o) => (r -= o.w) < 0) ?? pool[0]
+    const { groups } = chosen
+    seg.first ??= groups[0][0]
+    seg.shape = chosen.shape
+    seg.unit = chosen.unit
+    seg.growing = chosen.growing
+    seg.ask = chosen.ask
+    // tier 0's first pattern of the trip offers just its own two pictures; after that a third joins
+    // (the place's other obstacle or a carrot), so a lucky tap is one in three, not a coin toss
+    const opener = this.segments.find((s) => s.kind === 'rhythm') === seg
+    seg.choices = shuffled(tier || !opener ? [a, b, c] : [...new Set(chosen.unit)])
     seg.items = groups.flat()
     seg.starts = groups.map((_, g) => groups.slice(0, g).flat().length) // where each group begins, for the strip
     seg.carrots = seg.items.filter((name) => name === c).length
-    // on tier 0 a first miss brings in a third picture, so the second go is still a choice
-    seg.spare = tier ? null : [a, b, c].find((k) => !seg.unit.includes(k))
+    // with only two pictures (tier 0's first pattern), a first miss brings in a third, so the second go is still a choice
+    seg.spare = seg.choices.length < 3 ? [a, b, c].find((k) => !seg.unit.includes(k)) : null
     seg.end = seg.x + (seg.items.length - 1) * BEAT
+  }
+
+  /**
+   * Where the path forks, the child chose a patch of `size` carrots: that patch becomes the row. Pip's
+   * basket still holds `seg.n`, so a patch with one too many asks him to stop at full, and one with
+   * too few can't fill it.
+   */
+  layPatch(seg, size) {
+    seg.patch = size
+    seg.basket = true
+    seg.count = Math.min(size, seg.room)
+    seg.end = seg.x + (seg.count - 1) * ROW_STEP
+    for (let i = 0; i < seg.count; i++) this.carrot(seg.x + i * ROW_STEP, seg.low[i] ? GRASS_Y : ROW_Y, false, seg, i)
   }
 
   /** Builds a planned row or rhythm on the path, shaped by `tier` ({ row, pattern }). */
   build(seg, tier) {
     seg.shaped = seg.kind === 'row' ? tier.row : tier.pattern
     if (seg.kind === 'row') {
+      // a fork's carrots wait for the child to choose a patch (see `layPatch`)
+      if (seg.fork) {
+        if (seg.patch) return this.layPatch(seg, seg.patch)
+        return this.shapeRow(seg, tier.row)
+      }
       this.shapeRow(seg, tier.row)
       for (let i = 0; i < seg.count; i++) this.carrot(seg.x + i * ROW_STEP, seg.low[i] ? GRASS_Y : ROW_Y, false, seg, i)
       return
@@ -431,7 +516,7 @@ export class Course {
   }
 
   /**
-   * Animates the course and drops what's behind behindX. With a bunny ({ x, y, tumbling })
+   * Animates the course and drops what's behind behindX. With a bunny ({ x, y, grounded, tumbling })
    * it also catches carrots and checks for bumps; pass null to only animate.
    * Returns this frame's events (carrot / missed / bump / cleared / unmist / flower / flowerAhead); the array is reused next frame.
    */
@@ -500,7 +585,10 @@ export class Course {
     if (it.missed) return false
     const o = it.obj
     const dx = it.x - bunny.x
-    if (Math.hypot(dx, o.position.y - (bunny.y + 0.75)) >= PICKUP) {
+    // one growing in the grass is munched only with Pip's feet on the ground: a hop that skims it
+    // (taking off or landing) goes over it, so staying down is the way to get it
+    const reach = it.low && bunny.grounded === false ? false : Math.hypot(dx, o.position.y - (bunny.y + 0.75)) < PICKUP
+    if (!reach) {
       if (it.seg && dx < -AWAY) {
         it.missed = true
         events.push({ type: 'missed', seg: it.seg, index: it.index })

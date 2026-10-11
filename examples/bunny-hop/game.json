@@ -2,7 +2,7 @@
   "id": "bunny-hop",
   "title": "Bunny Hop",
   "tagline": "Hop Pip the bunny home through meadows, mushrooms, autumn woods and snow!",
-  "howToPlay": "Tap the screen or press the space bar to hop, and tap again in the air for a flippy double hop. Pip needs carrots for winter: some hang at hop height (hop as each one comes) and some grow in the grass (stay down to munch them). Once Pip is catching whole rows, his basket asks for fewer carrots than the row holds: count them in, then let the rest go by. Too many, and the basket is too heavy: one rolls out. Logs, rocks, pumpkins and carrots come in patterns with their own notes; when a ? appears, pick what comes next, then keep the pattern going through the mist: hop for the obstacles and stay down for the carrots. A wrong pick plays the pattern again for another go, and right answers lead on to three-part and growing patterns. At home, Pip's pantry shows each place's crates; answer his question about them (a line of carrots helps you count on), then see if there are enough for winter. After each pattern, wild flowers grow in the grass: stay down to pick them, and at home plant them by Pip's door in a pattern of your own, which Pip sings back. Choose 🐢 for a slower trip.",
+  "howToPlay": "Tap the screen or press the space bar to hop, and tap again in the air to hop higher, up to a golden carrot. Pip needs carrots for winter: some hang at hop height (hop as each one comes) and some grow in the grass (stay down to munch them). Once Pip is catching whole rows, his basket asks for fewer carrots than the row holds: count them in, then let the rest go by. Too many, and the basket is too heavy: one rolls out for every carrot past full. Once a trip the path forks: add up each patch's two little groups and choose the one that makes Pip's number. Logs, rocks, pumpkins and carrots come in patterns with their own notes; when a ? appears, pick what comes next, then keep the pattern going through the mist: hop for the obstacles and stay down for the carrots. A wrong pick plays the pattern again for another go, and right answers lead on to three-part and growing patterns. At home, Pip's pantry shows each place's crates; answer his question about them (a line of carrots helps you count on), then see if there are enough for winter; older hoppers work out how many spare, or how many more Pip needs (a crate of ten helps past ten). After each pattern, wild flowers grow in the grass: stay down to pick them, and at home plant them by Pip's door in a pattern of your own, which Pip sings back (he wonders what comes next if it doesn't repeat yet). Choose 🐢 for a slower trip.",
   "emoji": "🐰",
   "color": "#8ac926",
   "category": "jump",
@@ -13,5 +13,5 @@
     3,
     8
   ],
-  "learning": "Counting, comparing and adding, reading and making patterns, and timing"
+  "learning": "Counting, comparing, adding and finding the difference, reading and making patterns, and timing"
 }

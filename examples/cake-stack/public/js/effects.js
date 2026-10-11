@@ -179,15 +179,16 @@ export class Effects {
   }
 
   /** Icing splats out of the side of a squished layer, mostly in direction dir (+1 right, -1 left). */
-  splat(pos, color, dir = 1, amount = 14) {
+  splat(pos, color, dir = 1, amount = 14, reach = 1) {
     const v = this.tmp
     for (let i = 0; i < amount; i++) {
       // Small blobs that fly sideways and up, barely toward the camera, so none looms large in front of the scene
-      v.set(dir * (1.5 + Math.random() * 2.5), 1 + Math.random() * 2.5, (Math.random() - 0.5) * 0.8)
+      // ...and they stay near the cake, so none flies across the birthday friend's face.
+      v.set(dir * reach * (0.3 + Math.random() * 0.6), 0.8 + Math.random() * 1.6, (Math.random() - 0.5) * 0.6)
       this.blobs.spawn(pos, v, { life: 0.7 + Math.random() * 0.4, size: 0.3 + Math.random() * 0.45, color, spin: 6 })
     }
     for (let i = 0; i < 3; i++) {
-      v.set(dir * Math.random() * 1.2, Math.random(), 0.1)
+      v.set(dir * reach * Math.random() * 1.2, Math.random(), 0.1)
       this.puffs.spawn(pos, v, { life: 0.45, size: 0.25 + Math.random() * 0.2, color: '#ffffff' })
     }
   }

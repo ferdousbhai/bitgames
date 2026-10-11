@@ -13,7 +13,7 @@ import * as THREE from 'three'
  *
  * Habitats (Phase 2, 2026-10-09): every real animal is caught only where it really lives.
  *   lake, river, night  fresh water: goldfish, trout, turtle, frog, crayfish, pond snail
- *   ice (Icy Sea)       cold sea: whale, narwhal, snow crabs, jellyfish
+ *   ice (Icy Sea)       cold sea: whale, narwhal, ringed seal, Arctic cod, snow crabs, jellyfish, octopus
  *   reef (Coral Reef)   warm sea: clownfish, pufferfish, octopus, crabs, jellyfish
  * Jellyfish live in every ocean, from warm reefs to icy seas, and many make their own light,
  * so the glow jellyfish lives in both seas (not in the fresh night pond).
@@ -27,10 +27,25 @@ import * as THREE from 'three'
  * Round 3 (2026-10-11): a ramshorn pond snail joins the fresh water. It keeps close under a lily pad
  * (main.js spawnAmbient), so knowing where snails live tells you where to cast. It widens the sort:
  * a shell but no claws, breathes air but no bones.
+ *
+ * Round 6 (2026-10-11): the Icy Sea was thin (two Blue Fish, a narwhal, a jellyfish, a crab), so "a fish"
+ * and "no bones" were hardly a choice there. The Arctic cod, the real small fish of the icy sea, joins it,
+ * and so does the octopus (octopuses live in every ocean, the Arctic too).
+ *   Arctic cod   https://en.wikipedia.org/wiki/Polar_cod (Arctic seas; brown back with dark dots; a chin barbel;
+ *                three dorsal fins as in all cods; food for narwhals, seals and seabirds)
+ *   Arctic octopus https://en.wikipedia.org/wiki/Bathypolypus_arcticus (North Atlantic and Arctic seas)
+ *
+ * Round 8 (2026-10-11): in the Icy Sea "a fish" was only ever the cod and "breathes air" only ever the
+ * narwhal, so the idea riddles there had one answer and two clues could hardly be made. The ringed seal,
+ * the small seal of the Arctic sea (already resting on the ice shore), joins the water: grey with ringed
+ * spots, not a fish, breathes air. Now "breathes air" is narwhal or seal, and two clues can tell them
+ * apart ("breathes air and has no tusk", "breathes air and is blue").
+ *   ringed seal  https://www.fisheries.noaa.gov/species/ringed-seal (Arctic; dark spots in light rings; keeps
+ *                breathing holes open in the ice with the strong claws on its front flippers)
  */
 export const CREATURES = [
   { id: 'goldfish', name: 'Goldfish', stars: 1, size: 0.9, how: 'swim', places: { lake: 10, river: 5, night: 5 } },
-  { id: 'bluefish', name: 'Blue Fish', stars: 1, size: 0.95, how: 'swim', places: { lake: 8, river: 5, night: 6, ice: 9 } },
+  { id: 'bluefish', name: 'Blue Fish', stars: 1, size: 0.95, how: 'swim', places: { lake: 8, river: 5, night: 6, ice: 5 } },
   { id: 'clownfish', name: 'Clownfish', stars: 1, size: 0.85, how: 'swim', places: { reef: 10 } },
   { id: 'trout', name: 'Rainbow Trout', stars: 1, size: 1.1, how: 'swim', places: { river: 10, lake: 1.5, night: 3 } },
   { id: 'duck', name: 'Rubber Duck', stars: 1, size: 0.75, how: 'surface', places: { lake: 2.5, river: 3, night: 2, ice: 1.5, reef: 1.5 } },
@@ -38,7 +53,7 @@ export const CREATURES = [
   { id: 'pufferfish', name: 'Pufferfish', stars: 2, size: 0.85, how: 'swim', places: { reef: 5 } },
   { id: 'crab', name: 'Crab', stars: 2, size: 0.85, how: 'swim', places: { reef: 4, ice: 3 } },
   { id: 'turtle', name: 'Turtle', stars: 2, size: 1.0, how: 'swim', places: { lake: 3, river: 3.5, night: 3 } },
-  { id: 'octopus', name: 'Octopus', stars: 2, size: 0.9, how: 'swim', places: { reef: 4 } },
+  { id: 'octopus', name: 'Octopus', stars: 2, size: 0.9, how: 'swim', places: { reef: 4, ice: 2.5 } },
   { id: 'jellyfish', name: 'Glow Jellyfish', stars: 2, size: 0.9, how: 'swim', places: { reef: 4, ice: 3 } },
   { id: 'narwhal', name: 'Baby Narwhal', stars: 2, size: 1.2, how: 'swim', places: { ice: 7 } },
   { id: 'goldenfish', name: 'Golden Fish', stars: 3, size: 0.95, how: 'swim', places: { lake: 0.8, river: 0.8, night: 0.8, ice: 0.8, reef: 0.8 } },
@@ -47,6 +62,8 @@ export const CREATURES = [
   { id: 'frog', name: 'Frog', stars: 2, size: 0.8, how: 'swim', places: { lake: 3, river: 2.5, night: 4 } },
   { id: 'crayfish', name: 'Crayfish', stars: 2, size: 1.05, how: 'swim', places: { lake: 2.5, river: 3.5, night: 2.5 } },
   { id: 'snail', name: 'Pond Snail', stars: 2, size: 0.75, how: 'swim', places: { lake: 2.5, river: 2, night: 2.5 } },
+  { id: 'cod', name: 'Arctic Cod', stars: 1, size: 0.95, how: 'swim', places: { ice: 8 } },
+  { id: 'seal', name: 'Ringed Seal', stars: 2, size: 1.1, how: 'swim', places: { ice: 4 } },
 ]
 export const BY_ID = Object.fromEntries(CREATURES.map((c) => [c.id, c]))
 
@@ -55,7 +72,7 @@ export const AMBIENT = {
   lake: ['goldfish', 'bluefish', 'trout', 'turtle', 'frog', 'crayfish', 'snail'],
   river: ['trout', 'goldfish', 'bluefish', 'turtle', 'crayfish', 'frog', 'snail'],
   night: ['goldfish', 'bluefish', 'trout', 'turtle', 'frog', 'crayfish', 'snail'],
-  ice: ['bluefish', 'narwhal', 'jellyfish', 'bluefish', 'crab'],
+  ice: ['cod', 'bluefish', 'narwhal', 'seal', 'jellyfish', 'crab', 'octopus'],
   reef: ['clownfish', 'pufferfish', 'clownfish', 'octopus', 'jellyfish', 'crab'],
 }
 

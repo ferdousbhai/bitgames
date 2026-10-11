@@ -9,7 +9,11 @@
  * Tier 2: an idea you can't see but can learn here: is it a fish or not, does it breathe air, does
  * it have bones. Several animals may fit; any of them answers it (sorting, not guessing).
  * Tier 3 (7-8): two clues at once, an idea and a thing you can see ("not a fish, but has spots";
- * "a fish with no spikes"). Each clue must rule someone out, so both have to be used.
+ * "a fish with no spikes"; "an animal with no bones and no shell"). Each clue must rule someone out, so
+ * both have to be used.
+ * Past tier 3 (after three two-clue riddles answered with the first catch): two different animals
+ * that fit both clues ("two different animals that breathe air and have a hard shell").
+ * Blue Fish and Golden Fish are pretend friends: they answer colours, never an idea clue.
  * main.js moves up after a run of first-catch answers and back down after one slow riddle.
  *
  * Every miss says why ("Those are arms, not tentacles"), so a wrong catch still teaches.
@@ -24,17 +28,21 @@
  *   frogs: amphibians, tadpoles, lungs and skin breathing  https://en.wikipedia.org/wiki/Frog
  *   crayfish: fresh-water crustaceans, shell outside, claws  https://en.wikipedia.org/wiki/Crayfish
  *   ramshorn snails: fresh-water, air-breathing (lung) snails  https://en.wikipedia.org/wiki/Planorbidae
+ *   Arctic cod: a fish of the icy sea, dark-spotted back  https://en.wikipedia.org/wiki/Polar_cod
  *   snails and octopuses are both molluscs  https://ocean.si.edu/ocean-life/invertebrates/octopuses-squids-and-relatives
+ *   ringed seals: Arctic mammals, ringed spots, breathe air at holes in the ice  https://www.fisheries.noaa.gov/species/ringed-seal
  */
 
 /** What each catch has, as the child sees the models. Toys, the boot and the treasure fit no idea clue. */
 export const HAS = {
   goldfish: ['orange', 'fish'],
-  bluefish: ['blue', 'fish'],
+  // Blue Fish and Golden Fish are pretend friends (the book sorts them into "Not real"), so they answer
+  // what you can see (blue, yellow) but no idea clue: "a fish" means a real fish, with real gills
+  bluefish: ['blue'],
   clownfish: ['orange', 'stripes', 'fish'],
   trout: ['spots', 'fish'],
   pufferfish: ['yellow', 'spikes', 'spots', 'fish'],
-  goldenfish: ['yellow', 'fish'],
+  goldenfish: ['yellow'],
   turtle: ['shell', 'notfish', 'air'],
   frog: ['spots', 'notfish', 'air'],
   // Olive brown (wild crayfish are; they only go red when cooked), so it is never asked for as orange
@@ -43,7 +51,12 @@ export const HAS = {
   crab: ['red', 'shell', 'claws', 'notfish', 'nobones'],
   // A ramshorn pond snail: a coiled shell and a soft foot; it comes up to breathe air
   snail: ['shell', 'notfish', 'air', 'nobones'],
-  octopus: ['arms', 'spots', 'notfish', 'nobones'],
+  // No spots: the model is plain lilac all over (its spots were too faint to see, so they are gone)
+  octopus: ['arms', 'notfish', 'nobones'],
+  // Arctic (polar) cod: a real fish of the icy sea, speckled with dark spots on a brown back
+  cod: ['spots', 'fish'],
+  // Ringed seal: grey (never blue), dark spots in pale rings; a mammal that breathes air
+  seal: ['spots', 'notfish', 'air'],
   jellyfish: ['tentacles', 'notfish', 'nobones'],
   narwhal: ['blue', 'spots', 'tusk', 'notfish', 'air'],
   whale: ['blue', 'notfish', 'air'],
@@ -70,13 +83,15 @@ export const TRAITS = {
   tentacles: { tier: 1, icon: '〰️', word: 'tentacles', ask: 'something with long tentacles', has: 'has tentacles', hasnt: 'has no tentacles', no: 'No tentacles.' },
   tusk: { tier: 1, icon: '🦷', word: 'tusk', ask: 'something with a long tusk', has: 'has a tusk', hasnt: 'has no tusk', no: 'No tusk.' },
   // ask2 / more: tier 2 often asks for two different animals that share the idea (see twoOf)
-  fish: { tier: 2, icon: '🐟', word: 'a fish', ask: 'a fish', ask2: 'two different kinds of fish', is: "It's a fish", more: 'Can you find a different fish?', lead: 'a fish that', short: 'fish' },
+  fish: { tier: 2, icon: '🐟', word: 'a fish', ask: 'a fish', ask2: 'two different kinds of fish', is: "It's a fish", more: 'Can you find a different fish?', lead: 'a fish that', lead2: 'fish that', short: 'fish' },
   notfish: {
     tier: 2, icon: '🐟', not: true, word: 'not a fish', ask: 'an animal that is not a fish', ask2: 'two different animals that are not fish', is: "It's not a fish", more: 'Who else is not a fish?',
-    lead: 'an animal that is not a fish,', but: true, short: 'not fish',
+    lead: 'an animal that is not a fish,', lead2: 'animals that are not fish,', but: true, short: 'not fish',
   },
-  air: { tier: 2, icon: '🫧', word: 'breathes air', ask: 'an animal that breathes air', ask2: 'two different animals that breathe air', is: 'It breathes air', more: 'Who else breathes air?', lead: 'an animal that breathes air and', short: 'air' },
-  nobones: { tier: 2, icon: '🦴', not: true, word: 'no bones', ask: 'an animal with no bones', ask2: 'two different animals with no bones', is: 'It has no bones', more: 'Who else has no bones?', lead: 'an animal with no bones that', short: 'no bones' },
+  air: { tier: 2, icon: '🫧', word: 'breathes air', ask: 'an animal that breathes air', ask2: 'two different animals that breathe air', is: 'It breathes air', more: 'Who else breathes air?', lead: 'an animal that breathes air and', lead2: 'animals that breathe air and', short: 'air' },
+  // nor: the one look "no bones" may take as a "no" too, because it reads as one easy phrase and holds the idea:
+  // "an animal with no bones and no shell" (a crab has no bones, but wears a hard shell outside)
+  nobones: { tier: 2, icon: '🦴', not: true, word: 'no bones', ask: 'an animal with no bones', ask2: 'two different animals with no bones', is: 'It has no bones', more: 'Who else has no bones?', lead: 'an animal with no bones that', lead2: 'animals with no bones that', short: 'no bones', nor: ['shell'] },
 }
 
 /** Why the answer fits an idea clue: the learning. Two or three ways to say it, so a trip doesn't repeat. */
@@ -89,6 +104,7 @@ const WHY = {
     frog: ['Frogs are amphibians. They start as tadpoles!', 'A frog has legs, not fins.'],
     narwhal: ['Narwhals are whales, not fish.', 'A narwhal comes up to breathe air.'],
     whale: ['Whales are not fish. They breathe air.'],
+    seal: ['A seal is a mammal, like you. Not a fish!', 'A seal swims with flippers, not fins.'],
     jellyfish: ["Jellyfish aren't fish at all!", 'No fins, no gills, no bones.'],
     octopus: ['An octopus is not a fish. It has no bones.', 'An octopus crawls on its arms.'],
     crab: ['Crabs are not fish. They walk on legs.', 'A crab has a shell and legs.'],
@@ -101,6 +117,7 @@ const WHY = {
     snail: ['A pond snail creeps up to the top to breathe air.', 'A pond snail takes a breath of air at the top.'],
     narwhal: ['Narwhals breathe air through a blowhole.'],
     whale: ['Whales breathe air through a blowhole.'],
+    seal: ['A seal holds its breath under water, then comes up for air.', 'Seals breathe at holes in the ice.'],
   },
   nobones: {
     octopus: ['No bones, so it can squeeze through tiny gaps.', 'An octopus is soft all over.'],
@@ -117,6 +134,8 @@ const NEAR = {
   'arms:jellyfish': ['Those are tentacles, not arms. An octopus has eight arms.', 'Long thin tentacles! Eight arms is an octopus.'],
   'claws:turtle': ['Its claws are tiny, for walking. Look for big pinching claws.', 'Little walking claws. Bear wants big pinchers.'],
   'stripes:trout': ['Its stripe is pink. Look for white stripes.', 'One pink stripe. Bear wants white ones.'],
+  // From a distance a turtle's raised shell plates can look like spots
+  'spots:turtle': ['Those are shell plates, not spots.', 'Bumpy shell plates! Bear wants spots.'],
   'shell:frog': ['Its skin is soft and wet. No shell.', 'A frog is soft and smooth all over.'],
   'spikes:crab': ['A crab has a smooth shell. No spikes.', 'Smooth shell, no spikes.'],
   'claws:snail': ['A snail has soft feelers, not claws.', 'Those are feelers. Snails cannot pinch.'],
@@ -134,6 +153,11 @@ const NOT_IDEA = {
 }
 
 const NOT_ANIMAL = new Set(['duck', 'boot', 'chest'])
+/** Pretend friends miss every idea clue for the same reason the sorting page gives: they are not real. */
+const PRETEND = {
+  bluefish: ['Blue Fish is a pretend friend. Bear wants a real animal.', 'Blue Fish is only pretend. Bear wants a real one.'],
+  goldenfish: ['Golden Fish is pretend magic. Bear wants a real animal.'],
+}
 const has = (id, c) => (HAS[id] ?? []).includes(c.t) !== !!c.neg
 
 /** Fits every clue, and isn't a kind already found for this riddle (a "find two" wants two different ones). */
@@ -145,12 +169,20 @@ export const fits = (riddle, id) => !!riddle && riddle.clues.every((c) => has(id
  */
 export function twoOf(r) {
   const t = TRAITS[r.clues[0].t]
-  if (r.clues.length > 1 || !t.ask2) return r
+  if (r.clues.length > 1) {
+    // Tier 3, once two-clue riddles come easily: two different animals that fit both clues
+    // ("two animals that breathe air and have a shell"): every catch is checked against both
+    const [a, b] = r.clues
+    if (t.not && b.neg) return { ...r, need: 2, key: `${r.key}*2`, ask: `${t.ask2} and ${nor(b)}`, more: 'Can you find a different one that fits both clues?' }
+    const second = (b.neg ? TRAITS[b.t].hasnt : TRAITS[b.t].has).replace(/^is /, 'are ').replace(/^has /, 'have ').replace(/^does /, 'do ')
+    return { ...r, need: 2, key: `${r.key}*2`, ask: `two different ${t.lead2} ${t.but ? 'but ' : ''}${second}`, more: 'Can you find a different one that fits both clues?' }
+  }
+  if (!t.ask2) return r
   return { ...r, need: 2, ask: t.ask2 }
 }
 
 /** What Bear asks after one of two is found, or when the same kind is caught again. */
-export const more = (r) => TRAITS[r.clues[0].t].more ?? ''
+export const more = (r) => r.more ?? TRAITS[r.clues[0].t].more ?? ''
 
 /** A riddle from its clues: what Bear says, and the picture and word on the chip. */
 function riddle(clues, tier) {
@@ -158,7 +190,10 @@ function riddle(clues, tier) {
   if (!b) return { clues, tier, tries: 0, misses: 0, need: 1, found: [], key: clues[0].t, ask: a.ask, word: a.word, icons: [{ icon: a.icon, not: !!a.not }] }
   const neg = clues[1].neg
   // "an animal that is not a fish, but has spots" / "a fish that has no spikes" / "an animal that breathes air and has a shell"
-  const lead = a.but ? `${a.lead} ${neg ? 'and' : 'but'}` : a.lead
+  // (a "not" idea never takes a "not" look: see plainClues)
+  const lead = a.but ? `${a.lead} but` : a.lead
+  // "an animal with no bones and no shell" (the one "no" look a "no" idea takes: see TRAITS.nobones.nor)
+  const ask = a.not && neg ? `${a.ask} and ${nor(clues[1])}` : `${lead} ${neg ? b.hasnt : b.has}`
   return {
     clues,
     tier,
@@ -167,7 +202,7 @@ function riddle(clues, tier) {
     need: 1,
     found: [],
     key: `${clues[0].t}+${neg ? '!' : ''}${clues[1].t}`,
-    ask: `${lead} ${neg ? b.hasnt : b.has}`,
+    ask,
     word: `${a.short} + ${neg ? 'no ' : ''}${b.word}`,
     icons: [
       { icon: a.icon, not: !!a.not },
@@ -177,12 +212,20 @@ function riddle(clues, tier) {
 }
 
 /**
+ * Two clues are heard, not read, so a "not" idea (not a fish, no bones) only pairs with something the
+ * animal has: "not a fish, but has spots", never "not a fish, and has no spots".
+ */
+const plainNegs = (t, f) => (!TRAITS[t].not || TRAITS[t].nor?.includes(f) ? [false, true] : [false])
+/** A "no" look said after a "no" idea: "no shell". */
+const nor = (c) => TRAITS[c.t].hasnt.replace(/^has /, '')
+
+/**
  * A riddle that makes the child choose: at least one swimmer here fits and at least one doesn't.
  * `kinds` are the animals the child can see now; `last` is the riddle just asked and `recent`
  * the keys of the last few, which are left out while there are others to ask. `answered` are the
  * animals that solved the last few riddles: a riddle with another answer is preferred.
  */
-export function makeRiddle(kinds, tier, last, recent = [], answered = []) {
+export function makeRiddle(kinds, tier, last, recent = [], answered = [], { two = false, want = null, avoid = [] } = {}) {
   const ids = [...new Set(kinds)]
   const who = (clues) => ids.filter((id) => clues.every((c) => has(id, c)))
   const ok = (clues) => {
@@ -195,7 +238,7 @@ export function makeRiddle(kinds, tier, last, recent = [], answered = []) {
     // Two clues, an idea and a thing you can see, where each clue rules someone out
     for (const t of Object.keys(TRAITS).filter((k) => TRAITS[k].tier === 2)) {
       for (const f of Object.keys(TRAITS).filter((k) => TRAITS[k].tier === 1)) {
-        for (const neg of [false, true]) {
+        for (const neg of plainNegs(t, f)) {
           const clues = [{ t }, { t: f, neg }]
           const both = who(clues).length
           if (both && ok(clues) && both < who([clues[0]]).length && both < who([clues[1]]).length) pool.push(clues)
@@ -203,33 +246,71 @@ export function makeRiddle(kinds, tier, last, recent = [], answered = []) {
       }
     }
   }
+  // Where only one or two two-clue riddles fit (the Icy Sea has one real fish), the idea riddles join
+  // them, so the same narwhal isn't the answer every time
+  if (tier >= 3 && pool.length < 3) pool = [...pool, ...single(2)]
   if (!pool.length && tier >= 2) pool = single(2)
   if (!pool.length) pool = single(1)
+  // A riddle this animal answers (main.js: a little one stuck on one riddle gets one the ringed swimmer fits)
+  if (want) {
+    const mine = [...pool, ...single(1)].filter((c) => who(c).includes(want))
+    if (mine.length) pool = mine
+  }
   // Prefer clues that fit the few, not the many, so the choice is a real look, not a safe bet
   // ("a fish" where three of four swimmers are fish is no riddle at all)
   const few = pool.filter((c) => who(c).length <= ids.length * 0.6)
   if (few.length) pool = few
+  // Riddles not asked lately come first, before the turn-taking below (else the one riddle with another idea
+  // came up every other time: "no bones and no shell" was 40% of the reef's two-clue riddles)
+  const keyOf = (c) => riddle(c, tier).key
+  // `avoid`: what an item still on Bear's list asks (that riddle is the list's), left out while others fit
+  const open = pool.filter((c) => !avoid.includes(keyOf(c)))
+  if (open.length) pool = open
+  // (only as many as leaves a choice of two, so a small pool doesn't fall into one fixed order)
+  const asked = recent.map((k) => k.replace(/\*2$/, '')).slice(0, Math.max(1, new Set(pool.map(keyOf)).size - 2)) // a "find two" counts as its riddle
+  const unasked = pool.filter((c) => !asked.includes(keyOf(c)))
+  if (unasked.length) pool = unasked
+  // Two clues have to be read every time, so at tier 3 the same answer (or idea) may come twice running now
+  // and then: always turning away from the last one made a pattern a careful child could learn instead of
+  // the clues (on the reef the answer used to swing clownfish, pufferfish, clownfish...).
+  const vary = () => tier < 3 || Math.random() < 0.6
   // Never the same answer twice running (in the lake "not a fish" and "breathes air" can both be the turtle)
   if (last) {
     const before = who(last.clues).join()
-    const fresh = pool.filter((c) => who(c).join() !== before && c.map((x) => x.t).join() !== last.clues.map((x) => x.t).join())
+    const same = last.clues.map((x) => x.t).join()
+    const other = vary()
+    const fresh = pool.filter((c) => (!other || who(c).join() !== before) && c.map((x) => x.t).join() !== same)
     if (fresh.length) pool = fresh
     // and lead with a different idea where there is one ("not a fish" five times running is samey)
     const turn = pool.filter((c) => c[0].t !== last.clues[0].t)
-    if (turn.length) pool = turn
+    if (turn.length && vary()) pool = turn
+  }
+  // Never the animal that answered last (a Bear's list item too), so one octopus doesn't answer three in a row
+  if (answered[0] && vary()) {
+    const other = pool.filter((c) => !who(c).includes(answered[0]))
+    if (other.length) pool = other
   }
   // Lean away from the animals that answered the last few riddles, so the same frog isn't the answer every time
   const freshAnswer = pool.filter((c) => who(c).some((id) => !answered.includes(id)))
   if (freshAnswer.length) pool = freshAnswer
-  const keyOf = (c) => riddle(c, tier).key
-  const unasked = pool.filter((c) => !recent.includes(keyOf(c)))
-  if (unasked.length) pool = unasked
   // "A fish" is the easiest idea: tier 2 mostly asks the others (breathes air, no bones, not a fish)
   if (tier === 2) {
     const harder = pool.filter((c) => c[0].t !== 'fish')
     if (harder.length && Math.random() < 0.75) pool = harder
   }
-  const clues = pool[(Math.random() * pool.length) | 0]
+  // The step past two clues: two different animals that fit both, where two such kinds are in view
+  // (about half the time, and only one not asked lately, so the one-answer riddles keep coming round too)
+  if (two && Math.random() < 0.5) {
+    const pair = pool.filter((c) => c.length > 1 && who(c).length >= 2)
+    if (pair.length) pool = pair
+  }
+  // Choose who answers first, then a riddle for them: the reef has five riddles with a fish answer and one
+  // for the octopus and jellyfish, and each answer should come round as often as the others
+  const groups = new Map()
+  for (const c of pool) groups.set(who(c).join(), [...(groups.get(who(c).join()) ?? []), c])
+  const byWho = [...groups.values()]
+  const group = byWho[(Math.random() * byWho.length) | 0] ?? []
+  const clues = group[(Math.random() * group.length) | 0]
   return clues ? riddle(clues, tier >= 3 && clues.length > 1 ? 3 : TRAITS[clues[0].t].tier) : null
 }
 
@@ -245,7 +326,7 @@ export function makeList(places, water) {
   const ideas = Object.keys(TRAITS).filter((k) => TRAITS[k].tier === 2)
   const looks = Object.keys(TRAITS).filter((k) => TRAITS[k].tier === 1)
   const sets = [...looks.map((t) => [{ t }]), ...ideas.map((t) => [{ t }])]
-  for (const t of ideas) for (const f of looks) for (const neg of [false, true]) sets.push([{ t }, { t: f, neg }])
+  for (const t of ideas) for (const f of looks) for (const neg of plainNegs(t, f)) sets.push([{ t }, { t: f, neg }])
   const cands = []
   for (const clues of sets) {
     const who = (p) => places[p].filter((id) => clues.every((c) => has(id, c)))
@@ -260,11 +341,15 @@ export function makeList(places, water) {
     const j = (Math.random() * (i + 1)) | 0
     ;[cands[i], cands[j]] = [cands[j], cands[i]]
   }
-  // One for each water first, then a third: never two items the same animal could answer
+  // One for each water first, then a third: never two items the same animal could answer. The list is
+  // for children who reached two-clue riddles, so an idea or two clues come first; a single thing to see
+  // ("tentacles") only when nothing else fits.
   const list = []
   const clash = (c) => list.some((l) => [...c.answers].some((id) => l.answers.has(id)))
+  const look = (c) => c.clues.length === 1 && TRAITS[c.clues[0].t].tier === 1
   for (const w of ['fresh', 'sea', null]) {
-    const c = cands.find((x) => (!w || x.water === w) && !list.includes(x) && !clash(x))
+    const open = cands.filter((x) => (!w || x.water === w) && !list.includes(x) && !clash(x))
+    const c = open.find((x) => !look(x)) ?? open[0]
     if (c) list.push(c)
   }
   return list.map((c) => ({ clues: c.clues, done: false }))
@@ -282,53 +367,71 @@ export function listRiddle(item) {
 export const answersHere = (item, kinds) => kinds.some((id) => item.clues.every((c) => has(id, c)))
 
 /**
- * One line from a list, a fresh one each time in a trip (`said` remembers what was said). When all have
- * been said they come round again, but never the same one twice in a row.
+ * One line from a list, a fresh one each time in a trip (`said` remembers what was said). Once all have
+ * been said this trip it returns '' and the caller says less: a sentence is never said twice in a trip.
  */
-let lastPick = ''
 function pick(list, said) {
-  if (!list?.length) return ''
-  let fresh = list.filter((s) => !said?.has(s))
-  if (!fresh.length) {
-    for (const s of list) said?.delete(s)
-    fresh = list.length > 1 ? list.filter((s) => s !== lastPick) : list
-  }
-  const line = fresh[0]
-  said?.add(line)
-  lastPick = line
+  const line = list?.find((s) => !said?.has(s)) ?? ''
+  if (line) said?.add(line)
   return line
 }
 
-const article = (name) => `${/^[aeiou]/i.test(name) ? 'An' : 'A'} ${name.toLowerCase()}`
+/** A whole sentence once a trip; a repeat falls back to its short form ("Yes! A blue fish!"). */
+function once(line, short, said) {
+  if (!said) return line
+  if (said.has(line)) return short
+  said.add(line)
+  return line
+}
 
-/** What Bear says when a catch reaches the stage: its name, whether it fits, and why. */
+/** A name inside a sentence: lower case, but a place name keeps its capital ("an Arctic cod"). */
+export const lower = (name) => name.toLowerCase().replace(/\barctic\b/, 'Arctic')
+const article = (name) => `${/^[aeiou]/i.test(name) ? 'An' : 'A'} ${lower(name)}`
+
+/**
+ * What Bear says when a catch reaches the stage: its name, whether it fits, and why. `said` is the
+ * trip's set of sentences: no whole sentence is said twice in a trip (a repeat says the short form).
+ * A miss also leaves its reason on `r.reason`, for the card under the catch.
+ */
 export function verdict(r, id, name, said) {
   if (!r) return null
+  // `mute`: this short reason was already said this trip, so the card shows it and the voice rests
+  r.mute = false
+  r.reason = ''
   const a = article(name)
+  const yes = `Yes! ${a}!`
   if (r.found.includes(id)) {
     // The same kind again: the first time says why it goes back, a repeat only asks "Who else?"
     const again = r.lastMiss === `${id}:again`
     r.lastMiss = `${id}:again`
-    return again ? more(r) : `Another ${name.toLowerCase()}! Back you go. ${more(r)}`
+    r.reason = more(r)
+    // ("Can you find a different fish?" already said this trip is left to the card and the empty slot)
+    if (again) {
+      r.mute = !!said?.has(more(r))
+      return more(r)
+    }
+    return `Another ${lower(name)}! Back you go. ${once(more(r), '', said)}`.trim()
   }
   if (fits(r, id)) {
     r.lastMiss = null
     const idea = r.clues.find((c) => TRAITS[c.t].tier === 2)
-    // One of two found: the reason, then "Who else breathes air?"
-    if (r.found.length + 1 < r.need) return `Yes! ${a}! ${pick(WHY[idea.t]?.[id] ?? WHY[idea.t]?.any, said)} ${more(r)}`
-    // "Yes! A goldfish is orange!" (but not "a blue fish is blue")
-    if (!idea) return name.toLowerCase().includes(TRAITS[r.clues[0].t].word) ? `Yes! ${a}!` : `Yes! ${a} ${TRAITS[r.clues[0].t].has}!`
-    // Two clues: say how it fits both, which is the thinking ("It's a fish, and it has spots.")
-    if (r.clues.length > 1) {
-      const c = r.clues.find((x) => x !== idea)
-      return `Yes! ${a}! ${TRAITS[idea.t].is}, and it ${c.neg ? TRAITS[c.t].hasnt : TRAITS[c.t].has}.`
+    // One of two found: the reason (or, for two clues, how it fits both), then "Who else breathes air?"
+    if (r.found.length + 1 < r.need) {
+      // Each part once a trip: "Who else breathes air?" said before is left to the chip's empty slot
+      const why = r.clues.length > 1 ? once(both(r, idea), '', said) : pick(WHY[idea.t]?.[id] ?? WHY[idea.t]?.any, said)
+      const ask = once(more(r), '', said)
+      return `${yes} ${why} ${ask}`.replace(/ +/g, ' ').trim()
     }
+    // "Yes! A goldfish is orange!" (but not "a blue fish is blue")
+    if (!idea) return lower(name).includes(TRAITS[r.clues[0].t].word) ? yes : once(`Yes! ${a} ${TRAITS[r.clues[0].t].has}!`, yes, said)
+    // Two clues: say how it fits both, which is the thinking ("It's a fish, and it has spots.")
+    if (r.clues.length > 1) return `${yes} ${once(both(r, idea), '', said)}`.trim()
     const why = WHY[idea.t]
-    return `Yes! ${a}! ${pick(why?.[id] ?? why?.any, said)}`.trim()
+    return `${yes} ${pick(why?.[id] ?? why?.any, said)}`.trim()
   }
   // Explain the first clue it misses. The same animal missing the same clue again, in a row, or any
-  // miss after two on this riddle, hears only the short reason: the card shows the name, and the voice
-  // doesn't nag (the soft ring on the water is helping by then).
+  // miss after two on this riddle, hears only the short reason, once a trip: the card shows it after
+  // that, and the voice doesn't nag (the soft ring on the water is helping by then).
   const c = r.clues.find((x) => !has(id, x))
   const t = TRAITS[c.t]
   const key = `${id}:${c.neg ? '!' : ''}${c.t}`
@@ -336,12 +439,33 @@ export function verdict(r, id, name, said) {
   r.lastMiss = key
   let why
   if (NOT_ANIMAL.has(id) && t.tier === 2) why = ["That's not an animal!"]
-  else if (c.t === 'fish') why = WHY.notfish[id] ? ["That's not a fish!", ...WHY.notfish[id].map((w) => `That's not a fish! ${w}`)] : ["That's not a fish!"]
+  // A pretend friend: the same reason the sorting page gives ("Blue Fish is a pretend friend.")
+  else if (PRETEND[id] && t.tier === 2) why = PRETEND[id]
+  // (without the reasons that only say "not a fish" again: "That's not a fish! An octopus is not a fish.")
+  else if (c.t === 'fish') why = ["That's not a fish!", ...(WHY.notfish[id] ?? []).filter((w) => !/not (a )?fish|n't fish/i.test(w)).map((w) => `That's not a fish! ${w}`)]
   else if (NOT_IDEA[c.t]) why = NOT_IDEA[c.t]
   else if (c.neg) why = [`It ${t.has}.`, `Bear wants one that ${t.hasnt}.`]
   else why = NEAR[`${c.t}:${id}`] ?? [t.no, `${t.no} Bear wants ${t.ask}.`, `Look for ${t.ask}.`]
-  if (again || r.misses >= 2) return NEAR[`${c.t}:${id}`] ? t.no : why[0]
-  return `${a}. ${pick(why, said)} Back you go!`
+  const short = NEAR[`${c.t}:${id}`] && !PRETEND[id] ? t.no : why[0]
+  r.reason = short
+  if (again || r.misses >= 2) {
+    const k = `short:${short}`
+    r.mute = !!said?.has(k)
+    said?.add(k)
+    return short
+  }
+  const reason = pick(why, said)
+  if (reason) r.reason = reason
+  // ("No tentacles." said inside the first miss line counts: a second miss for it is the card and a plip)
+  if (reason === short) said?.add(`short:${short}`)
+  // Every reason for this miss was said earlier in the trip: just the name (the card shows why)
+  return reason ? `${a}. ${reason} Back you go!` : `${a}. Back you go!`
+}
+
+/** How a catch fits both of two clues: "It's a fish, and it has no spots." */
+function both(r, idea) {
+  const c = r.clues.find((x) => x !== idea)
+  return `${TRAITS[idea.t].is}, and it ${c.neg ? TRAITS[c.t].hasnt : TRAITS[c.t].has}.`
 }
 
 /** The reason part of a miss line, for the card under the catch ("No pinching claws."). */

@@ -67,7 +67,7 @@ export class Pickups {
   }
 
   /** Lays out this race's stars and boxes. Deterministic in `seed`. */
-  build(track, seed) {
+  build(track, seed, { stars = true } = {}) {
     this.dispose()
     this.track = track
     const r = rng((seed ^ 0x51a7) >>> 0)
@@ -83,10 +83,11 @@ export class Pickups {
       if (track.nearRamp(d, 10) || track.nearRamp(d + 18, 10)) continue
       const lane = (r() - 0.5) * (track.width - 3.5)
       const weave = (r() - 0.5) * 0.9
-      for (let k = 0; k < 5; k++) place(this.stars, d + k * 4, clamp(lane + weave * k, -half + 1.4, half - 1.4), 0.95)
+      // Without stars the seeded numbers are still spent, so the boxes land where they always did.
+      if (stars) for (let k = 0; k < 5; k++) place(this.stars, d + k * 4, clamp(lane + weave * k, -half + 1.4, half - 1.4), 0.95)
     }
     // An arc of stars over every jump: grab them in the air.
-    for (const j of track.jumps) {
+    for (const j of stars ? track.jumps : []) {
       const span = j.gap + j.face * 0.6
       for (let k = 0; k <= 6; k++) {
         const t = k / 6
@@ -197,8 +198,9 @@ export class Pickups {
       const it = this.boxes[i]
       // A box pops back in over its last half second.
       const back = seen ? clamp(1 - (seen.boxes[i] - now) / 0.5, 0, 1) : 1
-      d.position.set(it.x, it.y + Math.sin(this.time * 2.2 + i) * 0.18, it.z)
-      d.rotation.set(0.35, this.time * 1.4 + i, 0.2)
+      // A slow, gentle turn: something to notice on the road, not a flashing prize.
+      d.position.set(it.x, it.y + Math.sin(this.time * 1.2 + i) * 0.08, it.z)
+      d.rotation.set(0.35, this.time * 0.5 + i, 0.2)
       d.scale.setScalar(back)
       d.updateMatrix()
       this.boxMesh.setMatrixAt(i, d.matrix)

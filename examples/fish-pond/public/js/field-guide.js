@@ -13,6 +13,9 @@
 //   reefs      https://oceanservice.noaa.gov/education/tutorial_corals/coral05_distribution.html (warm, shallow)
 //   snow crab  https://www.fisheries.noaa.gov/species/alaska-snow-crab (Bering, Beaufort and Chukchi Seas)
 //   whale      https://ocean.si.edu/ocean-life/marine-mammals/whales
+//   seal       https://www.fisheries.noaa.gov/species/ringed-seal (Arctic; breathing holes in the ice; pups in snow dens)
+//   cod        https://en.wikipedia.org/wiki/Polar_cod (Arctic seas, often under sea ice; eaten by narwhals and seals)
+//   octopus    https://en.wikipedia.org/wiki/Bathypolypus_arcticus (an octopus of the Arctic and North Atlantic)
 //   frog       https://en.wikipedia.org/wiki/Frog (tadpoles grow into frogs; adults breathe air)
 //   crayfish   https://en.wikipedia.org/wiki/Crayfish (fresh water; relatives of lobsters and crabs)
 //   snail      https://en.wikipedia.org/wiki/Planorbidae (ramshorn snails: fresh water, graze on algae on
@@ -27,7 +30,7 @@ const NOTES = {
   pufferfish: 'A real pufferfish gulps water to puff up big when it is scared. Most live in warm seas.',
   crab: 'Many real crabs scuttle sideways on their walking legs. Some live on reefs, some in icy seas.',
   turtle: 'Real pond turtles climb onto logs to warm up in the sun.',
-  octopus: 'A real octopus has eight arms. It hides in a cozy den between the rocks.',
+  octopus: 'A real octopus has eight arms. It hides in a cozy den between rocks, in warm seas and icy ones.',
   jellyfish: 'Real jellyfish drift in every sea, warm or icy. Many can make their own light.',
   narwhal: 'Real narwhals are whales from the icy Arctic Ocean. The long tusk is a tooth!',
   goldenfish: 'Golden Fish is a magic pretend fish. It is very hard to find!',
@@ -35,6 +38,8 @@ const NOTES = {
   frog: 'Real frogs start life as tadpoles in ponds. Then they grow legs and breathe air.',
   crayfish: 'Real crayfish live in streams and ponds. They are cousins of crabs and lobsters.',
   snail: 'Pond snails creep under lily pads, nibbling the green slime. Look by the lily pads!',
+  cod: 'Real Arctic cod swim in the icy sea, under the ice. Narwhals and seals love to eat them.',
+  seal: 'Real ringed seals live in the icy Arctic sea. They keep holes open in the ice to breathe.',
   whale: 'Real whales live in the ocean. They breathe air through a blowhole on top.',
 }
 

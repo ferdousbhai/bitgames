@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { canvasTexture, reducedMotion, rng, wrap } from './util.js'
+import { SPUR } from './track.js'
 
 /**
  * Delivery Town: a calm, unraced drive round a city with picture parcels.
@@ -40,7 +41,15 @@ export const KINDS = [
  */
 export const TIERS = [null, { houses: 4, carry: 1 }, { houses: 4, carry: 2, pairs: true, roadworks: true }, { houses: 4, carry: 2, pairs: true, oneWay: true }]
 export const TOP_TIER = TIERS.length - 1
+/**
+ * The side streets' names, as pictures: each has its picture on a sign at its
+ * corner and beside its corner on the map. A house at the end of one cannot
+ * be seen from the main road, so the map says which street to turn into.
+ */
+export const STREETS = [{ emoji: '🌈', name: 'Rainbow Street', colour: '#ffd166' }, { emoji: '🌙', name: 'Moon Street', colour: '#9bb7ff' }]
 export const HOUSES = 4
+/** How much longer a side street is drawn on the map than it is (see townMapLayout). */
+const MAP_STRETCH = 1.8
 const EMOJI_FONT = 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
 
 const textures = new Map()
@@ -175,6 +184,19 @@ function facingSign(track, dist, lateral, facing, emoji, ring) {
   return g
 }
 
+/** A side street's name sign: its picture on a post at the corner, beside the lane, seen from both ways along the road. */
+function streetSign(track, spur, street) {
+  const g = new THREE.Group()
+  const at = spur.mouth.clone().addScaledVector(spur.t, 7 / 2 + 1.3).addScaledVector(spur.u, 1.2)
+  const pole = new THREE.Mesh(poleGeometry, poleMaterial)
+  pole.position.set(at.x, 2.1, at.z)
+  pole.castShadow = true
+  const board = sprite(pictureTexture(street.emoji, street.colour), 2.6)
+  board.position.set(at.x, 4.9, at.z)
+  g.add(pole, board)
+  return g
+}
+
 /**
  * Tier 3's one-way street: white arrows painted along it every dozen metres,
  * a blue ⬆️ sign where traffic may enter, and a ⛔ facing anyone who tries to
@@ -304,7 +326,7 @@ export function createTown(scene) {
     show(value) { group.visible = value; if (roof) roof.visible = value },
 
     /** Lays out this drive's houses. Deterministic in `seed`, so friends in the same town see the same houses. */
-    configure(track, seed, tier = 1) {
+    configure(track, seed, tier = 1, { behind = false } = {}) {
       clear()
       const r = rng((seed ^ 0x70f7) >>> 0)
       const count = TIERS[tier]?.houses ?? HOUSES
@@ -318,60 +340,90 @@ export function createTown(scene) {
       // Pins on the paper map are about a sixth of the town wide: houses closer than that would cover each other.
       const minApart = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) * 0.16
       const start = L - 8
-      // Tier 2: road works close the loop in one of the gaps between houses (never the start's own gap).
-      closed = TIERS[tier]?.roadworks ? track.clearOfRamps((L * (1 + Math.floor(r() * (count - 1)))) / count, 14) : null
-      // Tier 3: a one-way street over one of the gaps between houses (never the start's), either way round.
+      // Side streets the city made room for (track.planSpurs): a house stands at the end of each.
+      const spurs = (track.spurs ?? []).slice(0, Math.min(STREETS.length, count))
+      const nearJunction = (d, m) => spurs.some((sp) => Math.abs(track.offset(d, sp.dist)) < m)
+      // The gaps between evenly spread houses (never the start's own), in a seeded order: road works and the one-way street use one clear of the junctions.
+      const gaps = Array.from({ length: count - 1 }, (_, k) => (L * (k + 1)) / count).sort(() => r() - 0.5)
+      // Tier 2: road works close the loop in one of the gaps.
+      if (TIERS[tier]?.roadworks) {
+        const at = gaps.map((g) => track.clearOfRamps(g, 14))
+        closed = at.find((d) => !nearJunction(d, 28)) ?? at[0]
+      }
+      // Tier 3: a one-way street over one of the gaps, either way round.
       if (TIERS[tier]?.oneWay) {
         const span = (L / count) * 0.62
-        oneWay = { from: wrap((L * (1 + Math.floor(r() * (count - 1)))) / count - span / 2, L), span, dir: r() < 0.5 ? 1 : -1 }
+        const from = gaps.map((g) => wrap(g - span / 2, L)).find((f) => !spurs.some((sp) => wrap(sp.dist - f + 14, L) < span + 28)) ?? wrap(gaps[0] - span / 2, L)
+        oneWay = { from, span, dir: r() < 0.5 ? 1 : -1 }
       }
       const onOneWay = (d) => oneWay && wrap(d - oneWay.from + 10, L) < oneWay.span + 20
-      const spots = []
+      // Where the houses go: one at the end of each side street, the rest spread round the loop as far from each other (and the start) as they can be.
+      const slots = spurs.map((spur, j) => ({ dist: spur.dist, spur, street: STREETS[j], pin: spur.door }))
+      // A child who already finds the short way in tier 1: one house stands a little way behind the start, so the
+      // first real choice is often ↩️ (a short way back) against driving all the way round. Unless a street is already there.
+      if (behind && tier === 1 && !slots.some((q) => wrap(start - q.dist, L) < 100)) {
+        for (let back = 44; back <= 96; back += 4) {
+          const d = wrap(start - back, L)
+          if (track.nearRamp(d, 6) || nearJunction(d, 16)) continue
+          const p = track.sampleAt(d).p
+          if (!slots.every((q) => Math.hypot(q.pin.x - p.x, q.pin.z - p.z) >= minApart)) continue
+          slots.push({ dist: d, pin: p })
+          break
+        }
+      }
+      while (slots.length < count) {
+        // Any spot well away from the others (at least half as far as the furthest one is): a spread-out town that still varies from seed to seed.
+        const spots = []
+        for (let d = 2; d < L; d += 4) {
+          if (track.nearRamp(d, 6) || Math.abs(track.offset(d, start)) <= 20 || nearJunction(d, 16) || onOneWay(d)) continue
+          if (closed != null && Math.abs(track.offset(d, closed)) <= 22) continue
+          const p = track.sampleAt(d).p
+          if (!slots.every((q) => Math.hypot(q.pin.x - p.x, q.pin.z - p.z) >= minApart)) continue
+          spots.push({ d, gap: Math.min(Math.abs(track.offset(d, start)), ...slots.map((q) => Math.abs(track.offset(d, q.dist)))) })
+        }
+        const far = Math.max(0, ...spots.map((q) => q.gap))
+        const good = spots.filter((q) => q.gap >= far * 0.55)
+        const best = good.length ? good[Math.floor(r() * good.length)].d : track.clearOfRamps((L * (slots.length + 0.5)) / count, 6)
+        slots.push({ dist: best, pin: track.sampleAt(best).p })
+      }
+      slots.sort((a, b) => a.dist - b.dist)
       const firstSide = r() < 0.5 ? -1 : 1
       places.forEach((kindIndex, i) => {
         const kind = KINDS[kindIndex]
-        // Evenly round the whole loop (a little jitter), so every pick asks "which way is shorter?".
-        const want = (L * (i + 0.5 + (r() - 0.5) * 0.3)) / count
-        let dist = track.clearOfRamps(want, 6)
-        for (const nudge of [0, 8, -8, 16, -16, 24, -24, 32, -32, 40, -40]) {
-          const d = track.clearOfRamps(want + nudge, 6)
-          const p = track.sampleAt(d).p
-          const clear = spots.every((q) => Math.hypot(q.x - p.x, q.z - p.z) >= minApart) &&
-            Math.abs(track.offset(d, start)) > 20 && (closed == null || Math.abs(track.offset(d, closed)) > 22) && !onOneWay(d)
-          if (clear) {
-            dist = d
-            break
-          }
-        }
-        spots.push(track.sampleAt(dist).p)
-        const sign = i % 2 ? -firstSide : firstSide
+        const { dist, spur, street } = slots[i]
+        const sign = spur ? spur.sign : i % 2 ? -firstSide : firstSide
         const f = track.frameAt(dist)
-        const at = (lateral) => f.p.clone().addScaledVector(f.side, sign * lateral)
-        const door = at(track.width / 2 + 1.2)
+        // The doorstep, and which ways are "away from the road" and "along it" there: by the kerb, or on a side street's turning place.
+        const out = spur ? spur.u.clone() : f.side.clone().multiplyScalar(sign)
+        const along = spur ? spur.t.clone() : f.t.clone()
+        const door = spur ? spur.door.clone() : f.p.clone().addScaledVector(out, track.width / 2 + 1.2)
+        const beyond = (metres, sideways = 0) => door.clone().addScaledVector(out, metres).addScaledVector(along, sideways)
         const house = new THREE.Group()
-        // A coloured doorstep by the kerb: where the parcel is left.
+        // A coloured doorstep: where the parcel is left.
         kind.padMaterial ??= new THREE.MeshStandardMaterial({ color: kind.colour, roughness: 0.9 })
         const pad = new THREE.Mesh(padGeometry, kind.padMaterial)
         pad.rotation.x = -Math.PI / 2
-        pad.position.set(door.x, 0.04, door.z)
+        pad.position.set(door.x, spur ? 0.08 : 0.04, door.z)
         pad.receiveShadow = true
         // A tall post with the house's big picture, seen from far down the road.
-        const postAt = at(track.width / 2 + 2.6)
+        const postAt = beyond(1.4)
         const pole = new THREE.Mesh(poleGeometry, poleMaterial)
         pole.position.set(postAt.x, 2.1, postAt.z)
         pole.castShadow = true
         const sign3d = sprite(pictureTexture(kind.emoji, kind.colour), 3.4)
         sign3d.position.set(postAt.x, 5.6, postAt.z)
         // The resident waits beside the doorstep and waves when the parcel arrives.
-        const residentAt = at(track.width / 2 + 3.6).addScaledVector(f.t, 1.6)
+        const residentAt = beyond(2.4, 1.6)
         const resident = sprite(emojiTexture(kind.resident), 2)
         resident.position.set(residentAt.x, 1.05, residentAt.z)
         const hand = sprite(emojiTexture('👋'), 1.3)
         hand.position.set(residentAt.x, 2.5, residentAt.z)
         hand.visible = false
         house.add(pad, pole, sign3d, resident, hand)
+        // A side street's name sign at its corner: the picture the map shows at the same corner.
+        if (spur) house.add(streetSign(track, spur, street))
         group.add(house)
-        houses.push({ kind, kindIndex, wants: [], dist, x: door.x, z: door.z, sign, resident, hand, wave: 0, residentY: 1.05 })
+        houses.push({ kind, kindIndex, wants: [], dist, x: door.x, z: door.z, sign, resident, hand, wave: 0, residentY: 1.05, spur: spur ?? null, street: street ?? null })
       })
       // Tier 3: the arrows forbid the way the plain shortest plan would cross the one-way street, so they must be read, not just the distances.
       if (oneWay) oneWay.dir = -(plainPlanCrossing(L, start, houses.map((h) => h.dist), oneWay) || -oneWay.dir)
@@ -413,14 +465,15 @@ export function createTown(scene) {
     },
 
     /** Hands parcel `p` over: it hops from the roof to the doorstep, and the resident waves. */
-    deliver(p, car) {
+    deliver(p, car, { byFriend = false } = {}) {
       const index = parcels[p].house
       const h = houses[index]
       delivered.add(p)
       if (!order.includes(index)) order.push(index)
       if (load.includes(p)) this.pack(load.filter((q) => q !== p), car)
       const box = parcel(parcels[p], 0.8)
-      const from = car ? new THREE.Vector3(car.root.position.x, car.root.position.y + car.dims.top + 0.4, car.root.position.z) : new THREE.Vector3(h.x, 2, h.z)
+      // A friend's parcel drops gently onto the doorstep from just above it (their van is in their own town).
+      const from = car && !byFriend ? new THREE.Vector3(car.root.position.x, car.root.position.y + car.dims.top + 0.4, car.root.position.z) : new THREE.Vector3(h.x, 3, h.z)
       box.position.copy(from)
       group.add(box)
       // A pair sits side by side on the doorstep.
@@ -470,10 +523,28 @@ export function createTown(scene) {
 
 /** Where the town sits on a square map `size` pixels wide: map positions for world x and z. */
 export function townMapLayout(size, track, houses) {
+  // A side street is drawn longer than it is (as a street map would), so it reads as a street and not as a dot beside the road.
+  const spurs = houses.map((h) => h.spur).filter(Boolean)
+  const kerb = track.width / 2
+  // Only the street itself (its lane, turning place and house) is stretched: a point further along the
+  // same line, across the town, stays exactly where it is, so the loop and its houses are drawn true.
+  const end = kerb + SPUR.centre + SPUR.pad + 3
+  const stretch = (x, z) => {
+    for (const sp of spurs) {
+      const dx = x - sp.origin.x, dz = z - sp.origin.z
+      const l = dx * sp.u.x + dz * sp.u.z, a = dx * sp.t.x + dz * sp.t.z
+      if (l > kerb && l < end && Math.abs(a) < SPUR.pad + 4) {
+        const k = (MAP_STRETCH - 1) * (l - kerb)
+        return [x + sp.u.x * k, z + sp.u.z * k]
+      }
+    }
+    return [x, z]
+  }
   const xs = track.samples.map((s) => s.p.x), zs = track.samples.map((s) => s.p.z)
   for (const h of houses) {
-    xs.push(h.x)
-    zs.push(h.z)
+    const [x, z] = stretch(h.x, h.z)
+    xs.push(x)
+    zs.push(z)
   }
   const minX = Math.min(...xs), minZ = Math.min(...zs)
   const pad = size * 0.12
@@ -484,7 +555,12 @@ export function townMapLayout(size, track, houses) {
   const offZ = pad + (size - pad * 2 - (Math.max(...zs) - minZ) * scale) / 2
   const px = (x) => offX + (x - minX) * scale
   const pz = (z) => offZ + (z - minZ) * scale
-  return { px, pz }
+  /** Map position of world point (x, z), side streets drawn long. */
+  const at = (x, z) => {
+    const [sx, sz] = stretch(x, z)
+    return [px(sx), pz(sz)]
+  }
+  return { px, pz, at }
 }
 
 /**
@@ -493,7 +569,7 @@ export function townMapLayout(size, track, houses) {
  * stops in delivery order. The child's car goes on top with drawMapCar.
  */
 export function drawTownMap(g, size, track, houses, { chosen = -1, route = null, plan = null, order = null, closed = null, oneWay = null, layout = townMapLayout(size, track, houses) } = {}) {
-  const { px, pz } = layout
+  const { px, pz, at } = layout
   g.clearRect(0, 0, size, size)
   g.fillStyle = '#fbf3dc'
   g.beginPath()
@@ -510,6 +586,47 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, route = null,
   g.strokeStyle = '#fffdf6'
   g.lineWidth = size * 0.032
   g.stroke(road)
+
+  // Side streets: a short road off the loop to its house, with the street's picture at the corner.
+  for (const h of houses) {
+    if (!h.spur) continue
+    const { origin, centre, t } = h.spur
+    const [cx, cz] = at(centre.x, centre.z)
+    const lane = new Path2D()
+    lane.moveTo(px(origin.x), pz(origin.z))
+    lane.lineTo(cx, cz)
+    const ends = new Path2D()
+    ends.arc(cx, cz, size * 0.03, 0, Math.PI * 2)
+    g.strokeStyle = '#6e6784'
+    g.lineWidth = size * 0.045
+    g.stroke(lane)
+    g.fillStyle = '#6e6784'
+    g.fill(ends)
+    g.strokeStyle = '#fffdf6'
+    g.lineWidth = size * 0.026
+    g.stroke(lane)
+    const inner = new Path2D()
+    inner.arc(cx, cz, size * 0.021, 0, Math.PI * 2)
+    g.fillStyle = '#fffdf6'
+    g.fill(inner)
+    // The street's picture on a little round sign beside its corner.
+    const mx = (px(origin.x) + cx) / 2, mz = (pz(origin.z) + cz) / 2
+    const ox = px(origin.x + t.x) - px(origin.x), oz = pz(origin.z + t.z) - pz(origin.z)
+    const on = Math.hypot(ox, oz) || 1
+    const sx = mx + (ox / on) * size * 0.07, sz = mz + (oz / on) * size * 0.07
+    g.beginPath()
+    g.arc(sx, sz, size * 0.046, 0, Math.PI * 2)
+    g.fillStyle = h.street.colour
+    g.fill()
+    g.lineWidth = Math.max(1.5, size * 0.006)
+    g.strokeStyle = '#2b2d42'
+    g.stroke()
+    g.font = `${Math.round(size * 0.058)}px ${EMOJI_FONT}`
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillStyle = '#2b2d42'
+    g.fillText(h.street.emoji, sx, sz + size * 0.004)
+  }
 
   if (oneWay) {
     // The one-way street: a blue stretch of road with white arrows the way it may be driven.
@@ -554,7 +671,7 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, route = null,
     for (const point of plan) {
       if (!point) pen = false
       else {
-        g[pen ? 'lineTo' : 'moveTo'](px(point[0]), pz(point[1]))
+        g[pen ? 'lineTo' : 'moveTo'](...at(point[0], point[1]))
         pen = true
       }
     }
@@ -592,7 +709,7 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, route = null,
     for (const point of route) {
       if (!point) pen = false
       else {
-        g[pen ? 'lineTo' : 'moveTo'](px(point[0]), pz(point[1]))
+        g[pen ? 'lineTo' : 'moveTo'](...at(point[0], point[1]))
         pen = true
       }
     }
@@ -604,7 +721,7 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, route = null,
       g.font = `${Math.round(size * 0.06)}px ${EMOJI_FONT}`
       g.textAlign = 'center'
       g.textBaseline = 'middle'
-      g.fillText('🚚', px(start[0]), pz(start[1]))
+      g.fillText('🚚', ...at(start[0], start[1]))
     }
   }
 
@@ -612,7 +729,7 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, route = null,
   g.textAlign = 'center'
   g.textBaseline = 'middle'
   houses.forEach((h, i) => {
-    const x = px(h.x), y = pz(h.z)
+    const [x, y] = at(h.x, h.z)
     const delivered = order ? order.includes(i) : false
     const isChosen = i === chosen
     g.beginPath()
@@ -644,7 +761,8 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, route = null,
   order?.forEach((house, n) => {
     if (!route) return
     const h = houses[house]
-    const x = px(h.x) + r * 0.85, y = pz(h.z) - r * 0.85
+    const [hx, hy] = at(h.x, h.z)
+    const x = hx + r * 0.85, y = hy - r * 0.85
     g.beginPath()
     g.arc(x, y, r * 0.55, 0, Math.PI * 2)
     g.fillStyle = '#ff6b9d'
@@ -659,8 +777,8 @@ export function drawTownMap(g, size, track, houses, { chosen = -1, route = null,
 }
 
 /** The child's car on the town map: an arrow in its colour, pointing the way it faces. */
-export function drawMapCar(g, size, { px, pz }, player, heading) {
-  const x = px(player.x), y = pz(player.z)
+export function drawMapCar(g, size, { at }, player, heading) {
+  const [x, y] = at(player.x, player.z)
   const s = size * 0.045
   g.save()
   g.translate(x, y)

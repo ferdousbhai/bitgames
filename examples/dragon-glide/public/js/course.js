@@ -118,7 +118,8 @@ export class Course {
     const up = Math.random() < 0.5 ? 1 : -1
     let right = Math.random() < 0.5 ? 0 : 1
     let x0 = upright ? 0 : clamp(this.randX(0.15), -L.x + dx, L.x - dx)
-    let y0 = rand(3.6, 5)
+    // upright, the pair sits a little lower, so the upper ring's numeral stays clear of the corner buttons as it passes
+    let y0 = upright ? rand(3.1, 4.1) : rand(3.6, 5)
     const off = helpOffset(near)
     if (near) {
       // the right ring on Ember's outer side, so the other one sits toward the middle and stays in view
@@ -180,7 +181,11 @@ export class Course {
         // the nearest pair glows gold, both rings alike; after two wrong rings the wrong one rests pale
         const look = j === 0 && (right || !hint) ? 'gold' : 'pale'
         it.halo.visible = look === 'gold'
-        it.label.material.opacity = j > 0 ? 0.7 : look === 'gold' ? 1 : 0.45
+        it.label.material.opacity = look === 'gold' ? 1 : 0.45
+        // only the nearest pair shows its numbers, and drawn over Ember, so a centred upright pair reads early
+        // (a pair further on stays plain until this one is passed, so its numbers never sit on these)
+        it.label.visible = j === 0
+        it.label.material.depthTest = false
         if (it.look !== look) {
           it.look = look
           it.ring.traverse((o) => {
@@ -287,7 +292,7 @@ export class Course {
 
   /** The basket is full: the world's other treasures float gently up and away. */
   release(wi) {
-    for (const it of this.items) if (it.type === 'treasure' && it.wi === wi && !it.gone) it.away = true
+    for (const it of this.items) if ((it.type === 'treasure' || (it.type === 'bubble' && it.kind)) && it.wi === wi && !it.gone) it.away = true
   }
 
   treasure(kind, x, y, z, group = null) {
@@ -355,7 +360,10 @@ export class Course {
         const pBubble = goal.type === 'rings' ? 0 : 0.13
         // in a numbered-ring world the only rings are the numbered ones, so a plain ring never muddles the count
         const pHoop = goal.type === 'rings' ? 0 : 0.26
-        if (r < pObstacle) len = this.obstacle(this.nextZ)
+        // between numbered pairs the sky is mostly quiet: about half the stretches are open air, so the flight
+        // from one choice to the next is a calm glide, not a gem chase
+        if (goal.type === 'rings' && r >= pObstacle + pLantern && Math.random() < 0.5) len = 16
+        else if (r < pObstacle) len = this.obstacle(this.nextZ)
         else if (r < pObstacle + pLantern) len = this.lanterns(this.nextZ)
         else if (r < pObstacle + pLantern + pBubble) len = this.bubbles(this.nextZ)
         else if (r < pObstacle + pLantern + pBubble + pHoop) len = this.hoops(this.nextZ)
@@ -468,15 +476,13 @@ export class Course {
     return (n - 1) * gap + 4
   }
 
-  bubble(x, y, z) {
+  bubble(x, y, z, kind = null) {
     const obj = new THREE.Group()
     const b = new THREE.Mesh(this.bubbleGeo, this.bubbleMat)
     b.renderOrder = 3
     obj.add(b)
-    // in a gathering world a bubble holds one of the world's treasures: puff fire at the one the
-    // basket needs (or fly into it). Elsewhere it holds a gem.
-    const goal = this.goals.get(this.wi)
-    const kind = goal?.type === 'gather' && goal.kinds.some((k) => this.wants(k)) ? pick(goal.kinds) : null
+    // in a gathering world a bubble holds one of the world's treasures: line up with the one the
+    // basket needs and puff fire at it (or fly into it). Otherwise it holds a gem.
     const g = kind ? treasureMesh(kind) : copy(this.t.gem, GEMS.big.look)
     g.scale.setScalar(kind ? 0.7 : 0.9)
     obj.add(g)
@@ -484,8 +490,23 @@ export class Course {
     return this.add('bubble', obj, x, y, z, { r: 1.5, bubble: b, spin: g, fireTarget: true, kind, wi: this.wi })
   }
 
-  /** Floating gem bubbles: puff fire at them (or fly into them) to pop. */
+  /**
+   * Floating bubbles. In a gathering world they come as a pair side by side, each with a different treasure
+   * (one the basket still needs, when it needs any): fire goes where Ember is lined up (see shoot), so the
+   * child chooses which one to pop, and a wrong one popped lands in the oops corner like a wrong one caught.
+   */
   bubbles(z) {
+    const goal = this.goals.get(this.wi)
+    const wanted = goal?.type === 'gather' ? goal.kinds.filter((k) => this.wants(k)) : []
+    if (wanted.length) {
+      const good = pick(wanted)
+      const kinds = [good, pick(goal.kinds.filter((k) => k !== good))].sort(() => Math.random() - 0.5)
+      // far enough apart that Ember flying straight between them touches neither (2.9 > a bubble's reach)
+      const s = Math.min(this.lane.x * 0.92, 2.9)
+      const y = rand(3.4, 5.4)
+      kinds.forEach((k, i) => this.bubble(i ? s : -s, y + rand(-0.4, 0.4), z + 4, k))
+      return 16
+    }
     const n = 2 + Math.floor(Math.random() * 2)
     for (let i = 0; i < n; i++) this.bubble(this.randX(), this.randY(), z + i * 9)
     return n * 9
@@ -587,11 +608,13 @@ export class Course {
     let best = null
     let bestScore = Infinity
     for (const it of this.items) {
-      if (!it.fireTarget || it.done || it.targeted) continue
+      if (!it.fireTarget || it.done || it.away || it.targeted) continue
       const dz = from.z - it.obj.position.z
       if (dz < 3 || dz > 70) continue
       const dxy = Math.hypot(it.obj.position.x - from.x, it.obj.position.y - from.y)
-      if (dxy > 4 + dz * 0.12) continue
+      // a treasure bubble is popped only when Ember is lined up with it (the pair is the child's choice);
+      // lanterns and gem bubbles are found more generously
+      if (dxy > (it.kind ? 1.8 + dz * 0.02 : 4 + dz * 0.12)) continue
       const score = dz + dxy * 4
       if (score < bestScore) {
         bestScore = score
@@ -659,12 +682,12 @@ export class Course {
           break
         }
         case 'hoop': {
+          // a slow sway only: nothing pulses in scale while Ember flies
           o.rotation.z = Math.sin(it.t * 0.8) * 0.08
-          const pulse = 1 + Math.sin(it.t * 3) * 0.03
           // once Ember is through, the ring pops away before the camera reaches it, so its
           // puffs never fill the whole screen
           const away = it.done ? Math.max(0, 1 - Math.max(0, o.position.z - p.z - 1) / 3.5) : 1
-          o.scale.setScalar(pulse * (it.radius / 2.3) * (it.done ? 1 + it.flash : 1) * away)
+          o.scale.setScalar((it.radius / 2.3) * (it.done ? 1 + it.flash : 1) * away)
           o.visible = away > 0
           if (it.done) it.flash = Math.max(0, it.flash - dt * 1.5)
           if (!playing || it.done) break
@@ -736,16 +759,25 @@ export class Course {
           // a treasure inside sways like the loose ones, so its shape always reads
           if (it.kind) it.spin.rotation.y = Math.sin(it.t * 1.1) * 0.45
           else it.spin.rotation.y += dt * 1.8
-          it.bubble.scale.set(1 + Math.sin(it.t * 4) * 0.04, 1 + Math.cos(it.t * 4) * 0.04, 1)
+          // no wobble: the bubble only floats slowly, like the loose treasures
+          if (it.away) {
+            // the basket is full: an unpopped treasure bubble drifts up and away, out of reach
+            it.y += dt * 2.2
+            const k = (it.awayK = Math.max(0, (it.awayK ?? 1) - dt * 0.6))
+            o.scale.setScalar(1.3 * k)
+            if (k <= 0) it.gone = true
+          }
           o.position.y = it.y + Math.sin(it.t * 1.5) * 0.3
-          if (playing && o.position.distanceTo(p) < it.r * 1.3 + R) this.pop(it, events)
+          // a treasure bubble pops only when Ember really touches it (its own size plus Ember's), so the
+          // gap between the two bubbles of a pair is always safe to fly through
+          if (playing && !it.away && o.position.distanceTo(p) < (it.kind ? it.r : it.r * 1.3) + R) this.pop(it, events)
           break
         }
         case 'lantern': {
           if (it.done) {
             // lit lanterns float gently up and away
             it.y += dt * 1.4
-            it.glow.scale.setScalar(Math.min(4.5, it.glow.scale.x + dt * 12) * (1 + Math.sin(it.t * 9) * 0.03))
+            it.glow.scale.setScalar(Math.min(4.5, it.glow.scale.x + dt * 12))
           }
           o.position.y = it.y + Math.sin(it.t * 1.3) * 0.25
           o.rotation.z = Math.sin(it.t * 1.1) * 0.12
@@ -796,7 +828,7 @@ export class Course {
       f.t += dt
       const o = f.obj
       const tg = f.target
-      if (tg && !tg.done && !tg.gone) {
+      if (tg && !tg.done && !tg.gone && !tg.away) {
         this.tmp.subVectors(tg.obj.position, o.position)
         const dist = this.tmp.length()
         const speed = f.vel.length()
@@ -843,10 +875,10 @@ export class Course {
     const at = it.obj.position
     events.push({ type: 'bubble', pos: at.clone(), byFire })
     if (it.kind) {
-      // the treasure inside goes to the basket if it's wanted, or floats gently away if not. Flown into on
-      // purpose, a wrong one rides along like a loose one (fire finds the nearest bubble, so a puff never does)
+      // the treasure inside goes to the basket if it's wanted, or floats gently away if not. A wrong one rides
+      // along like a loose one, whether flown into or popped by fire (fire only pops the bubble Ember lines up with)
       const taken = this.wants(it.kind)
-      const extra = !taken && !byFire && this.oops(it.kind)
+      const extra = !taken && this.oops(it.kind)
       events.push({ type: 'treasure', kind: it.kind, taken, extra, bubble: true, pos: at.clone() })
       if (!taken && !extra) {
         this.wi = it.wi

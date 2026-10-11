@@ -19,7 +19,7 @@ export const CITIES = {
   helsinki: { name: 'Helsinki', emoji: '⛪', flag: '🇫🇮', blurb: 'Cobblestones, trams and the harbour', color: '#3a7bd5' },
   montreal: { name: 'Montreal', emoji: '🍁', flag: '🇨🇦', blurb: 'Staircases, maples and orange cones', color: '#d64a2f' },
   dino: { name: 'Dino Valley', emoji: '🦖', flag: '🌋', blurb: 'Dinosaurs, eggs and a volcano', color: '#3aa35a' },
-  stunt: { name: 'Stunt Park', emoji: '🎢', flag: '🏜️', blurb: 'Big jumps, boost pads and a cheering crowd', color: '#e08a1e' },
+  stunt: { name: 'Stunt Park', emoji: '🎢', flag: '🏜️', blurb: 'Big jumps, cactus desert and hot-air balloons', color: '#e08a1e' },
 }
 
 const cache = new Map()

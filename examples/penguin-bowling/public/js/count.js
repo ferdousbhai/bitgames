@@ -83,7 +83,6 @@ export class Counter {
     this.t = 0
     this.autoAt = Infinity
     this.done = true
-    this.reduced = matchMedia('(prefers-reduced-motion: reduce)')
   }
 
   /**
@@ -151,17 +150,15 @@ export class Counter {
       this.autoAt = this.t + STEP
       if (q) this.step(q, 'auto')
     }
-    // Rings ease in and breathe very slightly; numbers ease in.
-    const still = this.reduced.matches
+    // Rings and numbers ease in, then hold still: nothing pulses while the child counts or aims.
     for (const m of this.marks) {
       m.on += (m.want - m.on) * Math.min(1, dt * 6)
       const show = m.on > 0.02
       m.ring.visible = show
       m.label.visible = show && m.withLabel
       if (!show) continue
-      const breathe = still ? 1 : 1 + Math.sin(t * 2 + m.phase) * 0.05
       m.ring.material.opacity = m.on * (m.dim ? 0.8 : 0.95)
-      m.ring.scale.setScalar(breathe * (0.6 + 0.4 * m.on))
+      m.ring.scale.setScalar(0.6 + 0.4 * m.on)
       m.label.material.opacity = m.on
       m.label.scale.setScalar(0.3 * (0.5 + 0.5 * m.on))
     }
@@ -178,8 +175,12 @@ export class Counter {
     m.label.renderOrder = 10 - (q.row ?? 0)
     m.withLabel = true
     m.dim = false
-    m.phase = q.n
     m.want = 1
+  }
+
+  /** The numbers over the counted pins hide (`false`) while the child says how many, then come back. */
+  labels(on) {
+    for (const m of this.marks) if (m.want) m.withLabel = on
   }
 
   /** Before the second roll: soft rings stay under the pins left, without the numbers. */
@@ -243,7 +244,12 @@ export class Spot {
     this.len = z0 - z1
     this.mesh.renderOrder = 2
     this.mesh.visible = false
-    scene.add(this.mesh)
+    // A plan's number at the end of the short trail, so "stand here for 8" reads at a glance.
+    this.label = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false, toneMapped: false, opacity: 0 }))
+    this.label.scale.setScalar(0.42)
+    this.label.renderOrder = 4
+    this.label.visible = false
+    scene.add(this.mesh, this.label)
     this.x = null
     this.on = 0
   }
@@ -251,13 +257,22 @@ export class Spot {
    * Lay the trail at lane position x. `short` keeps only the first prints by the penguin:
    * where to stand, but not the line to slide along (the older children's spare).
    */
-  show(x, { short = false } = {}) {
+  show(x, { short = false, label = null } = {}) {
     this.x = x
+    this.short = short
     this.mesh.position.x = x
     const k = short ? 0.4 : 1
     this.mesh.scale.z = k
+    // The short prints are a little wider, so they still show beside the penguin from behind.
+    this.mesh.scale.x = short ? 1.35 : 1
     this.mesh.position.z = this.z0 - (this.len * k) / 2
     this.mesh.material.map.repeat.y = k
+    this.withLabel = label !== null
+    if (this.withLabel) {
+      this.label.material.map = numberTexture(label)
+      this.label.material.needsUpdate = true
+      this.label.position.set(x, 0.32, this.z0 - this.len * k - 0.2)
+    }
   }
 
   hide() {
@@ -269,8 +284,10 @@ export class Spot {
     const here = this.x !== null && Math.abs(penguinX - this.x) < 0.06
     this.on += ((this.x === null ? 0 : 1) - this.on) * Math.min(1, dt * 5)
     this.mesh.visible = this.on > 0.02
-    this.mesh.material.opacity = this.on * 0.85
-    this.mesh.material.color.set(here ? '#7bd88f' : '#ffca3a')
+    this.mesh.material.opacity = this.on * (this.short ? 1 : 0.85)
+    this.mesh.material.color.set(here ? '#7bd88f' : this.short ? '#ffb238' : '#ffca3a')
+    this.label.visible = this.mesh.visible && this.withLabel
+    this.label.material.opacity = this.on
     return here
   }
 }

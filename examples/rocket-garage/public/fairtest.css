@@ -359,3 +359,7 @@ body.looking #tray, body.looking #actions, body.looking #mission, body.looking #
 /* Portrait: the 📮 card sits on its own solid plate, clear of the window art behind it */
 .mission { background: #fff8e9; }
 .mission:not(.on) .mission-go { opacity: 1; }
+
+/* --- Round 5 --- */
+/* The ✔/💡 answer mark sits inside the planet button's corner, not over its border */
+.where-mark { right: 6px; top: 5px; font-size: 18px; line-height: 1; }

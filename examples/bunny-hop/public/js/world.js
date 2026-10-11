@@ -67,6 +67,10 @@ const pathTexture = () =>
     }
   })
 
+const flyTmp = new THREE.Vector3()
+
+const BUTTERFLY_SOFT = { wing_rim: ['#a8755e'], butterfly_body: ['#7a5866'] }
+
 export class World {
   constructor(scene, templates) {
     this.scene = scene
@@ -125,8 +129,13 @@ export class World {
     this.items = []
     // (x) => true where a pattern is hopped: no scenery logs, pumpkins or snowmen there to mix up with it
     this.quiet = () => false
+    // (x) => true near a flower to pick on the path: no scenery flowers in the near grass there
+    this.flowerQuiet = () => false
     this.butterflies = []
-    this.flutterAhead = Infinity // how far ahead of Pip butterflies drift (less on the narrow portrait menu)
+    this.flutterSpan = null // on the menu, [from, to] beside Pip where butterflies drift (in play: ahead of him)
+    this.flutterHigh = 0 // 1 while Pip hops: butterflies keep high and back, clear of the carrots (0.5 on the upright menu, in its sky)
+    this.camera = null // set by the game: butterflies are kept inside its view
+    this.flutterCeil = 0.55 // and below this height in it (a share of the half-height above its middle): clear of the title
     this.butterflyBiome = -1
     this.box = new THREE.Box3()
     this.v = new THREE.Vector3()
@@ -190,8 +199,10 @@ export class World {
     let r = Math.random() * total
     let [name, , s0, s1] = choices.find((c) => (r -= c[1]) < 0) ?? choices[0]
     // beside a pattern, a scenery pumpkin could pass for the hidden obstacle: grow something else
-    if (name in OBSTACLES && layer.key !== 'mid' && layer.key !== 'back' && this.quiet(x)) {
-      const other = choices.find((c) => !(c[0] in OBSTACLES))
+    // and beside a flower to pick on the path, a scenery flower could pass for it
+    const clash = (n) => (n in OBSTACLES && this.quiet(x)) || (n === 'flower' && this.flowerQuiet(x))
+    if (layer.key !== 'mid' && layer.key !== 'back' && clash(name)) {
+      const other = choices.find((c) => !clash(c[0]))
       if (!other) return 0
       ;[name, , s0, s1] = other
     }
@@ -353,9 +364,10 @@ export class World {
       this.butterflyBiome = biomeIdx
       for (const f of this.butterflies) f.userData.leaving = true
       for (let i = 0; i < b.butterflies; i++) {
-        const f = copy(this.templates.butterfly, { recolor: b.recolor })
+        // a soft brown rim and body, not near-black: dark edges read as a beetle against the sky
+        const f = copy(this.templates.butterfly, { recolor: { ...b.recolor, ...BUTTERFLY_SOFT } })
         f.scale.setScalar(2.2)
-        f.userData = { kind: 'butterfly', phase: rand(0, 6), ox: rand(2, 8), oz: rand(-3, -1.2), oy: rand(1.8, 3.2), x: bunnyX + 25 + i * 6, rise: 0, scare: 0 }
+        f.userData = { kind: 'butterfly', phase: rand(0, 6), ox: rand(2, 8), oz: rand(-3, -1.2), oy: rand(1.8, 3.2), x: bunnyX + 25 + i * 6, rise: 0, scare: 0, slot: b.butterflies > 1 ? i / (b.butterflies - 1) : 0.5 }
         f.position.set(f.userData.x, 2, 0)
         f.userData.wings = [f.getObjectByName('butterfly_wing_L'), f.getObjectByName('butterfly_wing_R')]
         this.scene.add(f)
@@ -369,19 +381,43 @@ export class World {
       const u = f.userData
       if (!u.leaving) u.x += moved
       // flutter along with the bunny, a little ahead, drifting about (close by Pip when the view is narrow)
-      const near = this.flutterAhead
-      const goal = u.leaving ? f.position.x - 1 : bunnyX + Math.min(u.ox, near) + Math.sin(time * 0.4 + u.phase) * Math.min(2, near / 2)
+      // on the menu they share out a little span beside Pip (spread across it, so they never bunch)
+      const span = this.flutterSpan
+      const ahead = span ? span[0] + u.slot * (span[1] - span[0]) : u.ox
+      const goal = u.leaving ? f.position.x - 1 : bunnyX + ahead + Math.sin(time * 0.4 + u.phase) * (span ? 0.4 : 2)
       u.x = THREE.MathUtils.damp(u.x, goal, u.leaving ? 0.2 : 1.2, dt)
       if (u.leaving) u.rise += dt * 2
       // a poked butterfly darts up in a little loop, then settles back
       u.scare = Math.max(0, u.scare - dt * 0.8)
       const dart = Math.sin(u.scare * Math.PI) * 1.6
-      f.position.set(u.x + Math.sin(u.scare * 9) * u.scare * 0.6, u.oy + Math.sin(time * 2.3 + u.phase) * 0.5 + u.rise + dart, u.oz + Math.sin(time * 0.9 + u.phase) * 0.8)
+      // while Pip hops they rise above the carrots and the golden carrot and drift further back, so
+      // nothing flutters where the child is judging high or low; on the menu they come down by Pip
+      u.lift = THREE.MathUtils.damp(u.lift ?? 0, this.flutterHigh, 0.8, dt)
+      const y = u.oy + u.lift * (6.2 - u.oy * 0.4)
+      const z = u.oz - u.lift * 3.5
+      f.position.set(u.x + Math.sin(u.scare * 9) * u.scare * 0.6, y + Math.sin(time * 1.4 + u.phase) * 0.4 + u.rise + dart, z + Math.sin(time * 0.9 + u.phase) * 0.8)
+      // on a narrow screen they stay inside the view (a butterfly cut by the edge looks broken)
+      if (this.camera && !u.leaving) {
+        // in the camera's own space: at this depth the view is `edge` wide each side of its middle
+        const cam = this.camera
+        const p = flyTmp.copy(f.position).applyMatrix4(cam.matrixWorldInverse)
+        const depth = -p.z
+        const half = depth * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2))
+        const edge = half * cam.aspect * 0.75
+        if (depth > 0 && Math.abs(p.x) > edge) {
+          const dx = p.x - Math.sign(p.x) * edge
+          u.x -= dx
+          f.position.x -= dx
+        }
+        const ceil = half * this.flutterCeil
+        if (depth > 0 && p.y > ceil) f.position.y -= p.y - ceil
+      }
       // flying along the path, rolled a little towards the camera, so the wings
       // show their colours and spots (seen head-on they'd look like a fly)
       f.rotation.set(0.5, Math.sin(time * 0.9 + u.phase) * 0.45, 0)
       // wings beat between flat-ish and raised high, so they show from the side
-      u.beat = (u.beat ?? 0) + dt * (20 + u.scare * 30)
+      // a slow, soft beat (about one and a half a second), quicker only for a moment when poked
+      u.beat = (u.beat ?? 0) + dt * (9 + u.scare * 30)
       const flap = 0.9 + Math.sin(u.beat + u.phase) * 0.65
       u.wings[0].rotation.x = flap
       u.wings[1].rotation.x = -flap

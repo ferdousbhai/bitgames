@@ -1,6 +1,6 @@
 // Each birthday friend orders a pictured cake, listed from the bottom layer to the top.
 // Early friends ask for short sequences; later friends ask for repeating patterns
-// (AB AB, ABC ABC) whose last part is hidden, so the child works out what comes next.
+// (AB AB, ABC ABC) whose last unit is hidden, so the child works out what comes next.
 // A child who builds cakes carefully gets harder patterns (ABB, AAB, AABB, growing) at
 // any friend; a child who is finding it tricky goes back to the simpler ones.
 
@@ -33,12 +33,11 @@ const repeatsFor = (unit, random) => {
 }
 
 /**
- * How many layers at the top are "?". The younger tiers keep at least two whole units in view and hide at
- * most one unit; from tier 2 a whole unit is always hidden, and at tier 3 everything past the first two
- * units (so a long AB cake hides two repeats), while one whole unit always stays in view to reason from.
+ * How many layers at the top are "?". Up to tier 2 the whole last unit is hidden (so ABC ABC shows
+ * ABC and the child builds the whole repeat, not only its last layer); at tier 3 everything past the
+ * first two units (so a long AB cake hides two repeats), while one whole unit always stays in view.
  */
 const hiddenFor = (length, unit, tier = 0) => {
-  if (tier < 2) return Math.min(unit, Math.max(1, length - 2 * unit))
   if (tier < 3) return Math.min(unit, length - unit)
   return Math.min(length - unit, Math.max(unit, length - 2 * unit))
 }

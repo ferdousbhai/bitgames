@@ -68,6 +68,7 @@ export class Bunny {
     this.time = 0
     this.runPhase = 0
     this.idleHop = 2
+    this.cheers = 0 // happy hops still to come on arriving home
     this.lookAtCamera = 0
     this.spin.rotation.z = 0
   }
@@ -126,24 +127,42 @@ export class Bunny {
     this.munchT = 0
   }
 
+  /** Home at last: a few happy hops, then Pip settles and looks at the child. */
+  celebrate(hops = 3) {
+    this.cheers = hops
+    this.idleHop = 0.2
+  }
+
+  /** One small hop of joy (an answer at home, a flower planted); never while already up. */
+  happyHop() {
+    if (!this.grounded) return
+    this.vy = 6
+    this.grounded = false
+    this.jumps = 1
+    this.sv += 3
+  }
+
   /**
-   * mode: 'menu' (idling), 'run' or 'home' (celebrating). Returns the landing
-   * speed when the bunny touches down this frame, else 0.
+   * mode: 'menu' (idling, with a little hop now and then), 'run', or 'still' (at home, or waiting
+   * for an answer: a few happy hops on arriving home, then only ears, blinks and a look at the
+   * child, so nothing moves beside a question). Returns the landing speed when the bunny touches
+   * down this frame, else 0.
    */
   update(dt, speed, mode) {
     this.time += dt
     let landed = 0
 
-    // Little happy hops on the menu and at home
-    if (mode !== 'run' && this.grounded) {
+    // A little hop now and then on the menu; at home, only the few happy hops of arriving
+    if (mode !== 'run' && this.grounded && (mode === 'menu' || this.cheers > 0)) {
       this.idleHop -= dt
       if (this.idleHop <= 0) {
-        this.idleHop = mode === 'home' ? 0.15 + Math.random() * 0.3 : 2 + Math.random() * 3
-        this.vy = mode === 'home' ? 9 : 6
+        const cheer = mode !== 'menu'
+        if (cheer) this.cheers--
+        this.idleHop = cheer ? 0.25 + Math.random() * 0.15 : 2 + Math.random() * 3
+        this.vy = cheer ? 8 : 6
         this.grounded = false
         this.jumps = 1
         this.sv += 3
-        if (mode === 'home' && Math.random() < 0.4) this.flipT = 0
       }
     }
 
@@ -203,7 +222,7 @@ export class Bunny {
     // (a positive turn about Z tips an ear backwards)
     for (let i = 0; i < 2; i++) {
       const flop = running ? Math.sin(this.runPhase * 2 + i * 0.7) * 0.18 : 0
-      const twitch = mode === 'menu' && Math.sin(this.time * 1.3 + i * 2) > 0.97 ? 0.4 : 0
+      const twitch = mode !== 'run' && Math.sin(this.time * 1.3 + i * 2) > 0.97 ? 0.4 : 0
       const target = clamp(this.vy * 0.045, -0.6, 0.7) + flop - twitch + (this.dizzy > 0 ? 0.5 : 0)
       this.earV[i] += ((target - this.ear[i]) * (90 + i * 25) - this.earV[i] * 7) * dt
       this.ear[i] += this.earV[i] * dt
@@ -232,7 +251,7 @@ export class Bunny {
     this.munchT = Math.min(1, this.munchT + dt / 0.35)
     this.dizzy = Math.max(0, this.dizzy - dt)
     const nod = this.munchT < 1 ? Math.sin(this.munchT * Math.PI * 3) * 0.2 * (1 - this.munchT) : 0
-    const idleLook = mode === 'menu' ? Math.sin(this.time * 0.7) * 0.15 : 0
+    const idleLook = mode !== 'run' ? Math.sin(this.time * 0.7) * 0.15 : 0
     p.head.rotation.z = p.head.userData.rest.z + clamp(this.vy * 0.012, -0.15, 0.15) - nod
     p.head.rotation.x = p.head.userData.rest.x + (this.dizzy > 0 ? Math.sin(this.time * 12) * 0.15 * this.dizzy : 0) + idleLook
     p.tail.rotation.y = p.tail.userData.rest.y + Math.sin(this.time * (running ? 14 : 4)) * 0.3

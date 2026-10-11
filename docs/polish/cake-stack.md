@@ -365,3 +365,192 @@ Playwright in Chromium (`--use-angle=gl`) with stubbed `speechSynthesis`. Script
 - A "spot the mistake" cake: a pre-stacked order with one wrong layer to find and replace.
 - At the card, let the child choose the next friend's pattern for someone else to finish.
 - `examples/_studio/tests/original-quality.mjs` still expects counting progress per landed layer (since round 3 it counts at the candle check).
+
+## Round 5 pass (2026-10-11, not yet built or deployed)
+
+Starting point: the last independent review scored 8.5 (calm 8.8, focus 8.5, learning 8.5, fun/depth 8.2, visual 8.6, voice 8.6, polish 8.4). Two audit items were still open: the recipe studio was not picture-only, and the friend voices used square and sawtooth tones.
+
+### Design
+
+- **The recipe studio is now picture-only.** Both instruction sentences are gone: "Follow the pictures…" and "Tap a friend's plate… Give everyone the same number." The flavour buttons show only their colour and picture, with no word label. The heading and the title chip are 🎂 📖, and the words stay only for screen readers (`.studio-sr`, `aria-label`). The instructions are spoken now. The first time the studio opens it says "Build the cake like the pictures, from the bottom up." once (`sayOnce`), and the share tab says "Give everyone the same!". The studio stays a separate, calm sandbox reached from the title, and it is not folded into the main loop. It is the one place to practise bottom-to-top recipes and halves and thirds with no friend waiting. With every word gone, nothing in it needs reading.
+- **Softer sounds.** Every friend voice is now sine or triangle, with gain 0.07–0.15 (it was sawtooth or square at about 0.2). The puppy's noise bark is gone, and the chick is lower and quieter. The landing plop is down from 0.4 to 0.2, and its noise from 0.14 to 0.08. The blow is down from 0.3 to 0.14 and the Happy Birthday melody from 0.2 to 0.13. The match strike no longer has a 1.8 kHz warble, and the splat and puff noise are quieter. No square or sawtooth oscillator is left in `audio.js`.
+- **Counting: the child decides how many to take off.** After too many layers, only the top layer tilts. After that, each tap on the cake lifts its top layer: nothing else tilts, the finger does not point, the pantry hides and the idle hint stays off. The candle comes back at once, so the child chooses when to stop and asks the friend to count again. Taking off too many is a real miscount, and stacking resumes after "Bear wants 3." On a second check the friend counts to their own number and then says "and one more", "one more" for each extra layer, so the difference is heard and not just a longer count.
+- **Candle taps are never lost.** A candle tap while a layer is still falling clicks softly and is checked once the layer has landed.
+- **Tier 1 is a real decision, not copying.** From tier 1 only the first dot of an order keeps its ring, which shows where the order starts. After that the child finds their own place by matching the layers on the cake to the dots. The ring comes back on a dot where a wrong layer was tried, and while peeking.
+- **A faster climb for confident children.** After two clean cakes in a row in a visit, every further clean cake steps the tier up. A careful player now meets memory orders on cake 5, at about 2 minutes, where before it was about cake 7. A slip resets the run, and three slips still step down. Nothing is announced.
+- **A shorter repeated party.** From the third cake of a visit, the toppers pop in one quick wave with a few soft pops, all the candles light together, and the friend hops onto the counter faster. The first two parties are unchanged.
+- **Clearer dots.** Order dots not yet reached keep their full icing colour with a thin outline, so mint and vanilla no longer look disabled. The counting goal row's slices are at opacity 0.8 (it was 0.35 and grey), so the one-to-one comparison with the cake is visible.
+- `game.json` how-to-play matches the game now: the pantry, tapping off, patterns, memory and made-up orders, counting with take-off, and the 🎂 📖 studio.
+
+### Files
+
+| Change | Where |
+| --- | --- |
+| Picture-only heading, a spoken studio intro, no instruction sentences, flavour buttons without words, share line | `examples/_studio/originals/recipe-studio.js:68-80`, `:295`, `:357` (copied to `public/js/recipe-studio.js`) |
+| Title chip 🎂 📖 with `aria-label` | `public/index.html:35` |
+| `.studio-sr`, sentence and label rules removed | `public/style.css:203-204` |
+| Soft friend voices, quieter plop, blow, match, birthday, splat and puff | `public/js/audio.js:7-33`, `:167-171`, and the sound methods below them |
+| Pantry hidden while trimming | `public/js/main.js:482` |
+| Over-count: the child takes layers off (`liftSurprise` branch, `takeTop`, `tap`) | `main.js:657-667`, `main.js:1125-1131`, `main.js:1768` |
+| Repeat check: "and one more" | `main.js:1081-1085` |
+| Over-count line | `main.js:1110-1115` |
+| Quick party from the third cake | `main.js:893-944` (`topDecorations(run, quick)`), `main.js:984-1023` |
+| Faster tier ramp (`cleanRun`) | `main.js:1034-1047`; reset in `start()` |
+| Quiet next dot (`.quiet`) | `main.js:1522-1524` |
+| No idle hint while trimming | `main.js:1631` |
+| Queued candle tap | `main.js:1725-1731` |
+| Full-colour dots, quiet ring, visible goal slices | `public/style.css:602-609` |
+
+### Evidence
+
+Playwright in Chromium (`--use-angle=gl`) with stubbed `speechSynthesis`. Scripts and screenshots are in the scratch folder `polish/cake-stack/r5/`: `play.mjs` (now with `OVER`/`LEAVE1` over-count modes), `ring.mjs` and `../studio5.mjs`. There were 0 console or page errors in every run.
+
+| Run | Result | Spoken |
+| --- | --- | --- |
+| Studio, 834×1194 and 1194×834 (`studio-*.png`) | No sentences and no flavour words. The heading is 🎂 📖, and the status line and controls are pictures. | — |
+| Careful, 834×1194, tier 0, 5 cakes (`pc`) | 24, 34, 26, 28 and 33 s per cake. The tier went 0 → 1 (cake 2) → 2 (cake 3) → 3 (cake 4). Cake 5 was Panda from memory: "You remembered Panda's whole order!" The tier-3 cut choice was 8 or 12. | 24 over 5 cakes |
+| Careful, 1194×834, tier 1 (`lc`) | 26 s and 27 s, and the tier went 1 → 2. | 9 over 2 cakes |
+| Random, 1194×834, tier 1 (`lr`) | 4 and 6 slips, 60 s and 45 s, and the tier fell to 0. | 13 |
+| Ring check (`ring.mjs`, `ring-t0.png`/`ring-t1.png`) | At tier 0 the third dot is ringed. At tier 1 the second to fourth dots are `quiet` and only the first ring would show. | — |
+| Counting 🐢, over by 2 (`co`) | Candle at 5 (wants 3): one tilt, then two child taps, then candle at 3, and the reward. Same at 6 (wants 4). `co-*-over.png`/`cl-1-over.png`: no finger, no pantry, the candle shown, and the goal slices clearly visible. | 29 over 2 cakes |
+| Counting 🐢, leaves one extra (`cl`) | Second check: "1, 2, 3, and one more", then "Bear wants 3.", then the right count. | 19 |
+| Counting 🐢, random (`cr`) | A candle tapped while a layer was falling was checked after it landed (the count of 2 for "candle at 1"). A repeat over-count said "1, 2, and one more, one more". | 32 over 2 cakes |
+| Counting 🧮, careful (`cc`) | Friends asked for 5 and 7, and each was right first time. | 21 |
+
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids cake-stack --run cake-stack-c1`: BOOT + PLAY ready, 0 errors. `node --check` passes on `main.js`, `audio.js` and both copies of `recipe-studio.js`, and the two copies are identical.
+
+### Checklist status
+
+- Recipe studio picture-only, or fold it in: **closed.** It is picture-only. It is deliberately kept as a separate sandbox, for the reason given above.
+- Soften the square and sawtooth voices and the loud plop: **closed** in `audio.js`, which is local to this game.
+
+### Remaining ideas
+
+- A tier-3 "spot the mistake" cake: a pre-stacked order with one wrong layer to find and replace.
+- At the card, let the child design the next friend's order.
+- Free stacking still has no tier. Counting could add "make it two more" or a comparison between two cakes.
+
+## Round 6 pass (2026-10-11, not yet built or deployed)
+
+Starting point: independent review 1 scored 8.3 (calm 8.8, focus 8.4, learning 8.4, fun/depth 8.1, visual 8.6, voice 8.3, polish 8.2). No audit checklist items were open. The review raised two blockers, six bugs and eight ranked improvements. All of them are addressed below.
+
+### Design
+
+- **At tier 0, looking now beats tapping.** Each of the bakery's layers crosses the cake once and then makes way, where before it crossed and came back. Letting a wrong layer go by now costs about 2.6 s instead of about 5 s. If the wanted layer goes by untouched, it comes straight back, so a slow drop never means a long wait. A wrong layer that is dropped costs more than before. After it is lifted, the friend glances at the dot for 1.1 s. Then the next layer is another flavour (once only, so a slip on that one never starts a chain). The wanted flavour comes along about half the time otherwise. Measured over 5 careful and 7 random tier-0 orders: careful averaged about 11 s per order with 0 slips (8–16 s), and random averaged about 22 s with 0–10 slips (10–44 s).
+- **Careful and random play sound different.** An order built with 3 or more wrong layers ends with "We got there! <layers>, for Bear." It no longer gets "Just like Bear's order!" or any pattern or memory praise. "So straight!" is still the only extra for careful play, and there is still no score.
+- **The tier steps down sooner, and it decays between visits.** It steps down after 3 wrong layers in one cake, or after wrong layers on two order cakes in a row, so a child making 1–2 slips per cake is eased off too. The stored tier starts one step lower each visit, so a younger sibling on the same device does not start on memory orders. The `cake-stack-clean` key is no longer read.
+- **Counting says the goal once.** "Bear wants 3 layers." is said only when the cake begins. A first under-count says "Not yet. More layers!" once. A first over-count says "Too many! Tap the cake to take layers off, then tap the candle." once. After that, "Count again with me." is said once, and then only the empty dots and the goal slices answer.
+- **The birthday friend stays visible during sharing in landscape.** The share card is at most 46vw wide (it was 56vw). The camera keeps the cake and the friend in the left half of what is actually shown, measured from the visible width so tall cakes are handled too.
+- **"The cake is ready!" sits at the top,** in the "Make a wish" spot, as a compact bubble (`.intro.high`). It no longer covers a tall cake's topper.
+- **Slivers and crumbs stay short of the friend.** A sliver's sideways speed is set from its fall time, so it lands 0.3–0.6 beside the cake. On the friend's side it is limited further by `view.custX`, and it slips straight down when the edge is already close to the friend. Crumbs on the friend's side get a `reach` factor.
+- **Twelve slices are countable.** The gaps between slices are wider, the cut lines on dark tops are solid white and thicker, each slice has one bigger cherry near its edge, and the sponge ring is wider. A twelve-slice cake top is drawn larger (`.share-cake.many`).
+- **The studio's division is now real.** A 🔪 button cuts the cake into 4, 6, 8 or 12 slices, for two or three friends. There is a baker's plate, and the plates show slices with no numeral. The slice-number buttons are gone: tapping a plate gives it the next slice. A share is fair when the cake is empty, every friend has the same, and the baker holds fewer than the number of friends. If the baker holds enough to go round again, the voice says "The baker has enough to go round again!"
+
+### Files
+
+| Change | Where |
+| --- | --- |
+| Tier decays per visit | `examples/cake-stack/public/js/main.js:91-95` |
+| One crossing, wanted layer comes back | `main.js:181-183`, `main.js:534-536` |
+| Next layer after a slip is another flavour; base odds | `main.js:364-382` (`pickOrderFlavour`), `main.js:595-598` (`landSurprise`) |
+| Tier-0 glance 1.1 s | `main.js:686-690` |
+| Crumb and sliver reach | `main.js:748-751`, `main.js:796-806`, `effects.js:182-191` |
+| Share camera in landscape | `main.js:255-263` |
+| Ready bubble high | `main.js:998`, `main.js:1650-1658`, `style.css:90-97` |
+| "We got there!" line | `main.js:1006-1010` |
+| `adaptTier` with `prevSlips` | `main.js:1060-1090` |
+| Counting voice | `main.js:1145-1156` |
+| Cake top for many slices | `party-share.js:48-79`, `style.css:452`, `style.css:587` |
+| Share card 46vw | `style.css:481` |
+| Studio cuts and baker plate | `examples/_studio/originals/recipe-studio.js:17-22`, `:186-190`, `:205-213`, `:249-276`, `:369-412` (copied, identical, to `public/js/recipe-studio.js`); studio CSS `style.css:239-240`, `:343-378` |
+| How to play | `game.json` |
+
+### Evidence
+
+Playwright in Chromium (`--use-angle=gl`) with stubbed speech. Scripts and screenshots are in the scratch folder `polish/cake-stack/r6/`: `play.mjs` (stores tier+1 to allow for the decay), `ready.mjs`, `sliver.mjs` and `studio6.mjs`. There were 0 console or page errors in every run.
+
+| Run | Result |
+| --- | --- |
+| Careful, tier 0, 834×1194 (`pc0`, `pc0b`) | 8.1, 8.2, 10.9, 13.4 and 16.0 s per order, 0 slips. Tier 0 → 1 → 2. |
+| Random, tier 0 (`pr0`, `pr0b`, `lr0`) | 13.4 s with 1 slip; 44 s with 10 slips; 30 s with 6 slips; 10 s with 0 slips; 15 s with 1 slip; 12 s with 1 slip; 32 s with 8 slips. Orders with many slips ended with "We got there!". |
+| Random, tier 1 (`pr1`) | 3 slips on cake 1 (34 s; careful `pc1` took 9.5 s), and the tier fell to 0. |
+| Careful, tier 3, 1194×834, level 6 (`lc3-6-share.png`) | A 9-layer made-up pattern. The pig is fully visible beside the share card. |
+| `ready-1194.png`, `ready-834.png` | A 10-layer cake. "The cake is ready!" sits above the topper. |
+| `sliver-grid.png` | Off-centre drops toward the bunny land beside the cake. |
+| `pc1-2-share.png`, `zoom12.png` | Twelve chocolate slices, each with its cherry, are clearly separate. |
+| Counting 🐢, random (`cr`) | Over two cakes, "Bear/Bunny wants N layers." was said once each. Each hint was said at most once per cake. |
+| `studio6-*.png` | At 834, 1194 and 390 wide: 8 slices for 3 friends plus the baker. "Fair share! 2 each, and 2 for the baker." |
+
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids cake-stack --run cake-stack-c2`: BOOT + PLAY ready, 0 errors. `node --check` passes on `main.js`, `effects.js`, `party-share.js` and both copies of `recipe-studio.js`, and the two copies are identical.
+
+### Checklist status
+
+- There were no open audit items. All six of review 1's bugs, both of its blockers and all eight of its improvements are handled as described above.
+
+### Remaining ideas
+
+- A tier-3 "spot the mistake" cake. At the card, let the child design the next friend's order.
+
+## Round 7 pass (2026-10-11, not yet built or deployed)
+
+Starting point: review 1 scored 8.5 and review 2 scored 8.4. Review 2 still had one checklist item open: pattern cakes hid only the last layer of ABC ABC at tiers 0–1. Between them the reviews raised seven bugs, and both reported that the tier ramp was fast.
+
+### Design
+
+- **Patterns hide their whole last unit at every tier below 3.** At tiers 0–1, Pig and Chick's ABC ABC now shows ABC with three "?" dots grouped as one unit, so the child builds the whole repeat, not only the final C. AB AB AB already hid a whole unit. Tier 3 is unchanged.
+- **An empty cake looks empty at the fairness check.** A given slice leaves a dashed place the colour of the plate, with no cherry. When the last slice is given, the sponge ring fades into the plate too.
+- **Plates only give while the cake still has slices.** Until the cake is empty, a tap anywhere on a plate, including on its slices, gives that plate a slice, and the slices on it are not buttons. When the cake is empty and the plates are checked, a slice can be tapped to put it back. This stops the give/take-back loop that comes from tapping the middle of a plate. Fixing an unfair share now means moving one slice at a time: take one back, then give it to the right plate.
+- **Counting dots match the cake.** A layer tilted to come off keeps its dot, tilted and dashed, so a cake with 5 layers shows 5 dots while the child decides how many to take off.
+- **Made-up patterns show a readable "?".** The "keep it going" dots now have a pink "?" on their white dot.
+- **The sliding layer no longer bobs.** The steady golden glow is the only timing cue.
+- **Mashing at tier 0 is slower than looking.** A wrong layer dropped less than 0.7 s after it appeared, before its picture could be checked, gives a 2 s glance at the dots instead of 1.1 s. A wrong layer still sends another flavour next, as before.
+- **The tier ramps more slowly at the top.** Tiers 1 and 2 still each take two clean cakes in a row. Tier 3 (memory orders and made-up patterns) needs three, and the "every further clean cake steps up" shortcut is gone.
+- **Counting adapts.** After two counting cakes in a row are counted right first time, the friends sometimes ask for one past the usual range (5 for 🐢, 8 for 🧮), and the share can leave slices for the baker's plate. A miscount resets this.
+- **Camera.** Sideways, the play view sits 0.22 right of the cake, which keeps the friend fully in frame and the cake clear of the pantry on the left. Tall screens use a slimmer margin around the slide, so an early short cake and its friend are about 6% bigger.
+- **The recipe studio says each flavour name once per round.** It used to say the name on every tap.
+
+### Files
+
+| Change | Where |
+| --- | --- |
+| Whole last unit hidden below tier 3 | `examples/cake-stack/public/js/orders.js:35-43` |
+| Counting tier: `countClean`, `stretch` numbers | `main.js:86`, `main.js:125-126`, `main.js:142`, `main.js:1378` |
+| Leftover sharing for counting | `main.js:1297` |
+| Camera margin and offset | `main.js:273-277` |
+| Mover age, no bob | `main.js:534`, `main.js:559-561` |
+| Hasty slip glance | `main.js:604-607`, `main.js:700-701` |
+| Tier ramp (3 clean cakes for tier 3) | `main.js:1076-1086` |
+| Pink "?" on made-up pattern dots | `main.js:1560-1562`, `main.js:1575` |
+| Tilted counting dot | `main.js:1588-1593`, `style.css:624-625` |
+| Empty plate wedges, faded rim | `party-share.js:50-52`, `:130`, `:248`; `style.css:454-460` |
+| Slices take back only when the cake is empty | `party-share.js:131-134`, `:152`, `:216`; `style.css:627` |
+| Studio flavour name said once | `examples/_studio/originals/recipe-studio.js:288-307` (copied, identical, to `public/js/recipe-studio.js`) |
+| How to play (sharing) | `game.json` |
+
+### Evidence
+
+Playwright in Chromium (`--use-angle=gl`) with stubbed speech. Scripts and screenshots are in the scratch folder `polish/cake-stack/r7/`: `play.mjs` (which now fixes a share by moving one slice at a time), `pips.mjs` and `studio7.mjs`. There were 0 console or page errors in every run.
+
+| Run | Result |
+| --- | --- |
+| `pig0.png` (L6, tier 0, 834×1194) | The order hides 3 layers: 🍓🍋🌈 \| ? ? ?. The voice says "Pig wants a pattern! strawberry, lemon, rainbow. What comes next?" |
+| `design3.png` (L6, tier 3, 1194×834) | The "?" dots are computed as `rgb(176, 74, 122)` on white. The design dots are blank and dashed. |
+| `sr-2-check.png`, `pt-3-part.png` | The empty cake shows as a dashed plate with no cherries. A chocolate cake with 12 slices and 3 given shows three empty places. |
+| Share, random dealing (`sr`) | Plates 0/4/2 were checked and fixed one slice at a time, and the share finished: "6 slices, 3 friends. 2 each." |
+| `co-2-oops.png`, `cb-1-oops.png` (1194×834) | Counting, too many: the cake had 6 layers and showed 6 dots (5 plus 1 tilted and dashed). The friend's whole head is in frame. |
+| Tier 0, careful 1194×834 (`mc`) against random 834×1194 (`mr`) | Careful took 28/38/29/32 s per whole cake (party included), with 0 slips. Tier 0 → 1 after cake 2 and → 2 after cake 4. Random took 23 s (0 slips), 40 s (2 slips) and 77 s (11 slips). |
+| Counting 🐢, careful, 5 cakes (`cs`) | After 2 clean cakes the share has a baker's plate, and cake 5 ended "8 slices, 3 friends. 2 each, and 2 for the baker!" Each "X wants N layers." was said once. |
+| Studio (`studio7.mjs`) | Seven flavour taps produced one "vanilla" and one "strawberry". |
+
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids cake-stack --run cake-stack-c3`: BOOT + PLAY ready, 0 errors. `node --check` passes on `main.js`, `orders.js`, `party-share.js` and both copies of `recipe-studio.js`, and the two copies are identical.
+
+### Checklist status
+
+- Pattern cakes hide the last unit: **closed** for every pattern at every tier.
+- Every reviewer bug is fixed: the share-card empty cake, the counting dot for the tilted layer, the friend in landscape counting, the made-up "?" colour, the plate tap targets, the studio voice and the mover bob.
+- Improvements: mashing (hasty glance), the tier ramp (both reviews), adaptive counting, and portrait and landscape framing are done.
+- Not done: a tier for free stacking ("copy my cake") and replacing the 🌼 vanilla icon. Both are left as ideas.
+
+### Remaining ideas
+
+- A tier-3 "spot the mistake" cake. A "copy my cake" prompt in free stacking. A cream swatch in place of 🌼 for vanilla.

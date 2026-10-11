@@ -431,3 +431,383 @@ Scripted real-input play (`scratchpad/polish/penguin-bowling/play4.mjs`, screens
 - Exact plan hits from one step out (8) are still about 55%. A finer half-step for tier 3 would make 7 reachable as well.
 - With bumpers down, the plan spots were not re-measured with curved slides.
 - Tier-2 footprints for a plan sit on the side the penguin is nearest. A child could be asked to choose the side.
+
+# Round 5 of the decision pass (2026-10-11)
+
+Source: independent review 4 (8.4/10). Its blockers were:
+- Tier-1 "worked out" credit went to random tapping, because the game supplied every number.
+- Plans reduced to memorising four spots, and the "leave k" part was read, never used.
+- Tier-2 bond questions could be answered by counting the lane.
+- A 10-frame game was long.
+
+Its bugs were: "N standing." was said with `sayNow` and not de-duplicated, and the tier-2 footprints were hidden behind the penguin.
+
+## Design
+
+1. **Tier 1: the child says how many.** After the child taps every standing pin (two or more), the numbers over the pins tuck away. The bond shows "?" with two neighbouring numbers, in random order. The lesson is cardinality: the last number counted tells how many.
+   - A wrong pick brings the numbers back. The child hears "The last number you counted tells how many." once a game, then picks again.
+   - With no answer after 10 s, the game goes on without the "worked out" mark.
+   - The last tap no longer says "N standing." with `sayNow`. Taps count aloud up to 5 through `voice.count`. "N standing." is said once a game, only after a count-along.
+2. **Careful counting is measured, not assumed.** A count is careful only if:
+   - every standing pin was tapped;
+   - no fallen pin was tapped;
+   - no two taps came closer than 250 ms;
+   - at most half the taps landed on bare ice;
+   - the total was right the first time.
+
+   One more rule: tapping a single pin still counts towards moving up, but it is not a way worked out. A hasty count takes one step back towards tier 2. A tier-2 miss takes two right answers back, so guessing among three numbers does not climb a tier.
+3. **The cloud from tier 2 up.** Every bond question hides the deck under the snow cloud. The standing pins in the card are already hidden, so "7 + ? = 10" needs the bond (or counting on from the 7 fallen pins), not a count of the lane.
+4. **Tier 3 plans are numeric: "leave 3".** The plan card asks "How many will you leave standing?". Each choice is the number with only that many upright dots, and no knocked gaps to count. The 🎯 pill reads "🎯 leave 3", then "✓" or "→ 2". Tips speak in the same terms ("To leave more standing, stand nearer the side."). Finding where to stand needs the conversion: leave 3 means knock 7.
+5. **A plan made exactly asks for the other part** (it no longer skips the question):
+   - Tier 2 ("knock 7") asks "How many more make 10?" under the cloud.
+   - Tier 3 ("leave 3") asks "? + 3 = 10. How many fell down?"
+   - 🎯 is kept whatever the answer; a first-try answer adds "worked out".
+6. **Tier-2 plan footprints are visible.** The short trail is 35% wider, fully opaque and warm orange, and the plan's number stands in a disc at its far end. This makes "stand here for 8" readable from behind the penguin (`r5/l2-plan-aim.png`).
+7. **Games are 5 frames by default.** Families can pick 10 on the title chip; the stored choice is kept.
+
+## Changes (`examples/penguin-bowling/public/`)
+
+- `js/main.js`:
+  - `short` default :90
+  - tier comments :105–117
+  - tap voice :428
+  - plan hit asks the other part :435
+  - `bondDone` :455: careful rule :467, single pin :469, hasty step back :474
+  - tap timing :495
+  - `askHowMany(…, part)` :575 (cloud at tier 2+)
+  - `numberChoices` :611
+  - `askTotal`/`totalDone` :632–660
+  - total answers :669
+  - tier-2 rights penalty :707
+  - `offerPlan` "leave" plans :789
+  - `standRow` :835
+  - footprints with number :860
+  - `updatePlanPill` :869
+  - `planResult` tips :887
+  - stray taps :1436
+  - plan number key uses `data-knock`
+- `js/count.js`:
+  - `Counter.labels(on)`.
+  - `Spot.show(x, { short, label })`: wider and bolder short prints, plus a number disc.
+- `index.html`: `#plan-text`; the Frames chip shows 5.
+- `style.css`: Round 5 block (`.bond.guess-total`, `.ten.stand`).
+- `game.json`: how-to-play describes saying how many, the cloud, "leave" plans and 5 frames.
+
+## Evidence
+
+Scripted real-input play (`scratchpad/polish/penguin-bowling/play5.mjs`, screenshots and logs in `r5/`):
+- Speech is stubbed and logged.
+- Careful mode makes one deliberate slip, one wrong total and one wrong answer per question type.
+- Random mode taps within ±130 px of the pins and picks answers at random.
+- Every run had 0 console or page errors when run alone. Four parallel Chromium instances once logged a WebGL context-lost warning at teardown; it did not appear when the run was repeated alone.
+
+| Run | Frames | Tiers | Worked out (met) | Plans exact/near | Spoken |
+| --- | --- | --- | --- | --- | --- |
+| Careful 834×1194 Night, tier 1 | 10 | 1 → 2 (roll 5) → 3 (roll 16) | 5 (7) | 3/8, 4 near | 32 |
+| Careful 1194×834, tier 1 | 10 | 1 → 2 (roll 7) | 5 (6) | 3/7, 4 near | 31 |
+| Random 834×1194, tier 1 | 10 | 1 | 1 (9) | — | 26 |
+| Random 1194×834 Fishy, tier 1 | 10 | 1 | 1 (10) | — | 28 |
+| Random 834×1194, tier 2 | 10 | 2 → 1 (roll 3) | 3 (6) | 0/1 | 27 |
+| Careful 1194×834 Fishy, tier 2 | 5 | 2 → 3 (roll 9) | 3 (4) | 2/5, 3 near | 20 |
+| Careful 1194×834, tier 3 | 10 | 3 | 5 (6) | 4/11, 5 near | 19 |
+| Careful 667×375, tier 3 | 5 | 3 | 2 (4) | 2/6, 3 near | 18 |
+| Careful 834×1194, tier 3 | 5 | 3 | 2 (3) | 0/6, 4 near | 16 |
+
+- Random tier-1 play now works out 1 way a game, against 5 for careful play (before: 3 against 2).
+- The veil and the cloud were up at every tier-2 and tier-3 bond question: 48/48.
+- A plan made exactly asked the other part ("? + 1 = 10" under the cloud: `r5/lc3-ask-fallen-t3.png`).
+- Screenshots:
+  - `pc1b-total-ask`, `lc1-total-wrong`: tier-1 total.
+  - `p3-plan-card`, `lsc3-plan-ask`: "leave" plans.
+  - `l2-plan-aim`: footprints with the plan number.
+- `browser.mjs --ids penguin-bowling --run penguin-bowling-c1`: 0 errors.
+- `oq.mjs` (prediction and Escape): pass. A tier-1 count the child leaves alone still counts along, with no total question, so `original-quality.mjs` is unaffected.
+- `node --check` passes on `main.js` and `count.js`.
+
+## Checklist status
+
+The audit checklist was "all handled" coming into this round. The review's bugs are fixed: the last-tap voice, careful credit at tier 1 and the faint tier-2 footprints. Improvements 1, 2, 5 (the cloud, rather than veiling the rack), 6, 7 and 8 are done.
+
+## Remaining ideas
+
+- Improvement 3: a "which group will you go for?" spare decision at tier 3, showing the resulting bond.
+- Improvement 4: a split spare that needs the curve at tier 3. It needs physics measuring first.
+- On short landscape phones the plan question text is hidden, so only the dots (a ten-frame for "knock", upright dots for "leave") and the first spoken question tell the two plan kinds apart.
+- Letting the child choose which side the tier-2 footprints go on.
+
+# 2026-10-11: Round 6 (review 8.2)
+
+## Design
+
+1. **A strong bowler moves up sooner.** Tier 1 counts "big" rolls: strikes, spares and first slides of 8 or more. After two of them, two careful counts move the child to tier 2 instead of three. A careful single-pin count still counts towards moving up. In the careful 10-frame landscape run the child reached tier 2 at roll 5. The reviewer's run reached it at roll 11.
+2. **Plans offer only numbers the spots really give.** I measured 20 straight Go slides per spot, on both sides (`measure6.mjs`):
+   - middle: 8–10, mostly 9;
+   - one step out: 7–10, mostly 8;
+   - two steps out: 3–6, mostly 4;
+   - edge: 1 (75–90%), else 2.
+
+   Steps are quantised, so no half-step spot exists. Curves from any spot give 8–10, so a curve cannot honestly give 5. `FEW` is now `{1, 4}` and `MANY` is `{8, 9}`, so tier 3's plans are leave 9, 6, 2 or 1. In 36 planned slides this round, 26 came out exact (72%) and the other 10 were one away. Before, 2:1 and 5:3 were common outcomes.
+3. **Tier-2 footprints fade out within a game.** The first two plans of a game get the numbered prints. After that the child finds the spot alone, and hears "Now you find where to stand." once per game. The prints come back for the next plan only after a plan that came out two or more away. In the runs the prints were shown as `PP-------`, and later plans still came out exact or near.
+4. **"Where" card shows the answer.** A correct side replaces the question, or a wrong try's comparison, with the answer ("3 on the left"; for "more": "4 on the right").
+5. **Results lead with the same number for everyone:** "You met 6 ways to make 10". The key line reads "▢ 4 worked out by you · 🎯 3 as planned". The voice says "You met 6 ways to make 10. You worked out 4 yourself, and made 3 just as you planned." Careful work now adds to the headline and never shows as a smaller number.
+6. **Slow counters keep their count.** At tier 1 the game waits 3.5 s between taps (was 2.6 s) and 5 s before the first tap (6 s with a prediction; was 4/5 s).
+7. **The results staircase reads as a picture.**
+   - Ways met are solid with a warm edge.
+   - Ways not met are pale and flat, with grey pins.
+   - Ways worked out have a strong green edge.
+   - On tablets the pins are 21 px.
+8. **The scenery hushes during counting.** While the pins are counted or a bond question is open, the Fishy Bay whale does not spout, and the Night lamp halos hold still. The halos also breathe more slowly and less (1.2 rad/s, ±5%).
+
+## Changes
+
+- `examples/penguin-bowling/public/js/main.js`:
+  - state: `big` :119, `plansMade` and `planOff` :138
+  - big rolls :392
+  - first-tap wait :450, between-tap wait :506
+  - promotion rule :478
+  - `FEW`/`MANY` and the measured comment :798, :836
+  - footprints for the first two plans, and the "find where to stand" line :868–869
+  - `planOff` :898
+  - where-card answer :1025
+  - results headline and voice :1081
+  - resets :1291
+  - `scenery.hush` :1687
+- `examples/penguin-bowling/public/js/scenery.js`: `hush`, plus the halos' own slower clock (:161, :294, :303).
+- `examples/penguin-bowling/public/index.html`: the results key line reads "N worked out by you".
+- `examples/penguin-bowling/public/style.css`: Round 6 block (results contrast and pin size).
+- `examples/penguin-bowling/game.json`: how-to-play says the footprints show only for the first two plans.
+
+## Evidence
+
+The runs used `scratchpad/polish/penguin-bowling/play6.mjs`, with speech stubbed and logged. Screenshots are in `r6/`. Every run had 0 console errors.
+
+| Run | Frames | Tiers | Worked out (met) | Plans exact/near | Spoken |
+| --- | --- | --- | --- | --- | --- |
+| Careful 1194×834, tier 1 | 10 | 1 → 2 (roll 5) → 3 (roll 17) | 4 (6) | 6/8, 2 near | 31 |
+| Careful 834×1194 Fishy, tier 2 | 10 | 2 → 1 → 2 → 3 (scripted misses) | 4 (6) | 5/8, 3 near | 25 |
+| Careful 1194×834 Night, tier 2 | 10 | 2 → 1 → 2 → 3 | 4 (8) | 6/9, 3 near | 32 |
+| Careful 1194×834 Fishy, tier 3 | 10 | 3 | 4 (6) | 9/11, 2 near | 17 |
+| Random 834×1194 Night, tier 1 | 10 | 1 | 0 (7) | — | 28 |
+| Random 1194×834, tier 1 | 5 | 1 | 0 (5) | — | 26 |
+
+- The where-card text after a correct answer was always the answer: "3 on the left", "1 on the right" (`r6/lc1-trail-t1.png`).
+- Results screenshots: `r6/pc2-results.png` (portrait) and `r6/lc1-results.png` (landscape).
+- `browser.mjs --ids penguin-bowling --run penguin-bowling-c2`: 0 errors.
+- `oq.mjs`: pass. `original-quality.mjs` drives only the prediction and one Go, which is unchanged.
+- `node --check` passes on `main.js` and `scenery.js`.
+
+## Checklist status
+
+No checklist items were open. Both bugs are fixed: the stale where-text, and plan footprints that led to the wrong number. The blocker is fixed: tier 1 is now quicker for strong bowlers. Improvements 1–8 are done. For improvement 2, I dropped 5 instead of tying it to a curve, because curves measure 8–10 from every spot. For improvement 5, prints show only for the first two plans and again after a plan that came out far away.
+
+## Remaining ideas
+
+- More variety in plan numbers needs aim (angle) as well as standing spot. That could be a tier-3 "aim off the head pin" plan, once it has been measured.
+- A "which group will you go for?" spare decision at tier 3.
+
+# 2026-10-11: Round 7 (review 8.4)
+
+## Design
+
+1. **A wrong answer keeps the answer hidden.** The cloud and the veil now lift only when the right number is picked. Before, they lifted on any answer, so a second try could copy the frame card or the 🎯 pill.
+   - Wrong "how many fell?": only the bond card's fallen pins come out to count (`.show-fallen`). The cloud, the frame card's "?" and the hidden plan pill stay.
+   - Wrong "how many standing?": the cloud lifts so the pins can be tapped. The frame card and the pill stay hidden until the count is done.
+2. **"10 + 0" means a strike.** A spare clears what the first slide left, and its way (say 9 + 1) was already met on that first slide. So a spare no longer records "10 + 0".
+3. **"N standing." is said once a game,** through one flag (`game.standingSaid`), whatever the number. Before, `sayOnce` keyed each number separately.
+4. **An age chip on the title card: 🐣 Ages 3–5 / 🐧 Ages 6–8.**
+   - Each game starts from the chip, not from the last tier saved on the device.
+   - 3–5 always starts at tier 1.
+   - 6–8 starts at tier 2, or at tier 3 if the last 6–8 game ended there (`bigtier`).
+   - Bumpers reset to the title chip at the start of every game. The tier-3 "Bumpers down?" offer lasts only that game.
+5. **Results lead with the child's own work.**
+   - Headline: "You worked out N ways to make 10". With none worked out, the plain title "Ways to make 10".
+   - The voice follows the headline.
+   - The staircase still shows every way met.
+   - A random run now reads "Ways to make 10", where it used to read "You met 8 ways".
+6. **Tier 3 gets curved plans: leave 7 and leave 8.** I measured 24 Go slides per setup (`measure7.mjs`):
+   - middle with a left curve: 3 every time (24/24);
+   - middle with a right curve: 3 in 14/24, otherwise 4;
+   - one step out, curving away from the middle: 2 in 21–22/24 with the bumpers up. With them down it gives 0–1, so that plan needs bumpers.
+
+   Picking a curved plan sets the curve button for the child. The plan card shows the same arrow ("↖️ curve"), and so does the 🎯 pill ("leave 7 ↖️"). The first curved plan of a game gets footprints, with one spoken line: "A curved plan. Stand on the footprints, then press Go."
+
+   Curved-plan tips speak about the curve. Sliding without the curve gets "A curved plan needs the curve." After a curved slide the curve goes back to straight. Turning bumpers down picks the plans again.
+
+   Tier 3 now sees leave 9, 8, 7, 6, 2 and 1, not just 9, 6, 2 and 1.
+7. **Bigger pins to count on sideways tablets.** The landscape counting camera sits higher and uses a longer lens: fov 26 (was 40), up 5.2. The pins are about 40% bigger and the rows separate (`r7/cam-l40-deck.png` vs `cam-lB-deck.png`). Sideways phones use fov 34.
+8. **The counting rings hold still.** The ±5% breathing is gone, including the rings kept for the spare.
+
+## Changes
+
+- `examples/penguin-bowling/public/js/main.js`:
+  - tier/age state :119–122
+  - slide's real curve :302
+  - spare is not "10 + 0" :366
+  - curve resets after a curved plan :402
+  - "N standing." once :449
+  - `setTier` stores only 6–8 :511
+  - right answer lifts the cloud and veil :710
+  - wrong fallen keeps the cloud :738
+  - wrong standing lifts only the cloud :747
+  - bumpers-down re-offers plans :807
+  - curved plan picks :841
+  - `CURVED`, `planCurve`, `CURVE_ICONS` :870–877
+  - `choosePlan` curve and footprints :906–928
+  - curved tips :970
+  - results headline and voice :1141
+  - `setBumpers({ keep })` :1305
+  - per-game bumpers and tier in `start` :1368
+  - `setLevel` :1399
+  - `CAM.deck` per orientation :1632, :1668
+- `examples/penguin-bowling/public/js/count.js`: rings no longer breathe (:161).
+- `examples/penguin-bowling/public/index.html`:
+  - the Ages chip;
+  - the results key's "worked out" part is now its own span.
+- `examples/penguin-bowling/public/style.css`: Round 7 block (`.show-fallen`, `.plan-curve`).
+- `examples/penguin-bowling/game.json`: how-to-play mentions curved plans and the age chip.
+
+## Evidence
+
+The runs used `scratchpad/polish/penguin-bowling/play7.mjs`, with speech stubbed and logged. Screenshots are in `r7/` and `r7b/`. Every run had 0 console errors.
+
+| Run | Frames | Tiers | Worked out (ways) | Plans exact/near | Curved plans |
+| --- | --- | --- | --- | --- | --- |
+| Careful 1194×834 Fishy, tier 1 | 10 | 1 → 2 → 3 | 5 (7) | 4/7, 2 near | — |
+| Careful 834×1194, 6–8 tier 3 | 5 | 3 | 3 (4) | 3/5, 2 near | 0 |
+| Careful 834×1194 Night, tier 3 | 10 | 3 → 2 (scripted misses) → 3 | 6 (7) | 10/11, 1 near | 3 (3:3, 2:2, 2:2) |
+| Careful 1194×834, tier 3 | 10 | 3 | 6 (6) | 7/11, 4 near | 2 (3:3, 2:3) |
+| Careful 1194×834 Fishy, tier 3 (after the fixes) | 10 | 3 | 6 (7) | 5/11, 6 near | 1 (3:3) |
+| Careful 834×1194 Night, tier 2 (after the fixes) | 10 | 2 → 3 | 7 (7) | 8/11, 3 near | 1 (3:3) |
+| Random 1194×834, tier 2 | 10 | 2 → 1 | 2 (7) | 0/3, 1 near | — |
+| Random 834×1194, tier 1 (after the fixes) | 10 | 1 | 0 (8): "Ways to make 10" | — | — |
+
+- After every scripted wrong answer the state matched the design:
+  - fallen: cloud up, veil up, frame "?" kept, pill hidden;
+  - standing: cloud down, veil up, frame "?" kept, pill hidden.
+- Screenshot: `r7/lc3-num-wrong-fallen-t3.png`.
+- "N standing." was said at most once in every run.
+- The ways recorded "10 + 0" only in runs with a strike. pc3 had 4 spares and no "10 + 0".
+- The age chip and bumpers were checked with `chip7.mjs`:
+  - A device that last played tier 3 with the 3–5 chip starts at tier 1.
+  - "Bumpers down" in one game is back ON in the next.
+  - With the 6–8 chip, the next game starts at the saved tier (3, then 2 after a drop), and keeps it after a reload.
+- Screenshots:
+  - Landscape counting framing: `r7/cam-lB-deck.png`, `r7/lc1-count1-done.png`.
+  - Curved plan card: `r7/pc3b-plan-ask.png`.
+  - Curved plan pill and prints: `r7b/lc3-plan-curve-aim.png`.
+  - Results: `r7/lc1-results.png` (own work), `r7b/pr1-results.png` (neutral).
+- `browser.mjs --ids penguin-bowling --run penguin-bowling-c3`: 0 errors.
+- `oq.mjs`: pass.
+- `node --check` passes on `main.js` and `count.js`.
+- `original-quality.mjs` drives Play → prediction → Go → Escape. That flow is unchanged; the new title chip is not on its path.
+
+## Checklist status
+
+No checklist items were open. All four bugs are fixed:
+- the answer showing after a wrong try;
+- spares recorded as "10 + 0";
+- "N standing." said for each number;
+- tier and bumpers carrying over to the next child.
+
+All eight improvements are done:
+1. The headline is the child's own work.
+2. The cloud stays after a wrong answer.
+3. Curved plans for tier 3. A curve, not an angle: the curve button is a deterministic choice a child can make, and its results are measured.
+4. "10 + 0" is a strike only. Spares are left out rather than shown as their own way.
+5. "N standing." once a game.
+6. The age chip, and bumpers reset each game.
+7. The landscape counting camera.
+8. Still rings.
+
+## Remaining ideas
+
+- A "which group will you go for?" spare decision at tier 3.
+- Sideways phones (667×375) could zoom further if the bond card moves aside.
+
+# 2026-10-11: Round 8 (reviews 8.5 and 8.4)
+
+## Design
+
+1. **What was counted stays true.** The pins counted as standing now stay standing until the next slide. When the fallen pins puff away, each standing pin settles upright where it is and sleeps (`lane.js:539–551`). Before, a pin leaning on a fallen one could tip over while the child aimed. The count, the bond, the "where?" answer and the rack map then disagreed ("2 pins left" and then "1 pin on the left").
+2. **"Where are the pins?" always adds up.** A pin between the middle and a side counts for both sides. So when the middle was also a right answer, the spoken counts could add up to more pins than were standing ("5 in the middle" and "4 on the right" with 7 up).
+   - Now the question is asked only when every right answer is a side (`main.js:1125`). As before, pins in the middle need no question.
+   - A wrong pick names every accepted side ("Most are on the left and on the right", `main.js:1163`). Left and right never share a pin, so each pin is counted once.
+3. **A second try is still a choice.** After a wrong number, the game no longer leaves only the right button to press.
+   - At tier 1 the numbers come back over the pins, and two fresh numbers are dealt: the answer and its other neighbour, never the one already tried. The child reads the last number counted to choose (`main.js:729`).
+   - At tier 2 the fallen pins come out to count, and three numbers nearest the answer are dealt, leaving out every number already tried (`redeal`, `main.js:651`, `:767`).
+   - At tier 3 the 1–10 strip keeps every other number live.
+4. **Random tapping earns nothing.**
+   - Taps closer than 0.4 s are a sweep, not a count (`main.js:531`; it was 0.25 s).
+   - Moving up from tier 1 now needs one careful count of 3 or more pins whose total was said right first time (`game.bigCount`, `main.js:505`). Single pins plus big rolls no longer promote.
+   - Random runs now end with "Ways to make 10" and 0 worked out, while careful runs reach 4.
+5. **A 3–5 child stays at tier 2 longer.** Reaching the 1–10 strip takes 6 right answers and the fourth frame or later. 6–8 still needs 4 (`main.js:749`).
+6. **The youngest plan too: "A few or a lot?"** At tier 1 each fresh rack offers two pictures of ten dots, either a few lying down or most of them, labelled "a few" and "a lot" (`offerRoughPlan`, `main.js:901–925`).
+   - A few means 1–4 fall; a lot means 7 or more.
+   - The first two plans of a game lay the footprint trail: the edge for a few, the middle for a lot. After that the child finds the spot. The prints come back after a plan that missed (`main.js:980`).
+   - The 🎯 card shows "a few" or "a lot" and then ✓ or "→ 5" (`main.js:1004`).
+   - A plan that missed gets one tip, once a game: "For a few, stand near the side." or "For a lot, stand in the middle." (`main.js:1032`).
+   - Rough plans never count as "made as planned" ways. The tapped count follows as before.
+   - Every first slide now carries a decision whose answer depends on where the penguin stands.
+7. **One sentence per slide.**
+   - A strike's line replaces the plan's tip (`planResult(..., { quiet: r.strike })`, `main.js:404`).
+   - The cloud line is held back when a plan line has just been spoken, so the question is heard clearly (`game.planSpoke`, `main.js:641`, `:1030`).
+   - The spoken count never skips a number: while the voice counts with the child, the numbers the game fills in after a pause are said too (`main.js:451`).
+8. **No repeat question.** At tiers 2 and 3, a second slide that knocks nothing leaves the very pins just counted, so the pins light together with no question (`main.js:465`).
+9. **The bond reads on one line.** Every part's number sits on one baseline. While "how many fell?" is open, the hidden fallen pins take no room, so the "?" sits level with the standing number: "? + 1 = 10" (`style.css`, Round 8 block).
+10. **Sideways, the cards sit beside the lane.** The "where?" and plan cards now sit over the left snow bank:
+    - tablets: at 42% height, at most 236 px wide;
+    - phones: a compact column.
+
+    The penguin and its spot stay in view while the child plans.
+11. **Calmer while aiming.**
+    - The penguin's idle sway is slower and smaller: 0.025 rad at 1.6 rad/s, where it was 0.08 at 4 (`penguin.js:178`).
+    - The flippers barely move and the feet stay still.
+    - The lamp halos and the whale hold still during aim, as they do while counting (`main.js:1870`).
+
+## Evidence
+
+The runs used `scratchpad/polish/penguin-bowling/play8.mjs`, with speech stubbed and logged. Screenshots are in `r8/`.
+
+Two checks ran in every play8 run:
+- **Upright check:** on every second slide, the standing count was compared again 1.5 s into aiming.
+- **Count-skip check:** every spoken run of bare numbers must go 1, 2, 3, …
+
+| Run | Frames | Tiers | Worked out | Upright check | Count skips | Errors |
+| --- | --- | --- | --- | --- | --- | --- |
+| Careful 834×1194, tier 1 | 10 | 1 → 2 | 4 | 0/10 changed | 0 | 0 |
+| Careful 1194×834 Night, tier 1 | 10 | 1 → 2 → 1 (scripted misses) → 2 | 4 | 0/9 | 0 | 0 |
+| Careful 1194×834 Night, tier 2 | 10 | 2 → 1 → 2 → 3 | 6 | 0/10 | 0 | 0 |
+| Careful 834×1194 Night, tier 3 | 10 | 3 | 5 | 0/9 | 0 | 0 |
+| Random 834×1194 Fishy, tier 1 | 10 | 1 | 0: "Ways to make 10" | 0/10 | 0 | 0 |
+| Random 1194×834 Fishy, tier 1 (before the rough plan) | 10 | 1 | 0 | 0/10 | 1 (false positive: the "That one fell down" line sat between 1 and 2) | 0 |
+
+- **Wrong-pick re-deal:**
+  - a wrong "fell" pick at tier 2 (answer 9) re-dealt [8, 9, 10], all live (`fallen8.mjs`);
+  - a wrong total at tier 1 re-dealt two numbers (`r8/lc1-total-wrong.png`: [1, 2] for 2 standing).
+- **Where feedback:** no run said a middle count beside a side count. Wrong picks read "No pins in the middle" or "Most are on the left". Right picks read "Yes! N pins on the left/right", with N not more than the pins standing.
+- **Missed spare:** a gutter second slide at tier 3 asked no question (counting finished, number buttons hidden, no cloud; `miss8.mjs`).
+- **Speech:**
+  - a strike no longer follows a plan line;
+  - "Close to your plan!" is followed directly by "How many fell down?";
+  - "The pins are hiding in a cloud." was kept for a later question.
+- **Screenshots:**
+  - landscape cards beside the lane: `r8/l-plan.png`, `r8/l-where-wrong.png`, `r8/lc2-ask-where-t2.png`;
+  - phone landscape: `r8/s-plan.png`, `r8/s-where-wrong.png`;
+  - the "?" in line: `r8/l-ask-fallen.png`, `r8/pc3-ask-fallen-t3.png`;
+  - tier-1 plan: `r8/pc1-plan-ask.png`, with the pill and trail in `r8/pc1-plan-aim.png`.
+- **Test commands:**
+  - `browser.mjs --ids penguin-bowling --run penguin-bowling-c4`: 0 errors.
+  - `oq.mjs` passes. It is the original-quality flow: Play → 💭 → Go → Escape.
+  - `node --check` passes on `main.js`, `lane.js` and `penguin.js`.
+
+## Checklist status
+
+No checklist items were open.
+- **Review 1:** all five bugs are fixed (where contradictions, the forced last tap, the landscape cards over the penguin, the "?" alignment, random tier-1 credit). Improvements 1–5 are done. Of improvement 6, the repeat question is gone; the tier-3 spare goal is left for later (see below).
+- **Review 2:** all three bugs are fixed (the leaning pin, the skipped spoken numbers, the plan tip before the strike line). Improvements 1–7 are done.
+- **Taps in order:** I did not make taps follow the counting order. Requiring front-row-first is harsh for 3-year-olds. The 0.4 s gap and the 3+ count rule separate careful counting from random tapping instead.
+
+## Remaining ideas
+
+- A tier-3 spare goal ("3 standing: can you get all 3?" or "which group will you go for?" on a split).
+- Rough-plan success rates were not measured separately. They reuse the measured straight spots: the edge gives 1–2 and the middle 8–10.

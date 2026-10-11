@@ -159,6 +159,8 @@ export class Scenery {
     this.bobbers = []
     this.whale = null
     this.spoutIn = 3
+    this.halosT = 0 // the halos' own clock, which stops while hushed
+    this.hush = false
     this.onSpout = null
   }
 
@@ -291,7 +293,7 @@ export class Scenery {
       b.o.position.y = b.y + Math.sin(t * 0.8 + b.ph) * (b.whale ? 0.25 : 0.12)
       if (b.whale) b.o.rotation.z = Math.sin(t * 0.6) * 0.06
     }
-    if (this.whale) {
+    if (this.whale && !this.hush) {
       this.spoutIn -= dt
       if (this.spoutIn <= 0) {
         this.spoutIn = 4 + Math.random() * 3
@@ -300,7 +302,9 @@ export class Scenery {
         this.onSpout?.(p)
       }
     }
-    for (const h of this.halos.children) h.scale.setScalar(1.6 + Math.sin(t * 2.3 + h.userData.ph) * 0.08)
+    // The lamp halos breathe slowly, and hold still while the pins are being counted (hush).
+    if (!this.hush) this.halosT += dt
+    for (const h of this.halos.children) h.scale.setScalar(1.6 + Math.sin(this.halosT * 1.2 + h.userData.ph) * 0.05)
     if (this.sun) this.sun.rotation.z = Math.sin(t * 0.6) * 0.06
   }
 }

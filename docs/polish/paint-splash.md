@@ -419,3 +419,168 @@ Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-
 - The child picks which shape comes next, but not where it goes. Dragging a chalk shape onto the page would add placement.
 - The coat count uses the roller's middle plus four points 0.55 m out. Edging along a part's outline can note a run.
 - A guest's own child still gets no rescue or adaptation, and no pick card (the host picks).
+
+## Round 5: a white pot for tints, ratio goals, true coats, and the reviewer's bugs (2026-10-11)
+
+Starting point: the round 4 review scored 8.5 (calm 8.7, focus 8.5, learning 8.7, fun/depth 8.1, visual 8.2, voice 8.6, polish 8.4). Open audit item: "an older ladder: ratios (yellow-orange), brown from three, tints". Brown from three was already built; tints and ratios were not. Bugs: the boat said "a brown boat"; the pick card was silent after the first offer; the rescue stripes sat under the child's painter; wet paint could smudge a just-inked shape. Blockers: breadth stopped at four mixes, and quick pot swapping over small shapes still counted as coats.
+
+### Design
+
+- **Tier 5: the white pot (tints).** A careful child who passes tier 4 gets a ⚪ white pot beside red, yellow and blue. It is said once a round: "A new pot: white! White makes a colour lighter." About half of the requests now ask for a light colour ("Paint the heart pink!", "a light blue sail and a brown hull", "a light green scoop"). The rest are tier 4's mixes and rules, where white would spoil the colour. So the decision on every shape is whether white belongs, and which paint it lightens. Recipes stay hidden (❓ + ❓). A slip names what happened, and the first time in a round it says why: "That's light green, not green. White makes colours light." On a rule part it says "That's pink. White made it light. This one needs no white." The rescue, the wet tip ("Roll white over the shiny red!") and the still picture all work with white. Every 5th shape the child's own choice can now be light ("any colour you can mix, light or not"), and the ending says the recipe back ("Pink! Red and white make pink."). The results show tint recipes too (● + ⚪ = pink).
+  - A light mix (light green, light orange) needs three coats while wet. A careful script could not finish those over large petals within `WET_MS`, so only the smaller ice-cream scoop asks for them. The big shapes ask for pink or light blue.
+- **Ratios, in the colour studio.** The bit-based paint grid records which paints are on a cell, not how much, so a ratio cannot be painted on the ground. The colour studio counts drops, and it already said "More yellow: a yellowish orange!". It now gives a child who has reached the rule steps (on any visit) a 🎯 goal swatch: "Can you mix a yellowish orange?" Mixing it, with more of one paint than the other and none of the third, says "A yellowish orange! More yellow than red." and ticks the swatch ✅. Emptying the cup brings the next of six goals (reddish orange, bluish green, and so on). Each goal is said once.
+- **Coats mean coats.** A part counts as painted in coats only when the first coat covered at least 80% of it before the next paint went on (`COAT_SHARE`). A paint that only crossed a part on its way (less than 10% cover, `TRANSIT_SHARE`) is forgotten. After a part is painted, the paint the child is still rolling (finishing the row) is neither a coat nor a slip on the next part until they change pot (`carry`). Without this, careful two-part shapes failed: the cone logged "2124" from the scoop's last yellow row.
+- **Re-earning is quicker.** Each visit still starts at most at tier 2. Below the highest step reached on any earlier visit (`paint-splash-peak`), each careful shape adds 0.5 instead of 0.25. An older child is back at tier 5 in about six shapes, but every step is still earned by careful painting.
+- **Reviewer bugs.**
+  - The boat's brown part is the "hull" and the carrot's orange part is the "root" ("Paint the boat: a light blue sail and a brown hull!").
+  - On later pick cards (not rests), a child who hasn't picked after 8 s hears the shapes named once: "Star, ice cream or fish?". This line is dropped if they pick first.
+  - The still rescue picture avoids cells within 1.8 m of the child's painter.
+  - A finished shape is washed once more 2 s later, on every device at the same game time, so a roller still rolling at its edge leaves it crisp.
+
+### Changes (file:line)
+
+| Where | What |
+| --- | --- |
+| `_studio/originals/colour-model.js:57-66` (copied to `public/js/`) | `WHITE_PAINT`, `TINT`, `tintToyPaint` (the three-drop `mixToyPaint` is unchanged, so `curriculum.test.mjs` still passes) |
+| `_studio/originals/colour-studio.js:26`, `:69`, `:82-104`, `:327-334`, `:391`, `:441` (copied) | `GOALS`, the `goals` option, `offerGoal`/`meets`, the 🎯/✅ swatch, the goal line, the next goal on 🫗 |
+| `public/js/paint.js:36-62` | `WHITE`, `POTS`, 16 `MIXES` (tints from `tintToyPaint`, white `#ffffff`), `TINTS` |
+| `public/js/paint.js:91`, `:178` | Four paint-time layers; `settle`, `write`, `soften` use the white layer |
+| `public/js/jobs.js:19-23`, `:41-90`, `:100` | Tint constants, `tints` per shape (big shapes pink and light blue only), `hull`, `root`, `TINTED` |
+| `public/js/jobs.js:107-109`, `:132`, `:161` | `COAT_SHARE`, `TRANSIT_SHARE`; `any` + `light`; tier 5 in `chooseJob` |
+| `public/js/jobs.js:246`, `:319`, `:345-381`, `:406`, `:528` | `byMix` 16; slips ignore carried paint; `roll` (transit, carry, first cover), `layered`, `fill(…, carry)`, `coverSince` |
+| `public/js/main.js:57-99`, `:241`, `:271` | `TOP_TIER` 5, `WHITE_TIER`, `REEARN_STEP`, `RETIDY_MS`, `PICK_SAY_MS`; `peak`; studio `goals` |
+| `public/js/main.js:465-506` | `w`/`4` key; `choosePot` accepts white once it is out; `updatePots` shows the white pot |
+| `public/js/main.js:1118`, `:1471` | Tint recipes on the results; the white dab gets a ring |
+| `public/js/main.js:1512`, `:1547-1554`, `:1694` | Stale offer lines dropped; `ruleWords`/`ruleSlip` for white; shapes named after 8 s |
+| `public/js/main.js:1712`, `:1753-1768`, `:1790` | `white` on the job message; guests accept tints and `light`; white pot plus its once-a-round line |
+| `public/js/main.js:1882`, `:1947`, `:1967-1970`, `:1984`, `:2063` | Pale slip line; re-earn step; carry and retidy; `visiblePoint` off the painter; `retidy()` |
+| `public/index.html:79`, `public/style.css:110`, `:161` | `#pot-white` (hidden until tier 5), `.dab.white`, `.pot.white` |
+| `game.json` | `howToPlay`/`learning` mention the white pot and the studio's ratio goals (`public/bitgames.json` stays stale until the coordinator rebuilds) |
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/paint-splash/r5/`. Speech was stubbed. Every run had 0 console or page errors.
+
+| Run | Shapes | Slips | Skill | Lines a minute | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `careful.mjs`, tier 5, landscape (`t5l2`) | 10 in 4 min | 0 | 5 → 5.5 | 5.2 | 7 light requests, all in coats ("18", "48"); `t5l2-3-later.png` |
+| `careful.mjs`, tier 5, portrait (`t5p5`) | 7 | 0 | 5.5 | 4.4 | Two-part shapes now coats: "18" + "24", "14" + "124" |
+| `careful.mjs`, tier 5, portrait (`t5p6`) | 7 | 0 | 5.5 | — | `t5p6-5-results.png` shows the light shapes and pink/light-blue recipes |
+| `careful.mjs`, tier 2, landscape (`t2l2`) | 6 | 0 | 2 → 3 | 3.7 | Every brown part "124@1.00" (round 5's first try: "2124@0.54", failed) |
+| `careful.mjs`, tier 0, portrait (`t0p2`) | 9 in 3 min | 0 | 0 → 2 | — | Every first coat covered 100% |
+| `sloppy.mjs` (swaps pots every 1.5–3 s) ×4 | 9–12 | 0–1 | 1.25–2.5 | — | Small shapes often still covered 80%+ per swap, which really is coats; larger shapes show "@0.29"/"@0.47" and earn nothing |
+| `random.mjs` (four pots, on the shape) | 1 in 3 min | 1 | 2 → 1.5 | 3.7 | — |
+
+- `tint.mjs`:
+  - A pink heart rolled red, then white, painted as "18@1.00" with "One coat, then the next…".
+  - White rolled over a green leaf is a slip: "That's light yellow. Yellow and blue make green." (tier 0 wording).
+  - The studio goal: "Can you mix a yellowish orange?" After 2 yellow and 1 red, "A yellowish orange! More yellow than red." with ✅ (`tint-6-studio-met.png`). After 🫗, "Can you mix a reddish orange?".
+- `t5p4`: a boat with a light blue sail then a brown hull said "That's light blue, not brown. White makes colours light." The script had carried white rows over the hull, which led to the `carry` rule; the run after it (`t5l2`, `t5p5`) had no such slip.
+- `names.mjs`: the first offer says "Which shape next? Tap one.". The second says "Sun, butterfly or apple?" after 8 s with no pick (`names-offer.png`).
+- `stuck.mjs one`: the rescue picture was placed 1.2–2.5 m from the painter (round 4: under it).
+- `duo.mjs` (host at tier 5):
+  - The guest sees the white pot and can paint white, and the host sees seat 1 holding paint 8.
+  - A light-blue butterfly is chalked, painted and inked on both devices.
+  - Final hashes match (`-1102310138`), and both final messages are identical.
+- `quick.mjs`: the quick round has no white pot and speaks only its start line and the ending.
+- `look.mjs`: the card (pink ● with ● + ⚪ recipe) and results at 1194×834 and 834×1194 (`look-*.png`).
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids paint-splash --run paint-splash-c1`: BOOT + PLAY ready, 0 errors.
+- `node --check` passes on `main.js`, `jobs.js`, `paint.js`, `colour-studio.js` and `colour-model.js` (both copies). The colour-model tests in `curriculum.test.mjs` pass. That file's catalogue comparison fails until the coordinator rebuilds.
+
+### Checklist status
+
+- **Older ladder: ratios, brown from three, tints: closed.**
+  - Brown from three: tiers 2–4.
+  - Tints: tier 5, the white pot, in core play.
+  - Ratios: the colour studio's goals. The paint grid holds which paints, not amounts, so ratios live where drops are counted.
+
+### Remaining ideas
+
+- The child still picks which shape comes next, not where it goes.
+- A guest's own child gets no rescue or adaptation.
+- There is no way to swap a request.
+- Softened dry trails look pastel, close to the tints. They are display-only and off the shapes. A different soften colour (greyer, not lighter) could keep "light" special at tier 5.
+
+## Round 6: ratios in play, grey dry trails, a way out when stuck, a sand timer (2026-10-11)
+
+Starting point: the round 5 review scored 8.5 (calm 8.7, focus 8.6, learning 8.7, fun/depth 8.3, visual 8.1, voice 8.7, polish 8.5). The checklist item "older ladder: ratios, brown from three, tints" stayed open: ratios lived only in the colour studio, behind a peak-skill gate, and nothing in play pointed to them. Bugs: softened dry trails at tier 5 looked like the tints; difficulty only stepped down when a shape was finished, so a stuck child never got an easier request; the studio goals were hard to find.
+
+### Design
+
+- **Tier 6: ratios on the playground.** The paint grid now records, per cell, which paint a two-paint mix has more of (`PaintMap.lean`). Rolling a paint again over a wet two-paint mix whose other paint went on after it gives "more of" that paint (yellow, red, then yellow again: a yellowish orange). Rolling the other paint again evens it back out. Each step has the same wet window as ordinary mixing (12 s per cell between coats), so big shapes can ask for ratios too. The six ratio colours come from the colour model at 2 : 1 drops. About a third of tier 6 requests are ratios ("Paint the sun reddish orange!"). The first one in a round adds "Reddish means more red." This explains the word without giving the method. The rest are tier 5 requests (tints and rules). So the decision on each shape is now which paint, whether white belongs, and which paint goes on twice. The card shows ❓ + ❓ + ❓ (three coats). An even orange counts as two-thirds of the way there, not as a slip. If the child stops on the even mix for 5 s, one tip comes while it is still wet: "Orange! Now more yellow: roll yellow over the shiny orange." After that the rescue ring points to the lean paint, and the still picture shows two stripes of it and one of the other paint. Coats are judged as before, with three runs for a ratio. Results show `● + ● + ● = ●` and say "Two yellows and one red made yellowish orange!". A request or result names a ratio by a code (bits | lean << 4). Guests accept those codes, and finished ratio cells are filled with their lean on every device.
+- **Progress counts coats.** A coat on its way counts as the fraction of the colour's coats it holds: yellow is ⅓ of a yellowish orange, ½ of orange. Before this, the second coat of brown or of a ratio looked like no progress, so tips fired while a careful child was mid-plan.
+- **Dry trails go grey, not pale.** `soften` now fades paint toward a quiet grey of its own lightness (`0.75·L + 0.25·220`, `PAGE_SOFT` 0.6), not toward the white ground. A dry red trail is dusty rose (≈196,123,130), not pink (244,173,180), and dry blue is slate (≈118,142,172), not light blue (173,200,231). Light colours now appear only where a child used white.
+- **A way out when stuck.** Stuck means one of two things. Either 60 s pass after the still picture with less than 20% of the part painted, or a shape is still less than half done after 3 minutes, even with progress creeping along. Then the requests step down `SLIP_STEP`, once (finishing the shape afterwards moves nothing), and the card shows a quiet dashed 🔄. The voice says once a round: "This one is tricky! Tap the arrows for another shape, or keep trying." Tapping it removes the shape on every device (`drop` message, `dropJob`) and offers new shapes from the easier step.
+- **Quick round without a race feel.** There is no 3‑2‑1 any more: one soft chime, as in the calm round. The visible seconds are replaced by a ⏳ sand bar that runs down smoothly (no numbers, colour change or ticking). The voice says "A quick free paint, until the sand runs out." The mode button is ⏳.
+- **No idle motion in play.** The "you" heart no longer bobs or spins; it moves only with the painter. Pickups stop floating, spinning and drifting through colours once landed. Their pop-in remains.
+- **The studio is findable.** On the menu, "Mix my colours" has a still 🎯 once the child has reached the rule steps, which is when the studio's ratio goals appear. Younger children's studio stays a free mixing table by design.
+
+### Changes (file:line)
+
+| Where | What |
+| --- | --- |
+| `public/js/paint.js:63-91` | `ISH`, `ratioCode`, `RATIOS` (2 : 1 colours from `describeMix`), `RATIO_CODES`, `colourOf`, `mixWords` for ratios |
+| `public/js/paint.js:119`, `:185-235` | `lean` per cell; `write` detects "more of" over a wet mix; `setLean`; `settle(i, lean)` keeps or clears lean and shows the ratio colour |
+| `public/js/paint.js:318-330` | `soften` toward grey of the paint's own lightness |
+| `public/js/jobs.js:99-105`, `:160-194` | `LEANED`, `WHITE_STEP`, `RATIO_STEP`; tier 6 in `chooseJob` (ratio codes) |
+| `public/js/jobs.js:252-260`, `:326-336`, `:547` | Part `code`/`target`/`lean`; ratio hits need the lean, and near counts coats (`coatsIn`) |
+| `public/js/jobs.js:405`, `:430-440`, `:470-480` | `layered`, `fill` (sets lean) and `ghost` use `colourOf(code)` |
+| `public/js/main.js:52-76` | `TOP_TIER` = 6, `RATIO_TIP_MS`, `STUCK_MS` |
+| `public/js/main.js:353`, `public/style.css:79-80` | 🎯 on the studio button |
+| `public/js/main.js:462`, `:1843-1862`, `:1758-1762`, `:1840`, `public/style.css:146-147`, `:313` | 🔄 swap: `swapJob`, `dropJob`, guests follow `drop` |
+| `public/js/main.js:913`, `:940-952`, `:2158-2161`, `public/index.html:40`, `:64`, `public/style.css:107-110` | No count‑in; sand timer |
+| `public/js/main.js:1800-1808`, `:1874-1882`, `:1921`, `:1932-1937`, `:1961-1975` | "Reddish means more red." once a round; `nextPaint` for ratios; progress by coats; ratio tip; step down when stuck |
+| `public/js/main.js` (results, card, words) | `colourOf(code)` in `jobName`, `requestWords`, `renderJob`, `recipe`, slip line, ghost words, scrub tip, sparkles, `jobsDone`, `jobsOf`, `onJob` |
+| `public/js/main.js:2187`, `public/js/items.js:82-87` | Still heart marker; still pickups |
+| `public/js/main.js` debug `chalk` | Also sends the job to guests (for the two-device test) |
+| `game.json` | `howToPlay`/`learning`: ratios in play, 🔄, ⏳, 🎯 |
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/paint-splash/r6/`. Speech was stubbed. Every run had 0 console or page errors.
+
+| Run | Shapes | Slips | Skill | Lines a minute | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `careful.mjs`, tier 6, landscape (`t6l`) | 8 in 4.6 min | 0 | 6 → 6.5 | 4.5 | Ratios "121" (reddish orange sun), "212" (yellowish orange heart), "242" (yellowish green leaf, tree), all in coats |
+| `careful.mjs`, tier 6, portrait (`t6p`) | 6 | 0 | 6.5 | 4.7 | Reddish orange cap "121", reddish purple butterfly "141"; `t6p-5-results.png` shows `● + ● + ● = ●` chips |
+| `careful.mjs`, tier 5, landscape (`t5l`) | 5 | 0 | 5 → 6 | 5.9 | Earns the ratio step |
+| `careful.mjs`, tier 0, portrait (`t0p`) | 10 in 3.5 min | 0 | 0 → 2 | 5.3 | No change at the low steps |
+| `random.mjs`, tier 4, on the shape (`rnd4`) | 3 in 5 min | 3 | 4 → 3 | 3.9 | Careless play goes down; careful play goes up |
+
+- `ratio.mjs`:
+  - A yellowish-orange fish painted yellow then red stays at share 0 and near 0.67.
+  - After 5 s: "Orange! Now more yellow: roll yellow over the shiny orange."
+  - One more yellow coat finishes it as code 35 (`ratio-even.png`, `ratio-done.png`).
+- `stuck.mjs` (tier 4, no painting, `sim`):
+  - The rescue goes ring (25 s), then picture (55 s), then step down to 3.5 with 🔄 on the card (125 s, `stl-swap.png`).
+  - Tapping 🔄 brought a tier 3 flower. The voice said "This one is tricky! Tap the arrows for another shape, or keep trying." once.
+- `duo.mjs`:
+  - The guest saw the host's bluish-green leaf (code 70, lean 4).
+  - After painting blue, yellow, blue, all 1256 cells lean blue on both devices, and both list `["leaf",70]`.
+  - Final hashes, which now include lean, match (`1617538268`).
+- `quick.mjs`:
+  - The count-in shows only 🎨 before play.
+  - The timer is "⏳" plus a bar (`scaleX(0.424)` at 23 of 40 s, `quick-play.png`).
+  - Speech is only "A quick free paint, until the sand runs out." and the ending.
+- Trails: in `t6l-3-later.png` and `t6p-3-later.png` the dry trails around the heart and the mushroom are grey-green, slate and dusty rose. The pink fish and star sit apart from them.
+- `look.mjs`: the menu 🎯 (`look-1194-menu.png`) and the ratio card at 834 and 1194 wide.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids paint-splash --run paint-splash-c2`: BOOT + PLAY ready, 0 errors.
+- `node --check` passes on every file in `public/js/`. The shared colour helpers were not changed this round.
+
+### Checklist status
+
+- **Older ladder: ratios, brown from three, tints: closed.**
+  - Brown from three: tiers 2–4.
+  - Tints: tier 5, the white pot.
+  - Ratios: tier 6, in core play: more of one paint, laid again over the wet mix.
+  - The studio keeps its drop-count ratio goals, marked with 🎯 on the menu.
+- Reviewer bugs:
+  - Pastel trails: fixed.
+  - No step down while stuck: fixed (step down + 🔄).
+  - Studio hard to find: fixed (🎯). Ratios no longer depend on the studio.
+
+### Remaining ideas
+
+- A guest's own child still gets no rescue or adaptation; the host's checks drive the request.
+- The request card can still cover a finished shape near the top edge when the camera follows the child. New requests are kept clear of it (`clearView`), but older inked shapes are not.
+- Ratio colours on the ground are display state. If two guests' strokes over the same cell arrive in different orders, they could disagree on a lean mid-stroke. The host's fill makes finished shapes identical everywhere.

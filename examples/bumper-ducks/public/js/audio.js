@@ -222,12 +222,6 @@ export class Audio {
     this.tone({ freq: 660, type: 'triangle', gain: 0.18, decay: 0.12, slide: 300 })
   }
 
-  beep(high = false) {
-    // Calm pass: a soft sine and triangle count-in (was a square-wave beep).
-    this.tone({ freq: high ? 784 : 523, type: 'sine', gain: 0.16, decay: high ? 0.6 : 0.3 })
-    this.tone({ freq: high ? 784 : 523, type: 'triangle', gain: 0.05, decay: high ? 0.5 : 0.25 })
-  }
-
   /** The round is over: a slow rising arpeggio that settles (calm pass: no square wave or crackle). */
   cheer() {
     const tune = [0, 2, 4, 7]

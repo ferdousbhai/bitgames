@@ -89,7 +89,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* Below the top-right corner, which BitGames keeps for its ✕ and 🏠 room buttons. */
 #minimap { position: absolute; top: calc(64px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); width: 140px; height: 140px; background: rgba(0,0,0,0.3); border-radius: 50%; }
 .banner {
-  position: absolute; top: 28%; left: 0; right: 0; text-align: center; font-size: clamp(40px, 9vw, 90px); font-weight: 900;
+  position: absolute; top: 28%; left: 0; right: 0; padding: 0 16px; text-align: center; font-size: clamp(36px, 7vw, 84px); font-weight: 900;
   color: #ffbe0b; text-shadow: 0 6px 0 #c0392b, 0 10px 30px rgba(0,0,0,.4); opacity: 0; transition: opacity .2s, transform .2s; transform: scale(.6);
 }
 .banner.show { opacity: 1; transform: scale(1); }
@@ -126,10 +126,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .podium .place { animation: arrive .45s cubic-bezier(.3,1.6,.5,1) both; }
 .podium .place:nth-child(2) { animation-delay: .12s; } .podium .place:nth-child(3) { animation-delay: .24s; } .podium .place:nth-child(4) { animation-delay: .36s; }
 @keyframes arrive { from { opacity: 0; transform: translateX(-40px) scale(.9); } to { opacity: 1; transform: none; } }
-/* Paper confetti over the results screen (the 3D confetti is behind it). */
-.party { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 20; }
-.party i { position: absolute; top: -30px; width: 12px; height: 18px; border-radius: 3px; animation: fall linear forwards; }
-@keyframes fall { to { transform: translate3d(var(--dx), 110vh, 0) rotate(var(--spin)); } }
 /* After a long pause on the menu, GO glows softly once. */
 #go.nudge { animation: glow 2.4s ease-in-out 1; }
 @keyframes glow { 50% { box-shadow: 0 7px 0 #b38200, 0 0 0 10px rgba(255, 190, 11, .45), 0 10px 30px rgba(0,0,0,.35); } }
@@ -287,13 +283,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 #sound-btn.off, .sound-chip.off { opacity: .6; }
 @media (prefers-reduced-motion: reduce) {
   .podium .place, .hud-buttons button.ready, #go.nudge, .car-spinner { animation: none; }
-  .party { display: none; }
 }
 
 /* --- Delivery Town (Phase 2): a calm HUD of parcels and a big paper map --- */
 #turn-btn { display: none; }
 /* Calm racing: no turbo in Easy mode; Smash has no clock, so 🅿️ ends it. */
 #park-btn, #hud.easy #turbo-btn { display: none; }
+/* Easy cars are gentle and never dented, so 🔧 has nothing to do; the camera switch is one more button than the youngest need. */
+#hud.easy #fix-btn, #hud.easy [data-touch="camera"] { display: none; }
 #hud.smash #park-btn { display: block; }
 #hud.town #lap,
 #hud.town #turbo-btn, #hud.town #fix-btn, #hud.town [data-touch="horn"], #hud.town [data-touch="camera"] { display: none; }
@@ -341,7 +338,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* Tier 1 help after a long way round, and at road works: the turn-round button is lit, steadily (no pulse). */
 #turn-btn.suggest { background: #ffbe0b; box-shadow: 0 0 0 3px #fff; }
 #hud.town #minimap { width: var(--map); height: var(--map); top: calc(64px + env(safe-area-inset-top)); background: none; border-radius: 8%; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
-#hud.town .banner { font-size: clamp(30px, 6vw, 56px); color: #fff; text-shadow: 0 3px 0 rgba(43,45,66,.55), 0 6px 18px rgba(0,0,0,.3); transition: opacity .4s; transform: none; }
+/* In town a banner is a paper card low on the road, above the pedals: it never floats in the scene like a second resident or sign. */
+#hud.town .banner { top: auto; bottom: calc(var(--tb) + 28px + env(safe-area-inset-bottom)); left: 50%; right: auto; width: max-content; max-width: calc(100% - 32px); box-sizing: border-box;
+  transform: translateX(-50%); padding: 4px 22px; border-radius: 24px; background: #fffaf0; border: 3px solid #c99a62; box-shadow: 0 4px 0 rgba(43,45,66,.25);
+  font-size: clamp(30px, 5vw, 48px); color: #2b2d42; text-shadow: none; transition: opacity .4s; }
+#hud.town .banner.show { transform: translateX(-50%); }
+@media not (any-pointer: coarse) { #hud.town .banner { bottom: calc(28px + env(safe-area-inset-bottom)); } }
+/* The floor for the youngest (main.js FLOOR_SECONDS): the right stop and, at its door, the right parcel wear a still gold ring. */
+.stop-here.floor, .parcel.floor { outline: 6px solid #ffd166; outline-offset: 4px; }
 .recap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 #recap-map { width: min(72vmin, 440px); height: min(72vmin, 440px); filter: drop-shadow(0 6px 0 rgba(0,0,0,.25)); }
 .recap-stops { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; font-size: 34px; }
@@ -405,4 +409,69 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .gate-recap .gate b { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 3px solid var(--tint, #fff); font-size: 22px; }
 .gate-recap .gate i { font-style: normal; }
 .gate-recap .gate.right { box-shadow: 0 0 0 3px #ffbe0b; }
+/* A miss: the present that house wanted, faint and small beside the one chosen. */
+.gate-recap .gate u { text-decoration: none; font-size: .7em; opacity: .55; margin-left: 4px; padding-left: 6px; border-left: 2px dashed rgba(255,255,255,.6); }
 @media (max-height: 500px) and (orientation: landscape) { .gate-pick { --gate: min(64px, 14vw); bottom: calc(70px + env(safe-area-inset-bottom)); } .gate-recap .gate { font-size: 20px; } .gate-recap .gate b { width: 30px; height: 30px; font-size: 17px; } }
+
+/* Round 5 (2026-10-11): side streets, a shared tray, a town tier chooser, quiet box notes, gates first on the results. */
+/* Delivery Town's tier: three small picture chips under the modes, for a grown-up or an older child (the drives still move it). */
+.town-tiers { display: flex; gap: 6px; justify-content: center; align-items: center; order: 1; }
+.town-tiers button { display: flex; align-items: center; gap: 2px; min-width: 52px; min-height: 44px; padding: 4px 14px; border-radius: 999px; background: rgba(255,255,255,0.16); font-size: 20px; line-height: 1; touch-action: manipulation; }
+.town-tiers button small { font-size: 16px; }
+.town-tiers button.on { background: rgba(255,255,255,0.45); box-shadow: 0 0 0 3px #fff; }
+/* A side street's button: the street's picture, with ↪️ (or, in tier 1, the house) in its corner badge. */
+.stop-here.street .hand { background: #2b2d42; }
+/* A parcel in a friend's van: their animal on it, and it waits for them. */
+.parcel.friend { opacity: .6; }
+.parcel.friend .tick { border-color: #3a86ff; font-size: 18px; }
+.recap-stops .gifts i.friend { position: relative; }
+.recap-stops .gifts i.friend b { position: absolute; right: -8px; bottom: -8px; font-size: 15px; line-height: 1; }
+/* A small, quiet word at the top (a mystery box): never big, never over the gate buttons. */
+.note { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 4px 14px; border-radius: 999px; background: rgba(43,45,66,.45); font-size: 22px; line-height: 1.3; opacity: 0; transition: opacity .4s; pointer-events: none; }
+.note.show { opacity: 1; }
+/* Race results: the gates the child drove under come first, big enough to read. */
+.gate-recap { margin: 2px 0 10px; gap: 10px; }
+.gate-recap .gate { font-size: 34px; padding: 6px 14px 6px 6px; gap: 4px; background: rgba(255,255,255,.24); }
+.gate-recap .gate b { width: 52px; height: 52px; font-size: 30px; border-width: 4px; }
+.gate-recap .gate.right { box-shadow: 0 0 0 4px #ffbe0b; }
+@media (max-height: 500px) and (orientation: landscape) { .gate-recap { margin: 0 0 4px; } .gate-recap .gate { font-size: 22px; padding: 3px 10px 3px 3px; } .gate-recap .gate b { width: 34px; height: 34px; font-size: 19px; } }
+
+/* Round 6 (2026-10-11): one soft glow round the tray for a child who has not packed yet (once, never repeated). */
+.parcels.nudge .parcel:not(.delivered) { animation: tray-glow 2.4s ease-in-out 1; }
+@keyframes tray-glow {
+  0%, 100% { box-shadow: 0 4px 0 rgba(0,0,0,.28); }
+  50% { box-shadow: 0 0 0 6px rgba(255,214,102,.85), 0 4px 0 rgba(0,0,0,.28); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .parcels.nudge .parcel:not(.delivered) { animation: none; box-shadow: 0 0 0 5px rgba(255,214,102,.85), 0 4px 0 rgba(0,0,0,.28); }
+}
+/* A narrow portrait phone: a smaller recap map and one row of small stops, so 🔁 and 🗺️ stay on screen without scrolling. */
+@media (max-width: 520px) and (orientation: portrait) {
+  #results:has(#recap:not(.hidden)) { gap: 8px; padding-top: calc(10px + env(safe-area-inset-top)); padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  #results:has(#recap:not(.hidden)) h1 { font-size: 30px; }
+  #recap-map { width: min(72vw, 38vh, 300px); height: min(72vw, 38vh, 300px); }
+  .recap { gap: 6px; }
+  .recap-ways { width: min(72vw, 38vh, 300px); gap: 3px; } .recap-ways .way { font-size: 18px; } .recap-ways .bar { height: 10px; }
+  .recap-stops { flex-wrap: nowrap; gap: 2px; font-size: 22px; max-width: calc(100vw - 24px); }
+  .recap-stops .stop { gap: 4px; }
+  .recap-stops .house { width: 42px; height: 42px; border-width: 3px; }
+  .recap-stops .house b { width: 22px; height: 22px; font-size: 13px; top: -7px; left: -7px; }
+  .recap-stops .stop.short .house::after { width: 20px; height: 20px; font-size: 12px; right: -7px; top: -7px; }
+  .recap-stops .gifts { font-size: 18px; padding: 2px 5px; border-width: 2px; }
+  .recap-stops .arrow { font-size: 14px; }
+  #results:has(#recap:not(.hidden)) .row .big-go { font-size: 20px; padding: 12px 16px; }
+}
+/* A sideways phone: the stops sit two by two beside the map (their numbers keep the order), and both buttons share one row. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .recap-stops { display: grid; grid-template-columns: repeat(2, auto); gap: 8px 12px; }
+  .recap-stops .arrow { display: none; }
+  .recap-stops .house { width: 42px; height: 42px; }
+  .recap-stops .gifts { font-size: 22px; }
+  #results:has(#recap:not(.hidden)) .row { flex-wrap: nowrap; }
+  #results:has(#recap:not(.hidden)) .row .big-go { font-size: 20px; padding: 10px 18px; }
+}
+/* A landscape tablet or laptop: the map gives a little height back so the buttons clear the bottom edge. */
+@media (min-height: 501px) and (max-height: 900px) and (orientation: landscape) {
+  #recap-map, .recap-ways { width: min(50vh, 440px); }
+  #recap-map { height: min(50vh, 440px); }
+}

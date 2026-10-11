@@ -2,7 +2,7 @@
   "id": "crash-racers",
   "title": "Crash Racers",
   "tagline": "Race up to 4 cars through Ubud, Helsinki and Montreal. Crashes welcome!",
-  "howToPlay": "📦 Deliver: drive slowly round a picture town with four parcels. Tap a parcel to load it, find its matching house on the big map (🍎 fruit shop, 🌸 florist, 🐶 dog's house…), then drive there to hand it over. ↩️ turns you round for a shorter way. At the end, see the route you chose. 🏁 Race and 💥 Smash! are still there for lively play with friends: steer with the arrows or on-screen buttons, and 🔊 turns the sound off.",
+  "howToPlay": "📦 Deliver: tap a picture parcel (a bone, bananas…), think who would like it, find their house on the big map, and tap the house as you drive up to stop there. Some houses are down side streets: the map shows which street (🌈 or 🌙) to turn into. ↩️ turns you round for the shorter way. Careful drives bring harder towns (or pick 📦📦 🚧 / ⛔ in the menu): two parcels for each house, a closed road or a one-way street, so the order of the stops needs a plan. Friends share one tray of parcels. Stuck for a long while? A gold ring shows the way. 🏁 Race and 🎪 Bumpers have present gates: tap (or steer with ◀ ▶) to the present the house would like; a gate you leave alone counts for nothing. Three right in a row bring harder presents, and the results show what each missed house wanted. In Easy mode bumps are soft and the other cars keep their distance. 🔊 turns the sound off.",
   "emoji": "🏎️",
   "color": "#ff595e",
   "category": "race",
@@ -13,5 +13,5 @@
     5,
     8
   ],
-  "learning": "Map reading, matching and route planning"
+  "learning": "Map reading, matching things by kind, and planning a route"
 }

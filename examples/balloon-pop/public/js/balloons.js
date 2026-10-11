@@ -178,11 +178,10 @@ export class Balloons {
       g.rotation.z = Math.sin(t * 1.7 + b.phase) * 0.12 - b.vx * 0.05
       if (b.kindName === 'star') g.rotation.y = Math.sin(t * 1.5 + b.phase) * 0.5
       else g.rotation.y = Math.sin(t * 0.9 + b.phase) * 0.25
-      // Squash and stretch: a little breathing, a heartbeat for hearts, and a pop-in when born
+      // Squash and stretch: the same slow, small breathing for every kind (hearts too: no heartbeat), and a pop-in when born
       const born = Math.min(1, b.age * 4)
       const grow = born < 1 ? 1 - (1 - born) ** 3 * 0.6 + Math.sin(born * Math.PI) * 0.12 : 1
-      let breathe = Math.sin(t * 3 + b.phase) * 0.025
-      if (b.kindName === 'heart') breathe = Math.max(0, Math.sin(t * 5 + b.phase)) ** 8 * 0.1
+      const breathe = Math.sin(t * 3 + b.phase) * 0.025
       g.scale.set(b.scale * grow * (1 - breathe * 0.5), b.scale * grow * (1 + breathe), b.scale * grow)
       if (b.string) b.string.rotation.z = Math.sin(t * 2.1 + b.phase) * 0.18 + b.vx * 0.08
       if (g.position.y > top + 2.5 * b.scale) this.remove(b)

@@ -19,8 +19,8 @@ Names the game relies on
 ------------------------
 creatures.glb top-level nodes (each faces +X, its "nose", and sits on its origin):
   goldfish, bluefish, clownfish, pufferfish, crab, octopus, turtle, trout,
-  jellyfish, narwhal, boot, duck, chest, goldenfish, whale, frog, crayfish, snail
-  <id>_tail        tail pivot (fish, whale, narwhal, turtle, crayfish): the game wags it
+  jellyfish, narwhal, boot, duck, chest, goldenfish, whale, frog, crayfish, snail, cod, seal
+  <id>_tail        tail pivot (fish, whale, narwhal, turtle, crayfish, seal): the game wags it
   pufferfish_spikes the spikes, scaled up when the puffer puffs
   chest_lid        lid pivot on the back hinge: rotate about Z to open
 Materials:
@@ -632,18 +632,10 @@ def creature_crab(m):
 def creature_octopus(m):
     rt = root("octopus")
     pink = material("octo_pink", "#c77dff", roughness=0.45)
-    spots = material("octo_spot", "#e9c2ff", roughness=0.5)
+    # Plain lilac all over (2026-10-11): pale spots on the back of the head never showed from the front, so
+    # Bear's "something with spots" could be answered by an octopus that looked spotless. Now it has none.
     head = sphere("octopus_head", 0.38, (0, 0, 0.32), pink, rt, scale=(1, 1, 1.12), segs=22, rings=14)
     f = Face(head, m, rt)
-    rnd = random.Random(4)
-    for k in range(7):
-        a = rnd.uniform(-2.8, 2.8)
-        b = rnd.uniform(0.3, 1.1)
-        d = Vector((math.cos(a) * math.cos(b), math.sin(a) * math.cos(b), math.sin(b)))
-        if d.x > 0.4:
-            d.x = -d.x
-        loc, n = f.hit(Vector((0, 0, 0.32)) + d * 3, -d)
-        sphere(f"octo_spot{k}", 0.05, loc, spots, rt, scale=(1, 0.3, 1), segs=8, rings=5, rot=n.to_track_quat("-Y", "Z"))
     for s in (-1, 1):
         f.eye(f"octo_eye{s}", *Face.ray((0, 0, 0.32), (1, s * 0.38, 0.22)), 0.1)
         f.cheek(f"octo_cheek{s}", *Face.ray((0, 0, 0.32), (1, s * 0.75, -0.2)), 0.06)
@@ -755,17 +747,18 @@ def creature_narwhal(m):
     rt = root("narwhal")
     grey = material("narwhal_blue", "#8fb3d9", roughness=0.4)
     belly = material("narwhal_belly", "#f4f8ff", roughness=0.5)
-    spot = material("narwhal_spot", "#5e83b0", roughness=0.5)
+    # Narwhals are mottled: dark blotches big enough to see on a small swimmer (riddles.js: narwhal has spots)
+    spot = material("narwhal_spot", "#3f5f8f", roughness=0.5)
     tusk = material("narwhal_tusk", "#fff5d6", roughness=0.35)
     L, H = 1.1, 0.34
     body, prof = fish_body(rt, "narwhal", L, H, 0.95, grey, bias=1.1, round_=0.5)
     sphere("narwhal_belly", H * 0.8, (0.06, 0, -0.15), belly, rt, scale=(1.4, 0.95, 0.5), segs=16, rings=8)
     f = Face(body, m, rt)
     rnd = random.Random(2)
-    for k in range(8):
-        x, z, s = rnd.uniform(-0.35, 0.15), rnd.uniform(0.08, 0.28), rnd.choice((-1, 1))
+    for k in range(16):
+        x, z, s = rnd.uniform(-0.4, 0.18), rnd.uniform(0.04, 0.27), (-1, 1)[k % 2]
         loc, n = f.hit((x, s * 3, z), (0, -s, 0))
-        sphere(f"narwhal_spot{k}", 0.03, loc, spot, rt, scale=(1, 0.3, 1), segs=8, rings=5, rot=n.to_track_quat("-Y", "Z"))
+        sphere(f"narwhal_spot{k}", 0.045, loc, spot, rt, scale=(1, 0.3, 0.8), segs=10, rings=6, rot=n.to_track_quat("-Y", "Z"))
     fish_face(rt, body, m, L, H, eye_x=0.3, eye_z=0.06, eye=0.085)
     # Spiral tusk
     pts, radii = [], []
@@ -781,6 +774,103 @@ def creature_narwhal(m):
     side_fins(rt, "narwhal", 0.15, -0.12, 0.28, grey, 1.1)
     return rt
 
+
+def creature_cod(m):
+    """Arctic (polar) cod, the small fish of the icy sea that narwhals, seals and seabirds eat: a slim brown
+    back speckled with dark spots, a silvery belly, three fins along its back and a tiny whisker on its chin."""
+    rt = root("cod")
+    brown = material("cod_brown", "#9b8462", roughness=0.4)
+    silver = material("cod_silver", "#e6ebef", metallic=0.2, roughness=0.3)
+    spot = material("cod_spot", "#3b2c1c", roughness=0.5)
+    fin = material("cod_fin", "#c9b893", roughness=0.4)
+    L, H = 1.1, 0.27
+    body, prof = fish_body(rt, "cod", L, H, 0.62, brown, bias=1.35, round_=0.6)
+    # A silvery belly tucked inside the body's sides
+    sphere("cod_belly", H * 0.74, (0.04, 0, -0.1), silver, rt, scale=(1.75, 0.8, 0.46), segs=18, rings=8)
+    f = Face(body, m, rt)
+    # Spots spread evenly over the brown back (a jittered grid, so they never clump into one blot)
+    rnd = random.Random(11)
+    k = 0
+    for s in (-1, 1):
+        for i in range(6):
+            for j in range(2):
+                x = -0.38 + i * 0.105 + rnd.uniform(-0.025, 0.025) + j * 0.05
+                z = 0.03 + j * 0.1 + rnd.uniform(-0.02, 0.02)
+                if x > 0.18 and j == 0:
+                    continue  # keep the cheek and eye clear
+                loc, n = f.hit((x, s * 3, z), (0, -s, 0))
+                sphere(f"cod_spot{k}", 0.03, loc, spot, rt, scale=(1, 0.3, 1), segs=10, rings=6, rot=n.to_track_quat("-Y", "Z"))
+                k += 1
+    fish_face(rt, body, m, L, H, eye_x=0.3, eye_z=0.08)
+    # The chin whisker (a barbel): cod feel for food on the sea floor with it
+    tube("cod_barbel", [(L / 2 - 0.1, 0, -0.12), (L / 2 - 0.08, 0, -0.18), (L / 2 - 0.1, 0, -0.23)], 0.012, fin, rt, sides=6)
+    tail_fin(rt, "cod", (-L / 2 + 0.04, 0, 0.0), fin, size=0.95, forked=False)
+    for k, x in enumerate((0.16, -0.04, -0.24)):
+        dorsal(rt, f"cod_{k}", x, H * 0.82 - abs(x) * 0.12, fin, 0.62, sweep=0.9)
+    side_fins(rt, "cod", 0.2, -0.08, 0.15, fin)
+    return rt
+
+
+def creature_seal(m):
+    """A ringed seal, the small seal of the icy Arctic sea: a plump silver-grey body with dark spots, each in a pale
+    ring (the rings give it its name), a round head with big dark eyes and whiskers on its muzzle, front flippers
+    with claws it scratches breathing holes in the ice with, and two back flippers held together like a fan. It is
+    grey, never blue, so "something blue" in the Icy Sea is still only the narwhal (and the pretend Blue Fish)."""
+    rt = root("seal")
+    fur = material("seal_fur", "#9a958f", roughness=0.5)
+    belly = material("seal_belly", "#d9d5ce", roughness=0.55)
+    spot = material("seal_dot", "#433d39", roughness=0.5)
+    ring = material("seal_ring", "#e4e0d8", roughness=0.55)
+    dark = material("seal_dark", "#3b3532", roughness=0.4)
+    L, H = 1.2, 0.26
+    body, prof = fish_body(rt, "seal", L, H, 1.0, fur, bias=1.0, round_=0.5)
+    sphere("seal_belly", H * 0.85, (0.0, 0, -0.12), belly, rt, scale=(1.9, 0.95, 0.5), segs=18, rings=8)
+    head = sphere("seal_head", 0.2, (0.42, 0, 0.06), fur, rt, scale=(1.15, 0.95, 0.92), segs=22, rings=12)
+    muzzle = sphere("seal_muzzle", 0.1, (0.6, 0, 0.0), fur, rt, scale=(0.9, 1.15, 0.8), segs=16, rings=10)
+    fb = Face(body, m, rt)
+    # Ringed spots: a dark dot inside a pale ring, scattered over the back and sides (a few sizes, never in rows)
+    rnd = random.Random(5)
+    k = 0
+    for s in (-1, 1):
+        for i in range(10):
+            x = -0.38 + i * 0.066 + rnd.uniform(-0.015, 0.015)
+            z = (0.03, 0.15, 0.09)[i % 3] + rnd.uniform(-0.02, 0.02)
+            r = rnd.uniform(1.05, 1.4)
+            loc, n = fb.hit((x, s * 3, z), (0, -s, 0))
+            q = n.to_track_quat("-Y", "Z")
+            sphere(f"seal_ring{k}", 0.034 * r, loc, ring, rt, scale=(1.25, 0.22, 1), segs=12, rings=6, rot=q)
+            sphere(f"seal_dot{k}", 0.02 * r, loc + n * 0.005, spot, rt, scale=(1.25, 0.3, 1), segs=10, rings=6, rot=q)
+            k += 1
+    f = Face(head, m, rt)
+    for s in (-1, 1):
+        f.eye(f"seal_eye{s}", *Face.ray((0.42, 0, 0.06), (0.55, s * 0.8, 0.35)), 0.065, squash=0.5, tall=1.1)
+        f.cheek(f"seal_cheek{s}", *Face.ray((0.42, 0, 0.06), (0.45, s * 0.9, -0.2)), 0.04)
+    fm = Face(muzzle, m, rt)
+    nose, _ = fm.hit((3, 0, 0.03), (-1, 0, 0))
+    sphere("seal_nose", 0.035, nose, dark, rt, scale=(0.6, 1.3, 0.9), segs=10, rings=6)
+    fm.arc("seal_smile", (3, 0, -0.04), (-1, 0, 0), 0.04, 0.02, 0.01)
+    # Whiskers: three a side, fanning out from the muzzle
+    for s in (-1, 1):
+        for w, dz in enumerate((0.03, 0.0, -0.03)):
+            a, _ = fm.hit((0.62, s * 3, dz), (0, -s, 0))
+            b = a + Vector((0.06 + w * 0.02, s * 0.2, dz * 2.5))
+            tube(f"seal_whisker{s}_{w}", [a, (a + b) / 2 + Vector((0, 0, 0.008)), b], 0.006, belly, rt, sides=4,
+                 radii=[0.007, 0.005, 0.003])
+    # Front flippers with three dark claws on the tip (it scratches its breathing holes in the ice with them)
+    for s in (-1, 1):
+        root_at, _ = fb.hit((0.2, s * 3, -0.1), (0, -s, 0))
+        xf = T(root_at + Vector((0, s * 0.01, 0)), rx=s * -0.35, ry=0.5)
+        pts = [(0.05, 0.05), (-0.08, 0.06), (-0.26, 0.0), (-0.31, -0.06), (-0.24, -0.11), (-0.02, -0.06)]
+        slab(f"seal_flipper{s}", pts, 0.018, 0.045, fur, rt, center=(-0.12, -0.02), xf=xf)
+        for c, (cx, cz) in enumerate(((-0.26, -0.095), (-0.3, -0.065), (-0.32, -0.03))):
+            sphere(f"seal_claw{s}_{c}", 0.02, xf @ Vector((cx, -s * 0.025, cz)), dark, rt, scale=(1.6, 0.9, 0.8), segs=6, rings=4)
+    # Back flippers, held together like a fan: seals sweep them side to side (the game wags seal_tail)
+    piv = pivot("seal_tail", rt, (-L / 2 + 0.05, 0, 0.0))
+    for s in (-1, 1):
+        pts = [(0.02, 0.03), (-0.12, 0.08), (-0.27, 0.15), (-0.31, 0.05), (-0.27, -0.01), (-0.12, -0.02), (0.02, -0.03)]
+        slab(f"seal_hind{s}", [(x, z * s) for x, z in pts], 0.016, 0.04, fur, piv, center=(-0.12, 0.03 * s),
+             xf=T((-L / 2 + 0.06, 0, s * 0.02)))
+    return rt
 
 def creature_whale(m):
     rt = root("whale")
@@ -1018,7 +1108,7 @@ def build_creatures():
     return [creature_goldfish(m), creature_bluefish(m), creature_clownfish(m), creature_pufferfish(m), creature_crab(m),
             creature_octopus(m), creature_turtle(m), creature_trout(m), creature_jellyfish(m), creature_narwhal(m),
             creature_boot(m), creature_duck(m), creature_chest(m), creature_goldenfish(m), creature_whale(m),
-            creature_frog(m), creature_crayfish(m), creature_snail(m)]
+            creature_frog(m), creature_crayfish(m), creature_snail(m), creature_cod(m), creature_seal(m)]
 
 
 # --- Bear, boat, rod ------------------------------------------------------------------
@@ -1519,9 +1609,10 @@ def build_shore_ice(sm, m):
           material("hat_dark", "#3b3355", roughness=0.6), rt, segments=16, loc=(sx, sy, 0))
     for s in (-1, 1):
         tube(f"snowman_arm{s}", [(sx + s * 0.6, sy, 2.7), (sx + s * 1.3, sy, 3.2), (sx + s * 1.6, sy, 3.6)], 0.06, sm["trunk"], rt, sides=5)
-    # Seal pals resting on the ice: Arctic animals, like the narwhal (penguins live in the far south)
-    fur = material("seal_grey", "#8291ab", roughness=0.6)
-    spot = material("seal_spot", "#56637e", roughness=0.6)
+    # Seal pals resting on the ice: Arctic animals, like the narwhal (penguins live in the far south), the same
+    # silver grey as the ringed seal you can catch (creature_seal)
+    fur = material("seal_grey", "#9a958f", roughness=0.6)
+    spot = material("seal_spot", "#4a4440", roughness=0.6)
     nose = material("seal_nose", "#2b3150", roughness=0.4)
     for i, (px, py, s, d) in enumerate(((-13.5, 15, 2.1, 1), (-10.4, 16.4, 1.5, -1), (14, 17, 2.0, -1))):
         body = sphere(f"seal_body{i}", 0.5 * s, (px, py, 0.28 * s), fur, rt, scale=(1.5, 0.8, 0.6), segs=16, rings=8)

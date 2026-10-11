@@ -79,18 +79,12 @@ export class Items {
       // Pop in with a little bounce.
       const s = it.age < 0.5 ? 1 + Math.sin(Math.min(1, it.age / 0.5) * Math.PI) * 0.25 - (1 - Math.min(1, it.age / 0.35)) : 1
       it.group.scale.setScalar(Math.max(0.01, s))
-      const t = now / 1000 + it.phase
+      // Still once landed (no float, spin or colour drift while a child paints); each pickup keeps its own look.
       if (it.kind === 'bucket') {
-        // A slow float and a slow drift through the colours (calm pass: was a quick bounce and spin)
-        it.model.position.y = 0.25 + Math.sin(t * 1.4) * 0.08
-        it.model.rotation.y = t * 0.5
-        it.paint?.color.setHSL((t * 0.06) % 1, 0.75, 0.6)
-      } else if (it.kind === 'rainbow') {
-        it.model.rotation.y = t * 0.4
-      } else {
-        it.model.rotation.y = Math.sin(t * 0.8) * 0.6
-        it.model.position.y = Math.sin(t * 2.5) * 0.02
-      }
+        it.model.position.y = 0.25
+        it.model.rotation.y = it.phase
+        it.paint?.color.setHSL((it.phase * 0.16) % 1, 0.75, 0.6)
+      } else it.model.rotation.y = it.phase
     }
   }
 }

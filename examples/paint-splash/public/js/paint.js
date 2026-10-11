@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { describeMix } from './colour-studio.js'
+import { tintToyPaint } from './colour-model.js'
 import { rng } from './util.js'
 import { listWords } from './speech.js'
 
@@ -27,25 +28,63 @@ export const WASH_R = 2.3
 /**
  * The paint is the colour studio's red, yellow and blue toy paints (colour-model.js),
  * kept as bits: 1 red, 2 yellow, 4 blue. A cell's colour is the mix of the bits on it.
+ * The top step adds a white pot (bit 8): white in a mix makes its tint (red and white make pink).
  */
 export const RED = 1
 export const YELLOW = 2
 export const BLUE = 4
+export const WHITE = 8
 export const PRIMARIES = [RED, YELLOW, BLUE]
-const WORDS = ['red', 'yellow', 'blue']
-const bitsOf = (mask) => PRIMARIES.filter((bit) => mask & bit)
+/** Every pot a roller can dip in: the three paints, and white for tints. */
+export const POTS = [RED, YELLOW, BLUE, WHITE]
+const WORDS = ['red', 'yellow', 'blue', 'white']
+const bitsOf = (mask) => POTS.filter((bit) => mask & bit)
 /** Every colour the ground can show, by bits: { hex, word, recipe (bits), rgb }. */
-export const MIXES = Array.from({ length: 8 }, (_, mask) => {
-  const toy = describeMix(PRIMARIES.map((bit) => (mask & bit ? 1 : 0)))
-  const word = mask ? toy.base.toLowerCase() : 'nothing'
-  return { mask, hex: toy.hex, word, recipe: bitsOf(mask), rgb: hexRgb(toy.hex) }
-})
+export const MIXES = []
+for (let mask = 0; mask < 16; mask++) {
+  const base = mask & ~WHITE
+  let hex, word
+  if (!(mask & WHITE)) {
+    const toy = describeMix(PRIMARIES.map((bit) => (mask & bit ? 1 : 0)))
+    hex = toy.hex
+    word = mask ? toy.base.toLowerCase() : 'nothing'
+  } else if (!base) [hex, word] = ['#ffffff', 'white'] // a touch brighter than the paint in tints, so white alone shows on the pale ground
+  else {
+    const tint = tintToyPaint(MIXES[base].hex, MIXES[base].word[0].toUpperCase() + MIXES[base].word.slice(1))
+    hex = tint.hex
+    word = tint.name.toLowerCase()
+  }
+  MIXES.push({ mask, hex, word, recipe: bitsOf(mask), rgb: hexRgb(hex) })
+}
 /** The colours made by mixing (two or three paints), in the order a child usually finds them. */
 export const MIXED = [RED | YELLOW, YELLOW | BLUE, RED | BLUE, RED | YELLOW | BLUE]
-/** "a", "a and b", "a, b and c" */
-/** "Red and yellow made orange!" */
+/** The tints the top step asks for: a paint or a mix, made light with white. */
+export const TINTS = [RED | WHITE, BLUE | WHITE, RED | BLUE | WHITE, YELLOW | BLUE | WHITE, RED | YELLOW | WHITE]
+/**
+ * Ratios (the top step): a two-paint mix with more of one paint, made by laying that paint again over the
+ * wet mix (yellow, red, then yellow again: a yellowish orange). A cell remembers which paint it leans to
+ * (`PaintMap.lean`); a request or a result names such a colour by a code, its bits plus the paint it
+ * leans to times 16 (`ratioCode`). Codes under 16 are plain mixes.
+ */
+const ISH = { [RED]: 'reddish', [YELLOW]: 'yellowish', [BLUE]: 'bluish' }
+export const ratioCode = (mask, lean) => mask | (lean << 4)
+export const RATIOS = {}
+for (const mask of [RED | YELLOW, YELLOW | BLUE, RED | BLUE]) for (const lean of bitsOf(mask)) {
+  const other = mask & ~lean
+  const toy = describeMix(PRIMARIES.map((bit) => (bit === lean ? 2 : bit === other ? 1 : 0)))
+  const code = ratioCode(mask, lean)
+  RATIOS[code] = { mask, lean, hex: toy.hex, word: `${ISH[lean]} ${MIXES[mask].word}`, recipe: [lean, other, lean], rgb: hexRgb(toy.hex) }
+}
+export const RATIO_CODES = Object.keys(RATIOS).map(Number)
+/** Any colour a request can name: a mix by its bits, or a ratio by its code. */
+export const colourOf = (code) => (code >= 16 ? RATIOS[code] : MIXES[code])
+/** "Red and yellow made orange!", "Two yellows and one red made yellowish orange!" */
 export function mixWords(mask) {
-  const list = listWords.format(bitsOf(mask).map((bit) => WORDS[PRIMARIES.indexOf(bit)]))
+  if (mask >= 16) {
+    const { lean, recipe, word } = RATIOS[mask]
+    return `Two ${MIXES[lean].word}s and one ${MIXES[recipe[1]].word} made ${word}!`
+  }
+  const list = listWords.format(bitsOf(mask).map((bit) => WORDS[POTS.indexOf(bit)]))
   return `${list[0].toUpperCase()}${list.slice(1)} made ${MIXES[mask].word}!`
 }
 /** Each seat starts with one paint (a child can change pots while painting). */
@@ -70,22 +109,24 @@ export const WET_MS = 12000
 export class PaintMap {
   constructor() {
     const n = NX * NZ
-    this.times = PRIMARIES.map(() => new Uint32Array(n))
+    this.times = POTS.map(() => new Uint32Array(n))
     this.washed = new Uint32Array(n)
     /** Painted request shapes are kept safe from this game time on (0 = open to paint). */
     this.locked = new Uint32Array(n)
     this.mix = new Uint8Array(n)
     this.mask = new Uint8Array(n)
+    /** The paint a two-paint cell has more of (0: even), laid again over the wet mix: shown as its ratio colour. */
+    this.lean = new Uint8Array(n)
     /** Cells shown softened (dry paint off the shapes): display only, the paint itself is unchanged. */
     this.soft = new Uint8Array(n)
     this.rgba = new Uint8Array(n * 4)
     /** When each cell was last painted (tenths of a second, two bytes: red high, green low), for the wet shine. */
     this.wetData = new Uint8Array(n * 2)
-    this.counts = new Int32Array(8)
+    this.counts = new Int32Array(16)
     /** The cell where each colour last appeared (to show where a new mix was found). */
-    this.lastAt = new Int32Array(8).fill(-1)
+    this.lastAt = new Int32Array(16).fill(-1)
     /** Cells each colour gained from this device's child's own roller (`mine` is their seat, `who` the painter now). */
-    this.mineCounts = new Int32Array(8)
+    this.mineCounts = new Int32Array(16)
     this.mine = -1
     this.who = -1
     this.paintable = n
@@ -105,6 +146,7 @@ export class PaintMap {
     this.rgba.fill(0)
     this.wetData.fill(0)
     this.mask.fill(0)
+    this.lean.fill(0)
     this.soft.fill(0)
     this.lastAt.fill(-1)
     this.mineCounts.fill(0)
@@ -142,26 +184,42 @@ export class PaintMap {
       if (t <= this.washed[i]) return
       this.washed[i] = t
     } else {
+      // One paint laid again over a wet two-paint mix whose other paint went on after it: more of this
+      // paint (yellow, red, yellow again: a yellowish orange). Laid over a mix leaning the other way, it evens it out.
+      let lean = -1
+      const mix = this.mix[i]
+      if ((bits === RED || bits === YELLOW || bits === BLUE) && mix & bits && RATIOS[ratioCode(mix, bits)]) {
+        const other = mix & ~bits
+        const to = this.times[POTS.indexOf(other)][i]
+        if (to > this.times[POTS.indexOf(bits)][i] && t > to && t - to <= WET_MS) lean = this.lean[i] === other ? 0 : bits
+      }
       let changed = false
-      for (let k = 0; k < 3; k++) {
-        if (bits & PRIMARIES[k] && t > this.times[k][i]) {
+      for (let k = 0; k < 4; k++) {
+        if (bits & POTS[k] && t > this.times[k][i]) {
           this.times[k][i] = t
           changed = true
         }
       }
       if (!changed) return
+      if (lean >= 0) return void this.settle(i, lean)
     }
     this.settle(i)
   }
 
-  /** Works out a cell's colour from its paint and wash times. */
-  settle(i) {
+  /** Gives a two-paint cell more of one paint (`lean`, 0 for even), shown in its ratio colour. */
+  setLean(i, lean) {
+    this.settle(i, lean)
+  }
+
+  /** Works out a cell's colour from its paint and wash times (`lean`: the paint it now has more of; otherwise kept while its mix stays). */
+  settle(i, lean = -1) {
     const w = this.washed[i]
-    const latest = Math.max(this.times[0][i], this.times[1][i], this.times[2][i])
+    const T = this.times
+    const latest = Math.max(T[0][i], T[1][i], T[2][i], T[3][i])
     let mix = 0
-    if (latest > w) for (let k = 0; k < 3; k++) {
-      const t = this.times[k][i]
-      if (t > w && latest - t <= WET_MS) mix |= PRIMARIES[k]
+    if (latest > w) for (let k = 0; k < 4; k++) {
+      const t = T[k][i]
+      if (t > w && latest - t <= WET_MS) mix |= POTS[k]
     }
     const before = this.mix[i]
     const wet = mix ? Math.min(65535, Math.round(latest / 100)) : 0
@@ -169,7 +227,10 @@ export class PaintMap {
     this.wetData[kw] = wet >> 8
     this.wetData[kw + 1] = wet & 255
     this.dirty = true
-    if (mix === before && !this.soft[i]) return
+    const was = this.lean[i]
+    const now = lean >= 0 && RATIOS[ratioCode(mix, lean)] ? lean : mix === before && lean < 0 ? was : 0
+    this.lean[i] = now
+    if (mix === before && now === was && !this.soft[i]) return
     if (mix !== before) {
       this.counts[before]--
       this.counts[mix]++
@@ -179,7 +240,7 @@ export class PaintMap {
     }
     // Fresh paint shows in its true colour again.
     this.soft[i] = 0
-    const c = MIXES[mix].rgb
+    const c = (now ? RATIOS[ratioCode(mix, now)] : MIXES[mix]).rgb
     const k = i * 4
     this.rgba[k] = c[0]
     this.rgba[k + 1] = c[1]
@@ -244,21 +305,24 @@ export class PaintMap {
   }
 
   /**
-   * Softens paint that is not part of a painted shape: its colour fades toward the ground by
+   * Softens paint that is not part of a painted shape: its colour fades toward a quiet grey by
    * `amountAt(x, z)` (0 keeps it bright), so the coloured-in shapes stand out. Only paint last laid at
    * or before game time `before` softens (so wet paint stays true while it can still mix), and only
    * the colour shown changes, never the paint itself. Fresh paint on a cell shows bright again.
    */
   soften(amountAt, before = Infinity) {
-    const [R, Y, B] = this.times
+    const [R, Y, B, W] = this.times
     for (let i = 0; i < this.mix.length; i++) {
       if (!this.mix[i] || this.locked[i] || this.soft[i]) continue
-      if (Math.max(R[i], Y[i], B[i]) > before) continue
+      if (Math.max(R[i], Y[i], B[i], W[i]) > before) continue
       const { x, z } = this.cellCentre(i)
       const amount = amountAt(x, z)
       if (!(amount > 0)) continue
+      // Toward a soft grey of the paint's own lightness, not toward white: a dry red trail goes a dusty
+      // rose, never pink, so light colours (made with white) stay special to the shapes that asked for them.
       const k = i * 4
-      for (let c = 0; c < 3; c++) this.rgba[k + c] = Math.round(this.rgba[k + c] + (244 - this.rgba[k + c]) * amount)
+      const grey = 0.75 * (0.299 * this.rgba[k] + 0.587 * this.rgba[k + 1] + 0.114 * this.rgba[k + 2]) + 0.25 * 220
+      for (let c = 0; c < 3; c++) this.rgba[k + c] = Math.round(this.rgba[k + c] + (grey - this.rgba[k + c]) * amount)
       this.soft[i] = 1
       this.dirty = true
     }
@@ -271,7 +335,7 @@ export class PaintMap {
     return i < 0 || j < 0 || i >= NX || j >= NZ ? -1 : j * NX + i
   }
 
-  /** The paint bits at a point: 0 bare, 1..7 a colour, or -1 outside / under an obstacle. */
+  /** The paint bits at a point: 0 bare, 1..15 a colour, or -1 outside / under an obstacle. */
   mixAt(x, z) {
     const i = Math.floor((x + HALF_W) / CELL)
     const j = Math.floor((z + HALF_D) / CELL)

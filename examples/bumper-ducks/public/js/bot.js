@@ -20,15 +20,19 @@ export class Bot {
    * `lead` is how far this robot is ahead of the best child; robots in front ease off so children win plenty.
    * `napping`: every child has stopped paddling, so the robots float and wait for them.
    * `helpedEnough` (Pond helpers): the robots already put in their share of the jar, so they leave the rest to the child.
+   *   (Bumper play: the team is in its last ten, so the robots leave the ones to the children's counting.)
    * `help` (Pond helpers): the child seems stuck (a few bubbles that didn't fit, or a long while without one),
    * so a robot shows one that fits. Otherwise the choosing is the child's.
    */
   update(sim, dt, lead = 0, napping = false, helpedEnough = false, help = false) {
     const d = this.duck
     // A robot that has done its share (or is showing a bubble) floats past jar bubbles without taking them.
-    d.leave = sim.calm && (helpedEnough || !!this.target?.show)
-    // Gentler still in the bubble party at the end, where a quick robot could snatch the win.
-    const easy = Math.min(1, Math.max(0, sim.party ? (lead + 1) / 4 : lead / 5))
+    // Bumper play: a robot that has gathered a few more than the best child plays instead of gathering,
+    // so the children are never outdone, and the last ten is theirs to count (unless no child has gathered
+    // a bubble for a good while: then the robots gather again, so nobody is stuck).
+    d.leave = sim.calm ? helpedEnough || !!this.target?.show : (lead >= 4 || helpedEnough) && !help
+    // A robot ahead of the children eases off, so the children gather plenty themselves.
+    const easy = Math.min(1, Math.max(0, lead / 5))
     if (d.fly || napping) {
       d.ix *= 0.85
       d.iz *= 0.85
@@ -52,7 +56,7 @@ export class Bot {
     }
     if (this.think <= 0 && !this.holdT) {
       this.think = 0.25 + (1 - this.skill) * 0.5
-      this.target = this.choose(sim, helpedEnough && !help)
+      this.target = this.choose(sim, sim.calm ? helpedEnough && !help : d.leave)
       // Pond helpers: when the child seems stuck, a robot swims to a bubble that fits and waits beside it,
       // showing it instead of taking it. The rest of the time the robots don't point the answer out.
       if (sim.calm && this.target?.item) this.target.show = help
@@ -128,6 +132,8 @@ export class Bot {
       // A helper only fetches bubbles the jar wants (and the odd gift); one that has done its share just plays.
       // A bubble stuck on a lily pad (or the mama duck) is the children's to bump free.
       if (it.stuck != null || (sim.sorts(it) && (playOnly || !sim.counts(it)))) continue
+      // Bumper play: rafts are the children's choice, and a robot leaving the gathering only plays.
+      if (!sim.calm && (it.k === 'ten' || (it.k === 'bubble' && (playOnly || !sim.playFits(it))))) continue
       const dist = Math.hypot(it.x - d.x, it.z - d.z)
       const value = it.k === 'gift' ? (sim.calm ? 1 : 3) : sim.calm ? 1 : ITEMS[it.k].points
       // A little randomness so the robots don't all pick the same bubble.

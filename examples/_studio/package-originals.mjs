@@ -13,7 +13,6 @@ const adventure=['js/adventure.js','adventure.css'];
 const studioDialog=['js/studio-dialog.js','studio-dialog.css'];
 const helpers={
   'balloon-pop':adventure,
-  'bumper-ducks':adventure,
   'bunny-hop':adventure,
   'cake-stack':[...adventure,...studioDialog,'js/recipe-studio.js'],
   'crash-racers':[...adventure,'js/delivery.js'],

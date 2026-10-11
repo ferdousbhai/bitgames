@@ -86,6 +86,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   15%, 80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   100% { transform: translate(-50%, -80%) scale(.9); opacity: 0; }
 }
+/* "The cake is ready!" waits up where the "Make a wish" bubble goes, above even a nine-layer cake */
+.intro.high { top: calc(70px + env(safe-area-inset-top)); padding: 6px 22px 10px; animation-name: intro-high; }
+.intro.high #intro-emoji { display: none; }
+@keyframes intro-high {
+  0% { transform: translate(-50%, 0) scale(0); opacity: 0; }
+  15%, 80% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -20%) scale(.9); opacity: 0; }
+}
 @keyframes intro-in { 0% { transform: translate(-50%, 0) scale(0); opacity: 0; } 100% { transform: translate(-50%, 0) scale(1); opacity: 1; } }
 #intro-emoji { font-size: 60px; line-height: 1.15; }
 #intro-title { font-size: clamp(26px, 6vw, 42px); font-weight: 900; }
@@ -200,19 +208,20 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 #birthday-studio h2 { font-size: 19px; }
 #birthday-studio .studio-row { gap: 6px; margin: 6px 0; }
 #birthday-studio .studio-preview { height: clamp(110px, 24svh, 230px); border-radius: 18px; }
-#birthday-studio section > p { margin: 4px 0; font-size: 14px; }
+/* Words in the studio are for screen readers only: the child reads pictures */
+#birthday-studio .studio-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #birthday-studio .studio-status { min-height: 40px; padding: 7px 10px; margin: 6px 0 0; font-size: 15px; }
 #birthday-studio button { padding: 6px 12px; }
 
 #birthday-studio #recipe-panel:not([hidden]) { display: grid; grid-template-columns: auto minmax(0, 400px); justify-content: center; gap: 4px 12px; align-items: center; }
-#birthday-studio #recipe-panel > p, #birthday-studio #recipe-panel > .studio-row:last-child { grid-column: 1 / -1; }
+#birthday-studio #recipe-panel > .studio-row:last-child { grid-column: 1 / -1; }
 #birthday-studio .recipe-strip { flex-direction: column-reverse; flex-wrap: nowrap; gap: 3px; margin: 0; align-items: center; }
 #birthday-studio .recipe-step {
   position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; width: 96px; height: 30px; padding: 0 6px;
   border-radius: 10px 10px 6px 6px; background: var(--icing); border: 2px solid #fff; border-bottom: 6px solid var(--sponge); box-shadow: 0 2px 0 #715b7a30;
 }
 #birthday-studio .recipe-step span { font-size: 18px; line-height: 1; }
-#birthday-studio .recipe-step small, #birthday-studio .flavour small { display: inline-block; font-size: 11px; line-height: 1.2; background: #fffffff0; color: #554462; border-radius: 6px; padding: 0 4px; }
+#birthday-studio .recipe-step small { display: inline-block; font-size: 11px; line-height: 1.2; background: #fffffff0; color: #554462; border-radius: 6px; padding: 0 4px; }
 #birthday-studio .recipe-step.next { outline: 3px dashed #ff6fae; outline-offset: 1px; }
 #birthday-studio .recipe-step.done::after, #birthday-studio .recipe-step.wrong::after {
   content: '✓'; position: absolute; right: -10px; top: 50%; translate: 0 -50%; width: 20px; height: 20px; border-radius: 50%;
@@ -227,16 +236,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 #birthday-studio .flavour span { font-size: 24px; line-height: 1; }
 #birthday-studio .flavour:active { transform: translateY(3px); border-bottom-width: 3px; }
-#birthday-studio #slice-buttons button, #birthday-studio #friend-buttons button { font-size: 17px; }
+#birthday-studio #friend-buttons button { font-size: 17px; }
+#birthday-studio #friend-buttons .plate.baker { border-style: dashed; margin-left: 8px; }
 #birthday-studio #share-check, #birthday-studio #recipe-check { background: #c4e4cd; }
 
 /* Phones held upright: shrink the preview and the words so nothing needs scrolling */
 @media (max-height: 700px) and (max-aspect-ratio: 1/1) {
   #birthday-studio .studio-preview { height: clamp(96px, 19svh, 150px); }
   #birthday-studio button { font-size: 14px; }
-}
-@media (max-height: 600px) and (max-aspect-ratio: 1/1) {
-  #birthday-studio section > p { display: none; }
 }
 
 /* Sideways phones and short tablets: the preview on the left, the controls on the right */
@@ -256,7 +263,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #birthday-studio { max-height: calc(100svh - 12px); padding: 6px 12px 8px !important; }
   #birthday-studio h2 { font-size: 16px; }
   #birthday-studio .studio-close { min-height: 44px; height: 44px; }
-  #birthday-studio section > p { display: none; }
   #birthday-studio .studio-row { margin: 4px 0; }
   #birthday-studio .recipe-step { height: 24px; }
   #birthday-studio .recipe-step span { font-size: 15px; }
@@ -287,12 +293,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #birthday-studio { font-size: 18px; }
   #birthday-studio h2 { font-size: 24px; }
   #birthday-studio button { font-size: 18px; }
-  #birthday-studio section > p { font-size: 17px; }
   #birthday-studio .studio-status { font-size: 18px; }
   #birthday-studio .recipe-step span { font-size: 22px; }
   #birthday-studio .flavour { min-height: 66px; }
   #birthday-studio .flavour span { font-size: 30px; }
-  #birthday-studio .recipe-step small, #birthday-studio .flavour small { font-size: 13px; }
+  #birthday-studio .recipe-step small { font-size: 13px; }
 }
 
 /* The intro bubble sizes to its words instead of squeezing into half the screen */
@@ -341,17 +346,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   border-radius: 999px; box-shadow: 0 4px 0 #715b7a30;
 }
 #birthday-studio #friend-buttons .plate span { font-size: 1.5em; line-height: 1; }
-#birthday-studio #friend-buttons .plate b { font-size: .95em; letter-spacing: -2px; }
-#birthday-studio #friend-buttons .plate small { font: 900 .9em/1 ui-rounded, system-ui, sans-serif; background: #fff; border-radius: 999px; padding: 2px 7px; }
+#birthday-studio #friend-buttons .plate b { font-size: .95em; letter-spacing: -2px; max-width: 6.5em; line-height: 1.1; }
 #birthday-studio #friend-buttons .plate:active { transform: translateY(3px); box-shadow: 0 1px 0 #715b7a30; }
 #birthday-studio #recipe-next.ready { background: #ffd23f; box-shadow: 0 4px 0 #d89a00; }
-/* Sharing with three friends fits phones too: slices in one compact row, the three plates side by side */
-#birthday-studio #slice-buttons { gap: 4px; }
-#birthday-studio #slice-buttons button { min-width: 44px; padding: 4px 7px; }
+/* Sharing with three friends fits phones too: the plates (and the baker's) side by side, slices shown small */
 #birthday-studio #friend-buttons button.plate { min-width: 0; padding: 4px 10px; }
 @media (max-width: 420px) {
   #birthday-studio #friend-buttons { gap: 5px; }
-  #birthday-studio #friend-buttons .plate b { display: none; }
+  #birthday-studio #friend-buttons .plate b { font-size: .7em; max-width: 4.5em; }
   #birthday-studio #friend-buttons button.plate { padding: 4px 8px; }
 }
 @media (max-height: 760px) and (max-aspect-ratio: 1/1) {
@@ -359,16 +361,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 @media (min-aspect-ratio: 5/4) and (max-height: 430px) {
   #birthday-studio #share-panel .studio-row { margin: 3px 0; }
-  #birthday-studio #friend-buttons .plate b { display: none; }
+  #birthday-studio #friend-buttons .plate b { font-size: .7em; }
 }
 @media (max-width: 360px) {
   #birthday-studio { padding-left: 10px !important; padding-right: 10px !important; }
-  #birthday-studio #slice-buttons { gap: 2px; }
-  #birthday-studio #slice-buttons button { font-size: 13px; padding: 2px 4px; }
 }
-/* Very short sideways phones: tapping a plate hands over the next slice, so the slice row steps aside */
+/* Very short sideways phones: the plates sit closer together */
 @media (min-aspect-ratio: 5/4) and (max-height: 330px) {
-  #birthday-studio #slice-buttons { display: none; }
   #birthday-studio #friend-buttons { gap: 4px; }
   #birthday-studio #friend-buttons button.plate { padding: 3px 7px; }
 }
@@ -449,8 +448,16 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .share-head { display: flex; align-items: center; gap: 14px; }
 .share-cake { width: clamp(96px, 22vmin, 150px); height: auto; }
+/* Twelve slices get a little more room, so every slice can be counted on the cake */
+.share-head > .share-cake.many { width: clamp(116px, 26vmin, 170px); }
 .share-cake .wedge { transition: opacity .35s, transform .35s; transform-origin: 0 0; }
-.share-cake .wedge.gone { opacity: .12; transform: scale(.92); }
+.share-cake .wedge path, .share-cake .rim { transition: fill .35s, stroke .35s; }
+/* A slice that has been given leaves an empty place on the plate (a faint dashed outline, no cherry);
+   once every slice is gone the sponge ring fades into the plate too, so an empty cake looks empty */
+.share-cake .wedge.gone { transform: scale(.92); }
+.share-cake .wedge.gone path { fill: #f6e3ee; stroke: rgba(176, 74, 122, .35); stroke-dasharray: 3 3; stroke-width: 1.4; }
+.share-cake .wedge.gone circle { opacity: 0; }
+.share-cake.empty .rim { fill: #f6e3ee; stroke: rgba(176, 74, 122, .3); stroke-dasharray: 4 4; }
 .share-faces { font-size: 34px; letter-spacing: 2px; }
 .share-plates { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .share-plate {
@@ -477,7 +484,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .card-share:empty { display: none; }
 @media (min-aspect-ratio: 6/5) {
   .share-wrap { align-items: center; justify-content: flex-end; padding-right: calc(24px + env(safe-area-inset-right)); }
-  .share-card { max-width: min(620px, 56vw); }
+  .share-card { max-width: min(620px, 46vw); }
 }
 @media (max-width: 440px) {
   .share-card { padding: 12px 12px 14px; gap: 8px; }
@@ -583,6 +590,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 @media (min-width: 768px) and (min-height: 700px) and (max-aspect-ratio: 6/5) {
   .share-cake { width: 130px; }
+  .share-head > .share-cake.many { width: 156px; }
   .share-plate { min-width: 112px; min-height: 112px; }
   .share-plate .face { font-size: 42px; }
   .share-plate .on-plate { min-width: 84px; max-width: 132px; }
@@ -602,3 +610,18 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .cut-choice .share-cake { width: clamp(84px, 17vmin, 130px); }
 /* A made-up pattern: the part the child chooses shows as empty dashed dots until it is stacked */
 .pips.order .pip.want.design { opacity: 1; filter: none; background: #fff; border-style: dashed; border-color: #d9a7c0; }
+
+/* --- 2026-10-11 round 5 --- */
+/* Dots not reached yet keep their full icing colour (a dashed rim says "not yet"), so pale flavours never read as disabled */
+.pips.order .pip.want { opacity: 1; filter: none; }
+.pips.order .pip.want:not(.on):not(.mystery):not(.design):not(.oops):not(.next) { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7), 0 0 0 1px rgba(113, 91, 122, .35); }
+/* From tier 1 the next dot is not ringed: the child finds their place in the order */
+.pips.order .pip.want.next.quiet:not(.ask) { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7), 0 0 0 1px rgba(113, 91, 122, .35); transform: none; }
+/* Counting: the friend's number as slices stays clearly visible, so the cake can be compared with it one to one */
+#hud .adventure-step:not(.adventure-got) { opacity: .8; filter: saturate(.55); }
+
+/* --- 2026-10-11 round 7: dots that match the cake, and plates that only give while the cake has slices --- */
+/* Counting: a layer tilted to come off keeps its dot, tilted and dashed like the layer itself */
+.pip.tilted { transform: rotate(-14deg) scale(1.1); border-style: dashed; border-width: 3px; border-color: #c27a95 !important; }
+/* While the cake still has slices, every tap on a plate gives it one (the slices on it are not buttons yet) */
+.share-card.dealing .share-plate .slice-btn { pointer-events: none; }

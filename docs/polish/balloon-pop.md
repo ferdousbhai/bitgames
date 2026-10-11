@@ -481,3 +481,303 @@ There were also four small bugs.
 - The treat choice is creative but carries no learning. A later tier could offer "a treat for each balloon" plates (choose the plate with 4 strawberries).
 - An occasional "Who has more?" about two bunches on the blanket at the end of a visit.
 - Free popping and Count three still have no decision. Count three is held by the shared test.
+
+# Round 5: which colour has most, colour mixing, and a decision in every basket (2026-10-11)
+
+The open audit item was the older tier's "which colour has most" and colour mixing. The last review (8.5) also listed small bugs and blockers:
+
+- friends repeated at the picnic;
+- the request was said twice;
+- the tier-1 count skipped from 5 to the target;
+- idle easing hit a slow child whose basket was already right;
+- each dot number always had the same picture;
+- dots finished on their own;
+- treats carried no learning;
+- eased hints gave the answer straight away.
+
+## Design
+
+- **Which colour has most (`most`, tiers 2 and 3).**
+  - The card shows the friend's own bunch, jumbled six to a row: two colours at least 2 apart in tier 2, and three colours 1 apart in tier 3.
+  - The friend says: "Owl has green and blue balloons. Which colour does Owl have most of? Give Owl 1 more of that one."
+  - A balloon of any of the bunch's colours goes into the basket, in plain grey slots that give nothing away, so a guess is only found out at Give: "That's 1 green. Owl has fewer green. Count each colour again."
+  - It ends with "4 blue is the most! 4 and 1 more make 5." A softened sky sorts the bunch into one row per colour, so the longest row shows the most.
+- **Colour mixing (`mix`, tiers 2 and 3).**
+  - A friend wants purple, orange or green. While they ask, no balloon of that colour rises, and yellow joins the sky and the rainbow babies.
+  - The card has a bowl for each new balloon: one of each colour goes in, and the mixed balloon appears beside it.
+  - Tier 2 names the recipe ("Red and blue make purple. Mix them!"). Tier 3 names it only the first time that mix comes up in a visit, then asks "Which two colours make green?". A wrong colour gets the usual head shake.
+  - 2 green needs 2 blue and 2 yellow, so the child also doubles.
+- **Dots are handed over.** "Fox wants 3 balloons with 5 dots": the basket, Give, the extras and "Just right!" now work as in every other request, and temptation sends more balloons with the asked number of dots. Each number has 4 scattered arrangements, chosen at random for each balloon, so the dots must be counted, not recognised.
+- **Treat plates from tier 2.** The treats come on two plates, "One treat for each balloon!" (said once per round). One plate has as many as the friend's bunch, which is shown beside the plates in rows of five. The other is 2 off in tier 2 and 1 off in tier 3. The wrong plate is set aside with a head shake and "Count the balloons, then the treats on each plate." (once). Tier 1 keeps the free choice, and so do bunches over 10.
+- **Hints teach first, then answer.** The first stuck trigger softens the sky with a strategy, for example "Count Koala's balloons first. One less stops one before them." Only a second trigger gives the answer: two more hand-overs, three more wrong dots, or another 50 s. For example "One less than 6 is 5.". There are hints and answers for more, less, same, most, mix, add, pair and dots.
+- **Bugs.**
+  - Each request is for a friend not yet at the picnic, so 8 places means 8 different friends.
+  - `sky.asked` starts when the request is said, so a quick tap on the friend or an empty Give only tilts the head. An empty Give is never a slip.
+  - Tier 1 counts every number up to the target (at most 10, since counting is the lesson), landing with "7. That's 7!".
+  - A just-right basket never idles into an eased sky.
+  - Home picnic friends sit in fixed 62 px columns, so a bunch of 10 never leans into its neighbour.
+- **Tier-2 opening** is now colour, pair, add, most, dots, mix, pair, shape from level 3, so a tier-2 child meets every kind within one visit.
+
+## Changes (under `examples/balloon-pop/public/`)
+
+- `js/sky.js`:
+  - `:20-25` yellow, `WORD_COLOURS` and `MIXES`.
+  - `:61-64` `OPENING_2` and `MIXED`.
+  - `:99` friends not at the picnic.
+  - `:123` dots with a count.
+  - `:137` `most`.
+  - `:157` `mix`.
+  - `:272` `scatterLayout(n, variant)`.
+- `js/main.js`:
+  - `:14` `HEX`.
+  - `:201` `newRequest`, with `away`, `taught` and `asked`.
+  - `:247-297` `ease` in two stages, `hintFor` and `answerFor`.
+  - `:306-323` `misfits`, `basketOver` and `basketWords`.
+  - `:447` the most card.
+  - `:471` the mix bowls.
+  - `:565-580` `blankSlot` and `appendExtra`.
+  - `:649` the tier-1 count to 10.
+  - `:675` empty Give.
+  - `:775-855` `bunchOf`, `pickTreats`, `treatChoice` and `pickTreat` (plates).
+  - `:960` dot variants.
+  - `:1043` `skyPalette`.
+  - `:1062` which-has-most spawns.
+  - `:1566` the finger in a which-has-most sky.
+  - `:1619` no idle easing when right.
+- `style.css`:
+  - `:279` home columns.
+  - `:283-301` bunch, bowls, plates and treat bunch.
+  - `:316-322` phone sizes.
+- `examples/balloon-pop/game.json`: `howToPlay` and `learning` describe most, mixing and plates.
+
+## Evidence (scratchpad `polish/balloon-pop/r5/`)
+
+- **Checks.** `node --check` passes on `main.js` and `sky.js`. `browser.mjs --ids balloon-pop --run balloon-pop-c1`: BOOT + PLAY ready, 0 errors.
+- **`flow.mjs` at 834×1194 and 1194×834, 0 errors.**
+  - **Empty Give and a friend tap right after a request:** the request is said once (`["Pig wants 2 blue balloons."]`).
+  - **Tier-1 count:** `1 … 8, "8. That's 8!"` and `1 … 9, "9. That's 9!"`.
+  - **Most, tier 2:**
+    - Guess: "That's 1 green. Owl has fewer green. Count each colour again."
+    - Right: "4 blue is the most! 4 and 1 more make 5. Thank you!", then "One treat for each balloon!".
+    - Plates 7 and 5 for a bunch of 7. The wrong plate gives one line and no treat; the right one is kept.
+  - **Mix, tier 2:** "2 red and 2 blue make 2 purple balloons! Just right!".
+  - **Mix, tier 3:** the first mix of a visit names the recipe. A taught mix asks "Which two colours make green?" (`flow2.mjs`). Spawns during a green mix were yellow, orange and blue, never green.
+  - **Dots:** "Pig wants 3 balloons with 6 dots."
+    - Over-full: "That's 4. Too many!".
+    - Let one go and Give: "3 balloons, 6 dots on every one! Thank you!".
+  - **Idle at a just-right tier-3 basket:** not eased.
+  - **Less, stuck:** the strategy line first, then "One less than 6 is 5.".
+  - **Most, stuck:** "Count each colour in Panda's bunch. Which number is biggest?", then "Green is the most. Give 2 green."
+  - **Friends:** 8 requests gave 8 different friends.
+- **Screenshots** (`834x1194-1-most-t2`, `5-most-t3`, `6-mix-t2`, `m1-mix-untold`, `m3-most-eased`, `3-plates`, `390x844-p1-mix4`, `p2-most`, `p3-plates`, `834x1194-p4-home`): the cards fit at phone width. The home row holds 8 friends with bunches of 10 without overlap.
+- **`compare.mjs` (speech stubbed):**
+
+| Run | Time | Friends | "Just right!" | Lines | Tier |
+|---|---|---|---|---|---|
+| Careful, 834×1194 | 240 s | 11 (one full visit and its closing) | 11 | 34 | reached 3 |
+| Careful, 1194×834, saved tier 3 | 200 s | 6 (including same and most) | 6 | 14 | stayed at 3 |
+| Random, 834×1194 | 180 s | 5 | 0 | 43 | stayed at 1 |
+| Random, 1194×834, saved tier 3 | 180 s | 1 | 0 | 24 | eased to 2 |
+
+- **`modes.mjs` at 390×844:** Count three, Hearts, Red and Start easy are unchanged, 0 errors.
+
+## Checklist status
+
+- **Older tier: one more/one less, teens on two ten-frames, which colour has most, colour mixing. Done.** One more/one less and the teens were done in round 3. `most` and `mix` were added this round, with mixing yellow coming in on the rainbow babies too.
+
+## For the coordinator
+
+- `game.json` was updated in place. The shared `original-quality.mjs` drives only Count three, which is unchanged.
+
+## Remaining ideas
+
+- Count three is held by the shared test. Free popping stays free on purpose.
+- Hearts for friends could gain a tier-3 twist, such as "one more heart than Fox".
+- An end-of-visit "Who has the most balloons?" on the blanket.
+
+## 2026-10-11: round 2 (reviews 8.4)
+
+**Design.** The adaptation now moves the numbers as well as the support, and free popping no longer counts anything. Mixing is shown as well as said. Most-bunches are big enough to count.
+
+### Changes (under `examples/balloon-pop/public/`)
+
+- **Step-down eases the counts** (`js/sky.js:93-97` takes a `reach`; `js/main.js:81`, `:238-245`, `:1000`, `:1405`):
+  - `game.reach` is the level that counts are sized by. It grows one per friend.
+  - `stepDown` puts it back to `EASED_REACH`: 2–4 in tier 1, 2–5 in tier 2. A child eased from tier 3 at level 12 is asked for 2–5 again, not 9 bunnies.
+- **No tally or level bar in free popping** (`index.html:44-48`, `js/main.js:1306-1318`, `:1371`, `style.css:67`):
+  - The 🎈 pop pill and the Level N bar are gone. A quiet picture strip shows the balloon friends met so far, and a new one joins when it is introduced.
+  - The "Level N!" card is now "More balloons!".
+  - Home says "You met 🎈 💖 👑", not "You popped N balloons".
+- **Waiting shape slots** (`js/main.js:335`, `:345-348`, `style.css:216`): a waiting heart or bunny slot is a pale silhouette in a dashed outline of its colour (pink or purple), matching the colour slots.
+- **Home summary** (`js/main.js:796`): `biggest` is the whole bunch carried away, from `bunchOf(sky).length`.
+- **No plates after help** (`js/main.js:840`): treat plates follow `viewTier()`, so a softened sky gets the plain treat choice.
+- **Bigger which-has-most bunch** (`js/main.js:469`, `style.css:291-308`):
+  - Balloons are 26 px (30 px on tablets, 21 px on short landscape).
+  - Five to a row in tier 2, four in tier 3.
+- **Visible mixing** (`js/main.js:500-515`, `style.css:312-319`):
+  - When a bowl gets its second colour, the new balloon starts as the two colours side by side and blends into the mixed colour over about 1.1 s. This uses `@property` colours.
+  - It happens once per bowl and not at all with reduced motion.
+- **Quieter reminders** (`js/main.js:738-756`):
+  - A Give that is not right names only what was handed over ("That's 2." or "That's 4. Too many!"). The goal stays on the card, and tapping the friend says it again.
+  - At most two reminders a sky.
+- **Shorter dots wait** (`js/main.js:1128-1136`): the exact-dots share is 0.45 while two or more are still to find, and 0.33 for the last one.
+- **Visible tier** (`index.html:50-53`, `js/main.js:597-611`, `style.css:154-158`):
+  - A small plant under the friend shows the tier: 🌱 numbered slots, 🌿 plain slots, 🌳 ten-frames.
+  - When the tier moves, it changes once with a soft 1.6 s grow. There are no words, and the cue is not played on the first card of a visit.
+- `game.json` `howToPlay` covers the blend, the plant and free popping.
+
+### Evidence (scratchpad `polish/balloon-pop/r6/`)
+
+- **Checks.** `node --check` passes on `main.js` and `sky.js`. `browser.mjs --ids balloon-pop --run balloon-pop-c2`: BOOT + PLAY ready, 0 errors.
+- **`flow.mjs` at 834×1194, 1194×834 and 390×844, 0 errors.**
+  - **From saved tier 3 at level 12:**
+    - The first ease steps to tier 2 with reach 4, and the plant 🌳 changes to 🌿 with `moved`.
+    - The next tier-2 totals are 1–7. The second step to tier 1 gives `colour:5 shape:2 add:4 colour:6 …`, growing from 2–4.
+  - **Too-few Give:** says `["1","2","That's 2."]`.
+  - **Shapes:** 9 or 10 empty hearts and bunnies are clearly outlined (`crop-2-shape-empty`, `crop-390x844-2-shape-empty`).
+  - **Most, tier 3:** 13–18 balloons, four to a row, readable at 390 px (`crop-5-most-t3`, `crop-390x844-5-most-t3`).
+  - **Mix blend:** red | yellow turns to orange (`crop-6-mix-blending`, then `7-mix-blended`).
+  - **Eased `same`:** `treats.counts` is null, and home says "up to 10 balloons" (the friend's whole bunch).
+- **`free.mjs`:** the HUD has no `#score` and no `.bar`. The strip is 🎈💖👑 at level 3, and home says "You met 🎈 💖 👑" (`834x1194-f1-free`, `f2-home`).
+- **`c3.mjs`:** in Count three, the goal box and the strip do not overlap at 1194×834 or 390×844.
+- **`modes.mjs` at 390×844:** Count three, Hearts and Red are unchanged, with 0 errors.
+- **`compare.mjs`:**
+  - Random, 834×1194: 4 friends, 36 lines (about 9 a friend, before the two-reminder cap). A rerun after the cap gave 2 friends and 21 lines.
+  - Random from tier 3: eased to tier 2.
+  - Careful: reached tier 3, every hand-over "Just right!", 0 errors.
+
+### Checklist status
+
+- **Leftover score, medal or magnet economies. Done.** Free popping has no tally, no level bar and no numeric home line. The counting sky already hid them.
+- **All of review 1's bugs are fixed:** step-down counts, the free-popping tally, faint shape slots, the home summary, and plates after easing.
+- **Improvements:**
+  - Done: 1–7 and 9.
+  - 8 (dots wait) is partly done: the exact share was raised. The rest of the wait was the bot.
+
+### For the coordinator
+
+`index.html` no longer has `#score`, `#level` or `#bar-fill`. It adds `#met` and `#sky-step`. `original-quality.mjs` drives only the Count three pops and mission progress, which are unchanged.
+
+## 2026-10-11: round 3 (reviews 8.5 and 8.4)
+
+**Design.** Every menu choice except free popping now carries the stopping decision. The older tier reaches the teens through counting on from ten, not only through bigger plain counts. A mixing sky never shows the colour that has to be mixed.
+
+### Changes (under `examples/balloon-pop/public/`)
+
+- **Count three is now "Three for friends"** (`js/main.js:131`, `js/sky.js:72-77`, `:121-124`, `:143`):
+  - It is a focused sky of 5 friends. Each friend wants exactly three: 3 blue, 3 hearts or 3 bunnies (tier 1); then 2 red and 1 purple, or 3 balloons with N dots (tier 2); then "2, then 1 more" (tier 3).
+  - It uses the same basket, Give, rests, let-go and tiers as the counting sky.
+  - The "n / 3" tally, the ⭐ reward card and their code are gone: `renderMissionProgress`, `celebrateMission`, `#mission-reward` in `index.html`, and the `.mission-reward`, `.mission-caption` and `.mission-slots` CSS.
+- **No target colour in a mixing sky** (`js/main.js:181-188`): when a mix request starts, a balloon of the target colour that is in view becomes `leaving` (not countable) and drifts away at 4.5. One not yet in view is removed.
+- **The goal is said again at most twice a sky** (`js/main.js:1431-1440` `repeatGoal`): a friend tap and an empty Give share the cap and the 6 s gap. After that, the friend only tilts their head and the card carries the goal.
+- **Hearts for friends grows with the child** (`js/sky.js:74`, `:190-197`; `js/main.js:262`, `:366`; `style.css:175`, `:363`, `:418`):
+  - Tier 2 adds "5 hearts, then 2 more" and "one more heart than Fox".
+  - Tier 3 adds one less and "make the same".
+  - The other friend's hearts show as hearts, both in the row and in the frames. Hints say "Count Fox's hearts first".
+- **Teens are reachable** (`js/sky.js:232`, `:249-250`):
+  - From tier-3 level 8, `add` can be "10 red balloons, then 3 more" (11–14), shown on two tinted ten-frames.
+  - More/less use a reference up to 13 once `climb >= 5`.
+  - Sample: 67 of 250 requests at levels 8–12 were teens (before this, about 1 in 9).
+- **Grammar** (`js/sky.js:206`): "4 blue balloons and 1 red balloon".
+- **Red and pink never share a which-has-most bunch** (`js/sky.js:78`, `:158`). Sample: 0 of 300 bunches.
+- **Tier-2 mix asks for 2 once that mix has been heard** this visit (`js/sky.js:179`).
+- **Free popping meets new friends on a slow clock**, not a pop count (`js/main.js:60`, `:1673`). This is goal × 3 s (24–45 s), so tapping faster earns nothing.
+- **One twinkle**: a gold or star balloon twinkles once (3 sparkles) as it comes into view, then rises quietly (`js/main.js:1683-1692`).
+- **`game.json`**:
+  - `ages` is [3, 8].
+  - `learning` names one more and one less, making two bunches the same, and adding on from ten.
+  - `howToPlay` names Three for friends and the hearts tiers.
+
+### Evidence (scratchpad `polish/balloon-pop/r7/`)
+
+- **Checks.** `node --check` passes on `main.js` and `sky.js`. `browser.mjs --ids balloon-pop --run balloon-pop-c3`: BOOT + PLAY ready, 0 errors.
+- **`flow.mjs` at 834×1194:**
+  - **Mixing sky:** the 3 green balloons from a green colour sky were all `leaving` the moment "green mix" started. 0 remained after about 5 s (`dbg.mjs`).
+  - **Repeat cap:** 6 friend taps and empty Gives with the gap skipped said the goal exactly twice.
+  - **Teens:** "Frog wants 10 pink balloons, then 3 more." (13) and "Koala has 12 blue balloons. Bear wants one more…" (13).
+- **`modes.mjs` at 834×1194 and 390×844, 0 errors:**
+  - **Menu:** Counting sky, Three for friends, Hearts, Red, Free popping. The goal box is hidden.
+  - **Three for friends:** tier 1 says "1, 2, 3. That's 3!". Over-full gives "That's 4. Too many!" and the let-go line. A visit of 5 ends with "Everyone is at the picnic!".
+  - **Hearts at tier 3:** more, same (with "2 and 4 more make 6, the same as Mouse! Just right!"), add, and the less hint.
+  - **Free popping:** the next friend comes on the clock with no pops.
+- **`shots.mjs`** at 834×1194, 1194×834 and 390×844:
+  - Hearts more, less and same.
+  - add-teen, more-teen and pair.
+  - At 390 px the cards fit. The more-teen card at 1194×834 wraps its second frame (about 300 px tall), still clear of the play area.
+
+### Checklist status
+
+- No audit items were open.
+- **Both reviews' bugs are fixed:** leftover mix colour, repeated goal, the Count three decision, ages, pair grammar, and red with pink.
+- **Improvements done:**
+  - Review 1: 1–6.
+  - Review 2: 1–7.
+
+### For the coordinator
+
+- `original-quality.mjs` must change. Balloon Pop no longer has an adventure goal mission (Count three is now a basket sky).
+  - Remove `'balloon-pop'` from the list on line 48.
+  - Replace lines 99–124 (the "Count three balloons" raw-count check). A matching check would be: choose `Three for friends`, play, pop 3 balloons that match `window.__adventure.game.sky.req.accept`, tap `#give`, and assert `game.sky.done === true` and `game.skies === 1`.
+
+## 2026-10-11: round 4 (reviews 8.6 and 8.6)
+
+**Design.** Free popping, the one mode with no decision, gets one gentle optional thread: now and then a friend would like one balloon (a heart, a crowned one, a bunny or a colour) and waits, with no timer, until the child finds it. The rest of the pass makes careful play sound different from lucky play: "Just right!" only for an exact basket, "You fixed it!" for a self-correction, and "Too many!" always heard the first time. The no-pulse rule now covers the hearts too, and phone landscape keeps more than half the screen as sky.
+
+### Changes (under `examples/balloon-pop/public/`)
+
+- **Free popping wishes** (`js/main.js:1335-1410`, `:1166-1178` spawn, `:1690` the finger; `index.html` `#wish`; `style.css:71-94`):
+  - A wish comes 14 s into a visit, then 22 s after each one is found. It is said once, and a tap on the friend says it once more.
+  - A matching balloon is sent at about 1 in 4 spawns, and always within 8 s. After 20 s the finger shows one.
+  - Finding it brings "A heart! Thank you!" and one chord. Other pops stay free.
+  - The home line reads "You met 🎈 💖 👑 and helped 2 friends".
+- **No heartbeat**: hearts use the same slow 2.5% breathe as every balloon (`js/balloons.js:184`). The title card rises with `ease-out` and no overshoot (`style.css:25-27`).
+- **Phone landscape at 420 px tall or less** (`style.css:400-436`):
+  - The right buttons stack, so the card can be 130 px narrower than the screen instead of 280. Ten-frames and slots shrink.
+  - The picnic is a 25 px strip. The home card and its picnic row compact so the card fits.
+  - Measured at 667×375: the card's bottom is 90 px (add-teen, same, pair) to 141 px (most), against 186–230 px before. The picnic starts at 346 px (319 px before). That leaves 205–255 px of sky.
+- **Red never paired with pink** in a two-colour basket (`js/sky.js:224`). Sample: 0 of 832 pairs.
+- **Praise tells exact from fixed** (`js/main.js:811`): "Just right!" needs `slips === 0 && fixes === 0`. A basket over-filled, fixed and then given hears "You fixed it! Thank you!".
+- **Too many is always named once** (`js/main.js:748-753`): the first over-full hand-over is spoken even after the two-reminder cap. The extras rest on a steady warm glow while `sky.over` (`style.css:194`, `js/main.js:415`, `:739`, `:776`).
+- **Tier 1 stuck help** (`js/main.js:249-260`): at the first stuck point (50 s idle, or three wrong dots) tier 1 now says the way out once a sky. That is "Too many in the basket. Tap one to let it go." when over-full, otherwise the strategy hint. A second stuck point gives the answer line.
+- **Mixing counts what is made** (`js/main.js:690-697`): tier-1 (eased) mix counts completed bowls ("1", "2 green. That's 2!"), not the input colours. A sky softened mid-basket stays quiet for that basket (`:265-266`), so a count never starts at "4".
+- **Shorter waits**:
+  - Tier 1 at levels 1–3 matches 1 in 2 (`:1118`).
+  - Any sky that has sent no match for 6 s (tier 1) or 8 s sends one, even on a full screen (`:1126`, `:1150`, `:1158`, `:1220`).
+  - Which-has-most sends the answer colour half the time (`:1134`).
+  - Measured gaps between matching spawns over 40 s: at most 9.2 s (tier-1 colour, before the limit was cut to 6 s), 5.5 s (mix) and 4.5 s (pair).
+- **Tier memory**:
+  - Only the Counting sky saves the tier (`js/main.js:164-171`).
+  - Ten-frames need a visit begun on plain slots (`game.startTier`, `:204-215`, `:1509`). A careful bot's first visit ended at tier 2. A second visit reached tier 3 after 4 clean baskets.
+  - Three for friends from saved tier 2 rose to 3 in session but left the save at tier 2.
+- **Tier-3 kinds are dealt from a bag** (`js/sky.js:94-103`, `:139`; `game.bag`). Every kind of the tier comes once before any repeats. Four sampled visits each had 8 different kinds.
+- **The other friend** in more, less or same is one not yet at the picnic when there is one (`js/sky.js:84-87`).
+- **Home picnic** (`js/main.js:927`, `style.css:297-301`): bunches are capped at two rows of five plus "+n", with wider column gaps.
+- **`game.json`** `howToPlay` describes the free-popping wishes.
+
+### Evidence (scratchpad `polish/balloon-pop/r8/`)
+
+- **Checks.** `node --check` passes on `main.js`, `sky.js` and `balloons.js`. `browser.mjs --ids balloon-pop --run balloon-pop-c4`: BOOT + PLAY ready, 0 errors.
+- **`flow.mjs` at 834×1194:**
+  - Two early gives, then over-fill: "That's 1.", "That's 2.", then "That's 7. Too many!" and the let-go line, with the extras glowing (`A-over.png`). Idle gives "Too many in the basket. Tap one to let it go.".
+  - Over-fill, fix, give: "You fixed it! Thank you!". An exact basket: "Just right!".
+  - Eased mix: "1", "2 green. That's 2!". Mix eased mid-basket: silent.
+- **`free.mjs`** at 834×1194 and 667×375: "Pig would like an orange balloon." A match was in view about 3.6 s later. "A bunny! Thank you!". The card cleared and the next wish came after 22 s. Home: "You met 🎈 💖 👑 🐰 and helped 1 friend".
+- **`careful.mjs`** (8 friends) at 834×1194, 1194×834 and 667×375 with 0 errors (`667x375-mid-0.png` shows the thin picnic).
+- **`land.mjs`** at 667×375, before and after (`*-before-*`, `*-after-*`).
+- **`home.mjs`** at 4 sizes: the card fits on every screen (667×375: 8 to 367 px).
+- **`modes.mjs`** at 834×1194 and 390×844: 0 errors.
+
+### Checklist status
+
+- **Infinite pulse or wiggle: closed.** The heart heartbeat is gone. The only remaining loop is the guidance finger, which shows only when help is needed.
+- **Bugs fixed:**
+  - Review 1: all 6. The waits are fixed with the dry-spell guard.
+  - Review 2: all 4.
+- **Improvements done:**
+  - Review 1: 1–8.
+  - Review 2: 1–8.
+
+### For the coordinator
+
+- `original-quality.mjs` still drives the old "Count three balloons" mission (lines 48 and 99–124). The fix requested in round 3 still applies.
+- Free popping now has `#wish`. Nothing in `original-quality.mjs` touches it.

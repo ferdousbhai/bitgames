@@ -20,11 +20,12 @@ export const WORLDS = [
     obstacles: ['windmill', 'rock'],
     gem: 'blue',
     // two numbered rings at a time: fly through the number that comes next.
-    // Tiers (chosen from how the last ring world went): 1 to 5; counting down to land; counting on from a middle number.
+    // Tiers (chosen from how the last ring world went): 1 to 5; counting down to land; counting on from a teen number.
     goal: { type: 'rings', tiers: [
       { start: 1, step: 1, size: [4, 5], decoy: 'far' },
       { down: true, size: [5, 7], decoy: 'down' },
-      { start: [3, 6], step: 1, size: [5, 6], decoy: 'near' },
+      // for 6-8: counting on through the teens, where 14 and 41 look alike and the next ten is near
+      { start: [11, 15], step: 1, size: [5, 6], decoy: 'teen' },
     ] },
     lanterns: 0,
     waterfalls: 0.25,

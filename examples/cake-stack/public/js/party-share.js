@@ -46,25 +46,33 @@ function sliceIcon(layers) {
 
 /** The whole cake from above, cut into equal wedges, each with a cherry, on a sponge-coloured rim. */
 function cakeTop(n, top, rim) {
-  const s = svg('svg', { viewBox: '-55 -55 110 110', class: 'share-cake', role: 'img', 'aria-label': `A cake cut into ${n} equal slices` })
+  const s = svg('svg', { viewBox: '-55 -55 110 110', class: n >= 12 ? 'share-cake many' : 'share-cake', role: 'img', 'aria-label': `A cake cut into ${n} equal slices` })
   // The plate and the cake's sponge side show round the edge, so even a pale (vanilla) top reads as a cake.
-  s.append(svg('circle', { cx: 0, cy: 0, r: 54, fill: '#f6e3ee' }), svg('circle', { cx: 0, cy: 0, r: 49, fill: rim, stroke: 'rgba(120,60,90,.4)', 'stroke-width': 1.5 }))
+  // A slice that has been given leaves its place on the plate empty (see .gone), and once every slice is
+  // gone the sponge ring fades too (.empty), so an empty cake really looks like an empty plate.
+  s.append(svg('circle', { cx: 0, cy: 0, r: 54, fill: '#f6e3ee' }), svg('circle', { class: 'rim', cx: 0, cy: 0, r: 49, fill: rim, stroke: 'rgba(120,60,90,.4)', 'stroke-width': 1.5 }))
   const wedges = []
   const [r8, g8, b8] = [1, 3, 5].map((k) => parseInt(top.slice(k, k + 2), 16))
-  const cutLine = 0.3 * r8 + 0.59 * g8 + 0.11 * b8 < 110 ? 'rgba(255,255,255,.85)' : 'rgba(120,60,90,.45)'
+  const dark = 0.3 * r8 + 0.59 * g8 + 0.11 * b8 < 110
+  // Many slices get a wider gap and a thicker cut line, so even twelve read one by one at a glance.
+  const many = n >= 8
+  const cutLine = dark ? '#fff' : 'rgba(120,60,90,.5)'
+  // The sponge shows as a wide ring round the icing, and through the gaps between the slices.
+  const r = 43
+  const gap = many ? 3.6 : 2.4
   for (let i = 0; i < n; i++) {
     const a0 = (i / n) * Math.PI * 2 - Math.PI / 2
     const a1 = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2
     const mid = (a0 + a1) / 2
-    const r = 46
-    const ox = Math.cos(mid) * 2.2
-    const oy = Math.sin(mid) * 2.2
+    const ox = Math.cos(mid) * gap
+    const oy = Math.sin(mid) * gap
     const d = `M${ox} ${oy} L${ox + Math.cos(a0) * r} ${oy + Math.sin(a0) * r} A${r} ${r} 0 0 1 ${ox + Math.cos(a1) * r} ${oy + Math.sin(a1) * r} Z`
     // Soft brown cut lines show every slice on pale icing, white ones on dark (chocolate) icing.
     const w = svg('g', { class: 'wedge' })
     w.append(
-      svg('path', { d, fill: top, stroke: cutLine, 'stroke-width': 1.6, 'stroke-linejoin': 'round' }),
-      svg('circle', { cx: ox + Math.cos(mid) * r * 0.66, cy: oy + Math.sin(mid) * r * 0.66, r: Math.max(3.5, 9 - n * 0.45), fill: '#e8456b', stroke: '#fff', 'stroke-width': 1.2 }),
+      svg('path', { d, fill: top, stroke: cutLine, 'stroke-width': many ? 2.4 : 1.8, 'stroke-linejoin': 'round' }),
+      // One cherry near the outer edge of every slice, where even a thin slice has room for a big one.
+      svg('circle', { cx: ox + Math.cos(mid) * r * 0.72, cy: oy + Math.sin(mid) * r * 0.72, r: n >= 12 ? 5 : Math.max(5.5, 9 - n * 0.45), fill: '#e8456b', stroke: '#fff', 'stroke-width': 1.4 }),
     )
     s.append(w)
     wedges.push(w)
@@ -84,6 +92,7 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
   let plates = [] // slices on each friend's plate; the baker's plate, when there is one, is the last
   let slices = 0
   let wedges = []
+  let cakeSvg = null // the cake top being shared (it shows as an empty plate once every slice is given)
   let boxes = [] // the plates as elements, the baker's last
   let withBaker = false
   let finished = false
@@ -118,6 +127,11 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
   function render() {
     // The cake keeps one wedge for every slice still on it.
     wedges.forEach((w, k) => w.classList.toggle('gone', k >= left()))
+    cakeSvg?.classList.toggle('empty', !cutting && slices > 0 && left() === 0)
+    // While slices are still on the cake, a tap anywhere on a plate (its slices too) gives it one more.
+    // Only when the cake is empty and the plates are being checked can a slice be tapped to go back, so a
+    // child who keeps tapping the middle of a plate never takes slices off by accident.
+    card.classList.toggle('dealing', left() > 0)
     boxes.forEach((b, i) => {
       const box = b.querySelector('.on-plate')
       while (box.children.length > plates[i]) box.lastChild.remove()
@@ -126,6 +140,7 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
         const s = el('button', 'slice-btn')
         s.type = 'button'
         s.setAttribute('aria-label', `Put a slice from ${nameOf(i)} back on the cake`)
+        s.tabIndex = -1
         s.append(sliceIcon(layers))
         s.addEventListener('click', (e) => {
           e.stopPropagation()
@@ -134,6 +149,7 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
         })
         box.append(s)
       }
+      for (const s of box.children) s.tabIndex = left() > 0 ? -1 : 0
       b.querySelector('.count').textContent = String(plates[i])
       b.querySelector('.give').setAttribute('aria-label', `Give ${nameOf(i)} a slice. ${nameOf(i)} has ${plates[i]}.`)
     })
@@ -164,7 +180,7 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
     sound?.wobble?.()
     say.textContent = '⚖️ ?'
     card.classList.add('checking')
-    if (!even) speakOnce('Is it fair? Look at every plate. You can put a slice back.')
+    if (!even) speakOnce('Is it fair? Look at every plate. Tap a slice to put it back.')
     else speakOnce('The baker has enough for every friend to have one more!')
     render()
   }
@@ -197,7 +213,7 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
 
   /** A slice goes back from plate i onto the cake. */
   function takeBack(i) {
-    if (cutting || finished || i < 0 || i >= plates.length || !plates[i]) return false
+    if (cutting || finished || i < 0 || i >= plates.length || !plates[i] || left() > 0) return false
     plates[i]--
     card.classList.remove('checking')
     sound?.click()
@@ -213,7 +229,7 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
     face.type = 'button'
     face.append(el('span', 'face', who.emoji), el('span', 'count'))
     b.append(face, el('span', 'on-plate'))
-    // The whole plate takes a slice; the slices on it are their own buttons, for putting one back.
+    // The whole plate takes a slice; once the cake is empty, the slices on it can be tapped to put one back.
     b.addEventListener('click', (e) => {
       e.stopPropagation()
       sound?.unlock?.()
@@ -229,6 +245,7 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
     const top = layers[layers.length - 1]
     const cut = cakeTop(slices, top?.rainbow ? '#ffd6e4' : top?.icing || '#fffaf0', top?.sponge || '#f7d98f')
     wedges = cut.wedges
+    cakeSvg = cut.s
     head.replaceChildren(cut.s)
     card.classList.remove('cutting')
     say.textContent = `${slices} 🍰 ➜ ${guests.map((g) => g.emoji).join(' ')}`
@@ -274,6 +291,7 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
       finished = false
       checks = 0
       wedges = []
+      cakeSvg = null
       row.classList.remove('fair')
       card.classList.remove('checking', 'counting')
       boxes = [...guests.map((g, i) => plateFor(i, g)), ...(withBaker ? [plateFor(guests.length, BAKER, ' baker')] : [])]

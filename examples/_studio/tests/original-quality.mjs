@@ -33,8 +33,6 @@ async function assertTouchableInViewport(selector) {
 // Games whose menu opens on a mode without missions pick the mission mode first.
 const missionMode = {
   'crash-racers': () => tap('[data-mode="race"]'),
-  // Pond helpers' jar goals replace the counting mission, which now belongs to Bumper race.
-  'bumper-ducks': () => tap('[data-mode="lively"]'),
 }
 const menuReady = () => window.__adventure && document.getElementById('adventure-choice')
 const choiceReady = () => document.getElementById('adventure-choice')?.getBoundingClientRect().width > 0
@@ -45,7 +43,7 @@ async function openMissions(id) {
 }
 
 await runChecks(session, async (pass) => {
-  for (const id of ['balloon-pop', 'bumper-ducks', 'bunny-hop', 'cake-stack', 'crash-racers', 'dragon-glide', 'fish-pond', 'star-catcher']) {
+  for (const id of ['bunny-hop', 'cake-stack', 'crash-racers', 'dragon-glide', 'fish-pond', 'star-catcher']) {
     await openMissions(id)
     await page.evaluate(() => localStorage.removeItem(`${location.pathname.split('/')[1]}:adventure`))
     // Advance to the first mission through the real native control.
@@ -97,14 +95,15 @@ await runChecks(session, async (pass) => {
   pass('Moving the car to actual marker positions verifies the four ordered deliveries.')
 
   await open('balloon-pop', () => window.__adventure?.game.state === 'title')
-  while ((await mission()).label !== 'Count three balloons') await tap('#adventure-choice')
+  while ((await mission()).label !== 'Three for friends') await tap('#adventure-choice')
   await tap('#play')
+  await page.waitForFunction(() => window.__adventure.game.sky?.req)
   for (let i = 0; i < 3; i++) {
-    // Wait for a live balloon near the middle of the screen and return its screen point.
+    // Wait for a live balloon the friend wants near the middle of the screen and return its screen point.
     const found = await page.waitForFunction(() => {
-      const { balloons, camera } = window.__adventure
+      const { balloons, camera, game } = window.__adventure
       for (const b of balloons.list) {
-        if (!b.alive) continue
+        if (!b.alive || b.leaving || !game.sky.req.accept(b)) continue
         const p = b.group.position.clone()
         const shape = balloons.shapes[b.kind.model]
         if (shape) {
@@ -115,13 +114,15 @@ await runChecks(session, async (pass) => {
         if (Math.abs(p.x) < 0.85 && Math.abs(p.y) < 0.7) return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2 }
       }
       return null
-    }, null, { timeout: 20000 })
+    }, null, { timeout: 30000 })
     const point = await found.jsonValue()
     await page.touchscreen.tap(point.x, point.y)
-    await page.waitForFunction((n) => window.__adventure.mission.progress === n, i + 1)
+    await page.waitForFunction((n) => window.__adventure.game.sky.count === n, i + 1)
   }
-  assert.equal((await mission()).complete, true)
-  pass('Three directly touched balloons complete the raw-count mission.')
+  // Stopping at three is the child's decision: the basket is handed over with Give.
+  await tap('#give')
+  await page.waitForFunction(() => window.__adventure.game.sky.done && window.__adventure.game.skies === 1)
+  pass('Three directly touched balloons and Give complete a friend\'s basket.')
 
   await open('cake-stack', () => window.cakeStack?.game.state === 'title')
   while ((await mission()).target !== 3) await tap('#adventure-choice')

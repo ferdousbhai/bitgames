@@ -440,3 +440,43 @@ svg.tre.empty { filter: none; }
   .next-pick { gap: 5px; padding-top: 4px; }
   .next-pick button { padding: 4px 7px; }
 }
+
+/* --- 2026-10-11 round 5: the gap being filled, shelf badges, the cloud home --- */
+/* the gap to fill now: a solid gold ring and a steady arrow under it (the other gap stays dashed and faint) */
+.sort.puzzle .nums i.gap { position: relative; }
+.nums i.gap:not(.now) { opacity: 0.55; }
+.nums i.gap.now { border-style: solid; border-color: #ffcf1a; background: rgba(255,207,26,0.3); color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.7); }
+.nums i.gap.now::after {
+  content: ''; position: absolute; left: 50%; top: calc(100% + 4px); translate: -50% 0;
+  border: 8px solid transparent; border-bottom-color: #ffcf1a; border-top: 0;
+}
+/* a shelf's label: one small solid treasure in a round badge, unlike the dashed places to fill */
+.shelf .label.badge {
+  display: grid; place-items: center; flex: none; width: calc(var(--s) * 0.9); height: calc(var(--s) * 0.9); padding: 0; margin-right: 4px;
+  border: none; border-radius: 50%; background: rgba(255,255,255,0.85); box-shadow: 0 0 0 2px rgba(40,30,90,0.35);
+}
+.shelf .label.badge svg.tre { width: calc(var(--s) * 0.6); height: calc(var(--s) * 0.6); filter: none; }
+/* after the goal is met a soft cloud drifts over the view and Ember is carried most of the way home */
+.veil {
+  position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity .7s ease-in-out;
+  background: radial-gradient(ellipse at 50% 55%, rgba(255,255,255,0.97), rgba(255,255,255,0.88) 60%, rgba(240,246,255,0.8));
+}
+.veil.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .veil { transition-duration: .35s; } }
+
+/* --- 2026-10-11 round 6: numbers flown by mistake ride along, and are taken out of the row at the nest --- */
+.goal .oops.nums i { width: calc(var(--s) * 0.8); height: calc(var(--s) * 0.8); font-size: calc(var(--s) * 0.45); color: #fff; background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.75); }
+.sort.puzzle .takeout { display: flex; gap: 6px; }
+.takeout .num {
+  display: grid; place-items: center; width: var(--s); height: var(--s); padding: 0; border-radius: 50%; box-sizing: border-box;
+  font-size: calc(var(--s) * 0.5); font-weight: 900; line-height: 1; background: #ffcf1a; border: 3px solid #fff; color: #6b3d00; cursor: pointer;
+}
+.sort.puzzle .takeout.wide .num { --s: clamp(30px, 4.6vw, 44px); }
+.takeout .num.read { box-shadow: 0 0 0 3px #fff3a0; outline: none; }
+
+/* --- 2026-10-11 round 7: the chooser marks the way that fits, and rests the big stretches --- */
+.next-pick button { position: relative; }
+.next-pick button.fit::after {
+  content: '🐉'; position: absolute; top: -0.85em; right: -0.35em; font-size: 0.8em; line-height: 1;
+}
+.next-pick button.far:not([aria-checked="true"]) { opacity: 0.45; border-style: dashed; }

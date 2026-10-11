@@ -572,3 +572,440 @@ Scripts are in the scratchpad under `polish/bumper-ducks/`. `rv4.mjs` adds a `no
 - A take-away step ("ten floated off: make 32 again") would give rafts a second job.
 - `game.json` `howToPlay` should mention breaking a raft, the four-step trips and the planning lines (coordinator).
 - Race is still timed and keeps its award titles.
+
+# Bumper Ducks: round 1 of the 2026-10-11 checklist pass, frog order, a clock-free bumper play, and fairer levels (2026-10-11)
+
+Starting point: the last independent review scored 8.6. Four audit items were still open:
+- counting aloud past ten at L3;
+- the frog-order arena;
+- calming Race;
+- Race's points economy and award titles.
+
+The reviewer also found these problems:
+- The stuck line fell between counted numbers.
+- Careful children stalled at L3, and some were charged misses for distractors they never steered at.
+- The ▶ L5 picture showed a '▭•' icon.
+- The results said each count twice.
+- Gift boxes appeared in Pond helpers.
+- L0 had no real choice.
+
+## Design
+
+- **Frog order (the pond).** All three lily pads now have a frog, and each frog holds a number on a round sign. The wanted bubble rides on the pad of the frog with the biggest number. A child bumps the frogs from the smallest number to the biggest:
+  - The right frog's sign turns soft green and plays a rising note.
+  - The biggest frog, bumped last, lets the bubble go.
+  - A frog bumped out of turn starts the line again, with a soft note. Once a round, if the voice is free, it says "Oops, back to the start. Smallest number first!"
+  - Only a real bump counts: straight in faster than 4, or a dash. A brush on the way past does nothing. Robots never bump frogs into the line.
+  - The numbers grow with the level. L0 uses 1–3, L1 up to 6 and L2 up to 10. Place value uses two-digit numbers with the same digits (14 / 41 / 42, 32 / 23 / 31), so the tens decide first.
+  - The first three trips say once "The frogs are holding a bubble. Bump them in order, smallest number first!"
+  - If nobody solves it, the frogs let go after 60 s. Bonks and dashes now carry an ordering decision.
+- **Bumper play replaces Race. It has no clock, points, stars or titles.**
+  - The round ends when the whole team has gathered five tens (50 bubbles). The HUD pill shows five rafts of two rows of five dots, filling in.
+  - Each full ten is said once ("One ten!" … "Five tens make 50!").
+  - Gone: the per-duck score pills, the 90 s timer, the last-15 s shower and banner, stars (3 points) and splash-out points (2).
+  - The results show the team's rafts ("5 tens = 50"), then each duck's rafts and dots as tens words, in player order, with no award titles. The voice says once "Your bubbles: 1 ten and 7 ones make 17!"
+  - Bubbles float in more slowly, so a round lasts about 50 s and each ten is heard about 11 s apart.
+  - The menu button is "💥 Bumper play" with a raft picture. `data-mode="lively"` is unchanged.
+- **L0 has a choice.** One ten is two rows of five, and each row wants its own colour ("Let's fill one ten: 5 blue and 5 pink!").
+  - A bubble of another colour bobs away, and a row that is full takes no more.
+  - The frame shows "5 and 5" as it fills. Counting aloud to ten stays, because counting is the lesson there.
+  - The results say "5 blue and 5 pink make one ten!" and "5 + 5 = 10".
+- **Counting aloud stays within ten.** Place value says a count only while it is 10 or less, so the first L3 trip says just "10".
+- **No line between counted numbers.** `resting()` now also waits 2.2 s after a landing. While a count is said aloud (L0, or the first colour or bond trip), it waits 8 s. `sayStuck` retries up to 12 times.
+- **Fairer levels.**
+  - `AIM_HOLD` is now 0.3 s.
+  - A trip with fewer than 8 careful catches is judged together with the trip before it at the same level.
+  - One lone miss never blocks a climb: climbing needs a rate ≤ 0.2 or ≤ 1 miss, a rate < 0.34, ≥ 55 % chosen, ≥ 3 chosen, and steady catching.
+  - A bubble that doesn't fit counts as a miss only if no fitting bubble lies further along the same line (`fitBeyond`).
+  - `nearKid` never puts a distractor within about 35° of where the child is steering.
+- **Smaller fixes.**
+  - The ▶ L5 picture is the number alone.
+  - Results rows say "Sailor helped … 21 🫧", with the count once and no highlighted row; the child's row is marked only by ⬅️.
+  - Gift boxes spawn only in bumper play.
+  - The pond's frogs hop for fun far less often, and never while holding a number.
+
+## Changes (under `examples/bumper-ducks/`)
+
+- `public/js/config.js`:
+  - `:6` `PLAY_TENS`, which replaces `ROUND_TIME`/`PARTY_TIME`.
+  - `:42` the third lily has a frog.
+  - `:121` L0 `rows`; `:171` `goalSlots` rows; `validGoal` accepts rows.
+  - `:269` `frogNumbers`.
+- `public/js/sim.js`:
+  - `:29` `FROG_FREE`; `:35` `AIM_HOLD` 0.3; `:82` `gathered`.
+  - `:264` bumper play ends at five tens; `:497` a frog bump needs a real bump.
+  - Splash-outs and stars score nothing; `:654` `fitBeyond`.
+  - `:712` the slower spawn; `:728` gifts only in bumper play; `:788` `nearKid` avoids the steering line.
+  - `stick` sets the frogs; `:834` `frogBump`; `free` and `applyEvent` handle the `frogs`/`frog` events; `:1068` `setFrogs`.
+- `public/js/view.js`: `:382` `ObstacleView.sign` (canvas sprite) and rarer idle hops.
+- `public/js/bot.js`: no party easing.
+- `public/js/main.js`:
+  - `:285` `countingAloud`/`resting`; `:312` `sayStuck` (the frog line).
+  - `:565` the L5 ▶ picture; `:616` the bumper play voice.
+  - `:1066` rolling adaptation; `:1332` frog events.
+  - `:1420` `teamTally`, with the HUD tens said once.
+  - `:1606` `renderRowsJar`, plus rows in `jarSpace`, `nopeWords`, `goalWords`, `madeWords`, `goalPicture` and the results.
+  - `:1766` count ≤ 10.
+  - `:1928` the bumper play results (`giveAwards`/`AWARDS` removed); the helper rows.
+  - `:2047` frogs in `st` sync; `:2083` signs every frame.
+- `public/style.css` (end): `.team-tally`/`.tr`, `#timer` as the team pill, `.team-sum`, and the compact menu picture.
+- `game.json`: the tagline, `howToPlay` and `learning` now describe rows of five, frog order, breaking a raft and bumper play.
+
+## Evidence
+
+Scripts are in the scratchpad under `polish/bumper-ducks/`:
+- `rv5.mjs` adds an arena argument, a frog-aware careful autopilot and logs frog bumps as `F1`/`F0`.
+- `sync5.mjs` adds frog sync asserts and a bumper play end check.
+- `menus5.mjs` checks the menus and bumper play.
+
+Logs and screenshots are in `r5/`. Speech is stubbed, and real input is driven through `input.read`.
+
+- **Careful, pond, portrait 834×1194** (`cP.log`): L0 → L1 → L2 → L3 → L4.
+  - Every trip climbed after one trip: 0 misses, careful share 0.82–1.00.
+  - L0 said "1 … 9, Ten!, 5 blue and 5 yellow make one ten!" with nothing in between.
+  - The frog line came once in a quiet moment (after "Another way to make 6!"). A rerun after the 8 s rule (`cP2.log`) counted 1–10 and 1–6 with nothing in between. During those short counting trips the frog line waited, and the wrong-bump line says the rule instead.
+  - Frog runs went F1 F1 F1, then the bubble was freed. The signs show 14 / 41 / 42 at L3 (`cP-r3-stage.png`) and 1 / 2 / 3 at L0 (`c0P-r0-mid.png`).
+- **Careful, bath, landscape 1194×834, from L3** (`c3L.log`):
+  - L3 → L4 after one 21 s trip; that trip said only "10" aloud (the old run said "10…16").
+  - L4 → L5 with 3 misses against 18 chosen (rate 0.17), then L5 stays.
+- **Greedy (nearest of anything), pond, from L3** (`g3P.log`): L3 → L2 → L1 → L0, with rates 2.25, 0.73 and 0.75. Careful and random play still part clearly.
+- **Bumper play:**
+  - Landscape puddle (`lvL.log`): 48 s. "One ten!" at 10.9 s, then 21.5, 33.8, 44.7, "Five tens make 50!" at 55.7, and "Your bubbles: 1 ten and 7 ones make 17!". HUD: `lvL-r0-mid.png`; results: `lvL-r0-results.png`, `race-results-834x1194.png`.
+  - Portrait pond (`lvP.log`): 49 s.
+- **Node sync** (`sync5.mjs`): 36 trips across 3 arenas × 6 levels, with 20 % of events dropped.
+  - The friend matches jar, stage, stuck state and frogs (280 frog checks).
+  - Bumper play ends when 50 are gathered, with no stars.
+- **Menus** (`menus5.mjs`): all 6 sizes (834×1194, 1194×834, 375×667, 667×375, 568×320, 320×568). Every button is ≥ 44 px and uncovered, and nothing overflows the bumper play button.
+- **Standard checks:**
+  - `browser.mjs --ids bumper-ducks --run bumper-ducks-c1`: BOOT + PLAY, 0 errors.
+  - `node --check` passes on every JS file.
+  - The only console message is the expected solo-multiplayer warning. GL out-of-memory warnings appeared only when four Chromium instances ran at once; a solo rerun was clean.
+
+## Checklist status
+
+- Count aloud only within the first ten: **closed.** `main.js:1766`: place value counts only ≤ 10; colours stop at 5; L0 counts to ten as the lesson.
+- Bonks and dashes free stuck bubbles, plus the frog-order arena: **closed.** The pond is the frog-order arena (`sim.js:834`, `config.js:269`).
+- Calm Race: **closed by redesign.** Bumper play has no clock, no shower or banner, no points or titles, and one team goal shown as tens.
+- Leftover score and medal economies: **closed.** Stars and splash-outs score nothing; awards are removed. What is left is a bubble count shown as tens and ones, the thing being taught.
+
+## Remaining ideas
+
+- A take-away step at L5 ("a ten floated off: make 62 again") would give rafts a second job.
+- L1 could mix in "more pink than blue" comparisons.
+- Real two-device multiplayer is still untested outside Node.
+
+# Bumper Ducks: round 2 of the 2026-10-11 checklist pass, one goal in bumper play and a real choice in it (2026-10-11)
+
+Review 1 scored 8.4. Bumper play still had the old counting-mission chip, which ran a second count beside the team tally. Its results compared each duck's total, and the robots usually won. A 3-2-1-GO count-in with beeps still opened every round. This pass removes all three. It gives bumper play one place-value decision, gives L1 a comparison step, and fixes the bond and frog-sign bugs.
+
+## Design
+
+- **Bumper play has one goal: make exactly 50.**
+  - The mission chip and its count are gone. The team tally (five rafts of ten dots) is the only count on screen, and the per-duck HUD tallies are hidden.
+  - **Ten rafts float by beside single bubbles.** A raft is ten at once, so a child who chooses rafts gets there faster.
+  - **Past 40 a raft is too many.** At 43 a raft would make 53, so it bobs away, and only ones (or a raft broken into ten ones with a dash) finish. At exactly 40 a raft still fits.
+  - Careful play and random play now differ. A careful child takes rafts early and ones late. A random paddler bumps rafts in the last ten: a greedy run logged 2–13 raft bounces at 44–49.
+  - **The voice has one line per moment:**
+    - At the start: "Each raft is ten bubbles!"
+    - The first raft a child takes: "12 and one ten make 22!" This line covers the ten it crosses, so the tally stays quiet.
+    - "One ten!" / "Three tens!", and nothing past 40.
+    - Once, after 40 and a pause: "46! Will a raft still fit?"
+    - On a raft bounce: once "A raft is ten. We need just 6 more!", then at least 10 s later "Dash into a raft to break it into ten ones!"
+    - At the end: "Five tens make 50!"
+  - **The robots never take rafts.** A robot that gets 4 ahead of the best child stops gathering and plays. In the last ten the robots leave the ones to the children. Both rules lift if no child has gathered a bubble for 20 s, so nobody is stuck.
+  - **Results** show the team's five full rafts ("5 tens = 50"). Below them is one row per duck: "Sailor helped" for the robots, and "You: 3 tens and 2 ones" with its rafts and dots for the child. No robot totals are shown. The voice says the child's own sum once.
+- **No count-in.** After the round syncs, there is one soft splash sound and a 💦, your own duck hops, and play begins. `audio.beep` is removed.
+- **Bond line:** the landing that completes a fixed bond no longer says "6 pink!". The bond's whole sentence ("6 pink and 4 green make 10!") is said once, either mid-trip or on the results.
+- **Frog signs** show only while playing (`game.state === 'play'`), so the results show only the answer's numbers.
+- **L1 gains a comparison step.**
+  - The trip is n of one colour, n of another, then "Now one more yellow than pink!". The number isn't said.
+  - The jar shows the previous colour as a row of dots beside the new frame, so the child sees "5 and one more".
+  - The results say "6 is one more than 5!".
+
+## Changes (under `examples/bumper-ducks/`)
+
+- `public/js/main.js`:
+  - Removed: `createAdventure`, `MISSIONS`, `useMission`, the `mission` setup field, `adventure.enable`/`begin`/`event` and `window.__adventure`.
+  - `:243`: the bumper play start line. `:586`: the menu line ("make 50 together: five tens, not one more").
+  - `:937`: one splash instead of the count-in.
+  - `:1173`: a raft caught in bumper play. `:1282`: raft bounces in bumper play.
+  - `:1418-1437`: the tens lines and the near-50 question.
+  - `:1558`: the L1 comparison row.
+  - `:1751`: the bond's done-landing line is skipped.
+  - `:1901`: the L1 results sentence.
+  - `:1927`: the bumper play results.
+  - `:2017`: the robot rules for bumper play.
+  - `:2094`: frog signs only during play.
+- `public/js/sim.js`:
+  - `:92` `left`, `:96` `playFits`.
+  - `:566`: in bumper play, a raft that doesn't fit bobs away or splits on a dash.
+  - `:602`: a raft adds 10 (`e.from`). `:699`: splitting in bumper play. `:757`: the raft spawner (at most 1, or 2 in the last ten).
+  - Robots never touch rafts, nor bubbles while leaving.
+- `public/js/bot.js:33`: `leave` in bumper play. `:136`: robots skip rafts.
+- `public/js/config.js:126-135`: the L1 trip with `more: 1`. `:241` `validGoal`; `:261` `validTrip` checks "one more than".
+- `public/js/audio.js`: `beep` removed.
+- `public/index.html`: the `adventure.css` link removed.
+- `public/style.css` (end): `#scores` hidden, the results helper tally and `.jar-compare`.
+- `game.json`: `howToPlay` and `learning` describe exactly-50 with rafts and "one more than".
+
+## Evidence
+
+Scripts are in the scratchpad under `polish/bumper-ducks/`: `rv6.mjs`, `sync6.mjs` and `menus6.mjs`. Logs and screenshots are in `r6/`. Speech is stubbed, and real input goes through `input.read`.
+
+- **Bumper play, careful, portrait pond** (`lvP`): 28 s. The child had 32 and the robots 7, 7 and 4. The voice said "Each raft is ten bubbles! | One ten! | 12 and one ten make 22! | Three tens! | Four tens! | …" (since merged, see the next bullet). `gvP-r0-mid.png` shows 46 on the tally with two rafts floating. `lvP-r0-results.png` shows the results.
+- **Bumper play, greedy, portrait pond** (`gvP`, 2 rounds), after the line-spacing fix: "41! Will a raft still fit?" came 1.2 s after "Four tens!" before the fix and 4.5 s after it in the later bath run. Raft bounces came at 44 and at 47–49. The two nope lines are now at least 10 s apart.
+- **Greedy, landscape bath** (`gvL`): "Each raft is ten bubbles! | One ten! | 11 and one ten make 21! | Three tens! | 42! Will a raft still fit? | Five tens make 50! | Your bubbles: 3 tens and 3 ones make 33!". Results: `race-results-1194x834.png`.
+- **Careful, landscape puddle** (`cvL`): 35 s, child 34.
+- **L2 bond, pond portrait** (`c2P`): "… 2 yellow! | 4 pink | 5 pink and 2 yellow make 7!", with no "5 pink!" before the bond line.
+- **L5, pond portrait** (`c5P-r0-results.png`): no frog signs over the results.
+- **L1** (`c1L` landscape bath, `c1P` portrait pond): "Now one more blue than yellow! | 1 … 5 | 6 blue! | We found 6 pink, 5 yellow and 6 blue bubbles! 6 is one more than 5!". `c1P-r0-stage2.png` shows the comparison row.
+- **Node sync** (`sync6.mjs`): 36 calm trips (3 arenas × 6 levels × 2) with a friend copy matching, and the L1 trips survive `validTrip`. Six bumper play runs with one child and two robots, careful and wandering: every run ended on exactly 50; only the child ever took a raft; every raft was taken at ≤ 40; and 0–33 raft bounces were logged.
+- **Menus** (`menus6.mjs`): all 6 sizes. Every button is ≥ 44 px and uncovered, and no mission chip appears on the menu or in play.
+- **Standard checks:**
+  - `browser.mjs --ids bumper-ducks --run bumper-ducks-c2`: BOOT + PLAY, 0 errors.
+  - `node --check` passes on every edited JS file.
+  - The only console message is the expected solo-multiplayer warning.
+
+## Checklist status
+
+- Visible "next goal ▶" with the mission chip removed: **closed.** The ▶ stays, and the chip, `MISSIONS` and its duplicate count are gone from bumper play.
+- Leftover score and medal economies: **closed.**
+  - The bumper play results show only the team total and the child's own sum; robots get a "helped" note.
+  - The per-duck HUD tallies are hidden.
+  - No ⭐ or reward banner remains.
+- Race-mode hooks: **closed.** The 3-2-1-GO count-in and its beeps are replaced by one soft splash.
+- Bugs: the bond double line and the frog signs on results are **fixed**.
+- Improvement 3 (a decision in bumper play): **done** with exactly-50, rafts and the last ten.
+- Improvement 7 (L1): **done** with the "one more than" step.
+
+## Remaining ideas
+
+- The L5 take-away step ("a ten floated off: make 62 again") is still open. The jar only adds today (`validTrip` requires carried steps to add), so taking away needs a jar that can lose a raft on every device. It was left for a later pass rather than done halfway.
+- Bumper play doesn't adapt yet. A 6–8 tier could make 70 or 100, or ask for "exactly 47".
+
+# Bumper Ducks: round 3 of the 2026-10-11 checklist pass, a growing bumper play goal, fairer levels and a reliable stuck line (2026-10-11)
+
+The reviews scored 8.6 and 8.2. The one open checklist item was the per-duck numbers in the Pond helpers results ("Rosie helped 27 🫧 / Cool helped 1 🫧"). The bugs were these: the stuck-bubble line was rarely said; bumper play lines piled up; a step change counted as a miss; random play climbed at place value; a hint fell between counted numbers; and L4–L5 trips ended alike. Both reviewers also asked for an adaptive bumper play.
+
+## Design
+
+- **The Pond helpers results show no per-duck numbers** (closes the checklist item). Each row says "You helped" or "Sailor helped" with a 🫧 (or "cheered the team on" 💛). The jar above is the only count.
+- **The stuck-bubble and frog lines are now said reliably.**
+  - The line follows the goal (or stage) line after 0.4 s, before any catch, so it never has to wait for a count.
+  - Otherwise it retries every 1.5 s until the bubble is free. Only the newest goal's line keeps retrying (`stuckRun`).
+  - Catches hold it back only while the jar counts aloud. Then it waits for a 5 s pause with no bubble landing, in flight, or about to be caught (`catchSoon`).
+  - Root cause found: the stuck bubble was often a colour the jar didn't want (`bubbleColour` favoured "others" once two wanted ones floated). The voice then skipped it, and bumping it free was pointless. It is now always a wanted colour (`Sim.wantedColour`).
+- **No line between counted numbers.** Nope hints now wait on `resting()` like other lines. `resting()` adds `catchSoon()`, so a child about to catch while the jar counts aloud holds the line back.
+- **Bumper play speaks one line at a time** (`playSay`/`playVoice`), with 2 s between lines.
+  - A newer tens line replaces one still waiting.
+  - Lines that are functions are read when spoken, so a number is never stale.
+  - "One ten is ten ones!" is dropped if the goal is already reached. The end line clears the queue, so it is heard alone.
+  - The raft-bounce answer ("A raft is ten. We need just 6 more!") cancels the "Will a raft still fit?" question.
+- **Bumper play adapts (the 6–8 tier).**
+  - The goal is 50, then 70, then a number with ones (32–68, never a whole ten). For 47 that means four rafts, then seven single bubbles, because a fifth raft is too many.
+  - It starts at 70 for a child at Together L4+. After each round, the host climbs when the child took ≥ 2 rafts and bounced at most one raft. It steps back after 3 or more different rafts bounced (`adaptPlay`).
+  - The HUD and results tally end on a short dashed frame of just the ones.
+  - The menu button shows the goal number. The voice says "make 47 together: 4 tens and 7 ones, not one more". Again shows "▶ 70", and a new goal is said at the start ("Let's make 70 together!").
+  - The robots keep to about a third of the bubbles (`botHelps*2 > kidHelps+6`) and leave the last 11. Careful play now ends faster than wandering play, and a raft can't stop fitting because a robot took a bubble at 40.
+- **Fairer place-value levels.**
+  - A dash into a bubble that doesn't fit is a miss (`Sim.missed`).
+  - Place value needs a 0.45 s aim (`AIM_HOLD_PLACE`).
+  - A raft broken by a random dash gives no "chosen" catches (`meant`). This was the main hole: a random dasher's split bubbles all counted as careful.
+  - For 1.5 s after a new step, or 4 s when the aim began before the step, a bubble that no longer fits is not a miss (`inGrace`).
+- **Varied place-value trips.**
+  - The first crossing goes 1–4 over the ten.
+  - The last step is either the next ten (+6…+12) or a raft and then ones over another ten (+16…+22, e.g. 44 → 62). `validTrip` accepts a +2-tens crossing only after a crossing.
+  - L3's last step is 3–5 more ("Now 3 more. Make 29!"), never 1.
+- **Clearer HUD.**
+  - Place value's goal reads "make" above a gold number, so it doesn't read like the white progress number on the bar.
+  - On tablets the jar is drawn larger for L0–L2 (`body.young-jar`, `--cell` 46 px).
+  - Frog signs are smaller (1.2) and frog green with a white number; a frog already in line turns pale.
+- **Results read the three ways aloud:** "3 and 5. 4 and 4. 2 and 6. Three ways to make 8!"
+- **Calmer bumper visuals.**
+  - Your duck's ring no longer pulses.
+  - The shield shrinks smoothly instead of blinking at 20 rad/s.
+  - Speedy ducks no longer leave a sparkle trail.
+- `game.json`: category `animals` (Race is gone); `howToPlay` and `learning` describe the growing goal and crossing a ten.
+
+## Changes (under `examples/bumper-ducks/`)
+
+- `public/js/config.js`:
+  - `:5-19` `PLAY_GOAL`, `PLAY_TIERS`, `validPlayGoal`, `makePlayGoal`.
+  - `:165-185` the L3 last step and the varied crossings.
+  - `validTrip` allows a +2-tens crossing after a crossing.
+- `public/js/sim.js`:
+  - `:31-45` `AIM_HOLD_PLACE`, `STAGE_GRACE`.
+  - `:49` `playGoal`; `:104` `left`; `:122` `stageAt`.
+  - `:231-250` `chose` (`meant`), `inGrace`, `missed`.
+  - `:702` `stats.bumps` (logged only).
+  - `:741` deliberate splits.
+  - `:897-900` and `:975-986` the stuck bubble is a wanted colour.
+- `public/js/main.js`:
+  - `:184` `newPlayGoal`.
+  - `:249-290` `sayGoal`, `playSay`, `playVoice`.
+  - `:299-318` `midCount`, `resting`, `catchSoon`.
+  - `:341` `sayStuck`.
+  - `:1122` the climb rule, with `lastJudge` for logs.
+  - `:1142` the bumper play end.
+  - `:1158` `adaptPlay`.
+  - `:1414` the nope hint waits on `resting()`.
+  - Raft, split and bounce lines go through `playSay`.
+  - `updateHud`: tens lines and the near question; `teamTally(n, goal)`.
+  - `:1673` the "make" label.
+  - `:975` `young-jar`.
+  - `:1996` the helper rows; `:2023` the ways read aloud.
+  - `:2152` the robot share.
+  - `renderModes` shows the goal, and the lobby re-renders it.
+- `public/js/view.js`: `:236-246` steady ring and shield; speedy sparkles removed; `:383-412` frog sign.
+- `public/style.css` (end): `.tr.ones`, `.goal-n`, `.jar-num.make`, `body.young-jar`.
+- `game.json`: category, `howToPlay`, `learning`.
+
+## Evidence
+
+Scripts are in the scratchpad under `polish/bumper-ducks/`:
+- `rv7.mjs` adds a `random` style (the reviewer's: random bursts with 30 % dashes), `FRESH` and `TIER` env vars, and judge logging.
+- `sync7.mjs` and `menus7.mjs` are the Node and menu checks.
+
+Logs and screenshots are in `r7/`. Speech is stubbed.
+
+- **Careful, pond, portrait** (`cP`, 7 trips): L0 → L0 → L1 → L2 → L3 → L4 → L5 → L5, with 0 misses at every level.
+  - The frog line came right after the goal at 7.0 s, and at trip 2 within 2 s of "Now 3 yellow!". The first L0 trip stayed at L0 because frog bumping left 3 of 7 chosen.
+  - Results: "3 and 5. 4 and 4. 2 and 6. Three ways to make 8!" and "4 is one more than 3!".
+- **Careful, bath, landscape, L0–L3** (`c0L2`): "One is stuck on Mama Duck. Bump it free!" came at 7.9 s, before "1". L0 → L1 → L2 → L3. `c0L2-r0-mid.png` shows the larger jar (about 270×128 px at 1194×834).
+- **Careful, from L3 pond** (`c3P`): L3 → L4 → L5, 0 misses, endings 26 → 29 (+3) and 44 → 62 (+18).
+- **Random (the reviewer's style):**
+  - `x4P2`: L4 → L3 (rate 3.5, careful 0.10) → L2 (careful 0.00).
+  - `x5L`: L5 → L4 (careful 0.35) → L3 (careful 0.14).
+  - Before the `meant` fix, `x4P` r1 had climbed with 20 "chosen" catches, mostly from a random split.
+- **Bumper play, careful, pond portrait** (`lvP`):
+  - 50 → 70 → 33.
+  - Lines came at least 2 s apart: "Each raft is ten bubbles! | One ten! | 10 and one ten make 20! | Three tens! | Four tens! | …".
+  - Round 2: "Let's make 70 together! …"; the end line was "3 tens and 3 ones make 33!".
+  - The robots gathered 15 of 50 and 17 of 70.
+  - `lvP-r1-results.png` shows "70 together!" and "▶ 33".
+- **Bumper play, greedy, bath landscape** (`gvL`): tier 2 (34) had 40 raft bounces and stepped back to 70; a lucky 70 round climbed again. Tier 2 careful puddle (`lvL`): goal 54, HUD `lvL-r0-mid.png` (five rafts and a 4-cell dashed frame).
+- **Node** (`sync7.mjs`):
+  - 6000 L3–L5 trips all pass `validTrip`. L3's last step is always 3–5 more. L4/L5 last steps spread over +6…+22 (14 sizes).
+  - 36 calm trips with a friend copy still match (jar, stage, stuck state, frogs).
+  - 9 bumper play rounds at 50, 70 and tier-2 goals end exactly on the goal, and only children take rafts, only while 10 or more are wanted.
+- **Menus** (`menus7.mjs`): all 6 sizes. Every button is ≥ 44 px and uncovered, nothing overflows the bumper play button, and the fast-forwarded results show the goal (`r7/menuL-*.png`, `race-results-*.png`).
+- **Standard checks:**
+  - `browser.mjs --ids bumper-ducks --run bumper-ducks-c3`: BOOT + PLAY, 0 errors.
+  - `node --check` passes on `main.js`, `sim.js`, `config.js`, `view.js` and `bot.js`.
+  - The only console message is the expected solo-multiplayer warning.
+
+## Checklist status
+
+- Leftover score and medal economies: **closed.** No per-duck numbers remain in either mode's results; only the child's own sum (as tens and ones) in bumper play.
+- Every earlier item stays closed (count aloud within ten, bonks and frog order, calm bumper play, no count-in, visible next goal).
+- Review bugs: all **fixed**:
+  - the stuck line
+  - bumper line pile-ups
+  - the step-change miss
+  - the random climb
+  - the hint between counts
+  - repeated L4–L5 endings
+  - the category
+- Improvements done:
+  - adaptive bumper play (both reviewers)
+  - the voice gap
+  - the grace window
+  - the tablet jar
+  - "make 28"
+  - the ways read aloud
+  - frog signs
+  - calmer power visuals
+
+## Remaining ideas
+
+- The L5 take-away step is still open (the jar only adds).
+- Bumper play's ▶ on the menu only shows the goal; a parent can't step tiers by hand yet.
+- Real two-device multiplayer is still untested outside Node.
+
+# Bumper Ducks: round 4 of the 2026-10-11 checklist pass, a real raft-or-single choice in bumper play, unbroken tens and a longer L3 (2026-10-11)
+
+Review round 3 scored 8.4. No checklist items were open. This pass fixes the four bugs and seven of the eight ranked improvements. The eighth, removing the dead adventure files, needs the coordinator (see the last section).
+
+## Design
+
+- **Bumper play steps up on the choice it teaches.** The old rule (2 rafts, at most 1 bounce) let random dragging climb.
+  - The host now reads three per-child counts from the sim:
+    - `rafts`: rafts the child steered at while a ten still fitted.
+    - `lastOnes`: single bubbles caught in the last stretch.
+    - `wise`: last-stretch singles the child steered at while a raft floated within 7.5 units, plus ones from a raft they meant to break.
+  - Step up: `rafts >= 2`, `wise >= 3`, `wise >= half of lastOnes` and at most 1 bounce.
+  - Step back: 3 or more bounces, or 5 or more last ones with at most 20 % chosen.
+  - Bumper play now runs `aimAll` too.
+  - In the last stretch a raft floats up near the child, off to one side and never in their path, so the choice is always there. The first one arrives within about a second.
+- **Fairer "chosen" for quick, sure catches.** A catch also counts as chosen when the duck pointed within about 11° of the bubble for 0.2 s (`aim.tight`). Bubbles from a raft the child broke by a random dash never count as chosen, so a random split's ring can't be swept up as careful catches.
+- **Counting by tens never skips.** The tens line is a function read when it is said. It says every ten from the last one spoken to the newest: "Three tens, four tens!". The raft line ("23 and one ten make 33!") and the "Will a raft still fit?" question queue behind tens still waiting instead of deleting them.
+- **The stuck line is said with its goal or not at all.** If it can't be said within 8 s of the goal line, it is dropped. The picture and the 40 s self-free cover it.
+- **L3 trips have four steps.** After "Now 3 more. Make 29!" comes "Now 20 more. Make 49!" or "Now 21 more. Make 59!", which needs two rafts and maybe a single. The ones stay within 9, with no crossing. The careful autopilot now takes 21–27 s (was 15–18 s), so a real child takes about a minute.
+- **Quieter labels.** "quack!", "whee!" and "ribbit!" are small and lower-case, like "bonk!".
+- **Portrait framing.** Once the pond fits the width, the camera centres it in the space between the top bar (or the jar) and the bottom edge, so it no longer sits high above the empty floor.
+- **No per-child tally.** The results line "You: 3 tens and 7 ones", its tally and the spoken "Your bubbles: … make 37!" are gone. Every duck gets the same "helped" note, and the team's tens and ones stay on top.
+
+## Changes (under `examples/bumper-ducks/public/js/`)
+
+- `sim.js`:
+  - `:22` new stats `rafts`, `lastOnes`, `wise`.
+  - `:39-48` `AIM_TIGHT`, `AIM_TIGHT_HOLD`, `RAFT_REACH`.
+  - `:211-239` `aimAll` covers bumper play's bubbles and rafts and records `aim.tight`.
+  - `:242-250` `chose`: tight-aim leniency, the surer 0.45 s hold in bumper play, and accidental splits never count.
+  - `:315` `aimAll` runs in both modes.
+  - `:640-660` the last-stretch single and raft choice counts.
+  - `:825-836` last-stretch rafts float near the child, and the first comes soon.
+- `main.js`:
+  - `:101-118` portrait centring in `frameCamera`.
+  - `:259`, `:362-372` `STUCK_SAY_WITHIN` and the deadline in `sayStuck`.
+  - `:1184` `adaptPlay` on the choice counts (`game.lastPlay` logs them).
+  - `:1310-1320` the raft line keeps the tens order.
+  - `:1358-1377` small labels.
+  - `:1557` `tensLine`; `:1601` tens queue; `:1606` near line no longer drops tens.
+  - `renderResults`: equal helper notes, own tally and line removed.
+  - `game.playRafts` removed.
+- `config.js` `:166-175`: the L3 fourth step. `validTrip` already allows four steps, and 5000 generated L3 trips all pass with ones ≤ 9 (55 distinct trips).
+
+## Evidence
+
+Scripts are in the scratchpad under `polish/bumper-ducks/`. `rv8.mjs` also logs bumper play's `W` (wise) catches. Logs and screenshots are in `r8/`, with speech stubbed.
+
+- **Bumper play, careful, landscape** (`lvL`):
+  - 50 → 70 → 66 → 42.
+  - Choice counts: rafts 2/2/2, wise 6/9, 5/9, 5/9, bounces 1/1/0.
+  - Voice: "One ten! | 11 and one ten make 21! | Three tens! | Four tens! | 44! Will a raft still fit?" and, at 66, "One ten! | 10 and one ten make 20! | Three tens, four tens! | Five tens! | 57! …". No ten is skipped.
+- **Bumper play, random drag with dashes, portrait** (`xvP`, `xvP2`): 8 rounds, never climbed.
+  - Rafts chosen: 0–1. Wise: 0–2.
+  - Two rounds stepped back (clamped at 50).
+  - A random split's ring no longer counts (before that fix, one round had wise 6 of 9).
+- **Pond helpers:**
+  - Careful from L3 (`c3P`): L3 → L4 → L5, with L3 careful 0.70 and 0 misses. The trip was 14 → 26 → 29 → 49.
+  - Careful from L2 (`c2L`): L2 → L3 → L4. The L3 trip was 16 → 26 → 29 → 49 with careful 1.00, 0 misses, 27 s.
+  - Stuck line: "One is stuck on Mama Duck. Bump it free!" at 6.6 s, before the first count.
+- **Random:**
+  - From L3 (`x3L`): L3 → L2 (careful 0.13) → L1 (careful 0.26).
+  - From L4 (`x4P`): stayed L4 (careful 0.50).
+- **Screens:**
+  - `xvP-r0-mid.png` and `c3P-r0-mid.png` (834×1194): the pond is centred, with only a thin strip of floor below.
+  - `lvL-r1-results.png`: "70 together!", 7 tens = 70, and four equal "helped" rows.
+- **Standard checks:**
+  - `browser.mjs --ids bumper-ducks --run bumper-ducks-c4`: BOOT + PLAY, 0 errors.
+  - `node --check` passes on `sim.js`, `main.js` and `config.js`.
+  - The only console message in every run is the expected solo-multiplayer warning.
+
+## Checklist status
+
+- Audit checklist: nothing was open, and every earlier item stays closed.
+- Review bugs, all **fixed**:
+  - skipped tens
+  - random climb in bumper play
+  - noisy L3 judging
+  - late stuck line
+- Improvements 1–6 and 8 are **done**.
+- Improvement 7 (the dead `adventure.js` and `adventure.css`) is **handed to the coordinator**. `package-originals.mjs` copies them into every game, so deleting them here would be undone by the next build.
+
+## Remaining ideas
+
+- The L5 take-away step is still open.
+- A parent still can't step bumper play tiers by hand.
+- Real two-device multiplayer is still untested outside Node.

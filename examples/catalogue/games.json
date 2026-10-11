@@ -3,7 +3,7 @@
     "id": "balloon-pop",
     "title": "Balloon Pop",
     "tagline": "Pop smiley, heart, bunny and star balloons over a sunny countryside!",
-    "howToPlay": "A friend asks for balloons: pop the ones they want (4 blue ones, the hearts, 3 then 2 more, 3 red and 2 blue, or the balloons with 5 dots) and tap 🧺 Give when the basket is just right. Too many? Tap a balloon in the basket to let it go. Then choose a treat for the picnic. When all eight friends are at the picnic, everyone waves. Stuck? The friend helps with numbered slots. Confident counters move on to plain slots, then ten-frames, the teens, one more / one less and making two bunches the same. 🌱 Start easy goes back to the beginning.",
+    "howToPlay": "A friend asks for balloons: pop the ones they want (4 blue ones, the hearts, 3 then 2 more, 3 red and 2 blue, or 3 balloons with 5 dots) and tap 🧺 Give when the basket is just right. Too many? Tap a balloon in the basket to let it go. Then choose a treat for the picnic. When all eight friends are at the picnic, everyone waves. Stuck? The friend helps with numbered slots and a hint. Confident counters move on to plain slots and treat plates with one treat for each balloon, then ten-frames, the teens (10 and 3 more), one more / one less, making two bunches the same, finding which colour a friend has most of, and mixing purple, orange or green from two colours (the new balloon blends before your eyes). A small plant under the friend (🌱 🌿 🌳) shows the step the game has settled on. 🌱 Start easy goes back to the beginning. Three for friends asks every friend for exactly three; Hearts for friends grows from counting hearts to one more heart than Fox. Free popping, for the youngest, just meets the balloon friends with no tally and no levels to chase; now and then a friend would like one balloon (a heart, a bunny or a red one) to find among the others, with all the time in the world.",
     "emoji": "🎈",
     "color": "#ff6b9d",
     "category": "pop",
@@ -11,19 +11,19 @@
     "featured": true,
     "url": "https://35cbf36a-bitgames-balloon-pop.ferdousbd.workers.dev/",
     "ages": [
-      2,
-      6
+      3,
+      8
     ],
-    "learning": "Counting to 10, colours, shapes, adding on and matching dots to quantities"
+    "learning": "Counting to 10 and into the teens, stopping at a number, one more and one less, making two bunches the same, adding on from ten, comparing which colour has most, colours and colour mixing, and matching dots to quantities"
   },
   {
     "id": "bumper-ducks",
     "title": "Bumper Ducks",
-    "tagline": "Bonk, bounce and squeak! Up to 4 rubber ducks in bumper boats grab bubbles and stars.",
-    "howToPlay": "Drag anywhere (or use the arrow keys) to paddle your duck. Tap 💨 (or Space) to dash and BONK! In Pond helpers every duck fills one shared ten-frame together: fill the tens or find the bubbles of one colour, then count them up. 🎁 boxes make you giant, super fast or bouncy. Pick ⏱️💥 Race for the lively 90-second round. Nobody is ever out!",
+    "tagline": "Bonk, bounce and squeak! Up to 4 rubber ducks in bumper boats gather bubbles into tens together.",
+    "howToPlay": "Drag anywhere (or use the arrow keys) to paddle your duck. Tap 💨 (or Space) to dash and BONK! In 🫧 Together every duck fills one shared jar: two rows of five, colours to sort and compare (one more than), your own ways to make a number, then tens and ones with ten rafts (tens first, then crossing a ten). Bubbles that don't fit bob away, so look before you paddle. Bump a stuck bubble free; in the frog pond, bump the frogs from the smallest number to the biggest. Dash into a raft to break a ten into ten ones. 💥 Bumper play has no clock: bump and bounce while the team makes exactly 50, then 70, then a number like 47. A raft is ten at once, but near the end only ones fit. Nobody is ever out!",
     "emoji": "🦆",
     "color": "#ffca3a",
-    "category": "race",
+    "category": "animals",
     "together": true,
     "featured": false,
     "url": "https://99cd94b6-bitgames-bumper-ducks.ferdousbd.workers.dev/",
@@ -31,13 +31,13 @@
       3,
       8
     ],
-    "learning": "Counting in tens (place value), sorting by colour, cooperation and spatial awareness"
+    "learning": "Counting to ten in rows of five, sorting by colour, one more than, number bonds, place value (tens and ones, adding tens, crossing a ten and regrouping), ordering numbers, cooperation and spatial awareness"
   },
   {
     "id": "bunny-hop",
     "title": "Bunny Hop",
     "tagline": "Hop Pip the bunny home through meadows, mushrooms, autumn woods and snow!",
-    "howToPlay": "Tap the screen or press the space bar to hop, and tap again in the air for a flippy double hop. Pip needs carrots for winter: some hang at hop height (hop as each one comes) and some grow in the grass (stay down to munch them). Once Pip is catching whole rows, his basket asks for fewer carrots than the row holds: count them in, then let the rest go by. Too many, and the basket is too heavy: one rolls out. Logs, rocks, pumpkins and carrots come in patterns with their own notes; when a ? appears, pick what comes next, then keep the pattern going through the mist: hop for the obstacles and stay down for the carrots. A wrong pick plays the pattern again for another go, and right answers lead on to three-part and growing patterns. At home, Pip's pantry shows each place's crates; answer his question about them (a line of carrots helps you count on), then see if there are enough for winter. After each pattern, wild flowers grow in the grass: stay down to pick them, and at home plant them by Pip's door in a pattern of your own, which Pip sings back. Choose 🐢 for a slower trip.",
+    "howToPlay": "Tap the screen or press the space bar to hop, and tap again in the air to hop higher, up to a golden carrot. Pip needs carrots for winter: some hang at hop height (hop as each one comes) and some grow in the grass (stay down to munch them). Once Pip is catching whole rows, his basket asks for fewer carrots than the row holds: count them in, then let the rest go by. Too many, and the basket is too heavy: one rolls out for every carrot past full. Once a trip the path forks: add up each patch's two little groups and choose the one that makes Pip's number. Logs, rocks, pumpkins and carrots come in patterns with their own notes; when a ? appears, pick what comes next, then keep the pattern going through the mist: hop for the obstacles and stay down for the carrots. A wrong pick plays the pattern again for another go, and right answers lead on to three-part and growing patterns. At home, Pip's pantry shows each place's crates; answer his question about them (a line of carrots helps you count on), then see if there are enough for winter; older hoppers work out how many spare, or how many more Pip needs (a crate of ten helps past ten). After each pattern, wild flowers grow in the grass: stay down to pick them, and at home plant them by Pip's door in a pattern of your own, which Pip sings back (he wonders what comes next if it doesn't repeat yet). Choose 🐢 for a slower trip.",
     "emoji": "🐰",
     "color": "#8ac926",
     "category": "jump",
@@ -48,13 +48,13 @@
       3,
       8
     ],
-    "learning": "Counting, comparing and adding, reading and making patterns, and timing"
+    "learning": "Counting, comparing, adding and finding the difference, reading and making patterns, and timing"
   },
   {
     "id": "cake-stack",
     "title": "Cake Stack",
     "tagline": "Stack yummy cake layers into a giant birthday cake for your animal friends!",
-    "howToPlay": "Each birthday friend orders a cake in pictures, from the bottom layer to the top: listen to the order, then wait for the matching layer and tap, click or press Space to drop it when it lines up. Layers the order doesn't need yet just slide past. Later friends order patterns like strawberry, mint, strawberry, mint. Blow out the candles, then share the cake fairly: give every friend the same number of slices. Choose 🎂 Free stacking to drop any layer, or open Recipe studio to build pictured recipes and share equal slices.",
+    "howToPlay": "Each birthday friend orders a cake in pictures, from the bottom layer to the top. Wait for the layer the order needs (or, later, choose it), then tap, click or press Space to drop it when it lines up. A layer that is not in the order sits crooked until you tap it off. Later friends ask for patterns to finish, orders to remember, or a pattern you make up. In the counting missions, tap the candle when the cake has the friend's number of layers; if it has too many, tap the cake to take layers off. Blow out the candles, then share the cake fairly: tap a plate to give it a slice, and when the cake is empty, tap a slice to put it back if the plates are not the same. The 🎂 📖 studio has picture recipes to build, and a cake to cut into 4, 6, 8 or 12 slices and share between two or three friends, with any slices that cannot go round on the baker's plate.",
     "emoji": "🎂",
     "color": "#ff8fab",
     "category": "puzzle",
@@ -65,13 +65,13 @@
       3,
       8
     ],
-    "learning": "Sequencing, patterns, counting and equal sharing"
+    "learning": "Sequencing, patterns, counting and comparing, and equal sharing"
   },
   {
     "id": "crash-racers",
     "title": "Crash Racers",
     "tagline": "Race up to 4 cars through Ubud, Helsinki and Montreal. Crashes welcome!",
-    "howToPlay": "📦 Deliver: drive slowly round a picture town with four parcels. Tap a parcel to load it, find its matching house on the big map (🍎 fruit shop, 🌸 florist, 🐶 dog's house…), then drive there to hand it over. ↩️ turns you round for a shorter way. At the end, see the route you chose. 🏁 Race and 💥 Smash! are still there for lively play with friends: steer with the arrows or on-screen buttons, and 🔊 turns the sound off.",
+    "howToPlay": "📦 Deliver: tap a picture parcel (a bone, bananas…), think who would like it, find their house on the big map, and tap the house as you drive up to stop there. Some houses are down side streets: the map shows which street (🌈 or 🌙) to turn into. ↩️ turns you round for the shorter way. Careful drives bring harder towns (or pick 📦📦 🚧 / ⛔ in the menu): two parcels for each house, a closed road or a one-way street, so the order of the stops needs a plan. Friends share one tray of parcels. Stuck for a long while? A gold ring shows the way. 🏁 Race and 🎪 Bumpers have present gates: tap (or steer with ◀ ▶) to the present the house would like; a gate you leave alone counts for nothing. Three right in a row bring harder presents, and the results show what each missed house wanted. In Easy mode bumps are soft and the other cars keep their distance. 🔊 turns the sound off.",
     "emoji": "🏎️",
     "color": "#ff595e",
     "category": "race",
@@ -82,13 +82,13 @@
       5,
       8
     ],
-    "learning": "Map reading, matching and route planning"
+    "learning": "Map reading, matching things by kind, and planning a route"
   },
   {
     "id": "dragon-glide",
     "title": "Dragon Glide",
     "tagline": "Fly Ember the baby dragon through floating sky islands, cloud rings and rainbow waterfalls!",
-    "howToPlay": "Drag anywhere (or use the arrow keys) to steer Ember the dragon home through four sky worlds. Each world has one goal, shown as a picture and spoken: fly through numbered rings in order (1 to 5, then 1 to 10), or gather the right hearts, stars or moons into your basket. Missed a ring? It waits for you. At each nest Ember's family sorts and counts what you brought home, and waits until you tap to fly on. Tap 🔥 to light lanterns and pop bubbles.",
+    "howToPlay": "Drag anywhere (or use the arrow keys) to steer Ember the dragon home through four sky worlds. Each world has one goal, shown as a picture and spoken: fly through the number that comes next (counting up, down, on, or by twos, threes and fives), or gather the hearts, stars or moons asked for. In the gathering worlds, line Ember up with the bubble holding a treasure you need and tap 🔥 to pop it. Missed a ring? It waits for you. At each nest you finish the lesson with Ember's family: take out any number flown by mistake, fill the missing numbers (and say which comes next), give back what wasn't asked for, sort onto shelves and say how many. The family waits until you tap to fly on.",
     "emoji": "🐉",
     "color": "#3fbf7f",
     "category": "jump",
@@ -99,13 +99,13 @@
       4,
       8
     ],
-    "learning": "Number order, counting to 10, sorting by colour and shape, and steering"
+    "learning": "Number order, counting on and back (into the teens), skip counting, counting to 10 with a ten-frame, sorting by colour and shape, adding two small groups, comparing \"how many more\", and steering"
   },
   {
     "id": "fish-pond",
     "title": "Fish Pond",
     "tagline": "Go fishing with Bear and fill your book with fish, a puffer, a whale and treasure!",
-    "howToPlay": "Pick a place: sunny lake, sunset river, starry night, icy sea or coral reef. Bear asks a riddle (\"something with a hard shell\"): tap the animal that fits, and it comes to your line. When the bobber dips and a ! pops up, tap to reel it in. An animal that fits goes in your 📖 book; one that doesn't is put back gently, with the reason why. Can you find all 18? Older players get trickier riddles, two clues at once, and Bear's list: animals to find in other waters, so you choose where to fish.",
+    "howToPlay": "Pick a place: sunny lake, sunset river, starry night, icy sea or coral reef. Bear asks a riddle (\"something with a hard shell\"): tap the animal that fits, and it comes to your line. When the bobber dips and a ! pops up, tap to reel it in. An animal that fits goes in your 📖 book; one that doesn't is put back gently, with the reason why. Can you find all 20? Older players get trickier riddles (is it a real fish? does it breathe air?), two clues at once, then two different animals that fit both, and Bear's list: animals to find in other waters, so you choose where to fish. Each trip, sort your catches in the book: fresh water, the sea, or not a real animal.",
     "emoji": "🎣",
     "color": "#3fa7e0",
     "category": "animals",
@@ -116,7 +116,7 @@
       2,
       8
     ],
-    "learning": "Observation, animal habitats (fresh water and sea) and counting"
+    "learning": "Observation, animal habitats (fresh water and sea), real or pretend, and counting"
   },
   {
     "id": "memory-match",
@@ -139,7 +139,7 @@
     "id": "paint-splash",
     "title": "Paint Splash",
     "tagline": "Roll giant paint rollers with up to 4 friends and paint a picture together!",
-    "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller. A dashed chalk shape asks for a colour (\"Paint the fish green!\"), but the pots only hold 🔴🟡🔵, so work out the mix and paint it like a painter, in coats: one paint all over inside the lines, then the other on top while it is still wet and shiny. Swapping pots back and forth still mixes, but careful coats are what move the puzzles on. Red and yellow make orange, yellow and blue make green, red and blue make purple, all three make brown. Painted shapes are inked and kept safe while robot friends paint a frame round the page. The recipe is pictured at first; as you paint carefully it hides behind ❓, two-part shapes (a tree's leaves and trunk) arrive, then puzzles with more than one answer (\"a mix of blue and one more paint\"), and finally puzzles on two-part shapes and with two conditions (\"a mix with blue but no red\"). After each shape you pick the next one from the card, and every few shapes you choose the colour yourself. Stuck? A ring shows the pot to try. When the page is full, keep painting on a fresh page. There is no clock: tap 🖼️ Finished! when your picture is done, and it is kept in My pictures by itself. Choose ⏱️ Quick for 75 seconds of free painting with 🌈 rainbow and 💧 water puddles, or open Mix my colours for the colour studio.",
+    "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller. A dashed chalk shape asks for a colour (\"Paint the fish green!\"), but the pots only hold 🔴🟡🔵, so work out the mix and paint it like a painter, in coats: one paint all over inside the lines, then the other on top while it is still wet and shiny. Swapping pots back and forth still mixes, but careful coats are what move the puzzles on. Red and yellow make orange, yellow and blue make green, red and blue make purple, all three make brown. Painted shapes are inked and kept safe while robot friends paint a frame round the page. The recipe is pictured at first; as you paint carefully it hides behind ❓, two-part shapes (a tree's leaves and trunk) arrive, then puzzles with more than one answer (\"a mix of blue and one more paint\"), then puzzles on two-part shapes and with two conditions (\"a mix with blue but no red\"), and at the top a ⚪ white pot for light colours (\"Paint the heart pink!\": red and white) — but white spoils a colour that should not be light, so you decide when it belongs. At the very top come ratios: \"Paint the sun yellowish orange!\" means more yellow than red, so you lay yellow, then red, then yellow again on top while it shines. After each shape you pick the next one from the card, and every few shapes you choose the colour yourself. Stuck? A ring shows the pot to try, then a still picture of the mix, and if a shape is still too tricky the card offers 🔄 another, easier one. When the page is full, keep painting on a fresh page. There is no clock: tap 🖼️ Finished! when your picture is done, and it is kept in My pictures by itself. Choose ⏳ Quick for a sand timer of free painting with 🌈 rainbow and 💧 water puddles, or open Mix my colours for the colour studio, where older painters get mixing goals (a 🎯 on its button says so).",
     "emoji": "🎨",
     "color": "#9b5de5",
     "category": "pop",
@@ -150,13 +150,13 @@
       2,
       8
     ],
-    "learning": "Colour mixing with primaries (secondary colours and brown), reasoning from a rule to a colour (including two conditions and elimination), planning in coats while the paint is wet, staying inside the lines, and cooperation"
+    "learning": "Colour mixing with primaries (secondary colours and brown), tints with white (pink, light blue), ratios (more yellow than red makes a yellowish orange, painted in play and mixed by drops in the colour studio), reasoning from a rule to a colour (including two conditions and elimination), planning in coats while the paint is wet, staying inside the lines, and cooperation"
   },
   {
     "id": "penguin-bowling",
     "title": "Penguin Bowling",
     "tagline": "Belly-slide a chubby penguin down the ice and knock over snowmen and fish!",
-    "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides; ◀ ▶ move the penguin. Bumpers 🛟 keep the penguin out of the gutters. After every roll, tap each pin still standing to count it (fallen ones don't count): fallen and standing always make 10. Children who count carefully are asked for the missing part instead (7 + ? = 10, or ? + 2 = 10), first from three numbers, later from a 1–10 strip, and may plan each fresh rack: pick 'knock 8, leave 2' and choose where to stand (the middle knocks nearly all, the edge just one; footprints help at first). The strongest counters work the bond out while a snow cloud hides the pins, and may try bumpers down. Before a second roll, say where the pins are or which side has more: footprints show where to walk the penguin, fewer of them as the child grows, until the spare is their own plan. Tap 💭 to guess how many will fall first. Pick 5 frames for a shorter game.",
+    "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides; ◀ ▶ move the penguin. Bumpers 🛟 keep the penguin out of the gutters. Each fresh rack starts with a plan: the youngest pick 'a few' or 'a lot' from two pictures, and stand near the edge or in the middle to make it happen. After every roll, tap each pin still standing to count it (fallen ones don't count), then say how many: the last number counted tells how many, and fallen and standing always make 10. Children who count carefully work out the missing part instead while a snow cloud hides the pins (7 + ? = 10, or ? + 2 = 10), first from three numbers, later from a 1–10 strip. Their plans use numbers: 'knock down 8' (for the first two plans of a game, footprints and a number show where to stand; then the child finds the spot: the middle knocks many, the edge just one), and later 'leave 2 standing', which takes the bond to turn into where to stand, or a curved plan like 'leave 7 ↪' that sets the curve. A plan that comes out just right asks for the other part. Before a second roll, say where the pins are or which side has more: footprints show where to walk, fewer as the child grows, until the spare is their own plan. Tap 💭 to guess how many will fall first. Pick Ages 3–5 to start with counting, or 6–8 to start with missing parts; either way the game adapts as the child plays. Games are 5 frames; pick 10 for a longer one.",
     "emoji": "🐧",
     "color": "#4cc9f0",
     "category": "pop",

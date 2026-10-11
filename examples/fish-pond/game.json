@@ -2,7 +2,7 @@
   "id": "fish-pond",
   "title": "Fish Pond",
   "tagline": "Go fishing with Bear and fill your book with fish, a puffer, a whale and treasure!",
-  "howToPlay": "Pick a place: sunny lake, sunset river, starry night, icy sea or coral reef. Bear asks a riddle (\"something with a hard shell\"): tap the animal that fits, and it comes to your line. When the bobber dips and a ! pops up, tap to reel it in. An animal that fits goes in your 📖 book; one that doesn't is put back gently, with the reason why. Can you find all 18? Older players get trickier riddles, two clues at once, and Bear's list: animals to find in other waters, so you choose where to fish.",
+  "howToPlay": "Pick a place: sunny lake, sunset river, starry night, icy sea or coral reef. Bear asks a riddle (\"something with a hard shell\"): tap the animal that fits, and it comes to your line. When the bobber dips and a ! pops up, tap to reel it in. An animal that fits goes in your 📖 book; one that doesn't is put back gently, with the reason why. Can you find all 20? Older players get trickier riddles (is it a real fish? does it breathe air?), two clues at once, then two different animals that fit both, and Bear's list: animals to find in other waters, so you choose where to fish. Each trip, sort your catches in the book: fresh water, the sea, or not a real animal.",
   "emoji": "🎣",
   "color": "#3fa7e0",
   "category": "animals",
@@ -13,5 +13,5 @@
     2,
     8
   ],
-  "learning": "Observation, animal habitats (fresh water and sea) and counting"
+  "learning": "Observation, animal habitats (fresh water and sea), real or pretend, and counting"
 }

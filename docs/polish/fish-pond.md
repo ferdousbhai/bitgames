@@ -514,3 +514,300 @@ Review 1 of round 3 scored 8.4. Calm, focus and learning held up. The weakest ar
 - A book sorting page (fresh water / sea / not an animal) where tiles are dragged into place.
 - An octopus den on the reef, like the snail's pad.
 - Counting crayfish legs (8 + 2 claws) as a tier-3 count.
+
+## Round 5 (2026-10-11)
+
+The open audit item was the book's sorting page (fresh water, sea or rubbish). The last review (8.5) also flagged collection pressure (stars and a progress bar in the book) and the crayfish running off a portrait stage. This round closes the audit item and fixes those two.
+
+### Design
+
+- **The book has a sorting page: "Where does each one live?"**
+  - The book head has two tabs: 📖 pictures (with the found count) and 🏞️🌊🧸 sorting. The sorting tab appears once something is in the book.
+  - Kept catches wait in a tray. Three baskets sit below it (beside it on short landscape screens): 🏞️ **Fresh water** with ☀️🌅🌙, 🌊 **Sea** with ❄️🐠, and 🧸 **Not real** with 🥾🦆. Each basket shows the places that belong to it, so where the child fished links to the kind of water.
+  - Tap a catch (it lifts with a still amber ring, and its name is said), then tap a basket. Dragging a catch onto a basket also works. A basket tapped with nothing picked says what belongs in it.
+  - "Not real" holds the toys, rubbish and treasure and the two made-up fish (Blue Fish, Golden Fish), which their field notes already call pretend. So the page teaches real versus pretend as well as fresh versus salty.
+  - Right: a soft plop, the catch moves into its basket, and one reason ("Yes! Crabs live in the sea.", "Yes! A boot is rubbish."). Sorting is saved (`fish-pond-sorted`), and new catches arrive in the tray later. When the tray is empty there is one "Everyone is in the right place." and a still 🐻👍.
+  - Wrong: bubbles, and the catch stays in the tray, still picked. Tier 1 hears the answer ("Frogs live in fresh water.") and the right basket gets a still amber ring. From tier 2 the first wrong try gives something to think with: "You catch frogs at the sunny lake, the sunset river and the night pond." or "Is Blue Fish a real animal?". A second wrong try gives the answer and the ring. The same words are never spoken twice in a row; a repeat stays on the page only. So careful sorting is quiet and quick, and random tapping gets reasons rather than progress.
+  - The question is asked once per visit to the page. Pictures, words and baskets carry the rest.
+- **Less collection pressure.** Book tiles lose their 1–3 star ratings and star tints, the rainbow progress bar is gone, and the catch card no longer shows stars (a put-back still shows 🌊). The rare-catch fanfare is unchanged.
+- **Crayfish on a portrait stage.** `showSize()` shows the crayfish at 1.05 in portrait (1.3 in landscape), so its feelers stay on screen. It is checked on every catch, so rotating the device updates it.
+
+### Changes
+
+| File | What |
+| --- | --- |
+| `public/js/book.js:9-55` | `BASKETS`, `PLACE_WORDS`, `PRETEND`, `REAL_Q`, `MANY`, `homeOf()`, saved `fish-pond-sorted` |
+| `public/js/book.js:221-247` | `setPage` (two pages, the question once a visit), `unsorted` |
+| `public/js/book.js:249-331` | `buildBaskets`, `renderSort`, `marks` (picked tile, tier-aware basket ring), `pick` |
+| `public/js/book.js:333-376` | `dragOn`: tap-tap or drag with a ghost picture; keyboard select |
+| `public/js/book.js:378-430` | `drop`, `why`, `clue` (tier 1 the answer; tier 2+ a clue first) |
+| `public/js/book.js` `render` | no tile stars; no progress bar; sorting tab hidden while the book is empty |
+| `public/index.html` | `.book-tabs` replaces the title and `.book-bar`; `.sort-page` with `.sort-tray` and `.sort-baskets` |
+| `public/style.css:110, 181-220, 253-260` | `.cstars:empty`; tabs, tray, tiles, ghost, baskets and the short-landscape row layout; the star tile rules are removed |
+| `public/js/main.js:630` | `showSize()` (portrait crayfish 1.05) |
+| `public/js/main.js:674` | the catch card shows no stars |
+| `public/js/main.js` `new Book` | `getTier` (the trip tier when playing, the best tier on the title) |
+| `game.json` | `howToPlay` covers the sorting page; `learning` adds real or pretend |
+
+### Evidence
+
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids fish-pond --run fish-pond-c1`: BOOT + PLAY ready, 0 errors.
+- `node --check` passes on `book.js` and `main.js`.
+- `scratchpad/polish/fish-pond/r5/sort.mjs` (Playwright Chromium `--use-angle=gl`, speech stubbed, real mouse clicks and a real mouse drag) ran at 834×1194 (tier 1), 1194×834 (tier 3), 375×667 (tier 2) and 667×375 (tier 1). Each run had 0 errors and no horizontal overflow, and all 8 catches were saved as sorted.
+  - At tier 1, a wrong frog said "Not there. Frogs live in fresh water." and ringed Fresh water. A second wrong try was silent.
+  - At tier 3, the first wrong try said "Not there. You catch frogs at the sunny lake, the sunset river and the night pond.", then gave the answer.
+  - The boot was dragged into Not real ("Yes! A boot is rubbish."). The last catch said "Yes! Jellyfish live in the sea. Everyone is in the right place."
+- `r5/homes.mjs`: every one of the 18 catches has the right home. Fresh water: goldfish, trout, turtle, frog, crayfish, snail. Sea: clownfish, pufferfish, crab, octopus, jellyfish, narwhal, whale. Not real: Blue Fish, Golden Fish, duck, boot, chest.
+- A careful lake trip (`r4/play.mjs`, 834×1194) had 0 errors. `r5/cray.mjs` shows the crayfish whole on the portrait stage (`p-cray.png`) and in landscape (`l-cray.png`).
+- Screenshots are in `scratchpad/polish/fish-pond/r5/`: `*-book.png`, `*-sort-0.png`, `*-sort-wrong.png`, `*-sort-drag.png` and `*-sort-done.png` for p, l, s and sl.
+
+### Checklist
+
+- Book sorting page (fresh water, sea or rubbish): **done**.
+
+### Remaining ideas
+
+- Deeper tier 3 (a 6th Icy Sea swimmer, single-answer variety), and Bear's list items that are never single look clues (review ranks 1–2).
+- Look closer that matches the riddle's clue, and a snail that stays by its pad (review ranks 5–6).
+- An octopus den on the reef; counting crayfish legs at tier 3.
+
+## Round 6 (2026-10-11)
+
+Review 1 scored 8.4 (fun depth 7.9, voice 8.2). No checklist items were open. This round fixes the four bugs it found and works through ranked improvements 1–10.
+
+### Design
+
+- **What you see is what Bear means.**
+  - The octopus no longer counts as spotted (`HAS.octopus`), and its pale back spots are gone from the model. Before, a "spots" riddle could be answered by an octopus that looked plain.
+  - The narwhal's mottling is now 16 larger, darker blotches, so you can see them on a small swimmer.
+  - A turtle caught for "spots" now gets a near-miss line that matches what the child sees: "Those are shell plates, not spots."
+- **A fuller Icy Sea.** Two animals join it:
+  - The **Arctic cod**, a real fish of the icy sea (the polar cod narwhals eat). It has a brown back with dark spots, a silver belly, a chin whisker and three back fins.
+  - The octopus (octopuses live in every ocean).
+  - The Icy Sea now has cod, Blue Fish, narwhal, jellyfish, crab and octopus. "A fish", "no bones", "eight arms" and "spots" are now real choices there: cod vs Blue Fish, octopus/jellyfish/crab, narwhal vs cod.
+  - Look closer on the cod counts its **three back fins** (tier 2+ guesses first) or explains its chin whisker.
+  - The book has 19 tiles, and the cod sorts into the Sea basket.
+- **The same answer never comes twice running.** `makeRiddle` leaves out riddles that the last answering animal could answer again. A Bear's list item is skipped when only that animal could answer it. List answers already go into `game.answered`, so an octopus no longer answers three riddles in a row. The recent-riddle window is now 5 (was 3), and the answered window is 4.
+- **Bear's list stays a two-clue list.** For each water, `makeList` takes an idea item or a two-clue item first. It uses a single look ("tentacles") only when nothing else fits. In 500 simulated lists (1,500 items), no item was a single look.
+- **Each short miss line is said once per riddle.** The short reason ("It isn't blue.") is spoken the first time. After that the card shows it and the miss makes a soft plip with no voice (`r.mute`). A golden fish or whale miss still says its "Wow!", without repeating the reason.
+- **"Not a fish" misses no longer repeat themselves.** Reasons that only say "not a fish" again are filtered out. "That's not a fish! An octopus is not a fish." is now "That's not a fish! An octopus crawls on its arms."
+- **Sorting is harder to win by trying every basket (tier 2+).**
+  - A first wrong try still gives a clue.
+  - A second wrong try moves the catch to the end of the tray ("Not there. We'll come back to the frog."), so the child sorts the others first.
+  - The answer and the ringed basket come only on a wrong try after the child comes back to it.
+  - Tier 1 is unchanged: the answer and ring come on the first wrong try.
+- **Calmer layout.**
+  - Sorting baskets are capped at `clamp(150px, 22vh, 220px)`, down from about 300 px of mostly empty space in portrait. The tray takes the rest. Short landscape still uses the row layout.
+  - The hint finger taps 3 times each time it appears, then rests. It used to loop forever.
+- Names in sentences keep "Arctic" capitalised: "Yes! An Arctic cod!" (`lower()`).
+
+### Changes
+
+| File | What |
+| --- | --- |
+| `public/js/riddles.js:48-50` | octopus without spots; `cod: ['spots', 'fish']` |
+| `public/js/riddles.js:125` | NEAR `spots:turtle` |
+| `public/js/riddles.js:228-231` | prefer riddles the last answerer can't answer |
+| `public/js/riddles.js:276-286` | `makeList`: an idea or two-clue item before a single look |
+| `public/js/riddles.js:318` | `lower()` (exported) |
+| `public/js/riddles.js` `verdict` | `r.mute` once-per-riddle short reasons; "not a fish" reasons filtered |
+| `public/js/main.js:682-683` | hush when `r.mute` |
+| `public/js/main.js:1081-1083` | list item skipped when only the last answerer fits |
+| `public/js/main.js:1093, 1200` | recent 5, answered 4 |
+| `public/js/book.js:77-78, 291, 409-420, 440-444` | `aside` and `told`: twice-wrong tiles wait at the end of the tray; ring only once the answer was said |
+| `public/js/creatures.js:57, 66` | `cod` (ice 8); octopus `ice: 2.5`; Blue Fish ice 9→5; ice ambient of six |
+| `public/js/look.js:132` | cod: count 3 back fins; chin whisker fact |
+| `public/js/field-guide.js:40`, `book.js:41` | cod note; "Arctic cod" plural; octopus note says warm and icy seas |
+| `public/style.css:167, 207, 258` | finger `3 forwards`; basket cap; short-landscape `height: auto` |
+| `public/index.html`, `game.json` | 0/19, "find all 19" |
+| `blender/models.py:632-640, 748-760, 778-805` | octopus spots removed; narwhal blotches; `creature_cod` |
+| `public/models/creatures.glb` | rebuilt with `node examples/_studio/assets.mjs fish-pond` (only this GLB changed) |
+
+### Evidence
+
+All scripts and screenshots are in `scratchpad/polish/fish-pond/r6/`.
+
+- **Browser harness.** `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids fish-pond --run fish-pond-c2` reported BOOT + PLAY ready with 0 errors. `node --check` passes on every file in `public/js`.
+- **Model renders.**
+  - `close.png` is a Blender close render of the cod, narwhal, octopus and turtle. The cod's spots and three fins read clearly, the narwhal's blotches show, and the octopus is plain.
+  - `p-ice-careful-show-3.png` shows the narwhal on stage with visible spots. `-show-6.png` shows the cod on stage.
+- **Playwright trips** (`play.mjs`, Chromium `--use-angle=gl`, speech stubbed; all with 0 errors):
+  - **Icy Sea, careful, tier 3, 1194×834:** 14 of 14 riddles answered with the first catch. The cod and the octopus both answered riddles, and Bear's list ticked twice. "Yes! An Arctic cod! It's a fish, and it is not blue." The cod count went "1 2 3, Three back fins! Just as you guessed!"
+  - **Icy Sea, careful, portrait:** tier 1 to tier 2 to tier 3 in one trip. The cod answered "two different kinds of fish" alongside Blue Fish.
+  - **Lake, random:** "A turtle. Those are shell plates, not spots." "It isn't orange." was said once; the next three misses were silent.
+  - **Night, random:** "It isn't blue." was said once, then the card only.
+  - **Reef, random:** "That's not a fish!" no longer repeats itself.
+  - In none of the four trips was a miss line spoken twice on one riddle.
+- **Simulation** (`sim.mjs`, 40 riddles per place and tier, random answerer): the same animal answered two riddles in a row 0 times in all nine place/tier runs.
+- **Sorting** (`sort.mjs`, real clicks and drag):
+  - Tier 1, 834×1194: the first wrong try said "Not there. Frogs live in fresh water." and ringed Fresh water.
+  - Tiers 2–3 at 1194×834, 375×667 and 667×375: the clue came first. The second wrong try said "Not there. We'll come back to the frog.", moved the frog to the end of the tray, unpicked it and showed no ring. The answer and ring came only on the next wrong try.
+  - Every run sorted all 10 catches, had no horizontal overflow and 0 errors.
+  - The baskets are 220 px tall in portrait (`p2-sort-almost.png`).
+
+### Checklist
+
+- No audit items were open. Review bugs 1–4: **fixed**. Ranked improvements 1–10: **done**.
+
+### Remaining ideas
+
+- An octopus den on the reef. Counting crayfish legs at tier 3.
+- An Icy Sea "under the ice" spot where the cod gathers, so knowing its habit tells you where to cast.
+
+## 2026-10-11 — Round 7 (review: 8.4)
+
+Review 1 scored 8.4 (fun depth 8.1, voice 8.4). No checklist items were open. This round fixes all five bugs and works through ranked improvements 1–8.
+
+### Design
+
+- **Blue Fish is pretend everywhere.** Before, the riddles called it a real fish with gills, while the sorting page called it a pretend friend. Now Blue Fish and Golden Fish answer only what you can see (blue, yellow), and never an idea clue. Catching one for "a fish", "not a fish" or "breathes air" says the same thing as the sorting page: "Blue Fish is a pretend friend. Bear wants a real animal." So at tier 2, "a fish" is a real choice between real and pretend. Its side-fin fact now begins "Blue Fish is pretend, but real fish have side fins like these."
+- **No whole sentence twice in a trip.** `pick()` no longer starts a list over within a trip. Once its lines are used it returns nothing, and the line gets shorter: "Yes! A goldfish!" or "A goldfish. Back you go!" (the card still shows the reason). `once()` covers each part of a line on its own: the two-clue "It's a fish, and it has no spots.", "Yes! A goldfish is orange!", "Who else breathes air?" and "Can you find a different fish?". A short miss reason is said once per trip, and saying it inside the first miss line counts. A riddle that comes round again is shown on the chip but not read aloud; tapping the chip still reads it.
+- **No double negatives.** A "not" idea (not a fish, no bones) is only paired with something the animal has (`plainNegs`), in riddles and on Bear's list. "An animal that is not a fish, and has no spots" can no longer be asked; "not a fish, but has spots" still can.
+- **A step past two clues (tier "4").**
+  - After three two-clue riddles in a row are answered with the first catch, about half of the next riddles ask for *two different animals that fit both clues*, such as "two different animals that breathe air and have a hard shell" (turtle and snail). The chip shows two slots.
+  - Every catch is checked against both clues. The usual recent-riddle and last-answerer rules still apply.
+  - One slow riddle empties the streak and ends the run. Where fewer than three two-clue riddles fit (the Icy Sea has one real fish now), idea riddles join the pool, so the narwhal is not the answer every time.
+- **Count to 3 happens once per trip.** After three kept catches it says its reward once with a plain card (🐟 "1, 2, 3!", no trophy, chord or golden glow) and then rests. The next trip starts a new count. The goal row shows three fish pictures that light up as they are counted, with no "n / 3" and no ⭐ (`renderProgress`).
+- **The sorting page comes back each trip.** Sorted catches are kept only for the current trip (`book.newTrip()` in `start()`), and the old saved key is removed. The first time the sort page opens in a trip, it asks its question again.
+- **Less collection pressure.** The ×2/×3 tile badges and the n/19 badge on the in-play book button are gone. The title and the book page still show n / 19.
+- **Crayfish claws.** On the stage the crayfish now turns a little side-on (−0.6 rad, was −1.05). Before, its near claw pointed straight at the camera and looked like part of the head. The glow point moves to the claw's pincers. In landscape it is shown at 1.15 (was 1.3), so it covers less of Bear.
+
+### Changes
+
+| File | What |
+| --- | --- |
+| `public/js/riddles.js:36-40` | `bluefish: ['blue']`, `goldenfish: ['yellow']` |
+| `public/js/riddles.js:146` | `PRETEND` miss reasons |
+| `public/js/riddles.js:159` | `twoOf` makes plural two-clue pairs (`lead2`, "are/have/do"), with its own `more` line |
+| `public/js/riddles.js:204, 235, 270` | `plainNegs`; idea riddles join a thin tier-3 pool; `{ two }` prefers pairs not asked lately |
+| `public/js/riddles.js:334-346` | `pick` never starts a list over; `once()` |
+| `public/js/riddles.js:357-430` | `verdict`: trip-level dedupe, `r.reason` for the card, pretend misses, `both()` |
+| `public/js/main.js:270-285` | calm one-time count card; `renderProgress` with no tally |
+| `public/js/main.js:1053` | removed the restart after a completed count |
+| `public/js/main.js:1095-1102` | `deep` gives `twoOf(...)` tier 4 |
+| `public/js/main.js:1117-1122` | `sayRiddle` reads each riddle sentence once per trip |
+| `public/js/main.js:697` | the card uses `r.reason` |
+| `public/js/main.js:639, 752` | crayfish show size and side-on pose |
+| `public/js/main.js:1478, 1593` | no HUD count; `book.newTrip()` |
+| `public/js/book.js:49, 166, 205` | per-trip sorting; no ×n badge; `newTrip()` |
+| `public/js/look.js:74, 124` | Blue Fish fin fact; claws point `[0.64, -0.3, 0.02]` |
+| `public/index.html`, `public/style.css` | `#count` badge and `.badge-count` / `.tile-count` CSS removed |
+| `game.json` | howToPlay describes real fish, two-animal pairs and sorting each trip |
+
+### Evidence
+
+All scripts and screenshots are in `scratchpad/polish/fish-pond/r7/`. Chromium was run with `--use-angle=gl` and speech was stubbed.
+
+- **Harness.** `browser.mjs --ids fish-pond --run fish-pond-c3` gave BOOT + PLAY ready with 0 errors. `node --check` passes on every file in `public/js`.
+- **Riddle simulation** (`sim2.mjs`, 60 tier-3 riddles per place):
+  - 0 double negatives.
+  - The Icy Sea mixes two-clue and idea riddles.
+  - In the lake's pair mode, 2 pair riddles share the pool with 6 single-answer riddles.
+- **Trips** (`play.mjs`, 0 console errors in all six):
+  - **Lake, careful, 1194×834:** 16/16 answered with the first catch. "Two different animals that breathe air and have no spots" came up, and snail then turtle answered it. The only repeated sentences were short forms ("Yes! A turtle!" ×3).
+  - **Icy Sea, careful, 834×1194:** 14/14 answered. The only repeats were short forms and the count numbers.
+  - **Reef, careful:** 12/12.
+  - **Lake and Icy Sea, random:** "A blue fish. Blue Fish is a pretend friend. Bear wants a real animal." No sentence was repeated.
+  - **Night, random:** no sentence was repeated.
+- **Count to 3** (`mission.mjs`, 6 kept catches): the reward was said once and the goal stayed at 3 lit fish. There was no restart and no ⭐.
+- **Sorting** (`sort2.mjs`, both orientations):
+  - 6 in the tray, then 4 after sorting two.
+  - A new trip brought back all 6 and asked the question again.
+  - `fish-pond-sorted` was gone, with 0 tile badges and no HUD badge.
+- **Crayfish** (`cray.mjs`): `p-crayfish-1.5.png` and `l-crayfish-1.5.png` show the glow on the near claw's pincers, side-on.
+- **Chip** (`p-chip4-crop.png`): 🫧 + slashed ⚫, two slots, "air + no spots".
+
+### Checklist
+
+- No audit items were open.
+- Review bugs 1–5: **fixed**.
+- Ranked improvements 1–8: **done**. For 4, pairs were chosen over a counted or habitat clue.
+
+### Remaining ideas
+
+- The reef cannot make two-clue pairs: its only non-fish are the octopus, jellyfish and crab, and each one-look clue fits only one of them. A reef hermit crab or sea star would allow "no bones and has a shell".
+- A "which place?" sorting round (☀️🌅🌙❄️🐠) for tier 3.
+
+## 2026-10-11 — Round 8 (review: 8.2)
+
+Review 1 scored 8.2 (fun depth 7.8, polish 8.0). No checklist items were open. This round fixes all six bugs and works through ranked improvements 1–7.
+
+### Design
+
+- **A ringed seal joins the Icy Sea** (improvement 2). Before, "a fish" there was only the cod and "breathes air" only the narwhal, so tier 3 fell back to one-idea riddles. The seal is the small seal of the Arctic (the shore already had seals resting on it).
+  - It is grey with dark spots in pale rings, is not a fish, and breathes air. It is grey, never blue, so "something blue" is still only the narwhal.
+  - Two clues now tell the narwhal and seal apart: "breathes air and has no tusk", "breathes air and is blue", "breathes air and is not blue". "Not a fish, but has spots" has two answers, so it works for a find-two.
+  - The model is built in Blender (`creature_seal`). The shore seals were recoloured to the same silver grey.
+  - Look-closer has three entries: spots ("Each dark spot has a pale ring round it…"), whiskers, and flippers (it keeps a breathing hole open in the ice with its claws).
+  - The book now has 20 animals.
+- **"No bones and no shell"** (improvement 1). `nobones` may take one "no" look, the shell, because it is one easy phrase and holds the idea: a crab has no bones but wears its shell outside. On the reef and the Icy Sea this two-clue riddle is answered by the octopus or the jellyfish, so the invertebrates answer tier-3 riddles again. As a find-two it reads "two different animals with no bones and no shell". The rule against double negatives still blocks "not a fish, and has no spots".
+- **No learnable answer pattern** (improvement 1):
+  - `makeRiddle` now chooses who answers first, then a riddle for them, so a place with five fish riddles and one octopus riddle still gives each answer a fair share.
+  - At tier 3 the "different answer / different idea / not the last animal" rules apply 60% of the time. Two clues have to be read every time, so the same answer twice running is fine there.
+  - The recent-riddle window keeps at least two choices open, so a small pool never falls into a fixed order.
+  - Riddles still on Bear's list are kept out by a separate `avoid` list. Before, a short recent window could drop them, and "no bones and no shell" was asked straight after the same list item.
+- **The look-closer glow confirms the clue** (improvement 3). A catch that answered a riddle glows on the part the child reasoned with: trout and spots, seal and spots, crab and shell, jellyfish and no bones (tentacles), turtle and shell. If that part has no fact left this trip, the glow moves to the next feature as before. The clue's glow skips the 40 s fact gap, but only while it has an unheard fact.
+- **Counting holds still and never ends silently** (improvement 4):
+  - The sway, bob and tail wag ease to zero while guessing or counting.
+  - A tap counts the nearest uncounted dot within 64 px, so a tap between two clownfish stripes 60 px apart counts one instead of nothing.
+  - After 10 s idle with some counted, Bear says, once, "One! Two more stripes to find." After a further 8 s it says "Three stripes in all." and the show ends.
+- **Every new two-clue riddle is read out once** (improvement 6), even when the child casts fast. The slashed icons are hard for a six-year-old to decode. A riddle that comes round again is still only shown.
+- **A little one stuck on one riddle** (improvement 7). After six misses on a riddle (once per riddle, never for list items), Bear swaps it for a one-look riddle that the real animal nearest the last cast answers. The soft ring goes on that animal, it drifts in front of the boat, and the new riddle is read. Careful play never reaches this point.
+- **Book picture and stage pose** (bugs 4 and 5):
+  - The crayfish book and sorting picture now looks down on its back, nose up, with claws spread (the classic crayfish shape), at 1.25×. It reads at the same size as the other tiles. The seal is drawn at 1.12×.
+  - On the stage the crayfish (portrait size 0.9) and the cod sit a little lower (`SHOW_DROP`). The crayfish is now clear of Bear and the boat, and the cod's counted back fins sit on Bear's tummy, not his face.
+
+### Changes
+
+| File | What |
+| --- | --- |
+| `blender/models.py:814` | `creature_seal` (ringed spots, whiskers, clawed front flippers, `seal_tail` pivot); listed in `build_creatures`; shore seals recoloured (`seal_grey` #9a958f) |
+| `public/models/creatures.glb`, `shore_ice.glb` | rebuilt with `node examples/_studio/assets.mjs fish-pond` (world, lake, river and reef unchanged) |
+| `public/js/creatures.js:37-45, 66, 75` | seal entry (ice 4) and source; `AMBIENT.ice` includes the seal |
+| `public/js/riddles.js:56-57, 104, 113` | `HAS.seal`, `WHY` lines |
+| `public/js/riddles.js:94, 176, 218-220` | `nobones.nor`, `plainNegs(t, f)`, `nor()`, two-clue and find-two phrasing |
+| `public/js/riddles.js:228-315` | `makeRiddle` options `want` and `avoid`, the bounded recent window, the soft variety rules at tier 3 (`vary`), choosing by answer group |
+| `public/js/look.js:143-148`, `field-guide.js`, `book.js:45-50` | seal looks, note, plural |
+| `public/js/book.js:12-17, 135-141` | `THUMB` scales; top-down crayfish picture |
+| `public/js/main.js:637-668, 704-711` | `CLUE_PARTS`, `clueLook`, `SHOW_DROP`, crayfish portrait size 0.9 |
+| `public/js/main.js:789-822` | `s.still` freeze; partial-count nudge and total |
+| `public/js/main.js:1006-1030` | `NUMBER`, `countNear` (dot handler and stage taps) |
+| `public/js/main.js:1167-1173, 1188` | list item never repeats the riddle just answered; `avoid: listKeys`; two-clue riddles are read |
+| `public/js/main.js:1193-1225` | `EASIER_AFTER`, `easierRiddle` (from both the put-back and the kept paths) |
+| `public/index.html`, `game.json` | 0/20, "Can you find all 20?" |
+
+### Evidence
+
+Everything is in `scratchpad/polish/fish-pond/r8/`. Chromium was run with `--use-angle=gl` and speech was stubbed.
+
+- **Harness.** `browser.mjs --ids fish-pond --run fish-pond-c4` gave BOOT + PLAY ready with 0 errors. `node --check` passes on every file in `public/js`.
+- **Seal model.** `seal3.png` is a Blender close-up. `l-seal.png` shows it on stage with the glow on its ringed spots.
+- **Riddle simulation** (`sim.mjs`, 300 riddles per place and tier):
+  - **Reef, tier 3:** "no bones and no shell" (octopus or jellyfish) 40 of 200, clownfish 86, pufferfish 74. Before: 0 invertebrate answers out of 300.
+  - **Icy Sea, tier 3:** every riddle has two clues. Answers: narwhal 92, seal 95, jellyfish/octopus 60, narwhal/seal 53. Before: 74% one-idea riddles.
+  - **Icy Sea, tier 2:** "breathes air" is narwhal or seal (117).
+- **Trips** (`play.mjs`, 0 console errors in every run):
+  - **Reef, tier 3, careful** (landscape and portrait): 14/14 and 14/14 answered. Octopus and jellyfish answered single and find-two riddles. The glow matched the clue: octopus and arms, jellyfish and tentacles.
+  - **Icy Sea, tier 2→3, careful:** 14/14 answered. The seal answered "breathes air", "no tusk" and "not a fish, but has spots". Its glow fell on flippers and spots.
+  - **Lake, tier 3, careful:** 14/14 answered. Trout "has spots" glowed on its spots; frog "breathes air" on its skin.
+  - **Lake, tier 1, careful:** 14/14 answered, with no repeated sentence.
+  - **Random trips:** six misses swapped the riddle (lake: "something blue" became "something with spots", with misses starting at 4 so the ring and drift come at once). No sentence was repeated.
+- **Counting** (`stage.mjs`):
+  - Two taps midway between the first two clownfish stripes counted 2 (portrait).
+  - A count left after 1 said "One! Two more stripes to find." and then "Three stripes in all." The phase went back to idle.
+  - Taps between octopus arms more than 64 px apart count nothing, as intended.
+- **Poses.** `p-crayfish.png` shows the crayfish in front of the boat, clear of Bear. In `l-cod-count.png` the dots are below Bear's face.
+- **Book.** `l6-crop.png` and `p6-sort.png`: the crayfish reads from above at full tile height, the ringed seal sits next to the cod, and the count is 18 / 20.
+
+### Checklist
+
+- No audit items were open.
+- Review bugs 1–6: **fixed**.
+- Ranked improvements 1–7: **done**.
+  - For 1, the seal and "no bones and no shell" were used instead of a new reef animal.
+  - For 4, the 64 px reach is done in code (`countNear`) rather than CSS, so overlapping hit areas never swallow a tap.
+
+### Remaining ideas
+
+- The reef crab still answers only one-look and idea riddles at tier 3: its red, shell and claws are each unique on the reef. A reef hermit crab or a spotted reef crab would give it a two-clue riddle.
+- A seal-pup snow den on the ice shore, for a "where does it live" look.

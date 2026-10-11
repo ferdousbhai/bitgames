@@ -2,7 +2,7 @@
   "id": "balloon-pop",
   "title": "Balloon Pop",
   "tagline": "Pop smiley, heart, bunny and star balloons over a sunny countryside!",
-  "howToPlay": "A friend asks for balloons: pop the ones they want (4 blue ones, the hearts, 3 then 2 more, 3 red and 2 blue, or the balloons with 5 dots) and tap 🧺 Give when the basket is just right. Too many? Tap a balloon in the basket to let it go. Then choose a treat for the picnic. When all eight friends are at the picnic, everyone waves. Stuck? The friend helps with numbered slots. Confident counters move on to plain slots, then ten-frames, the teens, one more / one less and making two bunches the same. 🌱 Start easy goes back to the beginning.",
+  "howToPlay": "A friend asks for balloons: pop the ones they want (4 blue ones, the hearts, 3 then 2 more, 3 red and 2 blue, or 3 balloons with 5 dots) and tap 🧺 Give when the basket is just right. Too many? Tap a balloon in the basket to let it go. Then choose a treat for the picnic. When all eight friends are at the picnic, everyone waves. Stuck? The friend helps with numbered slots and a hint. Confident counters move on to plain slots and treat plates with one treat for each balloon, then ten-frames, the teens (10 and 3 more), one more / one less, making two bunches the same, finding which colour a friend has most of, and mixing purple, orange or green from two colours (the new balloon blends before your eyes). A small plant under the friend (🌱 🌿 🌳) shows the step the game has settled on. 🌱 Start easy goes back to the beginning. Three for friends asks every friend for exactly three; Hearts for friends grows from counting hearts to one more heart than Fox. Free popping, for the youngest, just meets the balloon friends with no tally and no levels to chase; now and then a friend would like one balloon (a heart, a bunny or a red one) to find among the others, with all the time in the world.",
   "emoji": "🎈",
   "color": "#ff6b9d",
   "category": "pop",
@@ -10,8 +10,8 @@
   "featured": true,
   "url": "https://35cbf36a-bitgames-balloon-pop.ferdousbd.workers.dev/",
   "ages": [
-    2,
-    6
+    3,
+    8
   ],
-  "learning": "Counting to 10, colours, shapes, adding on and matching dots to quantities"
+  "learning": "Counting to 10 and into the teens, stopping at a number, one more and one less, making two bunches the same, adding on from ten, comparing which colour has most, colours and colour mixing, and matching dots to quantities"
 }

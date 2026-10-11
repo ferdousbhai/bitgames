@@ -511,3 +511,265 @@ Screenshots checked:
 - A row height pattern for the older tier ("high, low, high, low" stated as a rule) would join counting and patterns.
 - The garden is not remembered between trips. A kept garland on the menu would give continuity.
 - The 🐢 trip still speaks about 36 lines, mostly counting aloud in two places.
+
+# Review-5 fixes (2026-10-11)
+
+Independent review 4 scored 8.3 (fun/depth 7.9, learning 8.1). Its blockers were these. On tiers 0 and 1, "carrot" was the answer to "What comes next?" about 85% of the time. 22% of basket-tier trips lost the snow pattern. Pip hopped and flipped all through the home question and the garden. The flower hint could talk over the ask. Path flowers looked like the scenery flowers. The pattern ladder never stepped down for a child who was right only on the second go. One pantry question was thin for 6–8 year olds.
+
+## Design
+
+- **The answer has to be read.** A tier 0/1 ask can land on any step of the pattern:
+  - steps 2..n of the second go, after one whole unit plus a step;
+  - the first step of the third go, after two whole goes.
+
+  Tier 1 adds ABB (`[a,b,b]`). Tier 2 drops nothing, but its `[a,b]` growing pattern answers with obstacles. The course remembers this trip's answers (`course.answers`), so no answer comes three times running. Simulated over 500 trips per tier: carrot answers are 46% at tier 0, 32% at tier 1 and 34% at tier 2, with 0 runs of three.
+- **Every place keeps its pattern.** `plan()` budgets each place before laying it out: two rows, the rhythm and the gaps. When the rows don't fit, they give up spare carrots (down to two), then carrots, never the pattern. A row laid before the rhythm also leaves the rhythm's room. 1000 plans each for baskets, plain, 🐢 and a snow-only start: all have one pattern per place and every basket row keeps at least two spares.
+- **Pip is calm at home.** He does three happy hops on arriving (no flips), then stays still: ears, blinks and a slow look at the child. While a question waits on the path he does the same, with no idle hops. He makes one small hop when an answer at home is given or a flower is planted. The 40 samples taken during the home question show him in the air 0 times, in every run.
+- **One instruction at a time.** The flower hint waits while a pattern is unfinished and is said as it ends. In runs it came about 5 s after the answer, never beside "What comes next?".
+- **Pickable flowers stand out.** A path flower stands on an earth mound, like a carrot in the grass, so the rule is "on a mound: stay down". No scenery flowers grow in the near/side grass within 10 units of a path flower.
+- **The ladder follows first answers.** Two patterns in a row that needed a second go step down, the same as a second miss.
+- **A second home question for 6–8.** For basket hoppers whose total is 1–10 from the winter goal, the shelves fold and Pip asks "How many carrots to spare?" or "How many more does Pip need?" (`🥕 46 − ❄️ 40 = ?`), with three numbers. A first miss brings the count-on line from the smaller number up to the bigger: the carrots tapped are the answer. "Hop again" waits until it is answered.
+- **Compare quantities, not numerals.** In "Which has more?" the two crates' numbers are hidden until the answer.
+- **Fewer counting lines.** The 🐢 pace counts aloud only in the meadow, like the normal pace; the 🐢 run now speaks 28 lines over 286 s, down from 36.
+- **The count sits clear of the ears.** It floats higher in portrait.
+
+## Changes (under `examples/bunny-hop/`)
+
+- `public/js/course.js`:
+  - `RHYTHM_LEN` `:72`
+  - `this.answers` `:189`
+  - per-place budget `rooms` and `trim` `:200`, row reserve `rhythmLaid` `:214`
+  - flower mound `:277`
+  - `shapeRhythm` options, weights and the no-three-running filter `:328-358`
+- `public/js/bunny.js`: `celebrate` `:131`, `happyHop` `:137`, the 'still' mode with no idle hops `:156`; ear twitch and look are now also used outside the menu.
+- `public/js/world.js`: `flowerQuiet` `:129`, `clash` `:196`.
+- `public/js/main.js`:
+  - `flowerHint` `:107,718,738,1055`
+  - `tier.wrong` `:115,788-796`
+  - `world.flowerQuiet` in `start`
+  - `bunny.celebrate` `:373`
+  - `pantryTotal`/`winter` `:414`, `gardenSoon` `:421`
+  - hidden numbers `:506`
+  - `numberChoices` `:544`, `askWinter` `:586`
+  - meadow-only counting `:704,820`
+  - `course.answers.push` `:779`
+  - `overPip` `:810`
+  - 'still' mode `:1155,1172`
+- `public/style.css:68`: `.pantry-row.guess b`.
+- `game.json`: `howToPlay` (the gap question) and `learning` ("finding the difference").
+
+## Evidence
+
+Chromium (`--use-angle=gl`) with stubbed speech. The scripts are `…/scratchpad/polish/bunny-hop/play5.mjs` and `sim5.mjs` (plan and answer simulation), and the output is in `r5/`.
+
+| Run | Viewport | Asks → answer | Pantry / goal | Airborne at home | Lines | Errors |
+| --- | --- | --- | --- | --- | --- | --- |
+| careP | 834×1194 | carrot, toadstool, stump, log | 46 / 40, then "6 to spare" | 0/40 | 28 | 0 |
+| wrongL | 1194×834 | carrot, toadstool, pumpkin, snowman (pattern tier stays 0) | 46 / 40, count-on 40→46 | 0/40 | 35 | 0 |
+| randL | 1194×834 | log, toadstool, pumpkin, snowman | 29 / 40 | 0/40 | 27 | 0 |
+| randP | 834×1194 | carrot, toadstool, pumpkin, log | 33 / 45, numbers hidden | 0/40 | 24 | 0 |
+| topP (2/2) | 834×1194 | growing: stump, rock, carrot, snowman | 40 / 45, "5 more" | 0/40 | 17 | 0 |
+| t1L / t1P (1/1) | 1194×834, 834×1194 | rock, stump, carrot, log / stump, rock, pumpkin, carrot | 45 / 45, 50 / 45 | 0/40 | 18, 18 | 0 |
+| 🐢 gentleP | 834×1194 | log, toadstool, pumpkin, carrot | 43 / 40 | 0/40 | 28 (286 s) | 0 |
+| shortL | 667×375 | growing | 54 / 45 | 0/40 | 18 | 0 |
+| snowL (?biome=3, 2/2) | 1194×834 | snowman (snow pattern present) | 11 / 10 | 0/40 | 14 | 0 |
+
+Screenshots checked:
+- `careP-flower`: the flower on its mound, with no scenery flowers near
+- `careP-row`: the "1" above the ears
+- `t1P-home-q1` and `shortL-home-q1`: the folded gap question, with Pip clear
+- `wrongL-home-counton1`: the count-on line from 40
+- `randP-results-ask`: crate numbers hidden
+- `t1P-garden`: the planted row
+
+`browser.mjs --ids bunny-hop --run bunny-hop-c1`: BOOT + PLAY ready, 0 errors. `node --check` passes on all JS.
+
+## Checklist
+
+The audit checklist had no open items. All five review-4 blockers are handled above. For "every trip has the same shape", the gap question and hidden-number comparison add depth at home, but the path's structure is unchanged.
+
+## Remaining ideas
+
+- A structural variation on the path, such as a fork ("which path has 4 carrots?"). A height-pattern row was considered and dropped: row carrots are in view ahead, so a stated height rule adds nothing to look for.
+- The garden is still not kept between trips.
+
+# Review-6 fixes, round 2 (2026-10-11)
+
+Independent review 1 of this round scored 8.4 (fun/depth 8.0), with no open checklist items. It had two blockers. First, greedy overfilling filled the pantry as well as careful counting, because an overfull basket lost only 1 carrot. Second, every tier 0 pattern was an obstacle plus carrots, and "X, carrot, carrot" came up at 3 of 4 places. It also listed five bugs: overfill cost, a menu butterfly cut off in portrait, butterflies at carrot height during play, "Pip needs 4." said twice, and the home sum usually being a double.
+
+## Design
+
+- **Every carrot past full rolls one out.** A basket keeps its number minus each extra carrot: 7 asked and 10 caught brings home 4. The tray greys one more kept slot for each extra. "That's 8. Too heavy! One rolled out." is said at the first over-full basket. "Too heavy again! Stop when the basket is full." is said at the second. Each line is said once. Stopping at full now clearly wins: careful runs ended 57/45, 49/45 and 45/40, and greedy runs (perfect timing, never stopping) ended 34/35, 36/45 and 41/40. The 41 was a run where two spills stepped the child back down to whole rows.
+- **Tier 0 has eight pattern shapes.** There are five with a carrot (A🥕, 🥕A, AA🥕, A🥕🥕, A🥕A) and two made only of obstacles (AB, AAB), at most one of those per trip. The course remembers this trip's shapes (`course.shapes`), and a shape doesn't come again while others are left. Tier 1 now uses its four shapes once each, and growing patterns are told apart by which part grows. In 500 simulated trips per tier, no shape repeated within a trip, there were 0 runs of three same answers, and carrot answers were 37% at tier 0, 32% at tier 1 and 34% at tier 2. About 20% of tier 0 patterns are obstacle-only. When a rhythm is reshaped because the tier changed, its first step stays as it was (`seg.first`). On tier 0 the winter goal counts 3 carrots per pattern, not 4.
+- **The home sum avoids doubles.** Basket hoppers get the last shelf whose two crates differ. Counting hoppers (row tier 2), and anyone whose shelves are all doubles, add the shelf's 🎵 crate as well: "5 + 8 + 3 = ?". The hint then becomes "5 and 8 make 13. Count on 3." with the count-on line starting at 13. In the runs, the sums were 5+8+3, 6+7+6, 6+7+3, 6+9 and 3+3+3 (the last from an all-doubles trip).
+- **Butterflies stay clear of the carrots.** During play they rise to about y 5.5–6.6 and drift 3.5 units further back, so they sit above the hop band and the golden carrot. In every run, at least 99% of samples had them above a carrot hung at 3.6. Their wings beat about 1.4 times a second, down from 3.2.
+- **Menu butterflies stay in view.** They spread out in fixed spots beside Pip: round his ears when the screen is upright, to his right when it is sideways. They are clamped in camera space to 75% of the half-width and kept below the title band. Portrait screen x was −0.62..0.66, and landscape 0.35..0.75.
+- **No sparkle for a double hop.** The menu hint now reads "Tap to hop · tap again in the air to hop higher". The higher hop is how a golden carrot is reached.
+- **Each line once.** "Pip needs N." is said once per number per trip. A new basket rule ("Count them in…") is still said, without the repeated number. The meadow's "N carrots!" is also said once per number.
+
+## Changes (under `examples/bunny-hop/`)
+
+- `public/js/main.js`:
+  - `patternCarrots` `:134`
+  - `world.camera` `:227`
+  - no double-hop sparkle `:366`
+  - `askPantry` (differing shelf, three crates) `:478-549`
+  - once-per-number lines `:728-738`
+  - `course.shapes.push` `:742`
+  - row keeps `n − over` `:761`
+  - spill for every extra `:863-869`
+  - menu `flutterSpan`/`flutterHigh` `:1227`
+- `public/js/course.js`: `this.shapes` `:190`, tier 0 units `:347`, shape keys `:357`, filters `:361`, `seg.first` `:371`.
+- `public/js/world.js`: menu slots `:366,381`, play lift `:391`, camera-space clamp `:399-408`, slower wing beat `:415`.
+- `public/js/learning.js:178`: `spill()` greys the last kept slot each time.
+- `public/index.html:57`: the menu hint.
+- `game.json`: `howToPlay` (higher hop, one out for every carrot past full).
+
+## Evidence
+
+Chromium (`--use-angle=gl`) with stubbed speech. The scripts are `…/scratchpad/polish/bunny-hop/play6.mjs`, `sim6.mjs` and `fly.mjs`, and the output is in `r6/`.
+
+| Run | Viewport | Patterns | Home question | Pantry / goal | Lines | Errors |
+| --- | --- | --- | --- | --- | --- | --- |
+| careP (1/0) | 834×1194 | 🥕A, A🥕A, A🥕B, A🥕🥕 | 2+3+3 (before the fix: tier 2 now takes the last differing shelf) | 57 / 45 | 19 | 0 |
+| careP2 (2/1) | 834×1194 | A🥕B, A🥕🥕, growing ×2 | 5+8+3 | 49 / 45 | 19 | 0 |
+| greedyP (1/0) | 834×1194 | 🥕A, A🥕, ABB, AB🥕 | 6+7, then 35−34 | 34 / 35 | 22 | 0 |
+| greedyP2 (1/0) | 834×1194 | 🥕A, AB, A🥕🥕, AB🥕 | 6+9 | 41 / 40 (stepped down to whole rows) | 22 | 0 |
+| greedyL (2/1) | 1194×834 | AB🥕, A🥕B, growing ×2 | which has more (stepped down) | 36 / 45 | 20 | 0 |
+| wrongL | 1194×834 | AB, AA🥕, 🥕A, A🥕🥕 (pattern tier stays 0) | 3+3+3 (all doubles), 45−40 | 45 / 40 | 35 | 0 |
+| randL | 1194×834 | A🥕, AAB, … | which has more | 33 / 40 | 22 | 0 |
+| t0P | 834×1194 | AAB, A🥕🥕, … | 6+7+3 | 48 / 40 | 29 | 0 |
+| topL (2/2) | 1194×834 | growing ×4 | 6+7+6 | 43 / 40 | 19 | 0 |
+| 🐢 gentleP | 834×1194 | A🥕🥕, A🥕, ABB, AB🥕 | 3+4+3 | 40 / 35 | 26 (284 s) | 0 |
+
+No goal or hint line was said twice in any run. The only repeats were counting numbers and answer feedback such as "Yes, a log!".
+
+Screenshots checked:
+- `fly-menu-834`, `fly-menu-1194`: all three menu butterflies in view and apart
+- `careP-counting`, `greedyP-basket`: butterflies high in the sky, clear of the hanging carrot
+- `topL-ask-growing`: the ask card, with nothing moving at carrot height
+- `careP-home-q0`: the three-crate shelf highlighted under "2 + 3 + 3 = ?"
+- `wrongL-home-counton1`: the count-on line
+
+`browser.mjs --ids bunny-hop --run bunny-hop-c2`: BOOT + PLAY ready, 0 errors. `node --check` passes on all edited JS.
+
+## Checklist
+
+No items were open. Both blockers and all five bugs are handled above. Improvements 1–7 are done. Number 8, a fork or a height row for tier 2, is still an idea.
+
+## Remaining ideas
+
+- A path fork ("which way has 4 carrots?") would give a second kind of decision for 6–8 year olds.
+- The garden is still not kept between trips.
+
+# Round 3 fixes (2026-10-11)
+
+Review 1 scored 8.5 with no open checklist items. Review 2 scored 8.2. It had one open item: the harder tier for 6–8 could make the winter goal impossible. It also had two blockers. First, on the top tier the goal counted carrots that did not exist, so careful play fell short (37/40). Second, mashing met the goal in one run of three and was promoted to baskets.
+
+## Design
+
+- **The winter goal can always be met.** `Course.surest()` counts the carrots every row is sure to ask for, whatever tier the child reaches on the trip, after any shrinking for basket spares. It counts no pattern carrots, because some patterns are all obstacles. The goal is that number, rounded down to a five. Pattern carrots leave room for a slip or two.
+- **Grass carrots need Pip's feet on the ground.** A low carrot (`it.low`) is only munched while `bunny.grounded` is true. A hop that skims it on take-off or landing goes over it, so mashing misses most grass carrots and pattern carrots.
+- **Mission progress is never spoken as a bare number.** The game passes its own `announce` to `createAdventure`, which drops `'count'`. The tiles show progress, and the choice and the reward are still said. "1, 2, 3" is no longer followed by "2".
+- **Tier 0 gives three pictures after the first pattern.** Only the trip's first pattern offers its own two pictures. Every later one adds the place's other obstacle or a carrot. Two lucky first answers in a row now have about a 1 in 9 chance, not 1 in 4. A first miss on a two-picture ask still brings in a third.
+- **The fork: a second kind of choice for basket hoppers.** One trip on a basket tier has one fork. Tier 1 has it at the autumn wood's longer row, and tier 2 in the snow. Pip stops and the card asks "🧺7 · Which patch?". Each patch shows two little crates of carrots, with no numbers. One makes Pip's number. The other has one more or one less. Neither group is a lone carrot or more than five. The chosen patch becomes the row:
+  - Too many: the child has to stop hopping at full.
+  - Too few: the basket can't be filled ("6 of 7").
+  - Right: "Yes! 4 and 3 make 7."
+  - Wrong: "4 and 4 make 8. Stop at 7!"
+
+  The decision is to add two groups and compare the sum to the order, and its consequence plays out in the row.
+- **Larger gaps get the winter question.** The 'spare / more' question now runs for gaps of 1 to 20. Past ten, the count-on line starts with a `🥕×10` crate: 30 → 40 → 41 …, with the hint "Start at 30. Ten more, then count on to 45."
+- **The garden wonders once.** The planted row may not repeat yet, with 3 or more flowers (4 for the three-colour ask). If the child then pauses for 4 s, Pip reads the row back once: "Blue, blue, yellow… what could come next?". A soft gold ring lights the group it could go on from.
+- **"Pip needs N." waits after a spill.** It is not said within 8 s of "That's 6. Too heavy!", so two different numbers never come back to back. The fork says the number only if it hasn't been said this trip.
+- **The golden-carrot tally is gone from the results.** A golden carrot is Pip's treat on the way and is not counted at home.
+- **Menu (sideways tablets):**
+  - The camera stands further back (`menuZ` 8, look 1.3), so Pip's ears clear the subtitle.
+  - Butterflies keep below the title band (`world.flutterCeil` 0.12) and spread over x 1.6–4.8.
+  - Sideways phones keep the old framing.
+- **Bigger menu chips.** The mission and 🐢 chips are 62 px tall, with 36 px step tiles and 56×50 pace pictures. On short phones they are 52 px.
+- **Pip stays in view while he asks (portrait).** While he asks, only the shelf he asks about shows, as short phones already did. Sideways tablets keep every shelf.
+- **Softer butterflies.** A soft brown rim (`#a8755e`) and body replace the near-black, set at runtime through `copy` recolor. No GLB edit.
+- Spoken pattern words start with a capital letter: "Look, a rock! Toadstool, rock, rock."
+
+## Changes (under `examples/bunny-hop/public/`)
+
+- `js/main.js`:
+  - `menuZ` `:132`
+  - mission `announce` `:177`
+  - fork chosen in `start` `:309-316`
+  - goal `:325`
+  - winter gap ≤ 20 `:429`
+  - garden wonder `:468-494`
+  - tens-friendly `countOn` `:671`
+  - `askFork` and `groupsOf` `:756,789-830`
+  - spill/need spacing `:765,944`
+  - `probe.grounded` `:1262`
+  - `flutterCeil` and menu span `:1300-1308`
+  - golden tally removed from `showResults`
+- `js/course.js`:
+  - `surest()` `:324`
+  - tier-0 third picture `:393-399`
+  - `layPatch` `:408`
+  - fork branch in `build`
+  - grounded-only grass carrots `:590`
+- `js/learning.js`: `Cue.fork` `:272`, `groupOf` `:430`, garden `lead` `:508`.
+- `js/world.js`: `BUTTERFLY_SOFT` `:72`, `flutterCeil` `:138,412`.
+- `style.css`:
+  - `.count-step.ten` `:82`
+  - `.garden-place.lead` `:107`
+  - chips `:122,163,284`
+  - fork patches `:229-232,254,315`
+  - folding to the asked shelf in portrait `:348`
+- `index.html`: the `#golden` row is removed.
+- `game.json`: `howToPlay` (fork, crate of ten, garden wonder).
+
+## Evidence
+
+Chromium (`--use-angle=gl`) with speech stubbed and logged. The scripts are `…/scratchpad/polish/bunny-hop/play7.mjs` and `play7b.mjs` (bots: careful, wrong, greedy, random, and spam, which taps every 160 ms), plus `forkpeek.mjs`, `gardenpeek.mjs` and `menu7.mjs`. Output is in `r7/` and `r7b/`. All runs had 0 console errors.
+
+| Run | Viewport | Tier start | Fork | Pantry / goal |
+| --- | --- | --- | --- | --- |
+| careP | 834×1194 | 0/0 | — | 44 / 30 |
+| t1P | 834×1194 | 1/1 | 7: 7 vs 8 → 7 | 50 / 35 |
+| topL2 (whole rows mission) | 1194×834 | 2/2 | 6: 7 vs 6 → 6 | 48 / 35 |
+| wrongP | 834×1194 | 2/2 | 6: 5 vs 6 → 5, then "5 of 6" | 45 / 30 |
+| shortL | 667×375 | 1/1 | 7 → 7 | 52 / 35 |
+| gentleP 🐢 | 834×1194 | 0/0 | — | 42 / 25 |
+| spamP | 834×1194 | 1/0 | — | 23 / 35 |
+| spam0L | 1194×834 | 0/0 | — | 28 / 35 |
+| spamTopL | 1194×834 | 2/2 | — | 21 / 30, pattern tier → 0 |
+| randP | 834×1194 | 0/0 | — | 24 / 35 |
+| rand1P | 834×1194 | 1/1 | — | 30 / 35 |
+| greedyP | 834×1194 | 1/0 | — | 37 / 35, stepped down to whole rows |
+
+- **Goal:** every careful run met it, top tier included. No spam or random run did.
+- **Spoken lines:**
+  - With the whole-rows mission, the log has no bare mission numbers: "Three whole rows! Pip did not leave one behind." follows the rows directly.
+  - The winter question with a crate of ten ran in wrongP: "How many carrots to spare?" → "Start at 30. Ten more, then count on to 45." → "45 is 15 more than 30."
+  - The garden wonder fired once after a 4 s pause (`gw`: "Blue, blue, yellow… what could come next?", 3 places lit).
+
+Screenshots checked:
+- `r7/m-1194.png`, `m-1024.png`: ears clear of the subtitle, butterflies under the title, soft rims.
+- `m-834.png`, `m-667.png`: menu chips 273×62 and 130×64.
+- `r7/careP-home-q0.png` and `r7b/wrongP-home-counton3.png`: Pip and his door fully in view above the asked shelf.
+- `r7b/peek-fork-834/1194/667/375.png`: the fork card. It fits every width, and the patches stack on 375.
+- `r7b/gw-garden-wonder.png`.
+
+`browser.mjs --ids bunny-hop --run bunny-hop-c3`: BOOT + PLAY ready, 0 errors. `node --check` passes on every JS file.
+
+## Checklist
+
+- **Harder tier (review 2):** closed. The winter goal is built from `surest()`, so perfect play on any tier meets it. The tier also gains the fork.
+- **Both blockers:** closed (goal and mashing).
+- **Bugs from both reviews:** all handled. That covers the mission numerals, the landscape menu overlap, the chip size, portrait results covering Pip, "Pip needs 6" after a spill, and dark butterflies.
+- **Improvements:**
+  - Done: review 1 numbers 1–7 and review 2 numbers 1–7.
+  - The golden tally was dropped rather than folded in.
+  - The fork is review 2's number 6.
+  - The garden is still not kept between trips.
+
+## Remaining ideas
+
+- Keep the door garden between trips.
+- A masher on the top tier is not stepped down on rows, because it misses carrots rather than overfilling. Its pattern tier does drop. Stepping down on two short baskets could be considered.

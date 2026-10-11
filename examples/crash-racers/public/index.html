@@ -33,6 +33,11 @@
     <button data-mode="town" class="mode on" aria-label="Delivery Town: drive slowly and deliver picture parcels"><span>📦</span>Deliver</button>
     <button data-mode="race" class="mode"><span>🏁</span>Race</button>
     <button data-mode="smash" class="mode" aria-label="Bumper cars: gentle bumping, park when you like"><span>🎪</span>Bumpers</button>
+    <div id="town-tiers" class="town-tiers" role="group" aria-label="How hard a town">
+      <button type="button" data-tier="1" aria-label="An easy town: one parcel for each house"><span>📦</span></button>
+      <button type="button" data-tier="2" aria-label="A harder town: two parcels for each house, and road works"><span>📦📦</span><small>🚧</small></button>
+      <button type="button" data-tier="3" aria-label="The hardest town: two parcels for each house, and a one-way street"><span>📦📦</span><small>⛔</small></button>
+    </div>
   </div>
   <h2>Pick your car 🚗</h2>
   <div id="cars" class="car-row"></div>
@@ -68,6 +73,7 @@
   </div>
   <canvas id="minimap" width="160" height="160"></canvas>
   <div id="banner" class="banner"></div>
+  <div id="note" class="note" aria-live="polite"></div>
   <div class="hud-buttons">
     <button data-touch="turbo" title="Turbo (Shift)" id="turbo-btn">🔥</button>
     <button data-touch="fix" title="Fix my car (F)" id="fix-btn">🔧</button>
@@ -95,8 +101,8 @@
 
 <div id="results" class="screen hidden">
   <h1 id="results-title">🏁 Finish!</h1>
-  <div id="podium" class="podium"></div>
   <div id="gate-recap" class="gate-recap hidden" role="img"></div>
+  <div id="podium" class="podium"></div>
   <div id="recap" class="recap hidden">
     <div class="recap-left">
       <canvas id="recap-map" width="560" height="560" aria-label="Your delivery route"></canvas>

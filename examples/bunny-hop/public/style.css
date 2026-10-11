@@ -47,7 +47,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 .screen h1 { margin: 0; font-size: clamp(36px, 8vw, 66px); text-shadow: 0 4px 0 #ff6b9d, 0 8px 18px rgba(0,0,0,0.2); }
 /* Results say what Pip found (calm pass: no graded stars or best score). */
-.golden { min-height: 1.2em; font-size: clamp(30px, 6vw, 48px); letter-spacing: 2px; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.2)); }
 .found { margin: 0; max-width: 32ch; font-size: clamp(20px, 4vw, 28px); font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.35); }
 .results-top { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 /* The burrow pantry: each counted row in its own crate (in fives, like a ten-frame), added up. */
@@ -65,6 +64,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .pantry-row:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 #c98f00; }
 .pantry-row:focus-visible { outline: 3px solid #6575b0; outline-offset: 2px; }
 .pantry-row.more { background: #c9ec9a; }
+.pantry-row.guess b { visibility: hidden; }
 .pantry-row b { font-size: 20px; line-height: 1; }
 .pantry-crate { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 1px; padding: 3px 5px; border-radius: 10px; background: #e9b97a; box-shadow: inset 0 -3px 0 #c98f4a; font-size: 22px; line-height: 1.1; }
 /* a carrot that got away on the trip leaves its place in the crate empty */
@@ -79,6 +79,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .count-on b { font-size: 34px; font-weight: 900; color: #6b3d00; margin-right: 4px; }
 .count-step { display: grid; place-items: center; width: 48px; height: 48px; border: 2px solid #fff; border-radius: 14px; background: #fff; box-shadow: 0 3px 0 #c98f00; font-size: 26px; font-weight: 900; color: #6b3d00; touch-action: manipulation; }
 .count-step.counted { background: #c9ec9a; box-shadow: none; translate: 0 3px; }
+.count-step.ten { width: auto; padding: 0 10px; font-size: 20px; white-space: nowrap; }
 #again[hidden] { display: none; }
 .pantry-ask { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #5b3a8c; }
 .pantry-choices { display: flex; gap: 14px; }
@@ -102,6 +103,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .garden-place.planted { background: #9c6a3e; }
 .garden-place:disabled { cursor: default; }
 .garden-place:not(:disabled) { outline: 3px dashed #fff; outline-offset: -3px; }
+/* the group Pip wonders about going on from: a soft gold bed under it (still, no pulse) */
+.garden-place.lead { box-shadow: inset 0 3px 0 #6e4626, 0 0 0 3px #ffe58a; }
 .garden-place img { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
 .garden-place > span, .garden-seed > span { font-size: 30px; line-height: 1; }
 .garden-seeds { display: flex; gap: 12px; }
@@ -115,8 +118,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* The menu's mission choice and the 🐇/🐢 pace switch share a row. */
 .menu-options { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
 .menu-options .adventure-choice { margin: 0; }
-.pace-choice { display: inline-flex; align-items: center; gap: 2px; min-height: 48px; padding: 4px; border: 2px solid #fff9; border-radius: 18px; background: #fffdece8; box-shadow: 0 3px 0 #34365018; touch-action: manipulation; }
-.pace-choice span { display: grid; place-items: center; width: 40px; height: 38px; border-radius: 13px; font-size: 26px; opacity: 0.45; }
+/* both are real choices for small fingers: at least 60px tall, with big pictures */
+.pace-choice { display: inline-flex; align-items: center; gap: 4px; min-height: 62px; padding: 5px; border: 2px solid #fff9; border-radius: 20px; background: #fffdece8; box-shadow: 0 3px 0 #34365018; touch-action: manipulation; }
+.pace-choice span { display: grid; place-items: center; width: 56px; height: 50px; border-radius: 15px; font-size: 34px; opacity: 0.45; }
 .pace-choice:not(.gentle) .pace-fast, .pace-choice.gentle .pace-slow { background: #8ac926; opacity: 1; }
 .pace-choice:focus-visible { outline: 3px solid #6575b0; outline-offset: 3px; }
 
@@ -156,13 +160,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tap-hint.gone { animation: none; }
 
 /* Picture steps replace the free-play tap hint during a learning mission. */
-#menu .adventure-choice { gap: 7px; min-height: 48px; padding: 7px 10px; font-size: 14px; }
+#menu .adventure-choice { gap: 8px; min-height: 62px; padding: 7px 14px; border-radius: 20px; font-size: 17px; }
 .mission-steps { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
 .mission-step { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 2px solid #fff; border-radius: 9px; background: #fff8; color: #536c87; font-size: 23px; line-height: 1; opacity: .45; }
 .mission-step.done { background: #8ac926; color: #fff; opacity: 1; }
 .mission-step.next { background: #ffcf1a; color: #603d00; opacity: 1; box-shadow: 0 0 0 3px #ffcf1a55; }
-#menu .mission-step { width: 25px; height: 25px; font-size: 19px; }
-#menu .adventure-next { color: #aa679f; font-size: 22px; line-height: 1; }
+#menu .mission-step { width: 36px; height: 36px; font-size: 26px; border-radius: 11px; }
+#menu .adventure-next { color: #aa679f; font-size: 26px; line-height: 1; }
 #hud .adventure-goal {
   bottom: calc(18px + env(safe-area-inset-bottom)); min-width: 190px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -222,6 +226,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .ask-choice img { width: 76px; height: 76px; object-fit: contain; pointer-events: none; }
 .ask-choice > span { font-size: 52px; }
 .ask-choice:disabled { opacity: 0.3; filter: grayscale(1); box-shadow: none; transform: translateY(3px); }
+/* the fork: each patch is two little crates of carrots (in twos and threes, easy to see at a glance) */
+.ask-choice.fork-patch { display: flex; align-items: center; gap: 6px; width: auto; min-width: 150px; height: auto; min-height: 104px; padding: 10px 14px; }
+.ask-choice .fork-crate { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 1px; padding: 4px 6px; border-radius: 12px; background: #e9b97a; box-shadow: inset 0 -3px 0 #c98f4a; font-size: 26px; line-height: 1.1; }
+.fork-plus { font-style: normal; font-size: 26px; font-weight: 900; color: #6b3d00; }
 /* Tall portrait screens: the question sits just above Pip and the "?", not up under the trip bar */
 @media (orientation: portrait) and (min-height: 700px) {
   .ask { top: auto; bottom: calc(36% + env(safe-area-inset-bottom)); }
@@ -241,6 +249,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @keyframes float { 0% { transform: translateY(0) scale(0.8); opacity: 0; } 15% { transform: translateY(-10px) scale(1); opacity: 1; } 100% { transform: translateY(-60px) scale(1); opacity: 0; } }
 
 @media (max-width: 520px) {
+  /* narrow phones: the fork's two patches stack, one above the other */
+  .ask-choices:has(.fork-patch) { flex-direction: column; gap: 10px; }
+  .ask-choice.fork-patch { min-height: 80px; padding: 6px 12px; justify-content: center; }
+  .ask-choice .fork-crate { font-size: 20px; }
   .pill { font-size: 28px; }
   .popup { font-size: 30px; -webkit-text-stroke-width: 6px; }
   .popup.oops { font-size: 34px; }
@@ -268,8 +280,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .screen { gap: 8px; }
   .screen.clear { padding-top: calc(14px + env(safe-area-inset-top)); }
   .menu-bottom { gap: 6px; }
+  /* sideways phones: the menu choices stay a comfortable 52px, so 'Let's hop!' fits below */
+  #menu .adventure-choice, .pace-choice { min-height: 52px; }
+  #menu .mission-step { width: 28px; height: 28px; font-size: 20px; }
+  .pace-choice span { width: 44px; height: 40px; font-size: 27px; }
   .screen h1 { font-size: 34px; }
-  .golden { font-size: 30px; }
   .found { font-size: 18px; }
   .found-pattern img { width: 26px; height: 26px; }
   .pantry { padding: 6px 10px; gap: 2px; }
@@ -297,6 +312,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .ask-title { font-size: 18px; }
   .ask-choice { width: 72px; height: 72px; }
   .ask-choice img { width: 60px; height: 60px; }
+  .ask-choice.fork-patch { min-width: 120px; min-height: 76px; padding: 6px 10px; }
+  .ask-choice .fork-crate { font-size: 17px; padding: 3px 4px; }
+  .fork-plus { font-size: 18px; }
   .big-go { font-size: 26px; padding: 10px 36px; }
   /* a smaller banner, higher up, so '🏡 Home!' clears Pip's ears at the burrow */
   .banner { top: 15%; font-size: 52px; }
@@ -325,9 +343,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .banner, .banner.show { transform: none; }
 }
 
-/* Small phones: while Pip asks, only the shelf he asks about shows (all of them come back with the total) */
+/* Small phones and upright screens: while Pip asks, only the shelf he asks about shows, so he and
+   his door stay in view above it (all of them come back with the total) */
+#results .pantry-shelf.quiet { display: none; }
+@media (orientation: landscape) and (min-height: 481px) {
+  #results .pantry-shelf.quiet { display: flex; }
+}
 @media (max-height: 480px), (max-width: 520px) {
-  #results .pantry-shelf.quiet { display: none; }
   .count-on b { font-size: 24px; }
   .count-step { width: 38px; height: 38px; border-radius: 11px; font-size: 18px; }
 }

@@ -536,11 +536,19 @@ export class Pins {
       this.lane.world.removeBody(p.body)
       out.push(p.mesh.position.clone())
     }
-    // Standing pins settle exactly where they are
+    // The pins counted as standing stay standing: each settles upright where it is and sleeps until the
+    // next slide wakes it. (A pin leaning on a fallen one would otherwise tip over once that one puffed
+    // away, after the child had counted it, and the count, the bond and the rack map would disagree.)
     for (const p of this.list) {
       if (p.removed) continue
-      p.body.velocity.setZero()
-      p.body.angularVelocity.setZero()
+      const b = p.body
+      // Keep its turn about the upright axis; drop only the lean.
+      const q = b.quaternion
+      b.quaternion.setFromEuler(0, Math.atan2(2 * (q.w * q.y + q.x * q.z), 1 - 2 * (q.y ** 2 + q.x ** 2)), 0)
+      b.position.y = PIN_H / 2 + 0.002
+      b.velocity.setZero()
+      b.angularVelocity.setZero()
+      b.sleep()
     }
     return out
   }

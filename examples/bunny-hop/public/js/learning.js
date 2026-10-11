@@ -174,10 +174,10 @@ export class Cue {
     this.slots[this.slots.length - this.away]?.classList.add('away')
   }
 
-  /** Too many in the basket: it was too heavy, and one carrot that was in it rolled back out. */
+  /** Too many in the basket: it was too heavy, and one carrot that was in it rolled back out (once for every carrot past full). */
   spill() {
-    const kept = this.counting ? [...this.tray.querySelectorAll('.got')] : this.slots
-    const slot = kept[Math.min(this.need, kept.length) - 1]
+    const kept = this.counting ? [...this.tray.querySelectorAll('.got')] : this.slots.filter((s) => s.classList.contains('got'))
+    const slot = kept.at(-1)
     slot?.classList.remove('got')
     slot?.classList.add('away')
   }
@@ -259,6 +259,39 @@ export class Cue {
     this.askSeg = seg
     this.choiceRow = choices
     for (const name of seg.choices) this.addChoice(name)
+    this.askEl.replaceChildren(title, choices)
+    this.askEl.hidden = false
+    choices.firstChild?.focus({ preventScroll: true })
+  }
+
+  /**
+   * Two patches of carrots where the path forks: "Pip needs 7. Which patch?" Each patch is two
+   * little crates (4 and 3), with no numbers, so the child adds (or counts) to find the one that
+   * makes Pip's number. `patches` is [[a, b], …]; `onPick(i)` hears the patch chosen.
+   */
+  fork(n, patches, onPick) {
+    const title = document.createElement('p')
+    title.className = 'ask-title'
+    title.textContent = `🧺${n} · Which patch?`
+    const choices = document.createElement('div')
+    choices.className = 'ask-choices'
+    patches.forEach((groups, i) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'ask-choice fork-patch'
+      button.setAttribute('aria-label', `a patch of ${groups.join(' and ')} carrots`)
+      for (const [k, size] of groups.entries()) {
+        if (k) button.append(Object.assign(document.createElement('i'), { className: 'fork-plus', textContent: '+' }))
+        const crate = document.createElement('span')
+        crate.className = 'fork-crate'
+        crate.style.setProperty('--cols', String(Math.min(size, size > 3 ? Math.ceil(size / 2) : size)))
+        crate.setAttribute('aria-hidden', 'true')
+        for (let c = 0; c < size; c++) crate.append(Object.assign(document.createElement('span'), { textContent: '🥕' }))
+        button.append(crate)
+      }
+      button.onclick = () => onPick(i)
+      choices.append(button)
+    })
     this.askEl.replaceChildren(title, choices)
     this.askEl.hidden = false
     choices.firstChild?.focus({ preventScroll: true })
@@ -387,7 +420,15 @@ export function foldPantry(el, rows) {
  * colours (pink, yellow, pink, yellow → [pink, yellow]); null when the row does not repeat (yet).
  */
 export function repeatOf(row) {
-  for (let len = 2; len * 2 <= row.length; len++) {
+  return groupOf(row, 2)
+}
+
+/**
+ * The smallest group of two or more colours that the row keeps to so far, even part way through a
+ * go (pink, yellow, pink → [pink, yellow]), with at least `goes` whole goes; null when there is none.
+ */
+export function groupOf(row, goes = 1) {
+  for (let len = 2; len * goes <= row.length && len < row.length; len++) {
     const unit = row.slice(0, len)
     if (new Set(unit).size > 1 && row.every((c, i) => c === unit[i % len])) return unit
   }
@@ -460,7 +501,12 @@ export function renderGarden(el, counts, cue, onChange) {
   draw()
   garden.append(bed, seeds)
   el.append(garden)
-  return { buttons, get choices() { return [...buttons, ...places].filter((b) => !b.disabled) } }
+  return {
+    buttons,
+    get choices() { return [...buttons, ...places].filter((b) => !b.disabled) },
+    /** Lights the first `n` places (a group to go on from); 0 clears it. */
+    lead(n) { places.forEach((place, i) => place.classList.toggle('lead', i < n)) },
+  }
 }
 
 /** The pantry's total, with Pip's winter goal beside it: met, or how many short. */

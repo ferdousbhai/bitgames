@@ -416,3 +416,14 @@ body.portrait .reward-new.many .gift { flex: 0 0 44px; }
   .spinner, .finger, .reward-new .gift, #reward .card { animation: none; }
   #wipe { transition: none; }
 }
+
+/* --- Round 5 --- */
+/* The reward buttons stay centred when 🚀 is hidden on a missed card (🔧 alone sits in the middle) */
+.btns { justify-content: center; }
+body.portrait #reward .btns { justify-self: center; }
+/* A turbo landing's last stop on the reach bar: a small still ⚡ above the dash */
+.reach .dash.turbo { width: auto; height: auto; background: none; font-size: 15px; line-height: 1; }
+.reach .dash.turbo::after { content: "⚡"; }
+/* Portrait: the planet + stars and the buttons share the card in two even halves, each centred */
+body.portrait #reward .card { grid-template-columns: minmax(min-content, 1fr) minmax(min-content, 1fr); }
+body.portrait .reward-head, body.portrait .reward-stars { justify-self: center; }

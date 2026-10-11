@@ -19,6 +19,11 @@ const FRONT = 0.9 // how far in front of the middle the cup stands, towards the 
 const BACK = 0.5 // and the bottles behind
 const RIGHT = 2.1 // the cup stands a little to the right, so it hides no bottle
 const LOOK = new THREE.Vector3(0, 0.4, 0.6) // where the studio view's camera looks
+/**
+ * Ratio goals for older children: a two-paint colour that leans one way ("a yellowish orange"),
+ * made by putting in more of one paint than the other. [more, less] paint indexes, in a gentle order.
+ */
+const GOALS = [[1, 0], [0, 1], [2, 1], [1, 2], [0, 2], [2, 0]]
 
 /**
  * The colour words a child hears and sees: the model's own name ("Orange mixture" -> "Orange",
@@ -57,7 +62,11 @@ export function describeMix(drops) {
   return { ...result, base, more, say }
 }
 
-export function createColourStudio({ openButton, onOpen, onClose, voice, sound = () => {} }) {
+/**
+ * `goals()` true offers the ratio goals: a target swatch ("Can you mix a yellowish orange?") that is
+ * met by putting in more of one paint than the other. The next goal comes once the cup is emptied.
+ */
+export function createColourStudio({ openButton, onOpen, onClose, voice, sound = () => {}, goals = () => false }) {
   const speak = voice.sayNow // each tap's answer replaces the last one
   const drops = [0, 0, 0]
   const history = [] // paint index of each drop, for Undo
@@ -70,6 +79,28 @@ export function createColourStudio({ openButton, onOpen, onClose, voice, sound =
   let greeted = false
   let hintTimer = 0
   const mix = () => describeMix(drops)
+  let goalAt = 0 // the goal being tried (an index into GOALS)
+  let goal = null // { more, less, hex, words, met, said }
+  const goalOf = (k) => {
+    const [more, less] = GOALS[k % GOALS.length]
+    const counts = [0, 0, 0]
+    counts[more] = 2
+    counts[less] = 1
+    const result = describeMix(counts)
+    return { more, less, hex: result.hex, words: `${PAINTS[more].ish} ${result.base.toLowerCase()}`, met: false, said: false }
+  }
+  /** Is the cup the goal colour: just its two paints, with more of the one it leans to? */
+  const meets = (g) => drops[g.more] > drops[g.less] && drops[g.less] > 0 && drops.every((n, i) => i === g.more || i === g.less || !n)
+  /** Offers the goal (said once each): on opening, or when the cup is emptied after one is met. */
+  function offerGoal() {
+    if (!goals()) return void (goal = null)
+    if (!goal || goal.met) goal = goalOf(goal?.met ? ++goalAt : goalAt)
+    if (!goal.said) {
+      goal.said = true
+      speak(`Can you mix ${/^[aeiou]/.test(goal.words) ? 'an' : 'a'} ${goal.words}?`)
+      return true
+    }
+  }
 
   const studio = createStudioDialog({
     id: 'colour-studio',
@@ -79,8 +110,9 @@ export function createColourStudio({ openButton, onOpen, onClose, voice, sound =
       onOpen?.()
       draw()
       loadKit()
-      if (!greeted) speak('Tap a paint pot to drip paint in the cup!')
+      if (!offerGoal() && !greeted) speak('Tap a paint pot to drip paint in the cup!')
       greeted = true
+      draw()
       nudgeLater()
     },
     voice,
@@ -293,7 +325,14 @@ export function createColourStudio({ openButton, onOpen, onClose, voice, sound =
 
     const comparison = $('#colour-comparison')
     comparison.replaceChildren()
-    comparison.hidden = !saved
+    comparison.hidden = !saved && !goal
+    if (goal) {
+      // The goal: a target swatch, ticked once it is mixed. Still (no motion).
+      const target = document.createElement('span')
+      target.className = 'cs-kept cs-goal'
+      target.innerHTML = `${goal.met ? '✅' : '🎯'}<i class="cs-swatch" style="background:${goal.hex}"></i><span class="cs-sr">Goal: ${goal.words}${goal.met ? ', mixed' : ''}</span>`
+      comparison.append(target)
+    }
     if (saved) {
       const kept = document.createElement('span')
       kept.className = 'cs-kept'
@@ -349,7 +388,12 @@ export function createColourStudio({ openButton, onOpen, onClose, voice, sound =
       drops[i]++
       history.push(i)
       const result = mix()
-      speak(result.say)
+      if (goal && !goal.met && meets(goal)) {
+        // The goal is met: say how, so the ratio is the lesson ("more yellow than red").
+        goal.met = true
+        sound('keep')
+        speak(`A ${goal.words}! More ${PAINTS[goal.more].word} than ${PAINTS[goal.less].word}.`)
+      } else speak(result.say)
       if (view && studio.open) {
         // The cup shows the old colour until the new drop lands (a quick second tap restarts the pour).
         drawScene(before.hex, before.drops)
@@ -394,6 +438,7 @@ export function createColourStudio({ openButton, onOpen, onClose, voice, sound =
     history.length = 0
     anim = null
     sound('empty')
+    if (goal?.met) offerGoal()
     draw()
     nudgeLater()
   }
@@ -421,7 +466,7 @@ export function createColourStudio({ openButton, onOpen, onClose, voice, sound =
     close: studio.close,
     get open() { return studio.open },
     get state() {
-      return { drops: [...drops], picture: [...picture], saved, assetReady: !!kit, assetError, draws: view?.draws || 0 }
+      return { drops: [...drops], picture: [...picture], saved, goal, assetReady: !!kit, assetError, draws: view?.draws || 0 }
     },
   }
 }

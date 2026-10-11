@@ -39,7 +39,7 @@
     </div>
     <button id="bear-list" class="bear-list" type="button" hidden><span class="bl-head" aria-hidden="true">🐻📜</span><span id="list-items" class="list-items" aria-hidden="true"></span></button>
     <div class="title-row">
-      <button id="title-book" class="book-big" aria-label="Fish book">📖 <b id="title-count">0/18</b></button>
+      <button id="title-book" class="book-big" aria-label="Fish book">📖 <b id="title-count">0/20</b></button>
     </div>
   </div>
 </div>
@@ -47,7 +47,7 @@
 <div id="hud" class="hidden">
   <div class="hud-left">
     <button id="home" class="round-btn" title="Home (Esc)" aria-label="Home">🏠</button>
-    <button id="book-btn" class="round-btn book-btn" title="Fish book (B)" aria-label="Fish book">📖<span id="count" class="badge-count">0/18</span></button>
+    <button id="book-btn" class="round-btn book-btn" title="Fish book (B)" aria-label="Fish book">📖</button>
   </div>
   <div class="hud-right">
     <button id="music" class="round-btn" title="Music" aria-label="Music on or off">🎵</button>
@@ -74,11 +74,17 @@
 <div id="book" class="book hidden">
   <div class="book-card">
     <div class="book-head">
-      <div class="book-title">📖 <span class="book-count">0 / 18</span></div>
-      <div class="book-bar"><div class="book-fill"></div></div>
+      <div class="book-tabs">
+        <button class="book-tab book-title" type="button" data-page="book" aria-pressed="true" aria-label="Book pictures">📖 <span class="book-count">0 / 20</span></button>
+        <button class="book-tab" type="button" data-page="sort" aria-pressed="false" aria-label="Where do they live?" hidden><span aria-hidden="true">🏞️🌊🧸</span></button>
+      </div>
       <button class="book-close round-btn" aria-label="Close">✖</button>
     </div>
     <div class="book-grid"></div>
+    <div class="sort-page" hidden>
+      <div class="sort-tray"></div>
+      <div class="sort-baskets"></div>
+    </div>
   </div>
 </div>
 

@@ -4,32 +4,29 @@ const NOTE = (n) => 440 * 2 ** ((n - 69) / 12)
 const PENTA = [0, 2, 4, 7, 9]
 const penta = (step, base = 72) => NOTE(base + PENTA[((step % 5) + 5) % 5] + 12 * Math.floor(step / 5))
 
-// Each birthday friend says hello in its own little voice.
+// Each birthday friend says hello in its own little voice: soft sine and triangle tones only, never a buzzy
+// square or sawtooth, and all quieter than the layers landing.
 const VOICES = {
   bear: (s, t) =>
-    s.tone({ at: t, type: 'sawtooth', dur: 0.55, gain: 0.18, freq: [[0, 170], [0.15, 230], [0.55, 150]], filter: { type: 'lowpass', freq: 900 }, vibrato: { rate: 8, depth: 6 } }),
+    s.tone({ at: t, type: 'triangle', dur: 0.55, gain: 0.15, freq: [[0, 170], [0.15, 230], [0.55, 150]], filter: { type: 'lowpass', freq: 700 }, vibrato: { rate: 6, depth: 5 } }),
   bunny: (s, t) => {
-    s.tone({ at: t, type: 'sine', dur: 0.35, gain: 0.3, freq: [[0, 260], [0.12, 900], [0.35, 600]], vibrato: { rate: 22, depth: 40 } })
-    s.tone({ at: t, type: 'sine', dur: 0.08, gain: 0.25, freq: [[0, 140], [0.08, 60]] })
+    s.tone({ at: t, type: 'sine', dur: 0.35, gain: 0.12, freq: [[0, 300], [0.12, 760], [0.35, 560]], vibrato: { rate: 12, depth: 18 } })
+    s.tone({ at: t, type: 'sine', dur: 0.08, gain: 0.1, freq: [[0, 140], [0.08, 60]] })
   },
   cat: (s, t) =>
-    s.tone({ at: t, type: 'sawtooth', dur: 0.62, gain: 0.16, freq: [[0, 560], [0.18, 820], [0.62, 520]],
-      filter: { type: 'bandpass', freq: [[0, 900], [0.2, 2200], [0.62, 1100]], Q: 3 }, vibrato: { rate: 7, depth: 12 } }),
+    s.tone({ at: t, type: 'triangle', dur: 0.62, gain: 0.11, freq: [[0, 520], [0.18, 740], [0.62, 500]], filter: { type: 'lowpass', freq: 1600 }, vibrato: { rate: 6, depth: 8 } }),
   puppy: (s, t) => {
-    for (const d of [0, 0.2]) {
-      s.tone({ at: t + d, type: 'square', dur: 0.14, gain: 0.22, freq: [[0, 520], [0.03, 430], [0.14, 210]], filter: { type: 'bandpass', freq: 1000, Q: 1.2 } })
-      s.noise({ at: t + d, dur: 0.07, gain: 0.12, filter: { type: 'bandpass', freq: 1400, Q: 1 } })
-    }
+    for (const d of [0, 0.22]) s.tone({ at: t + d, type: 'triangle', dur: 0.15, gain: 0.12, freq: [[0, 480], [0.04, 400], [0.15, 220]], filter: { type: 'lowpass', freq: 1200 } })
   },
-  panda: (s, t) => s.tone({ at: t, type: 'triangle', dur: 0.5, gain: 0.3, freq: [[0, 330], [0.15, 440], [0.5, 300]], vibrato: { rate: 9, depth: 14 } }),
+  panda: (s, t) => s.tone({ at: t, type: 'triangle', dur: 0.5, gain: 0.13, freq: [[0, 330], [0.15, 440], [0.5, 300]], vibrato: { rate: 6, depth: 8 } }),
   pig: (s, t) => {
-    for (const d of [0, 0.22]) s.tone({ at: t + d, type: 'square', dur: 0.16, gain: 0.2, freq: [[0, 300], [0.16, 190]], filter: { type: 'bandpass', freq: 750, Q: 5 } })
+    for (const d of [0, 0.24]) s.tone({ at: t + d, type: 'triangle', dur: 0.17, gain: 0.13, freq: [[0, 300], [0.17, 190]], filter: { type: 'lowpass', freq: 800 } })
   },
   fox: (s, t) => {
-    for (const d of [0, 0.16]) s.tone({ at: t + d, type: 'triangle', dur: 0.12, gain: 0.26, freq: [[0, 760], [0.04, 1400], [0.12, 900]] })
+    for (const d of [0, 0.18]) s.tone({ at: t + d, type: 'triangle', dur: 0.13, gain: 0.1, freq: [[0, 700], [0.05, 1100], [0.13, 820]] })
   },
   chick: (s, t) => {
-    for (const d of [0, 0.13, 0.26]) s.tone({ at: t + d, type: 'sine', dur: 0.09, gain: 0.18, freq: [[0, 2300], [0.04, 3100], [0.09, 2500]] })
+    for (const d of [0, 0.15, 0.3]) s.tone({ at: t + d, type: 'sine', dur: 0.1, gain: 0.07, freq: [[0, 1500], [0.05, 1900], [0.1, 1600]] })
   },
 }
 
@@ -169,8 +166,8 @@ export class Sound {
   /** Soft spongy thump as a layer lands; lower for taller cakes. */
   plop(height = 0) {
     const t = this.now
-    this.tone({ at: t, type: 'sine', dur: 0.22, gain: 0.4, freq: [[0, 210 - height * 4], [0.22, 70]] })
-    this.noise({ at: t, dur: 0.1, gain: 0.14, filter: { type: 'lowpass', freq: 700 } })
+    this.tone({ at: t, type: 'sine', dur: 0.22, gain: 0.2, freq: [[0, 210 - height * 4], [0.22, 70]] })
+    this.noise({ at: t, dur: 0.1, gain: 0.08, filter: { type: 'lowpass', freq: 700 } })
   }
 
   /**
@@ -191,7 +188,7 @@ export class Sound {
   /** Squishy icing splat. */
   splat() {
     const t = this.now
-    this.noise({ at: t, dur: 0.18, gain: 0.16, filter: { type: 'lowpass', freq: [[0, 1400], [0.18, 300]] } })
+    this.noise({ at: t, dur: 0.18, gain: 0.1, filter: { type: 'lowpass', freq: [[0, 1400], [0.18, 300]] } })
     this.tone({ at: t, type: 'sine', dur: 0.25, gain: 0.14, freq: [[0, 420], [0.25, 120]] })
   }
 
@@ -217,18 +214,17 @@ export class Sound {
 
   match() {
     const t = this.now
-    this.noise({ at: t, dur: 0.25, gain: 0.16, filter: { type: 'highpass', freq: 2500 } })
-    this.tone({ at: t + 0.05, type: 'sine', dur: 0.3, gain: 0.06, freq: 1800, vibrato: { rate: 20, depth: 100 } })
+    this.noise({ at: t, dur: 0.2, gain: 0.07, filter: { type: 'bandpass', freq: 2200, Q: 0.8 } })
   }
 
   blow() {
     const t = this.now
-    this.noise({ at: t, dur: 0.9, gain: 0.3, attack: 0.15, filter: { type: 'bandpass', freq: [[0, 600], [0.4, 1400], [0.9, 500]], Q: 0.8 } })
+    this.noise({ at: t, dur: 0.9, gain: 0.14, attack: 0.15, filter: { type: 'bandpass', freq: [[0, 600], [0.4, 1400], [0.9, 500]], Q: 0.8 } })
   }
 
   puffOut(i = 0) {
     const t = this.now
-    this.noise({ at: t, dur: 0.12, gain: 0.1, filter: { type: 'highpass', freq: 3000 } })
+    this.noise({ at: t, dur: 0.12, gain: 0.05, filter: { type: 'bandpass', freq: 2000, Q: 0.8 } })
     this.tone({ at: t, type: 'sine', dur: 0.1, gain: 0.08, freq: penta(i + 3) })
   }
 
@@ -244,7 +240,7 @@ export class Sound {
     const beat = 0.32
     let at = 0
     for (const [n, b] of BIRTHDAY) {
-      this.tone({ at: t + at, type: 'triangle', dur: b * beat + 0.25, gain: 0.2, freq: NOTE(n) })
+      this.tone({ at: t + at, type: 'triangle', dur: b * beat + 0.25, gain: 0.13, freq: NOTE(n) })
       this.tone({ at: t + at, type: 'sine', dur: b * beat + 0.3, gain: 0.07, freq: NOTE(n + 12) })
       at += b * beat
     }

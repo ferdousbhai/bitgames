@@ -2,8 +2,21 @@
 
 export const R = 11 // radius of the water
 export const DUCK_R = 1.1 // a bumper boat's radius
-export const ROUND_TIME = 90 // seconds
-export const PARTY_TIME = 15 // the last seconds are a bubble party
+/**
+ * Bumper play (the lively mode) has no clock: it ends when the whole team has gathered exactly its goal.
+ * The goal grows with the child (see makePlayGoal): five tens, then seven tens, then a number with ones
+ * (47: four rafts, then seven single bubbles, since a fifth raft would be too many).
+ */
+export const PLAY_GOAL = 50
+export const PLAY_TIERS = 3
+export const validPlayGoal = (n) => Number.isInteger(n) && n >= 20 && n <= 90
+export function makePlayGoal(tier, rand = Math.random) {
+  const t = clamp(Math.floor(Number(tier)) || 0, 0, PLAY_TIERS - 1)
+  if (t === 0) return 50
+  if (t === 1) return 70
+  // Tens and ones: 32 to 68, never a whole ten, so the last few must be single bubbles.
+  return (3 + pick(4, rand)) * 10 + 2 + pick(7, rand)
+}
 export const MAX_PLAYERS = 4
 
 /** The six ducks: colour of the rubber, colour of the boat, and what they wear. */
@@ -39,7 +52,7 @@ export const ARENAS = {
     obstacles: [
       { kind: 'lily', x: -5.2, z: -3.6, r: 1.3, fixed: true, frog: true },
       { kind: 'lily', x: 5.6, z: -2.4, r: 1.3, fixed: true, frog: true },
-      { kind: 'lily', x: 0.6, z: 5.4, r: 1.3, fixed: true },
+      { kind: 'lily', x: 0.6, z: 5.4, r: 1.3, fixed: true, frog: true },
     ],
   },
   puddle: {
@@ -116,12 +129,22 @@ export function makeGoal(level, rand = Math.random) {
 /** A round's goals, in order. Place-value steps after the first `carry` the jar over and add to it. */
 export function makeTrip(level, rand = Math.random) {
   const l = clamp(Math.floor(Number(level)) || 0, 0, LEVELS - 1)
-  if (l === 0) return [{ level: 0, kind: 'tens', n: 1 }]
+  // One ten as two rows of five, each wanting its own colour (5 blue and 5 pink make ten): every bubble is
+  // a small choice (does this colour have a space?), and the frame's rows of five are there to see.
+  if (l === 0) {
+    const a = pick(BUBBLE_COLOURS.length, rand)
+    return [{ level: 0, kind: 'tens', n: 1, rows: [a, otherColour([a], rand)] }]
+  }
+  // Sorting, then comparing: n of one colour, n of another, then one more of a third than the second
+  // ("Now one more green than blue!"): the number isn't said, so the child works it out from the jar.
   if (l === 1) {
     const a = pick(BUBBLE_COLOURS.length, rand)
+    const b = otherColour([a], rand)
+    const n = 3 + pick(4, rand)
     return [
       { level: 1, kind: 'colour', c: a, n: 3 + pick(4, rand) },
-      { level: 1, kind: 'colour', c: otherColour([a], rand), n: 3 + pick(4, rand) },
+      { level: 1, kind: 'colour', c: b, n },
+      { level: 1, kind: 'colour', c: otherColour([a, b], rand), n: n + 1, more: 1 },
     ]
   }
   if (l === 2) {
@@ -138,19 +161,31 @@ export function makeTrip(level, rand = Math.random) {
   // (one raft), 20 more (two rafts), or a ten and a few ones (11, 12 more: a raft, then singles).
   const tens = l === 3 ? 1 : l === 4 ? 2 : 3 + pick(2, rand)
   const ones = l === 3 ? 2 + pick(5, rand) : 4 + pick(4, rand) // 2–6, or 4–7 before crossing a ten
-  const kinds = [[1, 0], [2, 0], [1, 1], [1, 2]].filter(([dt, d1]) => tens + dt + (l > 3 ? 2 : 0) <= 8 && ones + d1 <= 8)
+  // (Level 3 keeps the ones at 6 or fewer here, so its last step can ask for at least 3 more.)
+  const kinds = [[1, 0], [2, 0], [1, 1], [1, 2]].filter(([dt, d1]) => tens + dt + (l > 3 ? 2 : 0) <= 8 && ones + d1 <= (l === 3 ? 6 : 8))
   const [dt, d1] = kinds[pick(kinds.length, rand)]
   const mid = { level: l, kind: 'place', tens: tens + dt, ones: ones + d1, carry: true }
   if (l === 3) {
-    const more = 1 + pick(Math.min(3, 9 - mid.ones), rand)
-    return [{ level: l, kind: 'place', tens, ones }, mid, { level: l, kind: 'place', tens: mid.tens, ones: mid.ones + more, carry: true }]
+    // Four steps, about a minute: then a few more ones (3 to 5, still inside the ones frame), then two rafts
+    // and a single or two together ("Now 21 more. Make 49!"): how many rafts, how many singles?
+    const more = 3 + pick(Math.min(3, 10 - mid.ones - 3), rand)
+    const third = { level: l, kind: 'place', tens: mid.tens, ones: mid.ones + more, carry: true }
+    const fourth = { level: l, kind: 'place', tens: third.tens + 2, ones: third.ones + 1 + pick(Math.min(2, 9 - third.ones), rand), carry: true }
+    if (fourth.ones > 9) fourth.ones = third.ones // (a full ones frame: just the two rafts, "Now 20 more")
+    return [{ level: l, kind: 'place', tens, ones }, mid, third, fourth]
   }
-  // Crossing a ten: enough more ones to fill the frame and one or two over. Then a second crossing to
-  // the next ten (or just past it): 42 and 8 more make 50. Single bubbles float scarce on these steps, so
-  // breaking a raft into ten ones is the way to finish (see Sim.calmSpawn).
-  const over = 1 + pick(2, rand)
+  // Crossing a ten: enough more ones to fill the frame and one to four over. Then the last step is one of
+  // two crossings, so trips don't all end alike: on to the next ten or just past it (42 and 8 more make
+  // 50), or a ten and some ones that cross again (43 and 17 more make 60: a raft, then ones over the ten).
+  // Single bubbles float scarce on crossing steps, so breaking a raft into ten ones is the way to finish
+  // (see Sim.calmSpawn).
+  const over = 1 + pick(4, rand)
   const cross = { level: l, kind: 'place', tens: mid.tens + 1, ones: over, carry: true, regroup: true }
-  return [{ level: l, kind: 'place', tens, ones }, mid, cross, { level: l, kind: 'place', tens: cross.tens + 1, ones: pick(3, rand), carry: true, regroup: true }]
+  const jump = cross.tens + 2 <= 9 && rand() < 0.5
+  const last = jump
+    ? { level: l, kind: 'place', tens: cross.tens + 2, ones: pick(4, rand), carry: true, regroup: true }
+    : { level: l, kind: 'place', tens: cross.tens + 1, ones: pick(4, rand), carry: true, regroup: true }
+  return [{ level: l, kind: 'place', tens, ones }, mid, cross, last]
 }
 /**
  * Where a place-value goal's spaces are: `tens` raft spaces first, then (when the step crosses a ten) a
@@ -163,7 +198,7 @@ export function placeLayout(g) {
 }
 /** What each space in the jar wants, in order: a colour index, 'any' single bubble, or 'ten' (a raft). */
 export function goalSlots(g) {
-  if (g.kind === 'tens') return Array(g.n * 10).fill('any')
+  if (g.kind === 'tens') return g.rows ? [...Array(5).fill(g.rows[0]), ...Array(5).fill(g.rows[1])] : Array(g.n * 10).fill('any')
   if (g.kind === 'colour') return Array(g.n).fill(g.c)
   if (g.kind === 'bond') return g.free ? Array(g.n).fill('any') : g.parts.flatMap(([c, n]) => Array(n).fill(c))
   const at = placeLayout(g)
@@ -225,8 +260,10 @@ export function validGoal(g) {
   const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi
   const colour = (c) => int(c, 0, BUBBLE_COLOURS.length - 1)
   const level = int(g.level, 0, LEVELS - 1) ? g.level : 0
+  if (g.kind === 'tens' && Array.isArray(g.rows) && g.n === 1 && colour(g.rows[0]) && colour(g.rows[1]) && g.rows[0] !== g.rows[1])
+    return { level, kind: 'tens', n: 1, rows: [g.rows[0], g.rows[1]] }
   if (g.kind === 'tens' && int(g.n, 1, 3)) return { level, kind: 'tens', n: g.n }
-  if (g.kind === 'colour' && colour(g.c) && int(g.n, 1, 10)) return { level, kind: 'colour', c: g.c, n: g.n }
+  if (g.kind === 'colour' && colour(g.c) && int(g.n, 1, 10)) return { level, kind: 'colour', c: g.c, n: g.n, ...(g.more === 1 ? { more: 1 } : {}) }
   if (g.kind === 'bond' && g.free && int(g.n, 3, 10)) return { level, kind: 'bond', n: g.n, free: true }
   if (g.kind === 'bond' && Array.isArray(g.parts) && g.parts.length === 2) {
     const [[a, x] = [], [b, y] = []] = g.parts.map((p) => (Array.isArray(p) ? p : []))
@@ -245,14 +282,44 @@ export function validTrip(list) {
   delete trip[0].carry
   for (let i = 1; i < trip.length; i++) {
     const [a, b] = [trip[i - 1], trip[i]]
+    // "One more than": a colour step that says one more than the colour before it.
+    if (b.more && !(a.kind === 'colour' && b.kind === 'colour' && b.n === a.n + 1 && b.c !== a.c)) return null
     // A carried step only adds: the same tens or more, and (unless it crosses a ten) the same ones or more.
     // (A step after a crossing starts from the regrouped jar: its full bundle is one more raft.)
-    const adds = a.kind === 'place' && b.kind === 'place' && (b.regroup ? b.tens === a.tens + 1 : b.tens >= a.tens && b.ones >= a.ones)
+    // (A crossing adds one ten's worth of ones, or a raft and then ones over the next ten: one or two more tens.)
+    const adds = a.kind === 'place' && b.kind === 'place' && (b.regroup ? b.tens === a.tens + 1 || (b.tens === a.tens + 2 && a.regroup) : b.tens >= a.tens && b.ones >= a.ones)
     if (b.carry && !adds) return null
     if (b.regroup && !b.carry) return null
   }
   return trip
 }
+/**
+ * Frog order (the pond): each frog on a lily pad holds a number, and the stuck bubble rides on the pad
+ * of the biggest. Bumping the frogs from the smallest number to the biggest frees it; a frog bumped out
+ * of turn starts the line again. The numbers grow with the trip's level: 1–3, then up to 6, up to 10, and
+ * for place value two-digit numbers made of the same digits (23, 32, 27), so the tens decide first.
+ */
+export function frogNumbers(level, rand = Math.random) {
+  const l = clamp(Math.floor(Number(level)) || 0, 0, LEVELS - 1)
+  const distinct = (max) => {
+    const out = []
+    while (out.length < 3) {
+      const n = 1 + pick(max, rand)
+      if (!out.includes(n)) out.push(n)
+    }
+    return out
+  }
+  if (l === 0) return [1, 2, 3].sort(() => rand() - 0.5)
+  if (l === 1) return distinct(6)
+  if (l === 2) return distinct(10)
+  const a = 1 + pick(8, rand)
+  let b = 1 + pick(8, rand)
+  if (b === a) b = (a % 9) + 1
+  let c = 1 + pick(9, rand)
+  while (c === b || c === a) c = (c % 9) + 1
+  return [a * 10 + b, b * 10 + a, a * 10 + c].sort(() => rand() - 0.5)
+}
+
 /** Ducks have names, so the team results can say who helped. */
 export const duckName = (id) => (validDuck(id) ? id[0].toUpperCase() + id.slice(1) : 'Ducky')
 

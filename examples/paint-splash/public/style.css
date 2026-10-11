@@ -75,6 +75,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   background: #fff; color: #5a2d91; font: 900 19px/1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
   box-shadow: 0 5px 0 rgba(60,20,120,.35); transition: transform .1s;
 }
+#menu .extra-btn { position: relative; }
+/* Mixing goals are waiting in the studio (still, no pulse). */
+#menu .extra-btn.goal::after { content: '🎯'; position: absolute; top: -10px; right: -8px; font-size: 20px; line-height: 1; }
 #menu .extra-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(60,20,120,.35); }
 #menu .extra-btn .ico { font-size: 22px; letter-spacing: -6px; padding-right: 6px; }
 #gallery-open .ico { letter-spacing: 0; padding-right: 0; }
@@ -101,11 +104,17 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .round-btn.off { opacity: .45; }
 .hud-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .pill { background: rgba(90,45,145,0.6); border-radius: 999px; padding: 4px 18px; font-size: 26px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); }
+/* The quick round's sand timer: a sand-coloured bar that runs down smoothly, with no numbers. */
+.timer { display: flex; align-items: center; gap: 10px; }
+.timer .sand { display: block; width: min(28vw, 180px); height: 14px; border-radius: 999px; background: rgba(255,255,255,.35); overflow: hidden; }
+.timer .sand b { display: block; height: 100%; background: #f3d79a; transform-origin: left center; transition: transform .25s linear; }
 .together-bar { display: flex; align-items: center; gap: 6px; font-size: 24px; filter: drop-shadow(0 2px 0 rgba(90,45,145,.3)); }
 /* One shared fill for everybody's paint: full when the playground is nearly all painted. */
 .cover-bar { display: flex; width: min(28vw, 300px); height: 22px; border-radius: 999px; background: rgba(255,255,255,.85); border: 3px solid #fff; overflow: hidden; box-shadow: 0 3px 0 rgba(90,45,145,.3); }
 .cover-bar i { display: block; width: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #eb5063, #f099a3 28%, #f8d64e 50%, #5fac70 72%, #4e8ad5); transition: width .6s; }
 .dab { display: inline-block; width: 26px; height: 26px; border-radius: 50% 50% 50% 38%; border: 3px solid #fff; box-shadow: 0 2px 0 rgba(90,45,145,.25); vertical-align: middle; }
+/* White paint (and the white pot's dab) keeps a soft grey ring, so it shows on white cards. */
+.dab.white { box-shadow: inset 0 0 0 2px #d9d0c2, 0 2px 0 rgba(90,45,145,.25); }
 .found-row { display: flex; gap: 6px; min-height: 26px; }
 .found-row .dab { width: 24px; height: 24px; animation: fade-up .8s ease-out both; }
 @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } }
@@ -133,6 +142,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .job-card.offer { gap: 12px; padding: 6px 12px; }
 .job-card .opt { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; border: 3px dashed #b9a3dc; background: #faf6ff; font-size: 36px; line-height: 1; cursor: pointer; }
 .job-card .opt:active { background: #efe6ff; border-color: #8e6cc4; }
+/* A stuck child may swap the request: a quiet dashed button at the end of the card (no motion). */
+.job-card .swap { display: grid; place-items: center; width: 48px; height: 48px; margin-left: 4px; border-radius: 50%; border: 3px dashed #b9a3dc; background: #faf6ff; font-size: 26px; line-height: 1; cursor: pointer; }
+.job-card .swap:active { background: #efe6ff; border-color: #8e6cc4; }
 .recipe.shape-chip.more { font-size: 20px; font-weight: 900; color: #5a2d91; }
 /* Where the request is when it's off screen: a still arrow at the edge with the shape beside it. */
 .job-arrow { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity .5s; }
@@ -155,6 +167,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .pot:active { transform: translateY(2px); }
 /* The rescue for a stuck child: a soft, still dashed ring round the pot to use next (no pulse). */
 .pot { position: relative; }
+/* The white pot (top step): a soft grey rim so white shows against the tray. */
+.pot.white { border-color: #ddd5c8; }
+.pot[hidden] { display: none; }
 .pot.suggest::after { content: ''; position: absolute; inset: -11px; border-radius: 50%; border: 4px dashed #5a2d91; opacity: .7; pointer-events: none; }
 /* 🖼️ Finished!, top right, with a small ✅ / 🖌️ question so a stray tap never ends the picture. */
 .finish-btn {
@@ -295,7 +310,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .found.many .recipe.shape-chip .shape { font-size: 18px; }
   .job-card { font-size: 15px; padding: 3px 10px 3px 6px; gap: 6px; } .job-card .shape { font-size: 24px; }
   .job-card .part > .dab { width: 26px; height: 26px; } .job-card .how .dab { width: 16px; height: 16px; }
-  .job-card .opt { width: 46px; height: 46px; font-size: 26px; }
+  .job-card .opt { width: 46px; height: 46px; font-size: 26px; } .job-card .swap { width: 40px; height: 40px; font-size: 21px; }
   .mode-btn { width: 52px; height: 52px; border-radius: 16px; border-width: 3px; } .mode-btn .ico { font-size: 22px; } .mode-btn .lbl { font-size: 11px; }
   /* Four slimmer corner buttons, so the camera never touches the timer on small sideways phones. */
   .hud-left { gap: 6px; }

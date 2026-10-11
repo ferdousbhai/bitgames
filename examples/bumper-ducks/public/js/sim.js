@@ -1,4 +1,4 @@
-import { R, DUCK_R, ROUND_TIME, PARTY_TIME, ARENAS, POWERS, POWER_IDS, ITEMS, BUBBLE_COLOURS, TEN, goalSlots, slotTakes, fitsNow, freeBondFits, splitOf, wayKey, angleDiff } from './config.js'
+import { R, DUCK_R, PLAY_GOAL, validPlayGoal, ARENAS, POWERS, POWER_IDS, ITEMS, BUBBLE_COLOURS, TEN, goalSlots, slotTakes, fitsNow, freeBondFits, splitOf, wayKey, angleDiff, frogNumbers } from './config.js'
 
 /**
  * The bumper-boat world, with no drawing in it: ducks are circles on the
@@ -19,22 +19,44 @@ const SPLASH_SPEED = 9.5 // hitting the rim this fast sends you flying (paddling
 export const FLY_TIME = 1.35
 const HIT_MEMORY = 2.5 // seconds a bonk counts toward a splash bonus
 
-export const newStats = () => ({ bubbles: 0, stars: 0, gifts: 0, bonks: 0, splashes: 0, dashes: 0, flights: 0, nopes: 0, chosen: 0, splits: 0 })
+export const newStats = () => ({ bubbles: 0, gifts: 0, bonks: 0, splashes: 0, dashes: 0, flights: 0, nopes: 0, chosen: 0, splits: 0, frogs: 0, bumps: 0, rafts: 0, lastOnes: 0, wise: 0 })
 
 /** What a pickup puts in the jar: its colour, TEN for a raft, or null for stars and gifts. */
 export const tokenOf = (it) => (it.k === 'ten' ? TEN : it.k === 'bubble' ? (Number.isInteger(it.c) ? it.c : -1) : null)
 const NOPE_PUSH = 2.2 // how far a bubble the jar can't take bobs away from the duck
 export const STAGE_PAUSE = 3 // seconds between a trip's goals: the full jar is admired, then the next goal
 const STUCK_FREE = 40 // a stuck bubble nobody bumped floats free on its own after this long
+const FROG_FREE = 60 // frog order takes longer: the frogs let the bubble go on their own after this long
 /**
  * A child chose a bubble when their duck was steering at it (the closest to the stick's line) for at
  * least this long before touching it. Only chosen bubbles count for the next level: a bubble that didn't
- * fit is a miss only if it was chosen, and a random paddle that happens to sweep one up is not a careful catch.
+ * fit is a miss only if it was chosen (or dashed into), and a random paddle that happens to sweep one up
+ * is not a careful catch. Place value (the 6–8 tiers) asks for a longer, surer aim, so a random drag that
+ * lingers on whatever lies ahead doesn't read as choosing.
  */
-const AIM_HOLD = 0.5
+const AIM_HOLD = 0.3
+const AIM_HOLD_PLACE = 0.45
+/**
+ * A quick, sure catch is a choice too: a duck steered straight at a bubble (within about 11 degrees of it)
+ * for this long, and still on it when it touched, chose it even when it was close (a careful child at the
+ * place-value levels often turns to the next raft right beside the last one). A random drag rarely points
+ * that exactly at anything.
+ */
+const AIM_TIGHT = 0.2
+const AIM_TIGHT_HOLD = 0.2
+/** Bumper play's last stretch: a raft this close was a real option, so taking a single bubble instead was a choice. */
+const RAFT_REACH = 7.5
+/**
+ * A new goal changes what fits: for a moment after it starts, a bubble that no longer fits is not a miss
+ * (the child was already steering at it for the old goal, and a child turns no faster than that).
+ */
+const STAGE_GRACE = 1.5
+const STAGE_GRACE_AIMED = 4
 
 export class Sim {
-  constructor({ arena, entries, mode = 'lively', trip = null }) {
+  constructor({ arena, entries, mode = 'lively', trip = null, playGoal = PLAY_GOAL }) {
+    // Bumper play's team goal: exactly this many bubbles (50, 70, or a number like 47 for the older tier).
+    this.playGoal = validPlayGoal(playGoal) ? playGoal : PLAY_GOAL
     // Pond helpers ('calm'): no clock; the round is a trip of goals and ends when the jar holds the last one.
     this.calm = mode === 'calm' && Array.isArray(trip) && trip.length > 0
     this.trip = this.calm ? trip : []
@@ -45,6 +67,7 @@ export class Sim {
     this.jar = [] // the token of each bubble (or raft) the team has put in the jar, in order
     this.between = null // sim time the jar filled, while the team admires it before the next goal
     this.stage = -1
+    this.frogs = null // frog order: { n: number per obstacle (null for none), order: obstacle indices, next }
     if (this.calm) this.setStage(0)
     this.arenaId = arena
     this.arena = ARENAS[arena]
@@ -68,7 +91,7 @@ export class Sim {
     this.obstacles = this.arena.obstacles.map((o, i) => ({ ...o, i, vx: 0, vz: 0, mass: o.mass ?? 1, hitT: -9 }))
     this.events = []
     this.pairT = new Map()
-    this.timers = { bubble: 0, star: 7, gift: 4.5, drop: 2.5 }
+    this.timers = { bubble: 0, star: 7, gift: 4.5, drop: 2.5, raft: 4 }
     this.started = false
   }
 
@@ -76,8 +99,23 @@ export class Sim {
     this.events.push(e)
   }
 
-  get party() {
-    return !this.calm && this.time >= ROUND_TIME - PARTY_TIME
+  /** Bumper play's team total: every duck's bubbles together (it ends at the team's goal, playGoal). */
+  get gathered() {
+    let n = 0
+    for (const d of this.ducks) n += d.score
+    return n
+  }
+
+  /**
+   * Bumper play: how many more bubbles make the team's goal exactly. A raft is ten at once, so
+   * it fits only while ten or more are still wanted (at 40 it makes 50; at 43 it would be too many).
+   */
+  get left() {
+    return this.playGoal - this.gathered
+  }
+  /** Bumper play: does this raft or single bubble still fit in the team's tens? */
+  playFits(it) {
+    return (it.k === 'ten' ? 10 : 1) <= this.left
   }
 
   /** Is this a bubble (or raft) the jar sorts, rather than a gift? */
@@ -91,6 +129,7 @@ export class Sim {
    */
   setStage(s, authority = false) {
     this.stage = s
+    this.stageAt = this.time ?? 0
     this.goal = this.trip[s]
     this.slots = goalSlots(this.goal)
     this.target = this.slots.length
@@ -181,7 +220,7 @@ export class Sim {
       let best = null
       let bestA = Infinity
       for (const it of this.items.values()) {
-        if (!this.sorts(it) || it.stuck != null) continue
+        if (!(it.k === 'bubble' || it.k === 'ten') || it.stuck != null) continue
         const dx = it.x - d.x
         const dz = it.z - d.z
         const along = dx * ux + dz * uz
@@ -194,13 +233,36 @@ export class Sim {
           best = it
         }
       }
-      if (best?.id !== d.aim?.id) d.aim = best ? { id: best.id, t: this.time } : null
+      if (best?.id !== d.aim?.id) d.aim = best ? { id: best.id, t: this.time, tight: null } : null
+      // When it first points straight at it (see AIM_TIGHT).
+      if (d.aim && d.aim.tight == null && bestA < AIM_TIGHT) d.aim.tight = this.time
     }
   }
 
   /** Was this duck steering at this bubble long enough to have chosen it? (Catching a raft's bubbles after breaking it counts too.) */
   chose(d, it, catching = false) {
-    return !d.bot && ((d.aim?.id === it.id && this.time - d.aim.t >= AIM_HOLD) || (catching && it.split === d.id))
+    // (A raft this duck broke by a random dash scatters its ten ones around it: picking those up is no choice.)
+    if (d.bot || (it.split === d.id && !it.meant)) return false
+    // Place value and bumper play (the older children's tiers) ask for a surer aim than the colours do.
+    const hold = !this.calm || this.goal?.kind === 'place' ? AIM_HOLD_PLACE : AIM_HOLD
+    const aim = d.aim?.id === it.id ? d.aim : null
+    const held = !!aim && (this.time - aim.t >= hold || (aim.tight != null && this.time - aim.tight >= AIM_TIGHT_HOLD))
+    return held || (catching && it.split === d.id && !!it.meant)
+  }
+
+  /** Just after a new goal starts: a bubble chosen for the old goal that no longer fits is not a miss. */
+  inGrace(d) {
+    const since = this.time - (this.stageAt ?? 0)
+    return this.stage > 0 && (since < STAGE_GRACE || (!!d.aim && d.aim.t < this.stageAt && since < STAGE_GRACE_AIMED))
+  }
+
+  /**
+   * Did this duck choose a bubble that doesn't fit? Steering at it for a moment, or dashing into it, with
+   * no bubble that fits further along the same line (then it was only brushed on the way to that one).
+   */
+  missed(d, it) {
+    if (d.bot || this.inGrace(d)) return false
+    return (this.chose(d, it) || d.dashT > 0) && !this.fitBeyond(d, it)
   }
 
   radius(d) {
@@ -249,14 +311,15 @@ export class Sim {
       it.z = +o.z.toFixed(2)
     }
     if (!authority) return
-    if (this.calm) this.aimAll()
+    // (Bumper play reads the children's aim too: its step up counts the raft-or-single choices they made.)
+    this.aimAll()
     if (this.calm && this.dryOnes()) this.dryT += dt
     this.pickups()
     this.spawning(dt)
     if (this.arena.rain) this.rain(dt)
     if (this.over) return
     if (!this.calm) {
-      if (this.time >= ROUND_TIME) this.end()
+      if (this.gathered >= this.playGoal) this.end()
     } else if (this.jar.length >= this.target) {
       if (this.stage >= this.trip.length - 1) this.end()
       else if (this.between == null) {
@@ -488,7 +551,9 @@ export class Sim {
           d.sv += (Math.random() < 0.5 ? -1 : 1) * Math.min(10, rel)
           if (authority) {
             this.emit({ k: 'thud', o: o.i, id: d.id, s: +rel.toFixed(1) })
-            for (const it of this.items.values()) if (it.stuck === o.i) this.free(it, d)
+            // A frog counts only a real bump (straight in, or a dash), never a brush on the way past its pad.
+            if (this.frogs) (rel > 4 || d.dashT > 0) && this.frogBump(o, d)
+            else for (const it of this.items.values()) if (it.stuck === o.i) this.free(it, d)
           }
         }
       }
@@ -514,11 +579,8 @@ export class Sim {
       d.vx = 0
       d.vz = 0
       const by = d.lastHit && this.time - d.lastHitT < HIT_MEMORY ? this.byId.get(d.lastHit) : null
-      // In Pond helpers a splash-out is just fun: nobody scores from it and the team loses nothing.
-      if (by && by !== d && !this.calm) {
-        by.stats.splashes++
-        by.score += 2
-      }
+      // A splash-out is just fun: nobody scores from it and nobody loses anything.
+      if (by && by !== d) by.stats.splashes++
       d.lastHit = null
       this.emit({ k: 'fly', id: d.id, by: by?.id ?? null, f: [d.fly.fx, d.fly.fz, d.fly.tx, d.fly.tz, nx, nz].map((v) => +v.toFixed(2)) })
       return
@@ -539,8 +601,18 @@ export class Sim {
         if (d.fly) continue
         const fits = this.counts(it)
         if (this.sorts(it) && (d.leave || (!fits && d.bot))) continue
+        // Bumper play's rafts are the children's to choose: the robots float past them (and past single
+        // bubbles too, while a robot is leaving the gathering to the children).
+        if (!this.calm && d.bot && (it.k === 'ten' || (it.k === 'bubble' && d.leave))) continue
         const reach = this.radius(d) + ITEMS[it.k].radius
         if ((d.x - it.x) ** 2 + (d.z - it.z) ** 2 > reach * reach) continue
+        if (!this.calm && (it.k === 'ten' || it.k === 'bubble') && !this.playFits(it)) {
+          // Bumper play's last ten: a raft would be too many. A child's dash breaks it into ten ones;
+          // otherwise it bobs away. (A single bubble past 50, touched in the same moment, just slides aside.)
+          if (it.k === 'ten' && this.splits(it, d)) this.split(it, d)
+          else this.nope(it, d, it.k === 'ten' && !d.bot)
+          break
+        }
         if (this.sorts(it) && !fits) {
           // Ones wanted and a child dashes into a raft: it breaks into ten single bubbles (a ten is ten ones).
           if (this.splits(it, d)) {
@@ -548,8 +620,9 @@ export class Sim {
             break
           }
           // The jar has no space for this one: it bobs gently away and stays on the water. Only a duck
-          // steering at it chose it; one brushing past on the way to another just nudges it aside.
-          this.nope(it, d, this.chose(d, it))
+          // steering at it chose it; one brushing past on the way to another (one that fits, further along
+          // the same line) just nudges it aside.
+          this.nope(it, d, this.missed(d, it))
           break
         }
         this.items.delete(it.id)
@@ -568,11 +641,24 @@ export class Sim {
             e.aim = 1
           }
         } else if (it.k === 'bubble') {
+          // Bumper play's last stretch (fewer than ten wanted): a single bubble the child steered at while a
+          // raft floated within reach, or one of a raft they meant to break, is the right choice made.
+          if (!d.bot && this.left < 10) {
+            d.stats.lastOnes++
+            const raftNear = [...this.items.values()].some((r) => r.k === 'ten' && r.stuck == null && Math.hypot(r.x - d.x, r.z - d.z) < RAFT_REACH)
+            if ((this.chose(d, it) && raftNear) || (it.split === d.id && it.meant)) {
+              d.stats.wise++
+              e.wise = 1
+            }
+          }
           d.score += 1
           d.stats.bubbles++
-        } else if (it.k === 'star') {
-          d.score += 3
-          d.stats.stars++
+        } else if (it.k === 'ten') {
+          // Bumper play: a raft is ten bubbles at once (a choice when the child steered at it).
+          e.from = this.gathered
+          if (this.chose(d, it)) d.stats.rafts++
+          d.score += 10
+          d.stats.bubbles += 10
         } else {
           const options = POWER_IDS.filter((p) => p !== d.power)
           d.power = options[Math.floor(Math.random() * options.length)]
@@ -638,6 +724,12 @@ export class Sim {
     it.z = +z.toFixed(2)
     // A child's careful choosing is what counts: each bubble that didn't fit counts once per duck.
     it.noped ??= new Set()
+    // Every bump into one that doesn't fit, chosen or not (once per bubble): how much a duck wanders into them.
+    it.bumped ??= new Set()
+    if (!d.bot && !it.bumped.has(d.id)) {
+      it.bumped.add(d.id)
+      d.stats.bumps++
+    }
     if (chose && !it.noped.has(d.id)) {
       it.noped.add(d.id)
       d.stats.nopes++
@@ -645,13 +737,37 @@ export class Sim {
     this.emit({ k: 'nope', item: it.id, kind: it.k, id: d.id, x: it.x, z: it.z, c: tokenOf(it), ...(chose ? {} : { q: 1 }) })
   }
 
+  /**
+   * Is a bubble that fits further along this duck's line, past the one it touched? Then the duck was on its
+   * way to that one and brushed the near one: not a careless choice.
+   */
+  fitBeyond(d, near) {
+    const len = Math.hypot(d.ix, d.iz)
+    if (len < 0.3) return false
+    const ux = d.ix / len
+    const uz = d.iz / len
+    const reach = (near.x - d.x) * ux + (near.z - d.z) * uz
+    for (const it of this.items.values()) {
+      if (it === near || it.stuck != null || !this.counts(it)) continue
+      const dx = it.x - d.x
+      const dz = it.z - d.z
+      const along = dx * ux + dz * uz
+      if (along > reach && Math.abs(dx * uz - dz * ux) < Math.max(1.2, along * 0.35)) return true
+    }
+    return false
+  }
+
   /** Can a dash break this raft? Only a child's, only once the tens are in and single bubbles are wanted. */
   splits(it, d) {
+    if (!this.calm) return it.k === 'ten' && !d.bot && d.dashT > 0 && this.left < 10
     return it.k === 'ten' && !d.bot && d.dashT > 0 && this.goal.kind === 'place' && !this.open.includes('ten') && this.open.includes('any')
   }
 
   /** A raft breaks into its ten bubbles, in a ring where it was. */
   split(it, d) {
+    // Steering at the raft and dashing into it was a choice; a dash in a random direction that happens to
+    // hit one is not, so its ten bubbles are not careful catches either.
+    const meant = this.chose(d, it)
     this.items.delete(it.id)
     d.stats.splits++
     this.emit({ k: 'split', item: it.id, id: d.id, x: it.x, z: it.z })
@@ -664,8 +780,10 @@ export class Sim {
         x = (x / dist) * (R - 1.2)
         z = (z / dist) * (R - 1.2)
       }
-      // Breaking the raft was the choice: its bubbles count as chosen for the duck that broke it.
-      this.addItem('bubble', { x, z }).split = d.id
+      // Breaking the raft was the choice: its bubbles count as chosen for the duck that meant to break it.
+      const b = this.addItem('bubble', { x, z })
+      b.split = d.id
+      b.meant = meant
     }
   }
 
@@ -684,11 +802,10 @@ export class Sim {
     }
     const t = this.timers
     for (const k of Object.keys(t)) t[k] -= dt
-    const party = this.party
     if (t.bubble <= 0) {
-      // The last seconds bring a gentle bubble shower (calm pass: was every 0.18 s, up to 22).
       // Pond helpers: an unhurried trickle, so each bubble in the jar can be seen and counted.
-      t.bubble = this.calm ? 3 : party ? 0.35 : 0.55
+      // Bumper play: a steady trickle, so gathering five tens takes about a minute and each ten can be heard.
+      t.bubble = this.calm ? 3 : 1.1
       if (this.calm && this.between != null) t.bubble = 1 // the team is admiring the full jar: the pond waits too
       else if (this.calm) {
         this.calmSpawn(true)
@@ -701,17 +818,29 @@ export class Sim {
         }
         if (wanted < 2 || floating < this.pondSize() - 1) t.bubble = 0.8
       }
-      else if (this.count('bubble') < (party ? 16 : 11)) this.addItem('bubble')
+      else if (this.count('bubble') < 9) this.addItem('bubble')
     }
-    if (t.star <= 0 && !this.calm) {
-      t.star = party ? 3 : 6 + Math.random() * 3
-      if (this.count('star') < 2) this.addItem('star')
+    // Bumper play floats a ten raft by now and then beside the single bubbles: ten at once, until the last
+    // ten, when a raft is too many and only ones (or a raft broken into ten ones) can finish.
+    if (!this.calm && t.raft <= 0) {
+      t.raft = 6 + Math.random() * 3
+      // In the last stretch a raft floats up near a child (off to one side, never in their path), so taking
+      // single bubbles is a choice made with a raft in reach.
+      const last = this.left < 10
+      if (this.count('ten') < (last ? 2 : 1)) this.addItem('ten', last ? this.nearKid() : undefined)
     }
-    if (t.gift <= 0) {
+    // Into the last stretch: the next raft comes soon.
+    if (!this.calm && this.left < 10 && !this.lastStretch) {
+      this.lastStretch = true
+      t.raft = Math.min(t.raft, 1)
+    }
+    // Gift powers belong to bumper play; Pond helpers keeps the water for the bubbles the jar sorts.
+    if (t.gift <= 0 && !this.calm) {
       t.gift = 9 + Math.random() * 4
       if (this.count('gift') < 1) this.addItem('gift')
     }
-    for (const it of this.items.values()) if (it.stuck != null && this.time - it.born > STUCK_FREE) this.free(it, null)
+    const wait = this.frogs ? FROG_FREE : STUCK_FREE
+    for (const it of this.items.values()) if (it.stuck != null && this.time - it.born > wait) this.free(it, null)
   }
 
   /** How many bubbles (and rafts) Pond helpers keeps on the water: place value floats rafts beside singles. */
@@ -765,9 +894,12 @@ export class Sim {
     if (!d) return undefined
     const sp = Math.hypot(d.vx, d.vz)
     const ahead = sp > 0.5 ? Math.atan2(d.vz, d.vx) : Math.random() * Math.PI * 2
+    // Where the child is steering (it can differ from where the duck is drifting): never put one there.
+    const steer = Math.hypot(d.ix, d.iz) > 0.3 ? Math.atan2(d.iz, d.ix) : null
     for (let tries = 0; tries < 8; tries++) {
       const a = ahead + (Math.random() < 0.5 ? -1 : 1) * (1 + Math.random() * 0.9)
       const r = 2.6 + Math.random() * 1.4
+      if (steer != null && Math.abs(angleDiff(a, steer)) < 0.6) continue
       const x = d.x + Math.cos(a) * r
       const z = d.z + Math.sin(a) * r
       if (Math.hypot(x, z) > R - 1.6) continue
@@ -789,13 +921,45 @@ export class Sim {
     const k = this.goal.kind === 'place' && this.open.includes('ten') ? 'ten' : 'bubble'
     // On a crossing step the stuck one is one of the scarce single bubbles.
     if (k === 'bubble' && this.scarce != null) this.spared++
-    this.addItem(k, { x: o.x, z: o.z }, o.i)
+    const frogs = this.obstacles.filter((f) => f.frog)
+    if (frogs.length >= 3) {
+      // Frog order: the bubble rides on the pad of the frog with the biggest number.
+      const nums = frogNumbers(this.goal.level, Math.random)
+      const n = this.obstacles.map(() => null)
+      frogs.slice(0, 3).forEach((f, i) => (n[f.i] = nums[i]))
+      const order = frogs.slice(0, 3).map((f) => f.i).sort((a, b) => n[a] - n[b])
+      this.frogs = { n, order, next: 0 }
+      this.emit({ k: 'frogs', n, next: 0 })
+      const top = this.obstacles[order[2]]
+      this.addItem(k, { x: top.x, z: top.z }, top.i, this.wantedColour())
+      return
+    }
+    this.addItem(k, { x: o.x, z: o.z }, o.i, this.wantedColour())
+  }
+
+  /**
+   * A child bumped a frog: the next smallest number hops and keeps its place in the line; the biggest, last,
+   * lets the bubble go. A frog out of turn starts the line again (the robots leave the frogs to the children).
+   */
+  frogBump(o, d) {
+    const f = this.frogs
+    if (!f || f.n[o.i] == null || d.bot || f.next >= f.order.length) return
+    if (![...this.items.values()].some((it) => it.stuck != null)) return
+    const at = f.order.indexOf(o.i)
+    if (at < f.next) return // already in the line: bumping it again changes nothing
+    const ok = at === f.next
+    f.next = ok ? f.next + 1 : 0
+    if (!ok) d.stats.frogs++
+    this.emit({ k: 'frog', o: o.i, id: d.id, ok: ok ? 1 : 0, next: f.next })
+    if (ok && f.next === f.order.length) for (const it of this.items.values()) if (it.stuck === o.i) this.free(it, d)
   }
 
   /** A bump knocked a stuck bubble off: it drops into the water beside the obstacle, to one side of the duck. */
   free(it, d) {
     const o = this.obstacles[it.stuck]
     delete it.stuck
+    // Freed by the frogs in order, the line stays done; floating free on its own, the frogs rest (no numbers).
+    if (this.frogs) d ? (this.frogs.next = this.frogs.order.length) : (this.frogs = null)
     let nx = d ? d.x - o.x : 1
     let nz = d ? d.z - o.z : 0
     const len = Math.hypot(nx, nz) || 1
@@ -814,7 +978,7 @@ export class Sim {
     this.emit({ k: 'free', item: it.id, id: d?.id ?? null, x: it.x, z: it.z, o: o.i })
   }
 
-  addItem(k, at, stuck = null) {
+  addItem(k, at, stuck = null, colour = null) {
     let x = 0
     let z = 0
     for (let tries = 0; tries < 20; tries++) {
@@ -831,7 +995,7 @@ export class Sim {
     }
     if (at) ({ x, z } = at)
     const it = { id: this.nextItem++, k, x: +x.toFixed(2), z: +z.toFixed(2), born: this.time }
-    if (this.calm && k === 'bubble') it.c = this.bubbleColour()
+    if (this.calm && k === 'bubble') it.c = colour ?? this.bubbleColour()
     if (stuck != null) it.stuck = stuck
     this.items.set(it.id, it)
     const e = { k: 'item', item: it.id, kind: k, x: it.x, z: it.z }
@@ -841,13 +1005,23 @@ export class Sim {
     return it
   }
 
+  /** The colours the jar still wants now (none when any colour will do). */
+  wantedColours() {
+    const n = BUBBLE_COLOURS.length
+    // A free bond wants whichever colours can still finish a new way (any colour, before the first).
+    return this.goal?.free
+      ? [...Array(n).keys()].filter((c) => freeBondFits(this.goal.n, this.jar, c, this.used))
+      : [...new Set(this.open.filter((w) => Number.isInteger(w)))]
+  }
+  /** The stuck bubble is always one the jar wants, so bumping it free is worth it (and the voice can say so). */
+  wantedColour() {
+    const wanted = this.wantedColours()
+    return wanted.length ? wanted[Math.floor(Math.random() * wanted.length)] : Math.floor(Math.random() * BUBBLE_COLOURS.length)
+  }
   /** Colour goals keep two or so of the colours still wanted on the water; the rest are other colours. */
   bubbleColour() {
     const n = BUBBLE_COLOURS.length
-    // A free bond wants whichever colours can still finish a new way (any colour, before the first).
-    const wanted = this.goal?.free
-      ? [...Array(n).keys()].filter((c) => freeBondFits(this.goal.n, this.jar, c, this.used))
-      : [...new Set(this.open.filter((w) => Number.isInteger(w)))]
+    const wanted = this.wantedColours()
     if (!wanted.length || wanted.length === n) return Math.floor(Math.random() * n)
     let have = 0
     for (const it of this.items.values()) if (it.k === 'bubble' && wanted.includes(it.c)) have++
@@ -986,10 +1160,17 @@ export class Sim {
           it.x = e.x
           it.z = e.z
         }
+        if (this.frogs) e.id ? (this.frogs.next = this.frogs.order.length) : (this.frogs = null)
         break
       }
       case 'full':
         if (this.calm) this.between = this.time
+        break
+      case 'frogs':
+        if (Array.isArray(e.n)) this.setFrogs(e.n, e.next)
+        break
+      case 'frog':
+        if (this.frogs && Number.isInteger(e.next)) this.frogs.next = Math.max(0, Math.min(this.frogs.order.length, e.next))
         break
       case 'stage':
         if (this.calm && Number.isInteger(e.s)) this.goTo(e.s)
@@ -1001,6 +1182,15 @@ export class Sim {
         if (d && d.power === e.p) d.power = null
         break
     }
+  }
+
+  /** The authority's frogs (a number per obstacle), checked: only frogs get numbers, at most 99. */
+  setFrogs(list, next = 0) {
+    if (!Array.isArray(list)) return
+    const n = this.obstacles.map((o, i) => (o.frog && Number.isInteger(list[i]) && list[i] > 0 && list[i] < 100 ? list[i] : null))
+    const order = n.map((v, i) => i).filter((i) => n[i] != null).sort((a, b) => n[a] - n[b])
+    if (order.length < 2) return
+    this.frogs = { n, order, next: Number.isInteger(next) ? Math.max(0, Math.min(order.length, next)) : 0 }
   }
 
   /** Moves on to the authority's stage of the trip (a device that missed a 'stage' event catches up). */

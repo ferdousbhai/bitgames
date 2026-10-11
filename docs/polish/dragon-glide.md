@@ -423,3 +423,244 @@ Every run had 0 console/page errors.
 - Family play is needed:
   - Do 3-year-olds find the odd one out without help?
   - Do 6–8-year-olds pick the harder count?
+
+## Round 5 of the 2026-10-11 pass: a fair two-gap puzzle, no empty cruise, aimed fire, the family in view (not yet deployed)
+
+The previous review scored 8.3 (fun/depth 7.8, polish/UX 7.9). Its blockers:
+- the two-gap puzzle could mark a right number wrong;
+- 25–35 s of empty cruising after each goal was met;
+- landscape end-card rows over the parents' faces, shelf labels that read as extra places, and a cramped phone nest;
+- a run-on end-card sentence and too many bare numbers spoken;
+- fire with no purpose.
+
+The audit checklist had no open items.
+
+### Design
+
+- **Two-gap puzzle.** The tiles for the first gap never include any number of the row, so the second gap's answer can't be offered too early. The gap being filled now has a solid gold ring, a white halo and a steady arrow under it. The other gap stays dashed at 55% opacity. The retell counts on from at most three numbers back ("Let's count. 4, 6, 8, and then?").
+- **No empty cruise.** About 2.5 s after the goal is met (the basket is full or the last ring is flown), a soft white cloud fades over the view in 0.7 s of game time, with no motion. Ember is carried to 145 units short of the nest, and the cloud thins away. It is skipped when the nest is already under about 12 s away, or while the optional ring-counting mission is unfinished. The world's first two-thirds keep their full length.
+- **Fire has a job.** Treasure bubbles now come as a side-by-side pair. One holds a kind the basket still needs and the other a different kind. Fire pops a treasure bubble only when Ember is lined up with it (within 1.8 + 0.02·dz). A puff from the middle pops nothing. A wrong bubble popped by fire goes to the oops corner (and counts as a slip) like a wrong one caught, so fire is the same sorting choice made from a distance. The 🔥 button shows only in the gathering worlds; in the numbered-ring worlds there is nothing to pop. Once the basket is full, a stray treasure is silent and not a slip. This also fixed an existing "We need !" line with an empty list.
+- **Shelf labels** are now a small solid treasure in a round white badge. The dashed outlines are kept only for the places to fill.
+- **The family stays in view.**
+  - The nest camera fit now has both a top and a bottom limit:
+    - at the nest, the banner above and, on upright screens, the puzzle tray below;
+    - on the wide end card, the `#learned` rows above and the buttons below.
+  - The camera steps back until the parents' faces and the nest fit in that room, then tilts as little as it can.
+  - On upright screens last trip's keepsakes rest while the tray is up, and the new basket replaces them once solved.
+- **Voice.**
+  - The end card says only "Home sweet nest!" (each world's sentence was said at its own nest; the full list stays in the aria-label).
+  - Rings are counted aloud (to 5) only in the trip's first numbered-ring world.
+  - Read-alongs past five ("Let's count them again.") rely on the steady highlight instead of reciting 1…n.
+
+### Changes
+
+| File | What |
+| --- | --- |
+| `public/js/nest.js:88` | `upTo(n)`: read-along numbers only up to five (ten-frame and "how many in all" retells) |
+| `public/js/nest.js:139-149` | Two-gap decoys exclude the whole row; the retell counts on from at most three back |
+| `public/js/nest.js:238-239` | Shelf label is a solid badge |
+| `public/js/main.js:320` | End card says one line |
+| `public/js/main.js:331` | `showFire`: the 🔥 button only in gathering worlds (called from `startGoal`) |
+| `public/js/main.js:427` | Keepsakes rest under the upright tray |
+| `public/js/main.js:736` | Rings counted aloud only in the first ring world of the trip |
+| `public/js/main.js:779` | A full basket's strays are silent; bubble strays are no longer exempt |
+| `public/js/main.js:1082-1090, 1129-1160` | `cloudHome`: the veil and hop in game time; cleared in `toTitle` |
+| `public/js/main.js:1236-1250, 1281-1298` | `nestFloorPx`, `endCardRoom`, two-sided family fit |
+| `public/js/course.js:490-505` | `bubbles()` lays a wanted/other pair in gathering worlds |
+| `public/js/course.js:606` | A narrow aim cone for treasure bubbles |
+| `public/js/course.js:861` | Fire-popped wrong bubbles go to the oops corner |
+| `public/style.css:444-` | Round-5 block: the active gap and arrow, the shelf badge, `.veil` |
+| `game.json` | `howToPlay` and `learning` match the game (aimed fire, nest puzzles, skip counting, adding, "how many more") |
+
+### Evidence
+
+Scripts and screenshots are in the scratchpad, `polish/dragon-glide/` (`play5.mjs`, `live5.mjs`, `firetest.mjs`, `gapunit.mjs`). Every run had 0 console/page errors.
+
+- **`gapunit.mjs`:** 300 tier-2 ring nests (Meadow and Sunset). The first gap's tiles never held the second gap's answer and always held the right one (`bad: 0`).
+- **Careful landscape from tier 2** (`r5cl`):
+  - Meadow had two gaps in 4…9. A wrong tile led to "Let's count. 4, 5, and then?"; then 6 and 8 were filled.
+  - `r5cl-w0-puzzle.png`: tiles 2 3 6 10 for the first gap, with the solid arrowed gap.
+  - `r5cl-results.png`: the 4+3 and 3+2 rows sit above both parents' heads.
+  - 26 lines spoken, 347 s.
+- **Careful portrait from tier 0** (`r5cp`):
+  - Goal met to nest took 11 s in each world (34→45, 99→110, 176→186, 235→246), against 25–35 s before.
+  - 31 lines spoken, 277 s (was 319 s). Sunset by twos was silent.
+  - `r5cp-results.png` (the by-twos-to-16 row is clear of the family); `r5cp-w1-nest.png`.
+- **Phone 375×667 from tier 1 with 30% mistakes** (`r5ph`):
+  - `r5ph-w1-puzzle.png`: badge labels, then the dashed places.
+  - `r5ph-w1-nest.png`: the whole family above the tray, with the keepsakes under it.
+- **Careless 45% landscape from tier 2** (`r5xl`): levels fell to `{0, 0}`. 441 s, against 347 s for careful play. 29 lines spoken.
+- **Real time, Candy Clouds, landscape** (`live5.mjs`):
+  - The basket was full at 34.5 s, the cloud came at 37.0 s, and the nest at 45.7 s.
+  - `lv5-veil.png`: the soft white veil.
+- **`firetest.mjs`:**
+  - Lined up with the wanted bubble: it pops and counts.
+  - Lined up with the wrong one (Night): a heart goes to the oops corner, slip +1.
+  - 🔥 is hidden in Meadow and shown in Candy and Night.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids dragon-glide --run dragon-glide-c1`: BOOT + PLAY ready, 0 errors. `node --check` passes on main.js, nest.js and course.js.
+
+### Checklist status
+
+All audit items were already handled, and this round's review bugs are fixed:
+- the two-gap tiles;
+- the landscape end card;
+- the shelf labels;
+- dead air;
+- the phone nest.
+
+### Remaining ideas
+
+- The ring worlds' flight is still one binary pick per pair. A three-ring arch at tier ≥1 was considered, but on upright screens (lane 3.2) three rings with numerals above them overlap. It needs a different layout, such as a vertical stack, before it can ship.
+- Family play is needed: do 3–5-year-olds find the lined-up fire aim fair, or do they need the bubble to glow when lined up?
+
+## Round 6 of the 2026-10-11 pass: wrong rings ride home, distractors you count to, teen numbers (not yet deployed)
+
+The previous review scored 8.3 (fun/depth 7.6, polish/UX 8.1). No checklist items were open. It found five bugs:
+- the chip went stale after a nest swap;
+- the rule reminder was skipped when the breaking treasure also filled the basket;
+- the counting-on tiles were range-checkable (1, 2, 3, 5 for 4 ? 6 7 ? 9);
+- a portrait numeral passed under the corner buttons;
+- the banner did not step aside for treasure bubbles.
+
+### Design
+
+- **Careless steering now costs nest work in the ring worlds.**
+  - At tier 1 and above, a wrong ring's number rides along. Up to two do, the same cap as the gathering oops corner.
+  - The number is shown in a dashed oops corner on the chip, in the order it was flown.
+  - At the nest, the row first comes home exactly as flown, for example `7 4 6 5 4 3 2 1` when counting down from 6. The child says once: "Some numbers flew in by mistake. Tap the ones that don't belong!"
+  - Tapping a number that belongs shakes it, counts as a slip, and runs a silent read-along of the row up to that number ("That one belongs. Count along the row!" once). The child has to count along the row to find the extra number.
+  - If the same number sits side by side (`2 [2] 3`), either one counts as the extra.
+  - Each extra number taken out floats away and leaves the chip's oops corner. The gap puzzle follows.
+  - Tier 0 (3–5) is unchanged: a wrong ring is a slip only.
+- **Missing-number tiles have to be counted to.** `aroundRow` draws near misses from outside the row, alternating sides, nearest first:
+  - `4 ? 6 7 ? 9` → 3, 10, 2;
+  - by fives, `5 ? 15` → 9, 11, 12 (seen in `r6cp-w2-fix.png`);
+  - by twos → the odd neighbours.
+  - The other gap's answer is still never offered.
+- **A new 6–8 ring variant.** Meadow Isles tier 2 is now counting on through the teens (start 11–15, e.g. 12→16), not counting on from 3–6. The new `teen` decoy offers the swapped digits (14/41), the next-but-one, or the ones digit without the ten (14/4), so the flight decision is about reading teen numerals.
+- **Ten-frame counting is the child's.** The voice no longer counts "1, 2, 3" while treasures are tapped into the frame. A soft rising note plays instead, and the child answers by counting or seeing the frame. A wrong tile still reads the frame along aloud (up to five).
+- **Bugs fixed:**
+  - The chip follows every nest swap, and re-renders on solve.
+  - The rule reminder is said before "The basket is full" when the same treasure broke the rule and filled the basket.
+  - In upright view, ring pairs sit lower (y0 3.1–4.1, was 3.6–5). Sampled at 3 units before the pass, the upper numeral's top was at y≈343 px, below the corner buttons (about 190 px).
+  - The world banner steps aside for treasure bubbles as well as rings and treasures.
+
+### Changes
+
+| File | What |
+| --- | --- |
+| `public/js/main.js:341` | `flown: []` on each goal |
+| `public/js/main.js:738, 756-764` | Flight order recorded; a wrong ring rides along at tier ≥1 (max 2) and is said once |
+| `public/js/main.js:357-362, 380` | Chip oops corner for numbers; aria-label says how many to take out |
+| `public/js/main.js:436-452` | `onGiveBack` takes numbers out of the oops corner; `onChange: renderGoal`; `renderGoal()` on solve; the `count` option is removed |
+| `public/js/main.js:818-821` | Rule reminder before "basket is full" |
+| `public/js/main.js:1182` | `bannerMakesWay` includes treasure bubbles |
+| `public/js/nest.js:99-118` | `aroundRow` distractors |
+| `public/js/nest.js:142-197` | Ring branch: `takeOut` (remove flown-by-mistake numbers) then `gapPuzzle` |
+| `public/js/nest.js:282-292` | Ten-frame taps are silent (a note, no voice count) |
+| `public/js/nest.js:422` | Swaps call `onChange` |
+| `public/js/goals.js:186-198` | `teen` decoy; cap raised to 99 |
+| `public/js/worlds.js:23-28` | Meadow tier 2 counts on from 11–15 |
+| `public/js/course.js:121-122` | Lower upright ring pairs |
+| `public/style.css:467-` | Round-6 block: chip number oops, `.takeout` row |
+| `game.json` | howToPlay mentions taking out numbers; learning mentions the teens |
+
+### Evidence
+
+Scripts are in the scratchpad, `polish/dragon-glide/` (`play6.mjs`, `pass6.mjs`). Every run had 0 console/page errors.
+
+- **Careful portrait from tier 2** (`r6cp`):
+  - Meadow: "Count on from 12 to 16!". One wrong ring (13) rode along. The row `13 12 13 14 15 16` was cleaned, then the gaps 13 and 15 were filled.
+  - Candy: one more blue than pink.
+  - Sunset by fives: tiles 9/10/11/12.
+  - Night: 4 + 3.
+  - 21 lines spoken, 302 s.
+  - Screenshots: `r6cp-w0-puzzle.png`, `r6cp-w2-fix.png`.
+- **Careless 40% landscape from rings 1 / gather 2** (`r6xl`):
+  - Meadow count-down: the row `7 4 6 5 4 3 2 1` (`r6xl-w0-puzzle.png`, chip oops `7 4`). 7 and 4 were taken out, then a wrong take-out tap was counted as a slip.
+  - Candy: "Oh! Remember, more blue than pink." then "The basket is full." The swap was fixed, and the chip after solving shows 3 blue + 2 pink, matching the shelves (`r6xl-w1-nest.png`).
+  - Levels fell to `{0, 0}`. 354 s, against 302 s careful.
+- **Tier 0 portrait with 25% mistakes** (`r6p0`):
+  - The ten-frame filled with no spoken numbers; "How many blue hearts came home?" was answered from the frame.
+  - A tier-0 wrong ring did not ride along.
+  - 29 lines spoken.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids dragon-glide --run dragon-glide-c2`: BOOT + PLAY ready, 0 errors.
+- `node --check` passes on main.js, nest.js, goals.js, worlds.js and course.js.
+
+### Checklist status
+
+No audit items are open. All five review bugs are fixed. Improvements 1, 2, 3, 4, 5, 6, 7 and 8 are done. For 8, the frame is counted silently; there is no estimate step.
+
+### Remaining ideas
+
+- The end card is the same for careful and careless ring flights. The difference now shows at the nest (take-outs, slips) and in the next tier.
+- An estimate-first step for tier-0 gathering, if family play shows that silent counting is too quiet for 3-year-olds.
+
+## Round 7 of the 2026-10-11 pass: nothing pulses, a safe gap between bubbles, fair levels after a chosen challenge (not yet deployed)
+
+The previous review scored 8.3 (polish/UX 7.8, fun/depth 8.0). One checklist item was open: infinite pulses during play. It also found four bugs: flying between a bubble pair popped one; things still joined the basket after it was full; a chosen hard tier raised the level even after a muddle; and upright Sunset pairs read late.
+
+### Design
+
+- **Nothing pulses forever while flying.** Plain cloud hoops lose their 3% scale pulse and keep only the slow 0.08 rad sway. Bubbles lose their scale wobble and keep only the slow float, like loose treasures. Lit lanterns lose their 9 Hz glow flicker as they float away.
+- **The gap in a treasure-bubble pair is safe.** Pairs sit at ±min(lane.x·0.92, 2.9), so ±2.9 in portrait (was ±2.5). A treasure bubble pops when Ember touches it (`r + R` = 2.25, was `1.3r + R` = 2.7). Gem bubbles in other worlds keep the generous reach.
+- **A full basket takes nothing more.** `course.oops` returns false once `goalDone(g)`. `release()` also sends the world's unpopped treasure bubbles up and away. Away bubbles cannot be flown into, and fire does not target them or follow them.
+- **Levels after a chosen challenge.** Each goal records `from`, the child's own level before the world. `stepLevel` then works like this:
+  - Careful play on a harder picked tier makes that tier the child's level. Careful play on the usual tier steps up one. Careful play on an easier pick keeps the level.
+  - A muddle goes to one below the tier flown, and never above `from`.
+  - In-between play keeps `from`.
+- **Upright ring pairs read early.** Only the nearest pair shows its numerals. Those numerals are drawn over Ember (`depthTest: false`), because a centred upright pair was hidden behind Ember until it was about 20 units away. The pair after it stays plain until this one is passed, so its numbers never sit on these.
+- **Easier-tier nests count on.** At tier 0 (count up), filling the gap is followed by a new place at the end of the row: "And which number comes after that?" The tiles are its neighbours, for example 5/6/7 or 4/6/7 for 6. Choosing the last number again, or one too far, is a slip, and the end of the row is then counted along ("Let's count. 3, 4, 5, and then?").
+- **The chooser fits the child.** The way that matches `game.levels.rings` wears a small 🐉 mark, and its aria label says "just right". Ways more than one tier above the child are dimmed and dashed, and their label says "a big stretch". They can still be chosen.
+- **A quieter glide between numbered pairs.** In ring worlds, about half of the filler stretches are now open sky (16 units) instead of gem patterns.
+
+### Changes
+
+| File | What |
+| --- | --- |
+| `public/js/course.js:685-689` | Hoop pulse removed |
+| `public/js/course.js:762-773` | Bubble wobble removed; away drift; kind-bubble reach `r + R` |
+| `public/js/course.js:780` | Lantern glow flicker removed |
+| `public/js/course.js:505` | Bubble pair spacing ±2.9 |
+| `public/js/course.js:295` | `release()` includes treasure bubbles |
+| `public/js/course.js:611, 831` | Fire skips away bubbles |
+| `public/js/course.js:184-188` | Nearest pair's labels only, drawn over Ember |
+| `public/js/course.js:363-365` | Open sky between ring pairs |
+| `public/js/main.js:204` | `oops` is false once the goal is met |
+| `public/js/main.js:343` | `from` level on each goal |
+| `public/js/main.js:897-905` | `stepLevel` measured from `from` |
+| `public/js/main.js:945-958` | Chooser `fit` and `far` |
+| `public/js/nest.js:237-268` | `after()`: which number comes next (tier 0) |
+| `public/style.css:477-` | Round-7 block: the `.fit` mark and dimmed `.far` |
+| `game.json` | howToPlay mentions "say which comes next" |
+
+### Evidence
+
+Scripts are in the scratchpad, `polish/dragon-glide/` (`bub7.mjs`, `view7.mjs`, `play7b.mjs`, `take7.mjs`, `after7.mjs`). Every run had 0 console/page errors.
+
+- **`bub7.mjs`:** flew straight between treasure-bubble pairs in Candy and Night, 12 pairs in portrait and landscape.
+  - The closest Ember came was 2.90–2.97 against a reach of 2.25. No bubble popped, there were no slips from bubbles, and nothing went to the oops corner.
+  - Basket full, then flying into every remaining treasure or bubble: 5 items floated away, `extra {}`, slips 0, and the trip went on to the nest.
+- **`view7.mjs` portrait Sunset, by threes and by fives:**
+  - Before (`v7p-70.png`, `v7p-22.png`): the lower ring and its numeral sat hidden behind Ember.
+  - After (`v7q-50.png`, `v7q-22.png`): both numerals (3 and 2) are visible above Ember from 50 units away.
+- **Random portrait, 45% wrong, picking the top tier** (`r7xq`):
+  - The child was at rings 0, picked "by fives" and muddled (slips 4/1/5). Rings stayed 0, where they were before; this was the reviewer's case.
+  - The take-out of 15 and 11, then the two gaps, both worked.
+  - `r7xq-w1-nest.png` shows the chooser: 1 2 3 marked 🐉, 3 6 9 dimmed and dashed.
+  - 41 lines spoken.
+- **Careful portrait from tier 0** (`r7cp`): gather now steps 0→1→2 and rings 0→1→2. Previously gather stayed at 0 because of the slip after the basket was full. "And which number comes after that?" is said once at Meadow. 23 lines spoken, 272 s.
+- **Careful landscape from tier 0** (`r7c0`): levels end at `{2, 2}`, 274 s, 23 lines spoken.
+- **Landscape from tier 1 with 10% mistakes** (`r7cl`): the count-down take-out (8) worked. Sunset was by threes with two gaps.
+- **`after7.mjs`:** the row became 1 2 3 4 5 ? with tiles 5/6/7 or 4/6/7, and tapping 6 completed `123456` (`after7-l.png`).
+- **`take7.mjs`:** with a twin pair (5 [5]) and 21 flown in, both are taken out and the gap puzzle follows. This confirmed that the earlier stall was an autopilot bug: it compared `undefined !== false`.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids dragon-glide --run dragon-glide-c3`: BOOT + PLAY ready, 0 errors.
+- `node --check` passes on course.js, main.js and nest.js.
+
+### Checklist status
+
+The cross-cutting infinite-pulse item is closed (hoops, bubbles and lanterns). All four review bugs are fixed. Improvements 1–6 are done. For improvement 7, gems were made fewer rather than turned into a path: a gem path to the right ring would give the answer away.
+
+### Remaining ideas
+
+- The ring itself (not its numeral) can still sit behind Ember in an upright view. If family play shows children aiming at the numeral rather than the ring, consider a slight x offset for the pair.

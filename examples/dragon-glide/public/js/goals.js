@@ -185,14 +185,17 @@ export function countChoices(spec) {
 /**
  * The other ring's number in a pair: a mistake worth making for this goal.
  * far: a different-looking number (numeral recognition). near: the next-but-one or the last one
- * (counting order). down: one up or one too far down. skip: one off, or a whole step too far
+ * (counting order). down: one up or one too far down. teen: 41 for 14, or 4 (reading teen numerals).
+ * skip: one off, or a whole step too far
  * (the odd numbers when counting by twos; 14 or 20 when 15 is next by fives).
  */
 export function decoyFor(goal, i) {
   const s = goal.seq[i]
   const k = goal.step ?? 1
-  const options = { far: [s + 2, s + 3, s - 2, s - 3], near: [s + 1, s + 2, s - 1], down: [s + 1, s - 1, s - 2], skip: [s - 1, s + 1, s + k, s - k] }[goal.decoy]
-  return pick(options.filter((n) => n >= 1 && n !== s && n <= 40))
+  // teen: the digits swapped (14 and 41), the next-but-one, or the same ones digit without the ten (14 and 4)
+  const swapped = s >= 10 && s % 10 && s % 11 ? Number(String(s).split('').reverse().join('')) : s + 2
+  const options = { far: [s + 2, s + 3, s - 2, s - 3], near: [s + 1, s + 2, s - 1], down: [s + 1, s - 1, s - 2], skip: [s - 1, s + 1, s + k, s - k], teen: [swapped, swapped, s + 1, s - 10] }[goal.decoy]
+  return pick(options.filter((n) => n >= 1 && n !== s && n <= 99))
 }
 
 /** How many treasures the basket holds now. */

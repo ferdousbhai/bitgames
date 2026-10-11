@@ -48,3 +48,19 @@ export function mixToyPaint(drops) {
   else name = 'Orange mixture'
   return { hex, name, drops: sum(drops) }
 }
+
+/**
+ * White paint makes a tint: any colour with white in it sits this far toward paper white
+ * (red and white make pink, blue and white make light blue). The toy model keeps one amount of
+ * white, so a tint is one lighter step of its colour, not a range.
+ */
+export const WHITE_PAINT = '#fbfaf6'
+export const TINT = 0.55
+
+/** The tint of a colour (#rrggbb): `{ hex, name }`, with "Pink" for red and "Light ..." for the rest. */
+export function tintToyPaint(hex, name) {
+  const channels = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16))
+  const white = [1, 3, 5].map((k) => parseInt(WHITE_PAINT.slice(k, k + 2), 16))
+  const tinted = '#' + channels.map((c, j) => Math.round(c + (white[j] - c) * TINT).toString(16).padStart(2, '0')).join('')
+  return { hex: tinted, name: name === 'Red' ? 'Pink' : `Light ${name.toLowerCase()}` }
+}

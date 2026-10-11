@@ -10,8 +10,8 @@ import { AMBIENT, BY_ID, CREATURES, Creatures, SWIM_SCALE, roll } from './creatu
 import { Effects, softDot } from './effects.js'
 import { HOLES, PLACES, RIG, World } from './world.js'
 import { Book } from './book.js'
-import { factsOf, lookFor } from './look.js'
-import { TRAITS, answersHere, fits, listRiddle, makeList, makeRiddle, missReason, more, twoOf, verdict } from './riddles.js'
+import { LOOK, factsOf, lookFor } from './look.js'
+import { TRAITS, answersHere, fits, listRiddle, lower, makeList, makeRiddle, missReason, more, twoOf, verdict } from './riddles.js'
 import { createVoice } from './speech.js'
 
 const $ = (id) => document.getElementById(id)
@@ -268,11 +268,19 @@ const adventure = createAdventure({
   anchor: $('title-book'),
   hud: $('hud'),
   voice,
-  // The mission speaks its own reward; the screen shows a big trophy to go with it
+  // The mission speaks its own reward once a trip, with a calm card (no trophy, no star): the count
+  // is the lesson, so after three it rests until the next trip (start() begins it afresh)
   celebrate: () => {
-    showIntro('🏆', '1, 2, 3!', '🐟 🐟 🐟', false, true)
+    showIntro('🐟', '1, 2, 3!', '🐟 🐟 🐟')
     softMoment()
-    audio.chord()
+  },
+  // Three fish pictures, lit one per kept catch, and nothing else: no tally, no star
+  renderProgress: (goal, option, count) => {
+    const row = document.createElement('span')
+    row.className = 'adventure-steps'
+    row.setAttribute('aria-hidden', 'true')
+    for (let i = 0; i < option.target; i++) row.append(Object.assign(document.createElement('span'), { className: `adventure-step${i < count ? ' adventure-got' : ''}`, textContent: option.icon }))
+    goal.replaceChildren(row)
   },
   // The counting mission fills in a fish per catch, so a child who can't read can follow along
   options: [
@@ -355,7 +363,7 @@ function sendBiter() {
   const aim = fish.aim
   fish.aim = null
   const near = debug.force ? null : aim && aim.mode === 'wander' && creatures.swimmers.includes(aim) ? aim : nearestSwimmer(bob.pos, CHOOSE_R)
-  // The deep leans toward a surprise that fits Bear's riddle (a golden fish for "a fish", the whale for
+  // The deep leans toward a surprise that fits Bear's riddle (a golden fish for "something yellow", the whale for
   // "breathes air"): it is put back if it doesn't fit, so open water rewards thinking, not random casts
   const boost = (c) => (game.riddle && !AMBIENT[game.place].includes(c.id) && fits(game.riddle, c.id) ? 3 : 1)
   const pick = near ? near.info : BY_ID[debug.force] ?? roll(game.place, game.book, game.luck, boost)
@@ -609,7 +617,7 @@ function updateCatch(dt) {
   g.rotation.set(0, k.c.heading ?? 0, 0)
   g.rotation.y += k.spin * e * Math.PI * 2
   g.rotation.z = Math.sin(e * Math.PI) * 0.5 * k.spin
-  const end = stageScale() * k.c.unit * (SHOW_SIZE[k.pick.id] ?? 1)
+  const end = stageScale() * k.c.unit * showSize(k.pick.id)
   g.scale.setScalar(lerp(k.startScale, end, sm))
   // The bobber comes along on the line
   bob.pos.copy(g.position).y -= 0.2
@@ -625,8 +633,40 @@ function softMoment() {
   for (let i = 0; i < 8; i++) effects.bubble(stageFx.set(rand(-1.4, 1.4), rand(-0.8, 0.2), -1.2).add(stageWorld), 1, 0.3)
 }
 
+/** The parts of a creature (look.js LOOK) that show each clue: what the child looked for. */
+const CLUE_PARTS = {
+  stripes: ['stripes'],
+  spots: ['spots'],
+  shell: ['shell'],
+  claws: ['claws'],
+  arms: ['arms'],
+  tentacles: ['tentacles'],
+  tusk: ['tusk'],
+  spikes: ['spikes'],
+  air: ['blowhole', 'skin', 'flippers'],
+  nobones: ['tentacles', 'arms', 'shell'],
+  fish: ['fins', 'back fin', 'back fins', 'side fins'],
+}
+/** The look that matches a clue the catch answered (a thing to see first, then the idea), or null. */
+function clueLook(r, id) {
+  if (!r) return null
+  const clues = [...r.clues].filter((c) => !c.neg).sort((a, b) => TRAITS[a.t].tier - TRAITS[b.t].tier)
+  for (const c of clues) {
+    const l = LOOK[id]?.find((x) => CLUE_PARTS[c.t]?.includes(x.part))
+    if (l) return l
+  }
+  return null
+}
+
 /** Boxy or round things look bigger than fish of the same length. */
-const SHOW_SIZE = { chest: 0.78, pufferfish: 0.85, boot: 0.9, duck: 0.9, frog: 0.8, crayfish: 1.3, snail: 0.85, octopus: 1.15 }
+/** In portrait the crayfish's long feelers would run off the side and cover Bear, so it shows smaller. */
+const showSize = (id) => (id === 'crayfish' && innerWidth < innerHeight ? 0.9 : SHOW_SIZE[id] ?? 1)
+/**
+ * Shown a little lower (in stage units), clear of Bear: the crayfish's bulk sat over Bear and the boat in
+ * portrait, and the cod's back fins (counted, with a dot on each) sat on Bear's face.
+ */
+const SHOW_DROP = { cod: -0.5, crayfish: -0.45 }
+const SHOW_SIZE = { chest: 0.78, pufferfish: 0.85, boot: 0.9, duck: 0.9, frog: 0.8, crayfish: 1.15, snail: 0.85, octopus: 1.15 }
 
 /** Not animals: they are always kept, whatever Bear asked (a joke, never an answer). */
 const JOKES = new Set(['boot', 'duck', 'chest'])
@@ -659,16 +699,20 @@ function startShow() {
     store.set('fish-pond-luck', game.luck)
   }
   const isNew = keep && before === 0
+  // A catch that answered a riddle glows on the part the child reasoned with ("Yes! A rainbow trout has
+  // spots!" glows on its spots, not its stripe), so the look confirms the clue; otherwise the next feature
+  const clue = right ? clueLook(r, pick.id) : null
   // A feature whose facts were all heard this trip doesn't glow again (counting always may)
-  let look = keep ? lookFor(pick.id, game.book[pick.id]) : null
+  let look = keep ? clue ?? lookFor(pick.id, game.book[pick.id]) : null
   // and between facts there is a calm gap (FACT_GAP), so a trip is mostly looking and fishing, not listening.
-  // A new animal always has its glow, and so does the first count of an animal in a trip.
-  if (look && !isNew && (look.count ? game.counted.has(pick.id) : !lookFact(look) || clock - game.factAt < FACT_GAP)) look = null
+  // A new animal always has its glow, and so does the first count of an animal in a trip, and so does the
+  // clue just used (if it still has a fact to tell).
+  if (look && !isNew && (look.count ? game.counted.has(pick.id) : !lookFact(look) || (look !== clue && clock - game.factAt < FACT_GAP))) look = null
   fish.show = { c, pick, t: 0, strays: 0, isNew, right, back: !keep, puffed: false, all: isNew && caughtKinds() === CREATURES.length, look, lookAt: look ? creatures.featurePoint(pick.id, look.at) : null }
   setPhase('show')
   bob.state = 'hang'
-  // Card under the creature: stars, name and a NEW sticker (a put-back shows a wave instead of stars)
-  $('card-stars').textContent = keep ? '⭐'.repeat(pick.stars) : '🌊'
+  // Card under the creature: its name and a NEW sticker, with no rarity stars (a put-back shows a wave)
+  $('card-stars').textContent = keep ? '' : '🌊'
   $('card-name').textContent = pick.name
   $('card-new').classList.toggle('hidden', !isNew)
   $('card').className = `card-catch show stars${pick.stars}${keep ? '' : ' back'}`
@@ -676,15 +720,15 @@ function startShow() {
   const line = surprise && !right ? null : verdict(r, pick.id, pick.name, game.said)
   const wow = !keep && SAY[pick.id] ? `${SAY[pick.id]} ` : '' // "Wow! A golden fish! It isn't orange."
   // After four misses on one riddle the ringed animal has come close: further misses are a soft plip and
-  // the card's words, with no voice at all
-  const hush = !keep && r && r.misses >= 4 && !wow
-  if (!hush) voice.sayNow(keep ? line ?? SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${pick.name.toLowerCase()}!` : wow + (wow ? line.replace(/^An? [^.]*\. /, '') : line))
+  // the card's words, with no voice at all. A short reason already said on this riddle (r.mute) rests too.
+  const hush = !keep && r && (r.misses >= 4 || r.mute) && !wow
+  if (!hush) voice.sayNow(keep ? line ?? SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${lower(pick.name)}!` : wow + (wow ? (r?.mute ? '' : line.replace(/^An? [^.]*\. /, '')) : line))
   if (r && (right || !surprise)) fish.show.solved = answer(r, right, pick.id)
   if (fish.show.solved && r.list) fish.show.listDone = tickList(r)
   // Look closer: one feature to notice, asked right after the name (it is optional).
   // A put-back shows why not instead, in words, for children who read.
   $('card-look').classList.toggle('hidden', !look && keep)
-  if (!keep) $('card-look').textContent = missReason(line)
+  if (!keep) $('card-look').textContent = r.reason || missReason(line)
   if (look) {
     $('card-look').textContent = `🔍 ${look.part}?`
     if (game.lookAsks++ < 1) voice.say(`Look closer! See its ${look.part}?`)
@@ -704,7 +748,7 @@ function updateShow(dt, t) {
   const s = fish.show
   s.t += dt
   const g = s.c.group
-  const base = stageScale() * s.c.unit * (SHOW_SIZE[s.pick.id] ?? 1)
+  const base = stageScale() * s.c.unit * showSize(s.pick.id)
   const pop = s.t < 0.5 ? 1 + Math.sin((s.t / 0.5) * Math.PI) * 0.15 : 1
   let scale = base * pop
   const id = s.pick.id
@@ -738,11 +782,16 @@ function updateShow(dt, t) {
   g.scale.setScalar(scale)
   // A happy wiggle, turned so you can see its face
   // The octopus faces you square on: its arms fan round it like a star, so all eight tips show, clear of its face
-  const face = id === 'octopus' ? -1.45 : id === 'pufferfish' || id === 'jellyfish' || id === 'duck' || id === 'chest' || id === 'boot' || id === 'crab' || id === 'crayfish' || id === 'frog' ? -1.05 : -0.45
-  const sway = s.counting ? 0.08 : id === 'octopus' ? 0.2 : 0.35 // stiller while arms or stripes are being counted
-  g.rotation.set(Math.sin(s.t * 2.2) * 0.12 * (s.counting ? 0.3 : 1), face + Math.sin(s.t * 1.6) * sway, Math.sin(s.t * 3.1) * 0.08)
-  g.position.y = Math.sin(s.t * 2.8) * 0.08
-  if (s.c.parts.tail) s.c.parts.tail.rotation[id === 'whale' || id === 'narwhal' ? 'z' : 'y'] = Math.sin(s.t * 12) * 0.5
+  // The crayfish turns a little side-on, so its big claws reach out to the side instead of pointing at you
+  const face = id === 'octopus' ? -1.45 : id === 'crayfish' ? -0.6 : id === 'pufferfish' || id === 'jellyfish' || id === 'duck' || id === 'chest' || id === 'boot' || id === 'crab' || id === 'frog' ? -1.05 : -0.45
+  // Held quite still while arms or stripes are counted, so each dot stays under the finger: the sway and bob
+  // ease out to nothing from where they were (no jump) and the count dots sit still
+  s.still = damp(s.still ?? 0, s.counting || s.guessing ? 1 : 0, 4, dt)
+  const move = 1 - s.still
+  const sway = id === 'octopus' ? 0.2 : 0.35
+  g.rotation.set(Math.sin(s.t * 2.2) * 0.12 * move, face + Math.sin(s.t * 1.6) * sway * move, Math.sin(s.t * 3.1) * 0.08 * move)
+  g.position.y = Math.sin(s.t * 2.8) * 0.08 * move + (SHOW_DROP[id] ?? 0) * Math.min(1, s.t * 2)
+  if (s.c.parts.tail) s.c.parts.tail.rotation[id === 'whale' || id === 'narwhal' ? 'z' : 'y'] = Math.sin(s.t * 12) * 0.5 * move
   // Rays and glow behind
   const a = Math.min(1, s.t * 3)
   // A still, soft glow behind the catch (no spinning rays)
@@ -757,7 +806,21 @@ function updateShow(dt, t) {
   if (s.guessing) {
     if (s.t - s.guessing.last > IDLE_COUNT) finishShow()
   } else if (s.counting && !s.looked) {
-    if (s.t - s.counting.last > (s.counting.n ? 12 : IDLE_COUNT)) finishShow()
+    const c = s.counting
+    // Some counted, then a long rest: Bear says the count so far and how many are left, once ("Two! One
+    // more stripe to find."); a second rest ends it with the total, so a count never ends in silence
+    if (c.n && s.t - c.last > (c.nudged ? 8 : 10)) {
+      if (!c.nudged) {
+        c.nudged = true
+        c.last = s.t
+        const left = c.pts.length - c.n
+        const one = s.look.part.replace(/s$/, '')
+        voice.sayNow(`${NUMBER[c.n]}! ${left === 1 ? `One more ${one}` : `${NUMBER[left]} more ${s.look.part}`} to find.`)
+      } else {
+        voice.sayNow(`${NUMBER[c.pts.length]} ${s.look.part} in all.`)
+        finishShow()
+      }
+    } else if (!c.n && s.t - c.last > IDLE_COUNT) finishShow()
   } else if (s.looked) {
     const heard = s.factDone ? s.t - s.factDone > 1.2 && s.t - s.looked > s.factFor * 0.6 : s.t - s.looked > s.factFor
     if (heard || s.t - s.looked > 14) finishShow()
@@ -867,7 +930,7 @@ function startCount(s) {
     d.addEventListener('pointerdown', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      countAt(i)
+      if (!countNear(e.clientX, e.clientY)) countAt(i)
     })
     dotBox.append(d)
     dots.push(d)
@@ -935,9 +998,32 @@ function countAt(i) {
   if (c.n < c.pts.length) return
   // All counted: say the total, with a fact not yet heard this trip
   game.counted.add(s.pick.id)
-  const words = ['zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][c.n] ?? String(c.n)
+  const words = NUMBER[c.n] ?? String(c.n)
   const check = s.guess == null ? '' : s.guess === c.n ? ' Just as you guessed!' : ' Counting tells us for sure!'
   readFact(s, `${words} ${s.look.part}!${check} ${takeFact(s.look) ?? ''}`.trim())
+}
+
+const NUMBER = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight']
+
+/**
+ * A tap counts the nearest arm or stripe not yet counted, within a finger's reach of its dot, so a tap
+ * between two close stripes (the clownfish's are about 60 px apart) still counts one, never nothing.
+ */
+function countNear(x, y, reach = 64) {
+  const s = fish.show
+  const c = s?.counting
+  if (!c) return false
+  let best = -1
+  let bd = reach
+  c.pts.forEach((_, i) => {
+    if (c.done[i] || dots[i].hidden) return
+    const [dx, dy] = dotXY(dots[i])
+    const d = Math.hypot(dx - x, dy - y)
+    if (d < bd) [best, bd] = [i, d]
+  })
+  if (best < 0) return false
+  countAt(best)
+  return true
 }
 
 /** Keyboard: Enter or L counts the next one still to count. */
@@ -1023,6 +1109,7 @@ function updateToBook(dt) {
     if (creatures.swimmers.filter((w) => w.id === id && !w.spawned).length < want) spawnAmbient(id).pos.set(s.splash.x, -0.5, s.splash.z)
     refillAmbient()
     updateHud()
+    if (game.riddle?.misses >= EASIER_AFTER && !game.riddle.easy && !game.riddle.list) easierRiddle()
     return
   }
   if (e >= 1) {
@@ -1039,8 +1126,7 @@ function updateToBook(dt) {
     refillAmbient()
     updateHud()
     // Counted once the catch is in the book, so the number never talks over its name.
-    // After a trophy the next catch starts a fresh count at 1, so there is always a goal.
-    if (adventure.complete) adventure.begin()
+    // Three is the whole mission: once counted it rests for the trip (no new count, no reward loop).
     adventure.event(s.pick)
     // Bear's list finished: one thank-you and a calm card, then the list is put away (a new one next trip)
     if (s.listDone === 'all') {
@@ -1052,6 +1138,7 @@ function updateToBook(dt) {
     } else if (s.listDone) voice.say("One for Bear's list!")
     // A riddle answered: Bear asks the next one once the catch is safely in the book
     if (s.solved) newRiddle()
+    else if (game.riddle?.misses >= EASIER_AFTER && !game.riddle.easy && !game.riddle.list) easierRiddle()
     // Finding all 15 is the bigger prize: its card goes up last so nothing covers it
     if (s.all) {
       showIntro('🏆', 'You found them all!', `📖 ${CREATURES.length} / ${CREATURES.length}`, false, true)
@@ -1075,29 +1162,74 @@ function newRiddle(first = false) {
   const seen = [...new Set(visibleKinds())]
   const kinds = seen.length >= 3 ? seen : AMBIENT[game.place]
   // Bear's list comes in every other riddle while something on it swims here, in view
-  const item = game.tier >= 2 && !game.riddle?.list ? game.list?.find((it) => !it.done && answersHere(it, kinds)) : null
+  // (and not when only the animal that answered last could answer it: the same one twice running is no riddle)
+  const others = kinds.filter((id) => id !== game.answered[0])
+  const item = game.tier >= 2 && !game.riddle?.list ? game.list?.find((it) => !it.done && answersHere(it, others) && listRiddle(it).key !== game.riddle?.key.replace(/\*2$/, '')) : null
   // (an ordinary riddle never asks what an item still on the list asks: that one is the list's)
   const listKeys = (game.list ?? []).filter((it) => !it.done).map((it) => listRiddle(it).key)
-  game.riddle = item ? listRiddle(item) : makeRiddle(kinds, game.tier, game.riddle, [...game.recent, ...listKeys], game.answered)
+  // Past two clues: after three two-clue riddles in a row answered with the first catch, Bear asks for
+  // two different animals that fit both clues (tier 4 on the chip). One slow riddle ends the run.
+  const deep = game.tier === 3 && game.streak.length >= 3
+  game.riddle = item ? listRiddle(item) : makeRiddle(kinds, game.tier, game.riddle, game.recent, game.answered, { two: deep, avoid: listKeys })
   const r = game.riddle
+  const pair = () => new Set(seen.filter((id) => fits(r, id))).size >= 2
   if (item) r.item = game.list.indexOf(item)
   // Tier 2 sorts a group: "find two different animals that breathe air", when two such kinds are in view
-  else if (r && game.tier === 2 && r.clues.length === 1 && TRAITS[r.clues[0].t].ask2 && new Set(seen.filter((id) => fits(r, id))).size >= 2) game.riddle = twoOf(r)
+  else if (r && game.tier === 2 && r.clues.length === 1 && TRAITS[r.clues[0].t].ask2 && pair()) game.riddle = twoOf(r)
+  else if (r && deep && r.clues.length > 1 && pair()) game.riddle = { ...twoOf(r), tier: 4 }
   drawRiddle()
   if (!game.riddle) return
-  game.recent = [game.riddle.key, ...game.recent].slice(0, 3)
+  // The last five riddles are left out while there are others (a one-answer riddle twice in six was samey)
+  game.recent = [game.riddle.key, ...game.recent].slice(0, 5)
   // The first riddle of a trip, one from Bear's list and a new kind of riddle are read out. Otherwise the
   // chip shows the new picture, and Bear reads it only after a quiet look with no cast (or on a chip tap).
-  if (first || r.list || game.riddle.tier !== game.riddleTier) sayRiddle(first)
+  // Two clues are read out too (once per riddle in a trip, by sayRiddle): the chip's slashed pictures
+  // ("fish + no yellow") are hard to decode for a six-year-old who casts quickly.
+  if (first || game.riddle.list || game.riddle.tier !== game.riddleTier || game.riddle.clues.length > 1) sayRiddle(first)
   else game.riddleSaidAt = clock
 }
+
+/** Misses on one riddle before Bear swaps it for one the swimmer by the bobber answers. */
+const EASIER_AFTER = 6
+
+/**
+ * A little one tapping anywhere can miss one riddle many times. After six misses Bear swaps it for a riddle
+ * that the swimmer nearest where they last cast answers (one simple thing to see), with the soft ring on it
+ * and that swimmer drifting in front of the boat, so the loop still closes. Careful play never gets here:
+ * a riddle is only swapped after six misses, and only once.
+ */
+function easierRiddle() {
+  const r = game.riddle
+  const inView = (s) => {
+    seenP.copy(s.pos).setY(0).project(camera)
+    return Math.abs(seenP.x) < 0.9 && seenP.y > -0.9 && seenP.y < 0.72 && !JOKES.has(s.id) && !TOYS.has(s.id)
+  }
+  const near = nearestSwimmer(castSpot, 99, inView)
+  if (!near) return
+  const kinds = [...new Set(visibleKinds())]
+  const next = makeRiddle(kinds.length >= 3 ? kinds : AMBIENT[game.place], 1, r, game.recent, [], { want: near.id })
+  if (!next || !fits(next, near.id)) return
+  next.easy = true
+  next.misses = 4 // the ring and the drift to the front start at once (see updateHelp)
+  game.riddle = next
+  game.recent = [next.key, ...game.recent].slice(0, 5)
+  helpFor = near
+  drawRiddle()
+  sayRiddle()
+}
+/** Pretend friends answer only colours: the swap picks a real animal near the bobber when there is one. */
+const TOYS = new Set(['bluefish', 'goldenfish'])
 
 function sayRiddle(first = false) {
   const r = game.riddle
   game.riddleTier = r.tier
   game.riddleSaidAt = 0
   const who = r.list ? "From Bear's list" : first ? "Bear's riddle" : 'Next riddle'
-  voice.say(first ? `${who}: find ${r.ask}. Cast near ${r.need > 1 ? 'them' : 'it'}!` : `${who}: ${r.ask}.`)
+  const line = first ? `${who}: find ${r.ask}. Cast near ${r.need > 1 ? 'them' : 'it'}!` : `${who}: ${r.ask}.`
+  // A riddle that comes round again in a trip is shown on the chip, not read again (a tap on it reads it)
+  if (game.said.has(line)) return
+  game.said.add(line)
+  voice.say(line)
 }
 
 /** An item on Bear's list was found: tick it (saved). Returns 'all' when the list is finished. */
@@ -1192,7 +1324,7 @@ function answer(r, right, id) {
     return false
   }
   r.found.push(id)
-  game.answered = [id, ...game.answered].slice(0, 3)
+  game.answered = [id, ...game.answered].slice(0, 4)
   // One of two found: the riddle stays, with its first slot filled
   if (r.found.length < r.need) {
     drawRiddle()
@@ -1453,7 +1585,7 @@ function updateBobber(dt, t) {
 // --- HUD & screens ---------------------------------------------------------------------
 
 function updateHud() {
-  $('count').textContent = `${caughtKinds()}/${CREATURES.length}`
+  // (no count on the in-play book button: fishing is about Bear's riddle, not filling the book)
   $('title-count').textContent = `${caughtKinds()}/${CREATURES.length}`
 }
 
@@ -1567,6 +1699,8 @@ function start(place) {
   const P = PLACES[place]
   showIntro(P.emoji, P.name, P.ice ? 'Tap a hole to fish!' : 'Tap the water to fish!', true)
   voice.newRound()
+  // The sorting page comes back each trip: the catches wait in the tray to be sorted again
+  book.newTrip()
   game.lookAsks = 0
   game.said.clear()
   game.recent = []
@@ -1638,6 +1772,8 @@ const book = new Book({
   voice,
   creatures,
   getBook: () => game.book,
+  // The sorting page gives older players a clue before the answer (book.js clue)
+  getTier: () => (game.state === 'play' ? game.tier : game.best),
 })
 const openBook = (e) => {
   e?.stopPropagation()
@@ -1678,6 +1814,7 @@ function tapAt(x, y) {
         const [dx, dy] = dotXY(d)
         return !d.hidden && Math.hypot(dx - x, dy - y) < 110
       }
+      if (s.counting && countNear(x, y)) return
       const close = s.counting && dots.some(near)
       if (!close && ++s.strays >= 2) finishShow()
       return

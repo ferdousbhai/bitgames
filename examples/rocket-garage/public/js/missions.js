@@ -317,7 +317,7 @@ export function missionPicture(m, { rocketThumb = null, marks = null } = {}) {
  * trail along the planets, so the child finds out what to change before touching a part. The
  * rocket is shown big, with its boosters beside it, because the boosters are the answer.
  */
-export function createWhere({ rocketThumb, thumbOf, voice, sound = () => {}, onBack, onDiagnose = () => {} }) {
+export function createWhere({ rocketThumb, thumbOf, voice, sound = () => {}, onBack, onDiagnose = () => {}, aside = () => '' }) {
   const dialog = el('dialog', 'ft-dialog where-dialog diagnose')
   dialog.id = 'where'
   dialog.setAttribute('aria-labelledby', 'where-q')
@@ -345,7 +345,8 @@ export function createWhere({ rocketThumb, thumbOf, voice, sound = () => {}, onB
   /** The answer: the trail lights planet by planet up to where the rocket lands. */
   function reveal(i) {
     const lands = reach(build)
-    const words = diagnosisWords(card, i, build)
+    // `aside` adds one honest note, e.g. that the turbo (not the boosters) took the last flight farther
+    const words = `${diagnosisWords(card, i, build)}${aside(card, build)}`
     ;[...planets.children].forEach((b, k) => {
       if (k > lands) return
       b.style.transitionDelay = `${k * 0.25}s`

@@ -13,7 +13,7 @@ import { TREASURES, countOf, decoyFor, moreWords, ruleKept, treasureSVG } from '
  * elimination): the tiles rest while the row is counted along (aloud the first time), then come back as a
  * fresh set. Nothing is lost, but it is noticed (main.js counts it toward the next world's level).
  */
-export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, onGiveBack, onSolved: solved }) {
+export function nestPuzzle(entry, { tray, sound, say, sayOnce, onSlip, onGiveBack, onChange = () => {}, onSolved: solved }) {
   const { goal } = entry
   // solved: the tray keeps the child's work in view and makes room for ▶ underneath
   const onSolved = (extra) => {
@@ -84,12 +84,37 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
     return 400 + cells.length * 650 + 300
   }
 
+  /** " 1, 2, 3." to say along with a read-along, only up to five (past that the steady highlight does the counting). */
+  const upTo = (n) => (n <= 5 ? ` ${Array.from({ length: n }, (_, i) => i + 1).join(', ')}.` : '')
+
   /** `n` near misses around `right` (a fresh mix each time), never 0 and never one of `avoid`. */
   function nearBy(right, n, avoid = []) {
     const ok = (d) => d >= 1 && d !== right && !avoid.includes(d)
     const close = [right - 1, right + 1, right - 2, right + 2].filter(ok).sort(() => Math.random() - 0.5)
     const out = close.slice(0, n)
     for (let r = 3; out.length < n && r < 40; r++) for (const d of [right + r, right - r]) if (ok(d) && !out.includes(d) && out.length < n) out.push(d)
+    return out
+  }
+
+  /**
+   * `n` near misses for a missing number in a row, drawn from outside the row on both sides and close by, so a
+   * tile has to be counted on to (for 4 ? 6 7 ? 9: 3, 10, 2 rather than 1, 2, 3; by fives: 14, 16, 13).
+   * Never a number of the row (the other gap's answer would be right, just not yet) and never 0.
+   */
+  function aroundRow(right, n, seq, avoid = []) {
+    const lo = Math.min(...seq)
+    const hi = Math.max(...seq)
+    const ok = (d) => d >= 1 && d !== right && !seq.includes(d) && !avoid.includes(d)
+    const span = hi - lo + 12
+    const near = (side) => Array.from({ length: span }, (_, i) => right + side * (i + 1)).filter(ok)
+    // a little shuffle among equally close numbers, then one from each side in turn, nearest first
+    const below = near(-1)
+    const above = near(1)
+    const out = []
+    for (let i = 0; out.length < n && i < span; i++) {
+      const pair = Math.random() < 0.5 ? [below[i], above[i]] : [above[i], below[i]]
+      for (const d of pair) if (d !== undefined && out.length < n) out.push(d)
+    }
     return out
   }
 
@@ -116,6 +141,62 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
 
   // --- rings: which number is missing? (Two numbers at the challenge tier, filled one after the other.) ---
   if (goal.type === 'rings') {
+    const wrong = (entry.flown || []).filter((f) => f.wrong)
+    if (wrong.length) return takeOut(() => gapPuzzle())
+    return gapPuzzle()
+  }
+
+  /**
+   * Numbers flown through by mistake came home in the row, in the order they were flown (1 2 5 3 4 ...).
+   * The child finds each number that doesn't belong and takes it out, then the row is complete.
+   * A number that belongs shakes and stays (a slip): only counting along the row shows which one is wrong.
+   */
+  function takeOut(then) {
+    const flown = entry.flown.slice()
+    const row = el('div', `sort-row nums takeout${flown.length > 6 ? ' wide' : ''}`)
+    let left = flown.filter((f) => f.wrong).length
+    // (the chip's oops corner still shows which numbers they were, for a child who wants to check)
+    const ask = left > 1 ? 'Some numbers flew in by mistake. Tap the ones that don\'t belong!' : 'One number flew in by mistake. Tap the one that doesn\'t belong!'
+    tray.append(row)
+    tray.setAttribute('aria-label', ask)
+    say(ask)
+    const cells = flown.map((f) => {
+      const b = el('button', 'num', String(f.n))
+      b.type = 'button'
+      b.setAttribute('aria-label', String(f.n))
+      b.onclick = () => {
+        if (b.disabled || !left) return
+        const i = cells.indexOf(b)
+        // the same number side by side (2 [2] 3): either one is the extra
+        const twin = [i - 1, i + 1].find((j) => cells[j] && !cells[j].disabled && flown[j].wrong && flown[j].n === f.n)
+        if (!f.wrong && twin === undefined) {
+          sound.nope()
+          onSlip()
+          const upto = cells.slice(0, i + 1).filter((c) => !c.disabled)
+          sayOnce('That one belongs. Count along the row!')
+          readAlong(upto)
+          return shake(b)
+        }
+        if (!f.wrong) [flown[i].wrong, flown[twin].wrong] = [true, false]
+        b.disabled = true
+        sound.pop()
+        onGiveBack(f.n)
+        const fly = b.animate?.([{ transform: 'none', opacity: 1 }, { transform: still ? 'none' : 'translateY(-50px) scale(0.6)', opacity: 0 }], { duration: still ? 250 : 550, easing: 'ease-in' })
+        const gone = () => (b.style.display = 'none')
+        if (fly) fly.onfinish = gone
+        else gone()
+        if (--left) return
+        setTimeout(() => {
+          row.remove()
+          then()
+        }, still ? 300 : 800)
+      }
+      return b
+    })
+    row.append(...cells)
+  }
+
+  function gapPuzzle() {
     const seq = goal.seq.slice(0, entry.reached)
     const row = el('div', `sort-row nums${seq.length > 5 ? ' wide' : ''}`)
     // the gaps are never at the ends, and never side by side, so there is a number on each side to count from
@@ -129,22 +210,23 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
     const ask = gaps.length > 1 ? 'Which numbers are missing?' : 'Which number is missing?'
     tray.setAttribute('aria-label', ask)
     say(ask)
-    const showing = () => seq.filter((_, i) => !cells[i].classList.contains('gap'))
     const next = (j) => {
       const gap = gaps[j]
       const right = seq[gap]
       cells[gap].classList.add('now')
-      // a fresh set of near misses each time the tiles are dealt; never a number already showing in the row
+      // a fresh set of near misses each time the tiles are dealt; never a number of the row itself, so the
+      // other gap's answer is never offered here (it would be right, just not yet)
       const others = () => {
         const out = []
         for (let k = 0; k < 24 && out.length < size - 1; k++) {
           const d = decoyFor({ ...goal, seq }, gap)
-          if (!showing().includes(d) && !out.includes(d) && d !== right && Math.random() < 0.7) out.push(d)
+          if (!seq.includes(d) && !out.includes(d) && Math.random() < 0.7) out.push(d)
         }
-        return [...out, ...nearBy(right, size - 1 - out.length, [...showing(), ...out])]
+        return [...out, ...aroundRow(right, size - 1 - out.length, seq, out)]
       }
-      // after a wrong tile: count along the row up to the gap (aloud the first time), and choose again
-      const retell = (first) => readAlong(cells.slice(0, gap + 1), first && `Let's count. ${seq.slice(0, gap).join(', ')}, and then?`)
+      // after a wrong tile: count along the row up to the gap (aloud the first time, from at most three
+      // numbers back, so the voice counts on rather than reciting the whole row), and choose again
+      const retell = (first) => readAlong(cells.slice(0, gap + 1), first && `Let's count. ${seq.slice(Math.max(0, gap - 3), gap).join(', ')}, and then?`)
       const t = tiles(right, others, (b, tileRow) => {
         const cell = cells[gap]
         cell.className = 'got'
@@ -153,12 +235,37 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
         if (j + 1 < gaps.length) {
           tileRow.remove()
           next(j + 1)
+        } else if (goal.level === 0 && !goal.down) {
+          tileRow.remove()
+          after()
         } else onSolved('')
       }, retell)
       tray.append(t)
     }
+    /**
+     * At the easier tier the gap alone is the row just flown, so one more step counts on past it: a new place
+     * at the end of the row, "which number comes next?" (6 after 1 2 3 4 5). The tiles are its neighbours (5 and 7 for
+     * 6), so the last number again or one too far is a real slip; a wrong tile counts along the row's end.
+     */
+    const after = () => {
+      const step = goal.step ?? 1
+      const right = seq.at(-1) + step
+      const cell = el('i', 'gap now', '?')
+      row.append(cell)
+      row.classList.toggle('wide', seq.length + 1 > 5)
+      const ask = 'And which number comes after that?'
+      tray.setAttribute('aria-label', ask)
+      say(ask)
+      const all = [...cells, cell]
+      const retell = (first) => readAlong(all.slice(-4), first && `Let's count. ${seq.slice(-3).join(', ')}, and then?`)
+      tray.append(tiles(right, () => nearBy(right, size - 1), (b) => {
+        cell.className = 'got'
+        cell.textContent = String(right)
+        land(b, cell)
+        onSolved('')
+      }, retell))
+    }
     next(0)
-    return
   }
 
   const rows = goal.wants.map(([k]) => [k, entry.got[k] || 0])
@@ -179,7 +286,7 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
       tray.setAttribute('aria-label', ask)
       say(ask)
     }
-    const retell = (first) => readAlong(cells.slice(0, n), first && `Let's count them again. ${Array.from({ length: n }, (_, i) => i + 1).join(', ')}.`)
+    const retell = (first) => readAlong(cells.slice(0, n), first && `Let's count them again.${upTo(n)}`)
     for (const k of [...Array(n).fill(kind), ...extras].sort(() => Math.random() - 0.5)) {
       const b = el('button', 'item', treasureSVG(k))
       b.type = 'button'
@@ -199,7 +306,8 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
           if (!--giving) startCount()
           return
         }
-        // one tap, one treasure into the next square, one number (aloud up to five, then a soft note)
+        // one tap, one treasure into the next square, with a soft rising note. The voice doesn't count here:
+        // the frame is what the child counts (or sees at a glance) to answer, and a wrong tile counts it aloud
         b.dataset.n = String(++counted)
         b.classList.add('counted')
         b.disabled = true
@@ -207,7 +315,7 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
         cell.innerHTML = treasureSVG(kind)
         cell.classList.add('full')
         land(b, cell.firstElementChild)
-        if (!count(counted)) sound.treasure(counted)
+        sound.treasure(counted)
         if (counted === n) tray.append(tiles(n, () => nearBy(n, size - 1), () => onSolved(''), retell))
       }
       pile.append(b)
@@ -231,7 +339,8 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
   const placed = {}
   for (const [k] of rows) {
     const places = holds.has(k) ? `<span class="item place">${treasureSVG(k, true)}</span>`.repeat(holds.get(k)) : ''
-    const shelf = el('button', 'shelf', `<span class="label">${treasureSVG(k, true)}</span><span class="slots">${places}</span>`)
+    // the label is a small solid treasure in a round badge, so it never reads as one more dashed place to fill
+    const shelf = el('button', 'shelf', `<span class="label badge">${treasureSVG(k)}</span><span class="slots">${places}</span>`)
     shelf.type = 'button'
     shelf.dataset.kind = k
     shelf.setAttribute('aria-label', `${TREASURES[k].many} shelf`)
@@ -309,7 +418,7 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
     tray.setAttribute('aria-label', q)
     say(q)
     const all = [...shelves.values()].flatMap((s) => [...s.querySelectorAll('.slots .item')])
-    const retell = (first) => readAlong(all, first && `Let's count them all. ${Array.from({ length: total }, (_, i) => i + 1).join(', ')}.`)
+    const retell = (first) => readAlong(all, first && `Let's count them all.${upTo(total)}`)
     tray.append(tiles(total, () => nearBy(total, size - 1), () => onSolved(`${na} and ${nb} make ${total}!`), retell))
   }
   const [a, b] = goal.more ?? []
@@ -336,6 +445,7 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, count, onSlip, on
         entry.got[k]--
         entry.got[other] = (entry.got[other] || 0) + 1
         sound.treasure(entry.got[other])
+        onChange()
         if (!ruleKept(goal, entry.got)) return
         tray.classList.add('fixed')
         for (const s of shelves.values()) s.disabled = true

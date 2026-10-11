@@ -467,3 +467,54 @@ Source: round-3 reviews (8.6 and 8.1). The blockers were a soft-lock (mission mi
 - The 🧪 button in the notebook could wear a small 🏁 while the race challenge is open.
 - The look phase could also play a soft camera "whirr" sound, to make the pause read as deliberate.
 - The planet-guess chip on the reward card is small in landscape.
+
+# Round 5: softer Robot hello, an honest reach bar and a balanced reward card (2026-10-11)
+
+Source: the coordinator's open audit item (Robot's square-wave beeps) and the last independent review (8.6). That review raised three visual and logic bugs, plus ranked improvements 1, 5, 6 and 7. All paths are under `examples/rocket-garage/public/`.
+
+## Design
+
+- **Robot's hello is soft.** Tapping Robot plays three rounded notes, sine, triangle and sine, at a lower volume, with no square buzz.
+- **The tier 1–2 "as it is" guess is a real inference.** The review found that the reach bar's 🚀 showed the last landing while the own-rocket card waited. With the rocket unchanged, the child could copy the answer from the bar. Now, while an own-rocket card waits for its guess (`diag === null`), the bar keeps its 🚩 flags but hides the 🚀 and greys every planet. This is the same as Robot's cards already did. The record comes back as soon as the guess is made.
+- **A turbo landing no longer disagrees silently with the boosters.** When the turbo carried the last flight one stop past the boosters' reach, the bar shows a still ⚡ in place of the dash into that planet. If the child then guesses the same rocket, the reveal adds one sentence: "Last time the turbo carried it one stop farther, to Mars." So the record and the rule always agree.
+- **The reward card is balanced when 🚀 is hidden.** In portrait, the card splits into two even halves: the planet and stars on one side, the buttons centred on the other. A lone 🔧 now sits in the middle of its half. The landscape row is centred.
+- **The where-dialog ✔/💡 sits inside the planet button's corner** (inset 6/5 px, 18 px) and no longer overlaps the border.
+
+## Changes
+
+- `js/main.js`:
+  - `:2278-2281`: Robot tap tones are `sine`, `triangle` and `sine` at vol 0.07–0.08 (closes the audit item).
+  - `:73`: `MISSION_AFTER` moved above its first use.
+  - `:68`, `:75`: `save.landedTurbo` is added and persisted.
+  - `:1996`: `landedTurbo` is set on landing (turbo used, and the landing is one past `reach`).
+  - `:556-566`: `renderReach` hides the 🚀 while a tier 1–2 card waits for its guess, and marks the ⚡ dash.
+  - `:1003`: the `aside` passed to `createWhere` holds the turbo note.
+- `js/missions.js:320,349`: `createWhere` takes `aside(card, build)` and appends it to the reveal sentence.
+- `style.css` (round-5 block, `:420`): `.btns` is centred, the portrait reward card uses two even columns, and `.dash.turbo` shows ⚡.
+- `fairtest.css` (round-5 block, `:363`): the `.where-mark` inset.
+
+## Evidence (scratchpad `polish/rocket-garage/r5/`)
+
+- **`play5.mjs`: 834×1194 and 1194×834, Chromium `--use-angle=gl`, speech stubbed and logged, 0 console or page errors.**
+  - Robot is found by raycast and tapped. The OscillatorNode types logged are only `sine` and `triangle`.
+  - After 3 free flights, the own-rocket card waits with `goal:false` (no 🚀 on the bar). After the guess, `goal:true`.
+  - The ✔ mark's box (178,573–200,591) sits inside its button (76,568–206,698).
+  - A turbo flight (no boosters → Mars) gives `landedTurbo:true`. After the guess, the bar shows `.dash.turbo` and the 🚀 under Mars.
+  - The reveal said: "Yes! Your rocket lands on the Moon. Robot wants the Comet. What will you change? Last time the turbo carried it one stop farther, to Mars."
+  - 14 and 15 spoken lines over 7 flights.
+- **`miss.mjs`** (an overshoot miss with 🚀 hidden) at 834×1194, 1194×834 and 375×667: the 🔧 is centred in its half (portrait) or on the card (landscape, 960 = 960). Screenshots: `p-07`, `l-07` and `s-07-miss-hidden-again.png`.
+- **`narrow.mjs`** at 375×667: the reach bar with ⚡ fits (62–261 px), with no horizontal scroll.
+- **Checks:**
+  - `browser.mjs --ids rocket-garage --run rocket-garage-c1`: BOOT and PLAY, 0 errors.
+  - `node --check` passes on `main.js` and `missions.js`.
+  - `curriculum.test.mjs`: the rocket comparison test passes. The manifest and catalogue tests wait on the coordinator's build.
+
+## Checklist
+
+- Robot tap square-wave beeps: **closed** (`js/main.js:2278-2281`).
+
+## Remaining ideas (from the review, not done this round)
+
+- A non-lookup reasoning step for tier 4, such as a "which part did it?" card, or turbo plus booster planning.
+- A picture-first notebook page for pre-readers, and the workshop behind one "race Robot" entry.
+- One unlock per landing, tied to the planet reached, in place of a planet's whole set.

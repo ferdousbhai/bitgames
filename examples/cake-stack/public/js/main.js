@@ -82,13 +82,17 @@ const game = {
   counting: false, // counting: the friend is counting the cake aloud
   over: false, // counting: the cake had too many layers, and the extra ones tilt to come off one by one
   tier: 0, // 0–3: how hard the friends' orders and the party share are, from how carefully the child builds
-  clean: 0, // cakes in a row built with no wrong layer (two step the tier up)
+  clean: 0, // cakes in a row built with no wrong layer (two step the tier up; three for the top tier)
+  countClean: 0, // counting: cakes in a row counted right first time (two open bigger numbers and leftovers)
+  prevSlips: 0, // wrong layers in the last order cake, when it had any (two slipping cakes in a row step down)
+  afterSlip: false, // tier 0: the bakery's next layer after a wrong one is another flavour, so looking first pays
   landedAt: 0, // when the last layer landed (a double tap's second half is not a pantry choice)
   told: new Set(), // how-to sentences already said this visit: each is said once, not every cake
 }
+// The tier is remembered between visits but starts one step lower each time, so a younger sibling who
+// picks up the same tablet meets gentler orders, and an older child is back where they were after two cakes.
 try {
-  game.tier = clamp(Number(localStorage.getItem('cake-stack-tier')) || 0, 0, 3)
-  game.clean = clamp(Number(localStorage.getItem('cake-stack-clean')) || 0, 0, 1)
+  game.tier = clamp((Number(localStorage.getItem('cake-stack-tier')) || 0) - 1, 0, 3)
 } catch {}
 /** A how-to sentence, said once per visit and queued after whatever the friend is saying. */
 const tellOnce = (text) => !game.told.has(text) && (game.told.add(text), voice.say(text))
@@ -118,8 +122,8 @@ const adventure = createAdventure({
   // Each counting cake asks for its own number (see countFor), so the first cake's number is only a start.
   options: [
     { emoji: '🧁', label: "Friend's order", order: true },
-    { emoji: '🐢', label: 'Gentle layer counting', pace: 0.6, goal: 'Stack 3 layers', target: 3, base: 3, range: [2, 3, 4], icon: '🍰', reward: 'Three layers make your little cake!', praise: 'layers make your little cake!' },
-    { emoji: '🧮', label: 'Count bigger cakes', pace: 0.65, goal: 'Stack 5 layers', target: 5, base: 5, range: [4, 5, 6, 7], icon: '🍰', reward: 'Five layers, counted one at a time!', praise: 'layers, counted one at a time!' },
+    { emoji: '🐢', label: 'Gentle layer counting', pace: 0.6, goal: 'Stack 3 layers', target: 3, base: 3, range: [2, 3, 4], stretch: [5], icon: '🍰', reward: 'Three layers make your little cake!', praise: 'layers make your little cake!' },
+    { emoji: '🧮', label: 'Count bigger cakes', pace: 0.65, goal: 'Stack 5 layers', target: 5, base: 5, range: [4, 5, 6, 7], stretch: [8], icon: '🍰', reward: 'Five layers, counted one at a time!', praise: 'layers, counted one at a time!' },
     { emoji: '🎂', label: 'Free stacking' },
   ],
 })
@@ -127,13 +131,15 @@ const NUMBER_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Sev
 /**
  * Counting: each friend wants their own number of layers. The first cake of a visit asks for the mission's
  * starting number; after that the number always changes (never the same twice running), so the child has to
- * count the cake rather than remember the last answer. A child who miscounted twice gets a smaller number next.
+ * count the cake rather than remember the last answer. A child who miscounted twice gets a smaller number next;
+ * one who counts right first time, cake after cake, sometimes gets one past the usual range (5, or 8).
  */
 function countFor(option, first) {
   let n = option.base
   if (!first) {
     const last = option.target
-    let range = option.range.filter((k) => k !== last)
+    // A child who has counted two cakes in a row right first time meets a bigger number now and then.
+    let range = option.range.concat(game.countClean >= 2 ? option.stretch || [] : []).filter((k) => k !== last)
     if (game.lastMiscounts >= 2) range = range.filter((k) => k <= option.base).length ? range.filter((k) => k <= option.base) : range
     n = range[(Math.random() * range.length) | 0]
   }
@@ -175,8 +181,9 @@ const topY = () => STAND_TOP + (cake ? cake.layers.length : 0) * STEP
 const topLayer = () => (cake && cake.layers.length ? cake.layers[cake.layers.length - 1] : { x: 0, w: START_W })
 // One calm, constant pace: no ramp by level or cake height, so patience and timing stay the skill.
 const SLIDE_SPEED = 1.25
-// In an order, a layer crosses this many times before it makes way for the next one.
-const LEAVE_AFTER = 2
+// In an order at tier 0, each of the bakery's layers crosses the cake once and makes way for the next, so
+// letting a layer go by is quick, and waiting for the right picture beats dropping whatever comes.
+const LEAVE_AFTER = 1
 const speed = () => adventure.pace * SLIDE_SPEED
 
 // --- Camera -----------------------------------------------------------------------------------
@@ -249,10 +256,13 @@ function aimCamera(snap = false) {
     camGoal.halfH += 0.35
     camGoal.y += 0.3
     if (game.state === 'card' || game.state === 'share') {
-      // Leave room for the party card: beside the cake on wide screens, below it on tall ones
+      // Leave room for the party card: beside the cake on wide screens, below it on tall ones. On wide
+      // screens the cake and the birthday friend keep to the left half of what is really shown (a tall
+      // cake widens the view through its height), so the card on the right never covers the friend.
       if (camera.aspect > 1.2) {
-        camGoal.halfW *= 1.9
-        camGoal.x += camGoal.halfW * 0.45
+        camGoal.halfW *= 2.1
+        const shownHalfW = Math.max(camGoal.halfW, camGoal.halfH * camera.aspect)
+        camGoal.x += shownHalfW * 0.5
       } else {
         camGoal.halfH *= 1.4
         camGoal.y -= camGoal.halfH * 0.3
@@ -260,7 +270,11 @@ function aimCamera(snap = false) {
     }
   } else {
     const t = topLayer()
-    Object.assign(camGoal, { x: t.x * 0.4, y: topY() + 0.3, halfW: view.R + START_W / 2 + 0.25, halfH: 2.1, pitch: 0.22 })
+    // Sideways, the view sits a little right of the cake: the pantry stands along the left edge, and the
+    // birthday friend on the right stays wholly in frame. Tall screens keep a slimmer margin round the slide,
+    // so a short early cake and its friend fill more of the screen.
+    const wide = camera.aspect > 1.2
+    Object.assign(camGoal, { x: t.x * 0.4 + (wide ? 0.22 : 0), y: topY() + 0.3, halfW: view.R + START_W / 2 + (camera.aspect < 0.8 ? 0.12 : 0.25), halfH: 2.1, pitch: 0.22 })
     camGoal.y = liftForDots(camGoal.y)
   }
   const dist = distFor(camGoal.halfW, camGoal.halfH)
@@ -359,9 +373,14 @@ function pickOrderFlavour() {
   const others = [...new Set([...game.order.layers, ...unlockedFlavours(game.level)])].filter((f) => f !== want && f !== game.lastFlavour)
   // Older children spend their time deciding, not waiting: from tier 2 the wanted layer comes round more often.
   const quick = game.tier >= 2
-  const match = !others.length || game.misses >= (quick ? 1 : 2) || Math.random() < (game.misses ? 0.55 : quick ? 0.5 : 0.4)
+  // Straight after a wrong layer the bakery sends another flavour (once): a guess costs a whole slide, so
+  // waiting for the right picture is quicker than tapping every layer. Otherwise the wanted one comes often.
+  const forced = game.afterSlip && others.length
+  game.afterSlip = false
+  const match = !forced && (!others.length || game.misses >= (quick ? 1 : 2) || Math.random() < (game.misses ? 0.6 : 0.5))
   const f = match ? want : others[(Math.random() * others.length) | 0]
   game.misses = match ? 0 : game.misses + 1
+  game.forcedLayer = !!forced
   game.lastFlavour = f
   return f
 }
@@ -479,7 +498,7 @@ function renderPantry() {
   const i = built()
   const full = missionTarget() && built() >= countCap()
   const finished = orderMode() && i >= targetLayers()
-  const list = game.state !== 'play' || !cake || cake.surprise || game.counting || full || finished ? null : orderMode() ? (choosing(i) ? game.choices : null) : unlockedFlavours(game.level)
+  const list = game.state !== 'play' || !cake || cake.surprise || game.counting || game.over || full || finished ? null : orderMode() ? (choosing(i) ? game.choices : null) : unlockedFlavours(game.level)
   pantry.classList.toggle('hidden', !list)
   pantry.classList.toggle('ask', !!list && isMystery(i))
   if (!list) return
@@ -512,6 +531,7 @@ function updateMover(dt, t) {
   if (!mover || mover.dropping) return
   const L = mover
   L.appear = Math.min(1, L.appear + dt * 4)
+  L.age = (L.age || 0) + dt
   L.pos += L.dir * speed() * dt
   if (L.leaving) {
     // It shrinks away past the edge and the next layer comes along.
@@ -520,6 +540,8 @@ function updateMover(dt, t) {
       L.group.removeFromParent()
       mover = null
       hideMoverTag()
+      // The wanted layer went by untouched: it comes straight back, so a slow drop never means a long wait.
+      if (orderMode() && L.flavour === wanted()) game.misses = 9
       const run = game.run
       setTimeout(() => run === game.run && game.state === 'play' && !mover && spawnMover(), 350)
       return
@@ -535,7 +557,8 @@ function updateMover(dt, t) {
   L.x = top.x + L.pos
   const pop = ease.outBack(L.appear) * (1 - (L.fade || 0))
   // The sliding layer follows the lean of the cake's top, so lining it up still looks right on a tilted cake.
-  L.group.position.set(L.x + leanAt(topY()), topY() + hover() + Math.sin(t * 3) * 0.04, 0)
+  // It slides level, with no bob: the steady golden glow alone says when it is lined up.
+  L.group.position.set(L.x + leanAt(topY()), topY() + hover(), 0)
   L.body.scale.set(L.w * pop, pop, L.w * pop)
   // Every layer glows golden while it is lined up for a perfect drop: the glow is about timing, never about which flavour
   const lined = !L.leaving && Math.abs(L.pos) <= perfectWindow(top.w)
@@ -579,7 +602,12 @@ function landSurprise(L) {
   const mystery = isMystery(i)
   game.slips++
   game.tried[i]++
-  game.misses = 0
+  // Dropped before there was time to look at its picture (a tap as soon as it appeared): at tier 0 the
+  // friend's glance at the dots is longer, so tapping every layer the moment it shows is clearly slower.
+  game.hasty = !choosing(i) && (L.age || 0) < 0.7
+  // At tier 0 the next layer is another flavour, unless this slip was already on one (no chain of them).
+  game.afterSlip = !choosing(i) && !game.forcedLayer
+  if (game.afterSlip) game.misses = 0
   ;(game.wrongAt[i] ||= []).push(L.flavour)
   mover = null
   game.landedAt = performance.now()
@@ -654,22 +682,26 @@ async function liftSurprise() {
   cake.layers.splice(cake.layers.indexOf(layer), 1)
   cake.surprise = null
   updateHud()
-  // Counting, after too many: each extra layer tilts in turn until the cake has the friend's number again,
-  // then the finger rests on the candle so the child can count it once more.
+  // Counting, after too many: the child decides how many come off. Each tap on the cake lifts its top
+  // layer (nothing else tilts or points), and the candle asks the friend to count again. Taking off too
+  // many is a real miscount too: the friend says their number and stacking starts again.
   if (game.over) {
-    if (built() > missionTarget()) return tiltTop()
-    game.over = false
-    $('done').classList.remove('hidden')
+    $('done').classList.toggle('hidden', !built())
     renderPantry()
-    setTimeout(() => run === game.run && game.state === 'play' && !mover && !game.counting && showHintAt($('done')), 600)
+    if (!built()) {
+      game.over = false
+      setTimeout(() => run === game.run && game.state === 'play' && !mover && !game.counting && spawnMover(), 250)
+    }
     return
   }
   // In an order, the friend glances back at the dots before the pantry opens again: a slip costs a calm
   // moment, so looking first is quicker than guessing.
-  const glance = choosing(built())
-  if (glance) askPip()
-  else renderPantry()
-  setTimeout(() => run === game.run && game.state === 'play' && !mover && !game.counting && !(missionTarget() && built() >= countCap()) && spawnMover(), glance ? 850 : 250)
+  // At tier 0 (the bakery's layers) the glance is a little longer, so tapping every layer is slower than looking.
+  const glance = orderMode() ? (choosing(built()) ? 850 : game.hasty ? 2000 : 1100) : 250
+  game.hasty = false
+  if (orderMode()) askPip()
+  if (!choosing(built())) renderPantry()
+  setTimeout(() => run === game.run && game.state === 'play' && !mover && !game.counting && !(missionTarget() && built() >= countCap()) && spawnMover(), glance)
 }
 
 function land(L) {
@@ -727,7 +759,9 @@ function land(L) {
   } else {
     // The overhang squishes off with a splat of icing, and a little piece tumbles onto the counter
     const edge = new THREE.Vector3(fromX + dir * (fromW / 2) + cake.group.position.x, y + 0.18, 0.1)
-    effects.splat(edge, icing, dir, kind === 'squish' ? 18 : 10)
+    // Crumbs flying toward the friend stay short, so none crosses their face.
+    const room = dir > 0 ? clamp((view.custX - 0.8 - edge.x) / 0.6, 0.15, 1) : 1
+    effects.splat(edge, icing, dir, kind === 'squish' ? 18 : 10, room)
     sound.splat()
     if (ad > 0.08) sliver(L.flavour, fromX + dir * (fromW / 2 - Math.min(0.2, ad) / 2), y, Math.min(0.32, ad * 0.9), dir)
     cake.wobble = Math.max(cake.wobble, kind === 'squish' ? 0.14 : 0.07)
@@ -772,8 +806,16 @@ function sliver(flavour, x, y, w, dir) {
   L.body.scale.set(w, 0.9, w)
   L.group.position.set(x + cake.group.position.x, y, 0)
   scene.add(L.group)
-  // It tumbles sideways along the counter, never toward the camera, where it would loom large.
-  slivers.push({ obj: L.group, v: new THREE.Vector3(dir * (1.1 + Math.random() * 0.6), 1.5, 0.1 + Math.random() * 0.25), spin: dir * -(3 + Math.random() * 3), age: 0, landed: false })
+  // It tumbles sideways and lands on the counter close beside the cake, never toward the camera (where it
+  // would loom large) and never as far as the birthday friend's face: its sideways speed is set from how
+  // long it falls, so a tall cake's sliver lands just as near as a short one's.
+  // Toward the friend (who stands to the right), it lands well short of their face, or slips straight
+  // down without a hop when the cake's edge is already close to them.
+  const room = dir > 0 ? view.custX - 0.8 - (x + cake.group.position.x) : 9
+  const vy = room < 0.3 ? 0.2 : 1.5
+  const fall = (vy + Math.sqrt(vy * vy + 2 * 9.8 * Math.max(0, y))) / 9.8
+  const reach = Math.max(0.03, Math.min(0.3 + Math.random() * 0.3, room))
+  slivers.push({ obj: L.group, v: new THREE.Vector3((dir * reach) / fall, vy, 0.1 + Math.random() * 0.2), spin: dir * -(2 + Math.random() * 2), age: 0, landed: false })
 }
 
 function updateSlivers(dt) {
@@ -888,7 +930,7 @@ async function decorateSide(L, k) {
 
 // --- The birthday party ------------------------------------------------------------------------
 
-async function topDecorations(run) {
+async function topDecorations(run, quick = false) {
   const L = topLayer()
   const y = topY() + 0.003
   const deco = new THREE.Group()
@@ -936,9 +978,9 @@ async function topDecorations(run) {
     const s = o.userData.s
     o.scale.setScalar(0.001)
     deco.add(o)
-    sound.pop(0, i % 12)
+    if (!quick || i % 5 === 0) sound.pop(0, i % 12)
     tween(0.32, (t) => o.scale.setScalar(Math.max(0.001, s * ease.outBack(t))))
-    await wait(i === 0 ? 0.25 : 0.07)
+    await wait(quick ? 0.025 : i === 0 ? 0.25 : 0.07)
     if (run !== game.run) return false
   }
   return true
@@ -965,7 +1007,8 @@ async function finishCake(reason) {
     addLayer(cake, 'vanilla', 0, START_W).sq = 0.3
     sound.plop()
   }
-  showIntro('🎂', reason === 'narrow' ? 'What a tall cake!' : 'The cake is ready!', customer?.def.emoji ?? '🎂')
+  // Up at the top, where the "Make a wish" bubble goes, so it never covers a tall cake's topper.
+  showIntro('🎂', reason === 'narrow' ? 'What a tall cake!' : 'The cake is ready!', customer?.def.emoji ?? '🎂', false, true)
   sound.fanfare()
   hideMoverTag()
   // Name what the child built: the order followed layer by layer, or the pattern finished.
@@ -974,14 +1017,20 @@ async function finishCake(reason) {
     // A cake lined up with care stands straight, and the friend notices (once, quietly; never a score).
     const straight = Math.abs(cake.lean) < 0.02 && topLayer().w > 1 && cake.layers.length >= 4 ? ' So straight!' : ''
     const remembered = game.order.memory && !game.peeks && !game.slips
-    voice.sayNow(game.order.design ? `You made up a pattern for ${name}, and kept it going!${straight}` : game.order.groups.length ? `You finished ${name}'s pattern!${straight}` : remembered ? `You remembered ${name}'s whole order!${straight}` : `${orderWords(game.order.layers)}. Just like ${name}'s order!${straight}`)
+    // A cake that took many wrong layers is still finished, but the friend says so plainly: careful
+    // building and guessing sound different, without any score.
+    const bumpy = game.slips >= 3
+    voice.sayNow(bumpy ? `We got there! ${orderWords(game.order.layers)}, for ${name}.` : game.order.design ? `You made up a pattern for ${name}, and kept it going!${straight}` : game.order.groups.length ? `You finished ${name}'s pattern!${straight}` : remembered ? `You remembered ${name}'s whole order!${straight}` : `${orderWords(game.order.layers)}. Just like ${name}'s order!${straight}`)
     cake.straight = !!straight
     adaptTier()
   }
   await wait(0.5)
   if (run !== game.run) return
-  if (!(await topDecorations(run))) return
-  await wait(0.3)
+  // The first two parties of a visit are shown in full; after that the toppers arrive together, the
+  // candles light at once and the friend hops quickly, so the child reaches the sharing (the thinking part) sooner.
+  const quick = game.cakes > 2
+  if (!(await topDecorations(run, quick))) return
+  await wait(quick ? 0.1 : 0.3)
   if (run !== game.run) return
 
   // The birthday friend hops onto the counter beside the cake
@@ -993,7 +1042,7 @@ async function finishCake(reason) {
   const s0 = c.group.scale.x
   sound.voice(c.def.animal)
   c.group.rotation.y = 0
-  await tween(0.7, (t) => {
+  await tween(quick ? 0.45 : 0.7, (t) => {
     c.group.position.lerpVectors(from, to, t)
     c.group.position.y = lerp(from.y, to.y, t) + Math.sin(t * Math.PI) * 1.6
     c.group.scale.setScalar(lerp(s0, 1.35, t))
@@ -1002,13 +1051,15 @@ async function finishCake(reason) {
   sound.plop()
   c.hop(0.2)
   c.group.rotation.y = -0.35
-  await wait(0.4)
+  await wait(quick ? 0.15 : 0.4)
   if (run !== game.run) return
 
-  // Light the candles one by one
+  // Light the candles one by one (all together once the party is familiar)
   for (const cd of cake.candles) {
     cd.lit = true
+    if (quick && cd !== cake.candles[0]) continue
     sound.match()
+    if (quick) continue
     await wait(0.18)
     if (run !== game.run) return
   }
@@ -1021,19 +1072,29 @@ async function finishCake(reason) {
 /**
  * The next friends' orders follow how the cakes go: two cakes in a row built with no wrong layer step up
  * (choosing every layer, then patterns to finish, then harder patterns and sharing with leftovers); three
- * or more wrong layers in one cake step back down. It is never announced and never locks anything.
+ * or more wrong layers in one cake, or wrong layers on two cakes in a row, step back down. It is never
+ * announced and never locks anything.
  */
 function adaptTier() {
-  if (game.slips === 0 && ++game.clean >= 2) {
-    game.tier = Math.min(3, game.tier + 1)
+  // Two clean cakes in a row step up to tiers 1 and 2; the hardest orders (memory and made-up patterns)
+  // need three, so a careful but young child is not meeting them a minute into a visit.
+  if (game.slips === 0) {
+    game.prevSlips = 0
+    if (++game.clean >= (game.tier >= 2 ? 3 : 2)) {
+      game.tier = Math.min(3, game.tier + 1)
+      game.clean = 0
+    }
+  } else {
     game.clean = 0
-  } else if (game.slips) {
-    game.clean = 0
-    if (game.slips >= 3) game.tier = Math.max(0, game.tier - 1)
+    // It eases off after three wrong layers in one cake, or after wrong layers on two cakes in a row
+    // (so a child making one or two slips every cake is not left on the hardest orders).
+    if (game.slips >= 3 || game.prevSlips) {
+      game.tier = Math.max(0, game.tier - 1)
+      game.prevSlips = 0
+    } else game.prevSlips = game.slips
   }
   try {
     localStorage.setItem('cake-stack-tier', String(game.tier))
-    localStorage.setItem('cake-stack-clean', String(game.clean))
   } catch {}
 }
 
@@ -1046,6 +1107,7 @@ async function checkCount() {
   const run = game.run
   const want = missionTarget()
   game.counting = true
+  game.over = false
   game.idle = 0
   $('done').classList.add('hidden')
   $('hint').classList.add('hidden')
@@ -1066,8 +1128,11 @@ async function checkCount() {
       pips[k - 1].classList.add('counted')
       pips[k - 1].textContent = String(k)
     }
-    // Counting is the lesson here, so the friend counts aloud all the way (the cakes stop at nine).
-    if (!voice.count(k, { aloud: 10, interrupt: false })) sound.pop(0, k)
+    // Counting is the lesson here, so the friend counts aloud all the way (the cakes stop at nine). On a
+    // second look at a cake that was too big, the friend counts to their own number and then names each
+    // extra layer as "one more", so the difference is heard instead of a longer and longer count.
+    if (game.miscounts && k > want) voice.say(k === want + 1 ? 'and one more' : 'one more')
+    else if (!voice.count(k, { aloud: 10, interrupt: false })) sound.pop(0, k)
     await wait(0.62)
     if (run !== game.run) return
   }
@@ -1077,7 +1142,6 @@ async function checkCount() {
     p.classList.remove('counted')
     p.textContent = ''
   }
-  const name = animalName(customer.def.animal)
   if (n === want) {
     // The mission counts the layers (quietly: the friend just did) and says its reward line.
     // The cake is finished: game.counting stays set until the party starts, so no layer, pantry or candle
@@ -1090,19 +1154,31 @@ async function checkCount() {
   game.miscounts++
   customer?.surprised()
   updateHud()
+  // The friend's number was said when the cake began: here a short hint is said once, then "count again"
+  // once, and after that the goal slices and the empty dots do the telling.
   if (n < want) {
-    voice.say(`${name} wants ${want}.`)
+    if (!voice.sayOnce('Not yet. More layers!')) voice.sayOnce('Count again with me.')
   } else {
-    // The top layer tilts, like a wrong layer: one tap takes it off.
+    // The top layer tilts, like a wrong layer: one tap takes it off. After that the child decides how many
+    // more to take off (a tap on the cake lifts its top layer) before tapping the candle again.
     game.over = true
     tiltTop()
-    if (!voice.sayOnce(`${name} wants ${want}. Tap to take one off.`)) voice.say(`${name} wants ${want}.`)
+    if (!voice.sayOnce('Too many! Tap the cake to take layers off, then tap the candle.')) voice.sayOnce('Count again with me.')
   }
   await wait(1.2)
   if (run !== game.run) return
   game.counting = false
   $('done').classList.toggle('hidden', !built() || !!cake.surprise)
-  if (!cake.surprise && !mover && built() < countCap()) spawnMover()
+  if (!game.over && !cake.surprise && !mover && built() < countCap()) spawnMover()
+}
+
+/** Counting, after too many: a tap on the cake takes its top layer off (the child decides how many). */
+function takeTop() {
+  if (!built() || cake.surprise) return
+  const top = cake.layers[cake.layers.length - 1]
+  top.surprise = true
+  cake.surprise = top
+  liftSurprise()
 }
 
 /** Counting: the top layer tilts, marked to come off with one tap (as a wrong layer does in an order). */
@@ -1217,14 +1293,15 @@ function shareCut(n) {
   const most = game.tier >= 2 ? 4 : 3
   const exact = [4, 6, 8, 12].filter((s) => s % n === 0 && s / n <= most)
   const leftover = [4, 6, 8].filter((s) => s > n && s % n)
-  const hard = game.tier >= 1 && game.order
+  // Orders follow the tier; counting cakes follow the child's own counting (two right first time in a row).
+  const hard = game.order ? game.tier >= 1 : game.countClean >= 2
   // The hardest tier chooses the cut: one way that goes round exactly, one that leaves slices over.
   if (game.tier >= 3 && game.order && leftover.length) {
     const cuts = [exact[(Math.random() * exact.length) | 0], leftover[(Math.random() * leftover.length) | 0]]
     return { cuts: Math.random() < 0.5 ? cuts : cuts.reverse(), withBaker: true }
   }
   const list = hard && leftover.length && Math.random() < 0.6 ? leftover : exact
-  return { slices: list[(Math.random() * list.length) | 0], withBaker: !!hard && n > 2 }
+  return { slices: list[(Math.random() * list.length) | 0], withBaker: hard && n > 2 }
 }
 
 function startShare() {
@@ -1297,6 +1374,8 @@ async function startLevel(run) {
   game.peeks = 0
   game.peeking = false
   game.lastMiscounts = game.miscounts
+  // Counting cakes right first time in a row: two open the bigger numbers and sharing with leftovers.
+  if (missionTarget() && game.cakes) game.countClean = game.miscounts ? 0 : (game.countClean || 0) + 1
   game.miscounts = 0
   game.counting = false
   game.over = false
@@ -1308,6 +1387,8 @@ async function startLevel(run) {
   game.cakes = (game.cakes || 0) + 1
   game.slips = 0
   game.misses = 0
+  game.afterSlip = false
+  game.forcedLayer = false
   voice.newRound()
   game.lastFlavour = null
   customer = animals.make(def)
@@ -1477,6 +1558,8 @@ function updateHud() {
       if (blank) {
         p.classList.remove('mystery', 'oops')
         p.textContent = i < game.order.design ? '' : '?'
+        // The "?" of the part still to keep going is drawn in the order's pink, so it reads on its white dot.
+        p.style.color = i < game.order.design ? '' : '#b04a7a'
         p.style.setProperty('--want', '#fff')
         p.style.setProperty('--want-rim', '#d9a7c0')
         p.setAttribute('aria-label', `Layer ${i + 1}: your choice`)
@@ -1489,17 +1572,25 @@ function updateHud() {
       const oops = i === n && cake?.surprise ? cake.surprise.flavour : null
       p.classList.toggle('mystery', mystery)
       p.classList.toggle('oops', !!oops)
+      p.style.color = ''
       p.textContent = oops ? FLAVOURS[oops].emoji : mystery ? '?' : f.emoji
       p.style.setProperty('--want', mystery ? '#fff' : f.rainbow ? '#ffe3ef' : f.icing)
       p.style.setProperty('--want-rim', mystery ? '#d9a7c0' : f.sponge)
       p.setAttribute('aria-label', `Layer ${i + 1}: ${oops ? `${oops} is on the cake, tap to take it off` : mystery ? 'what comes next?' : game.order.layers[i]}`)
       p.classList.toggle('next', i === n && game.state !== 'party')
+      // From tier 1 only the first dot is ringed (where the order starts); after that the child finds their
+      // own place by matching the layers on the cake to the dots. The ring comes back where a wrong one was tried.
+      p.classList.toggle('quiet', game.tier >= 1 && i > 0 && !game.peeking && !(game.tried[i] > 0))
       return
     }
     // Counting: only the layers on the cake have dots, so the child compares the cake with the friend's
     // number instead of filling empty slots. After two miscounts the friend's number of empty dots comes back.
-    if (missionTarget()) p.classList.toggle('ghost', !on && !(game.miscounts >= 2 && i < missionTarget()))
-    const f = on ? FLAVOURS[layers[i].flavour] : null
+    // A layer tilted to come off (too many) still sits on the cake, so it keeps its dot, tilted and dashed
+    // like the layer: the dots always match the layers the child can see while deciding how many to take off.
+    const tilted = !!cake?.surprise && i === n && layers[i] === cake.surprise
+    p.classList.toggle('tilted', tilted)
+    if (missionTarget()) p.classList.toggle('ghost', !on && !tilted && !(game.miscounts >= 2 && i < missionTarget()))
+    const f = on || tilted ? FLAVOURS[layers[i].flavour] : null
     p.style.background = f ? (f.rainbow ? 'conic-gradient(#ff6b6b, #ffe066, #69db7c, #74c0fc, #b197fc, #ff6b6b)' : f.icing) : ''
     // The sponge colour rings each landed layer, so pale icings (vanilla) still read as filled
     p.style.borderColor = f ? f.sponge : ''
@@ -1577,7 +1668,7 @@ function celebrateMission(text) {
 }
 
 let introTimer = 0
-function showIntro(emoji, title, sub, stay = false) {
+function showIntro(emoji, title, sub, stay = false, high = false) {
   $('intro-emoji').textContent = emoji
   $('intro-title').textContent = title
   $('intro-sub').textContent = sub
@@ -1585,6 +1676,7 @@ function showIntro(emoji, title, sub, stay = false) {
   el.className = 'intro'
   void el.offsetWidth
   el.classList.add(stay ? 'stay' : 'show')
+  if (high) el.classList.add('high')
   clearTimeout(introTimer)
   if (!stay) introTimer = setTimeout(() => (el.className = 'intro'), 2000)
 }
@@ -1600,7 +1692,8 @@ function showHintAt(pos) {
 }
 /** A child who stops tapping gets the finger again, pointing just under the sliding layer. */
 function updateIdle(dt) {
-  if (game.state !== 'play' || (mover && mover.dropping) || cake?.surprise || game.counting) return
+  // After too many layers the child is deciding how many to take off: nothing points the way.
+  if (game.state !== 'play' || (mover && mover.dropping) || cake?.surprise || game.counting || game.over) return
   game.idle = (game.idle || 0) + dt
   // A quiet reminder only after a long pause; a child who is simply watching is left to watch.
   if (game.idle > 30 && $('hint').classList.contains('hidden')) {
@@ -1675,7 +1768,7 @@ function start() {
   endRun()
   clearDemo()
   const debugLevel = Number(new URLSearchParams(location.search).get('level')) || 1
-  Object.assign(game, { level: debugLevel, streak: 0, lastFlavour: null, cakes: 0, miscounts: 0 })
+  Object.assign(game, { level: debugLevel, streak: 0, lastFlavour: null, cakes: 0, miscounts: 0, countClean: 0, prevSlips: 0 })
   show('play')
   startLevel(game.run)
 }
@@ -1693,6 +1786,13 @@ $('card-home').addEventListener('click', () => {
 $('next').addEventListener('click', nextCake)
 $('done').addEventListener('click', (e) => {
   e.stopPropagation()
+  // A candle tap while a layer is still falling is heard, and it waits for the layer to land.
+  if (game.state === 'play' && mover?.dropping && !game.counting && !cake?.surprise) {
+    sound.click()
+    const run = game.run
+    setTimeout(() => run === game.run && $('done').click(), 360)
+    return
+  }
   if (game.state !== 'play' || (mover && mover.dropping) || game.counting || cake?.surprise) return
   sound.click()
   if (missionTarget()) checkCount()
@@ -1729,7 +1829,7 @@ musicBtn.addEventListener('click', (e) => {
 
 function tap() {
   sound.unlock()
-  if (game.state === 'play' && !game.counting) cake?.surprise ? liftSurprise() : drop()
+  if (game.state === 'play' && !game.counting) cake?.surprise ? liftSurprise() : game.over ? takeTop() : drop()
   else if (game.state === 'candles') blowCandles()
   else if (game.state === 'title' && demo) {
     demo.friends[(Math.random() * 2) | 0].cheer(0.8)

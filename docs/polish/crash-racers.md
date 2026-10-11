@@ -462,3 +462,363 @@ Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-
 - True side spurs and junctions (new road geometry per city).
 - The tier is still per device.
 - The gate signs are sprites. A Blender gantry would match the cities' style.
+
+## Round 5 of the 2026-10-10 re-audit (2026-10-11)
+
+The last review scored 8.4. Two audit items were still open: side streets and junctions, and a shared tray for friends. The review also found five bugs: a gate tap that counted for nothing, bot turbo flames in Easy mode, the confetti when a mystery box opens, an old Stunt Park blurb, and award badges on the results. Its blockers were that Race had no step up, the greedy route still earned the planning praise, older children could not choose the harder town, and friends could get different towns.
+
+### Design
+
+- **Side streets (closes the "spurs and junctions" item).**
+  - **The streets.** In Delivery Town each city now has two short dead-end streets off the loop, 🌈 Rainbow Street and 🌙 Moon Street.
+    - Each is a 7 m lane laid in the city's own road surface, with a round turning place at its end.
+    - A house stands at the end of each street. Its picture sign sits on a post at the corner.
+  - **Where they go.**
+    - The city plans the streets before it builds any scenery: on straight road, on open ground, away from the start and from each other. The planned streets join the road's spatial hash, so terraces, buildings and trees keep clear of them the same way they keep clear of the road.
+    - Once the city is built, anything still in a street's way is cleared, such as a shrine or a crate.
+    - A street that would run into the sea, a river or a jump's landing is dropped and a spare takes its place.
+    - Every city got two streets in each of 30 seeded builds (`spurs.mjs`).
+  - **Choosing a street.**
+    - As a street's corner comes up, the stop button shows the street's picture with ↪️. In tier 1 the button shows the house with the street as its badge.
+    - Tapping it means "turn in here". The van turns in by itself, rolls gently to the door, waits for the handover, swings round the turning place and comes back out, carrying on the way it was going.
+    - A wrong street costs the trip down it and back.
+  - **The map.** Each street is drawn as a road off the loop, 1.8 times longer than it really is, so it reads as a street. The street's picture sits at its corner and the house is pinned at its end.
+  - **The plan.** The best plan, the "nearest first" check, the trip lengths and the recap all count the way down and back up a street. A careful drive that took a street measures within a few metres of the plan (for example 807 m against 806 m).
+- **A shared tray with friends (closes the "cooperative tray" item).**
+  - In Delivery Town with friends, everyone drives the host's town, with the same houses and tier (`setup.tier`). Everyone shares one tray.
+  - Two new messages keep the tray in step:
+    - `pack` sends the parcels in a child's van. They show that child's animal in everyone else's tray and cannot be packed there.
+    - `given` sends a parcel that was handed over. It is ticked off for everyone, drops onto that doorstep, and a 👋 banner shows who delivered it.
+  - The drive ends for everyone when the tray is empty, with the line "All 8 parcels delivered together! You took N." Each child's recap shows their friends' handovers with the friend's animal on them.
+  - Friends' vans show on the map.
+  - A shared drive does not change the tier.
+- **The order has to be planned in tiers 2 and 3.**
+  - `tourGreedy` works out the "drive to the nearest house next" route and `tourBest` the best one. If nearest-first comes within the praise margin, `configureTown` lays the town out again from another seed (up to 24 tries).
+  - House spots are picked at random among the well-spread ones, so the tries really differ.
+  - In 20 seeded towns, nearest-first now misses the praise in 18 at tier 2 and in 19 at tier 3 (`tours.mjs`).
+- **A visible harder town.** When 📦 Deliver is selected, three small chips sit in the mode row: 📦, 📦📦🚧 and 📦📦⛔. A grown-up or an older child can start at tier 2 or 3, and later drives still move the tier up or down.
+- **Race and Bumpers.**
+  - **Gate taps (bug).** A tapped present is now always the answer. In Easy mode the car aims at the middle of the picked lane (±0.3 of the road width), looking closer in once the gate is within 45 m. Measured lanes at the gate were ±1.5 to 3.6 m, against −0.7 m before.
+  - **More gates that adapt.** Three gates per loop instead of two, and no house comes straight back on the next gate. Three right in a row bring each house's harder present (🍐, 🕯️); two misses in a row bring the easy presents back. The closing line notices the harder presents.
+  - **Calmer in Easy mode.**
+    - No bot ever fires a turbo, and boost pads boost no one, so there are no flames.
+    - A bot's box simply opens.
+    - Opening a box makes a soft sound and shows a small note at the top of the screen (🎁 📯). There is no colour burst and no big banner over the gate buttons.
+    - The honk ring is pale dust, without the purple and teal sparks.
+    - The boxes turn slowly.
+    - There are no road stars.
+  - **Results.** The gates (house and present, with a gold ring for each match) now lead the results at a larger size. The per-car "kind" badges are gone; each car shows only 🏁, 🏎️, 🅿️ or 👋.
+  - **Stunt Park blurb.** It now reads "Big jumps, cactus desert and hot-air balloons".
+
+### Changes
+
+| What | Where |
+| --- | --- |
+| `SPUR` sizes; `Track.plan`; `planSpurs`, `spurClear`, `makeSpur`, `nearSpur`; jumps avoid junctions; town builds skip boost pads under a moved jump | `public/js/track.js:11`, `track.js:87-91`, `track.js:330`, `track.js:444`, `track.js:511-571` |
+| `carveSpurs` (clear the way, drop blocked streets, keep two), `buildSpur` (lane over the pavement, turning place); an emptied merge bucket is skipped | `track.js:580-712`, `track.js:718` |
+| `STREETS`, `streetSign`, side-street house slots, spread house spots, road works and one-way kept off junctions, a friend's parcel drops from above | `public/js/town.js:49`, `town.js:188`, `town.js:344-410`, `town.js:456` |
+| Map: streets drawn long (`MAP_STRETCH`, `layout.at`), lane, turning place, street picture | `town.js:52`, `town.js:513-545`, `town.js:575-610` |
+| `townWay` and `streetLength`; shared tray (`friendHas`, `shareLoad`, `friendDelivered`, `pack` and `given`) | `public/js/main.js:351-367`, `main.js:386-420`, `main.js:1673-1681` |
+| Street button (`renderStop`); van in a side street (`startGlide`, `glideStep`, `endGlide`) | `main.js:471`, `main.js:737-846` |
+| `tourBest`, `tourGreedy`, `bestRoute` with streets, `configureTown`; shared ending and tier | `main.js:941-1030`, `main.js:1041`, `main.js:1074` |
+| Adaptive gates; gate taps always count; lane aim | `main.js:1141`, `main.js:1173`, `main.js:1241`, `main.js:2700`; `public/js/gates.js:39`, `gates.js:75`, `gates.js:106` |
+| Tier chips; host tier in `setup`; side streets planned before the city is built; shared run | `main.js:1401-1440`, `main.js:1714`, `main.js:1772`, `main.js:1784` |
+| Calm Easy race: no stars, calm bots, box note, side streets count as road in `recover` | `main.js:1808`, `main.js:1863`, `main.js:2096-2160`, `main.js:2206`; `public/js/bot.js:50,61`; `public/js/pickups.js:70,203`; `public/js/effects.js:198` |
+| Results without badges, gates first | `main.js:2417`, `public/index.html:104` |
+| Tier chips, `#note` | `index.html:36`, `index.html:76` |
+| Styles for the new pieces | `public/style.css:410` onward |
+| Stunt Park blurb | `public/js/cities.js:22` |
+| How to play and learning text | `game.json` |
+
+`delivery.js`, the shared helpers and the Blender assets are untouched.
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/crash-racers/r5/`. Speech was stubbed in every run, and every run had 0 page or console errors.
+
+- **`spurs.mjs`.**
+  - Five cities with 6 to 7 seeds each: two side streets in every build, and each build took 50 to 300 ms.
+  - Views of the street and its turning place in each city: `spur-*.png`.
+- **`play.mjs` with real Easy drives.**
+  - **Tier 1.** Ubud portrait: 4/4 in 93 to 98 s with 13 lines. Stunt Park landscape: two drives (115 s and 82 s) both took the side streets the short way, and the tier moved to 2.
+  - **Pictures.**
+    - `c1-stop.png`: the street button, showing 🧸 with 🌙.
+    - `c1-glide.png`: the van turning in.
+    - `m1-door1.png`: a wrong parcel at a door on a side street.
+    - `c2-recap0.png`: the streets on the recap.
+    - `g3-stop.png`: the tier-3 street button, showing 🌙 with ↪️.
+  - **Nearest-first against planned.**
+    - Helsinki tier 3: nearest-first drove 996 m against a best of 818 m and got "Look at the gold road…". The `planner` style drove 807 m against 806 m and got "planned the whole way along the arrows!".
+    - Montreal tier 2: the planner drove 825 m against 805 m and was praised.
+  - **Matcher.** Dino tier 1: 1314 m against 834 m, with 1 wrong offer and no promotion.
+  - **Phone (375×667), tier 2.** 8/8 (`ph-glide.png`).
+- **`coop.mjs`: two iframes and a stand-in BitGames bridge, with real WebRTC between them.**
+  - Both cars drove the same tier-2 town, with the same houses and the same tray.
+  - After the host packed 📕, the guest's tile showed 🦊 and could not be packed (`coop-packed.png`).
+  - After the host delivered it, the guest's tray ticked it off.
+  - The guest delivered the other seven. Both screens moved to the results with "All 8 parcels delivered together! You took one." on the host and "…You took 7." on the guest. The recap shows the friend's animal on their handovers (`coop-results.png`).
+  - The tier stayed at 2.
+- **`race.mjs`.**
+  - **Ubud portrait, careful taps.** 6/6 gates, measured at lanes −1.5, −3.6, 2.9, 2.9, −3.5 and −1.5 m. Gates 4 to 6 were run in the harder tier, but gates 4 and 5 had already been set out with the easy presents (🐶 🦴 shows twice in `ru-results.png`), so only gate 6 (🍎 🍐) truly used a harder present. Before the fix in `gates.js`, `passed[].hard` was read from the live tier, so the log marked all three with H. The gate now keeps its own hardness. The closing line was "You matched every present, even the harder ones!" The results show the gate row first (`ru-results.png`).
+  - **Helsinki landscape, random taps.** 2/6 right, with two house questions.
+  - **Bumpers, Montreal landscape.** 4/4 right, and the tier stepped up after 3.
+- **`calm.mjs`, Easy mode.**
+  - Race in Stunt Park (90 s) and Bumpers in Montreal (60 s): 0 samples of a bot turbo and 0 road stars. 4 and 5 boxes were opened, each showing the small top note (`calm-smash-1194x834-note.png`).
+  - That screenshot was taken before the honk ring lost its sparks, so it still shows the old purple and teal streaks.
+- **`menu.mjs`.** At 834×1194, 1194×834, 375×667 and 667×375 there is no horizontal scroll, the tier chips are at least 44 px, the choice is saved, and the chips are hidden for Race.
+- **Checks.** `node --check` passes on every `public/js/*.js`. `browser.mjs --ids crash-racers --run crash-racers-c1` gives BOOT + PLAY ready with 0 errors. `original-quality.mjs` passed, crash-racers included.
+
+### Checklist
+
+- **Add side streets and junctions so the map matters: done.** There are two dead-end side streets per city. A street's corner is a real decision, and in tiers 2 and 3 only the map says which house is down which street. A wrong street costs a trip, and the streets count in every plan.
+- **Shared tray for friends: done.** It uses the `pack` and `given` messages and the host's tier, and was tested over real WebRTC between two pages.
+- **Review bugs: fixed.** The gate tap, the Easy turbo flames, the box burst, the Stunt Park blurb and the award badges.
+- **Review blockers: addressed.**
+  - Race now steps up to the harder presents, with three gates per loop.
+  - Nearest-first misses the praise in 18 of 20 tier-2 towns and 19 of 20 tier-3 towns.
+  - Older children can pick the harder town in the menu.
+  - Friends share the host's tier.
+
+### Remaining
+
+- The name "Crash Racers" still clashes with the calm default. The title belongs to the catalogue and was not changed.
+- The side streets have no colliders. A child steering by hand can still drive in and out of a street, and the street counts as road for rescue.
+- The van drives a side street by itself, so there is no steering there, even outside Easy mode.
+- `passed[].lateral` (where the car was under a gate) is recorded for the test scripts only.
+
+## 2026-10-11 — Round 6: a true map, one start sentence, a nudge for a quiet child
+
+### Design
+
+- **The map is drawn true.** Side streets are still drawn 1.8× long, but only the street itself (its lane, turning place and house) is stretched. Before this fix, any point on the same line as a side street, anywhere across the town, was pushed outward. That moved stretches of the loop, loop houses, the car arrow, the recap route and the gold plan off the road, in every city. Now the loop and every loop house sit exactly where `px`/`pz` put them.
+- **One sentence to start.** The child hears a single opening line in every tier, and with friends that line carries the sharing. The road-works or one-way line is now said once, when the van is full (the moment to plan the way) and after the parcels' questions. The side-street line was dropped from the start, because the corner already says it ("A side street! Is your house down there? Look at the map.").
+- **A child who has not packed yet.** After 25 s with nothing packed and nothing handed over, the child hears "Tap a parcel to put it in the van." once. The tray tiles glow softly once (a single 2.4 s ease, a still ring under reduced motion), and the glow never repeats.
+- **"The short way" is honest.** A stop counts toward the short way only if the parcel had a way to choose: a shortest trip of at least 12 m that the van really drove (at least 0.6 × the shortest). A parcel packed at its own door, or a teleported trip, now counts neither way. The co-op line "You went the short way every time" also needs at least two such trips.
+- **Fluent tier 1 gets a decision behind the start.** After one careful tier-1 drive (careful streak ≥ 1), the host's setup carries `behind`. One loop house then stands 44–96 m behind the start, unless a side street is already there. That house is about 42 m away with ↩️ and about 780 m away driving round, so turning round becomes a real choice. Friends get the same town because the flag travels in `setup`.
+- **Results fit the screen.**
+  - On a narrow portrait phone, the recap uses a smaller map (`min(72vw, 38vh, 300px)`) and one row of compact stops, so 🔁 and 🗺️ stay on screen.
+  - On a sideways phone, the stops sit two by two and both buttons share one row. Before this, at 667×375 the 🗺️ button sat 76 px below the fold.
+  - On a landscape tablet or laptop, the map gives a little height back.
+
+### Changes
+
+| What | Where |
+| --- | --- |
+| Stretch bounded to the street (`end`) | `public/js/town.js:529-536` |
+| `configure(..., { behind })`: a house behind the start for a fluent tier 1 | `town.js:329`, `town.js:362-374` |
+| `townRun.idle`/`nudged`, `IDLE_NUDGE_SECONDS`, `nudgeTray`, idle check in `watchTheWay` | `public/js/main.js:306`, `main.js:618-637` |
+| Plan line when the van is full | `main.js:525-529` |
+| `routed` trips in `deliverTo`; honest shared ending | `main.js:884-887`, `main.js:1069-1073` |
+| `configureTown(seed, tier, behind)`; `setup.behind` | `main.js:1037-1042`, `main.js:1740`, `main.js:1815` |
+| One-sentence start | `main.js:1960-1966` |
+| Tray glow, portrait-phone recap, sideways-phone recap, landscape-tablet recap | `public/style.css:433-471` |
+
+`delivery.js`, the shared helpers and the Blender assets are untouched.
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/crash-racers/r6/`. Speech was stubbed and logged in every run, and every run had 0 page or console errors.
+
+- **`mapprobe.mjs` (the unit check the review asked for).**
+  - It covers 5 cities × 60 seeds × tiers 1–3, 900 layouts in all. For every track sample and every loop house, `at(x, z)` equals `[px(x), pz(z)]` exactly (worst error 0 px), and no house falls off the 300 px map.
+  - With the bound removed, the same probe fails all 180 Montreal layouts, with a worst error of 105 px.
+- **`mapshot.mjs`.** On the Helsinki HUD map (`map-helsinki-1.png`), each street house sits at the end of its own lane.
+- **`play.mjs` drives.**
+  - Montreal tier 2 (`c2`, `m2`), phone tier 2 (`ph`) and Dino tier 3 planner (`g3`): all 8/8 delivered with 13 lines each. Each opened with one sentence, and the closure or one-way line came after the parcels' questions.
+  - The recaps (`c2-recap0.png`, `ph-recap0.png`) show the route and gold band on the road. The 🎂 street is drawn as a short lane, not a long diagonal.
+  - `c2-t45.png`: the car arrow is on the road.
+- **Nudge.** In the Helsinki passive run (`p1`), "Tap a parcel to put it in the van." came at 26 s and nothing else followed. `nudge.mjs` shows one soft glow that is removed after 2.6 s (`nudge.png`).
+- **`behind.mjs`.**
+  - With `behind`, all 40 of 40 seeds put a house within 100 m behind the start in every city. Without it, Helsinki managed 3 of 40 and Montreal 2 of 40. Ubud, Dino and Stunt already have a side street there.
+  - Live Montreal: 📚 is 44 m behind the start (42 m back against 689 m round).
+  - A fluent Helsinki careful drive (`f1`) turned round for it, got "went the short way every time", and moved up to tier 2.
+- **`recap.mjs`.** Results across sizes, with the bottom of the buttons against the viewport height:
+
+  | Size | Buttons end at | Viewport |
+  | --- | --- | --- |
+  | 375×667 | 607 | 667 |
+  | 360×640 | 589 | 640 |
+  | 667×375 | 357 | 375 (was 451) |
+  | 1194×834 | 812 | 834 |
+  | 834×1194 | 1000 | 1194 |
+
+  None of these sizes scrolls horizontally.
+- **Checks.** `node --check` passes on `main.js` and `town.js`. `browser.mjs --ids crash-racers --run crash-racers-c2` gives BOOT + PLAY ready with 0 errors.
+
+### Checklist
+
+- **Open checklist items:** none.
+- **Map distortion (the blocker): fixed** and probed.
+- **Car arrow off the map, and recap route or plan leaving the canvas: fixed** (same cause).
+- **Phone results below the fold: fixed** in portrait, and in sideways phones too.
+- **Co-op "short way every time" after 0 m trips: fixed** (`routed`).
+- **Improvements done:**
+  - 1: the bound plus the unit probe.
+  - 2: one start sentence, with the plan line given when the van is full.
+  - 3: the idle nudge with a one-time glow.
+  - 5: the recap fits the screen.
+  - 6: honest "short".
+  - 7: a house behind the start for a fluent tier 1.
+- **Not done: improvement 4** (race gates as route choices, or the matched present riding to a finish house). This is a Race-mode redesign and was left for a later round. A miss still costs only a short puddle.
+
+## 2026-10-11 — Round 7: a calm Easy race, a gate answer that survives a rescue, a floor for the youngest
+
+### Design
+
+- **Easy Race and Bumpers are calm (blocker 1, improvement 1).** `calmRoad()` (Delivery Town or Easy mode) now decides how bumps look and feel.
+  - Every car this device drives is `gentle` in Easy mode: a bump is a soft wobble with a little dust. There are no dents, no sparks, no camera shake, and nothing falls off.
+  - A friend's crash shown on an Easy device is dust and a soft bump, not a spark burst.
+  - Grinding sparks and the scrape sound are gone. A landing gives a soft thump with no shake.
+  - Police lights glow steadily in every mode. They used to flash red and blue five times a second.
+  - The dead Bumpers score path (`addScore`, the `score` message, `game.scores`) is removed.
+- **Bots keep out of the child's view (bug 4).**
+  - *Manners.* In Easy mode a bot within 24 m behind or alongside the child holds below the child's speed. A bot just in front speeds up to make room. A child stopped for more than 6 s is passed slowly (9 m/s) along the far edge. While a bot waits it does not count as stuck or as making no headway, so a rescue never drops it next to the child.
+  - *Veil.* Any car that is not the child's thins to an even 4×4 dither within 3 to 6.5 m of the camera. It uses the same screen as the see-through trees and is never transparent-sorted.
+- **The gate answer lives on the gate (bug 1, improvement 2).** `g.tapped` is set by the tap and cleared when the gate is dressed again. It no longer resets when the shown gate changes. A pass counts across ±40 m (`GATE_PASS`), so a rescue that carries the car past the gate still scores the tapped present.
+- **The step up shows at once (improvement 8).** After three right in a row, or two misses, every gate that is not on show is dressed again with the new tier.
+- **Kind ending at 5/6 (improvement 4).** The child now hears "You matched five presents. One house wanted something else."
+- **The countdown stands alone (bug 2).** "You drive …" shows for 1.5 s, then 3-2-1 starts at 1.8 s. The race banner font is smaller and padded, so long car names fit at 834 px wide.
+- **Door banners (bug 3).**
+  - The "🏠 house" banner at a door is gone, because the tray already leads with the house's picture.
+  - Town banners (the handover 👋, the turned-away 🤔, 🚧, ⛔ and 📦 × n) are now a paper card low on the road, above the pedals, clear of the 3D sign and resident.
+- **A floor for the youngest (blocker 2, improvement 3).**
+  - After 90 s with nothing handed over in tier 1 (60 s once it has helped), still gold rings show the way: the parcel for the house coming up, then its stop button once that parcel is packed, then that parcel at the door.
+  - The help ends at the handover and counts as help, so it never leads to promotion. There is no extra voice line.
+- **A thinner start (improvement 5).**
+  - Tiers 2 and 3 ask one question, once, when the first pair is packed ("A ball and a bone. Who would like them?").
+  - The road-works or one-way line follows 7 s later.
+  - In tier 1 the parcel question now uses `sayOnce`, so the same parcel packed twice is not asked about twice. The random run had heard "Bananas. Who would like bananas?" twice.
+- **The map matters for a fluent tier 1 (improvement 7).** With a careful streak of 1 or more (`setup.behind`), a side street's stop button shows only the street picture and ↪️, as in tiers 2 and 3.
+
+### Changes
+
+| What | Where |
+| --- | --- |
+| `calmRoad()` | `public/js/main.js:245` |
+| Fluent stop picture (`mapOnly`) | `main.js:488` |
+| Floor ring on the stop button | `main.js:495` |
+| One pair question; delayed plan line | `main.js:528-548` |
+| No door banner | `main.js:592` |
+| `FLOOR_SECONDS`, `floorWatch` | `main.js:636-655` |
+| Floor ends at the handover | `deliverTo` |
+| `tappedFor`, `GATE_PASS`, `watchGates`, `passGate` | `main.js:1210-1275` |
+| Immediate step redress | `main.js:1260` |
+| 5/6 ending | `main.js:1322` |
+| `townRun.fluent` | `main.js:1863` |
+| `car.gentle = calmRoad()`; veil for every other car | `main.js:1932`, `main.js:1945` |
+| Countdown after the car banner | `main.js:2023` |
+| Calm `showHit` and landing; score path removed | `main.js:2145` |
+| Waiting bots are not stuck | `main.js:2290`, `main.js:2300` |
+| Polite bots wired in | `main.js:2734` |
+| `nearCamera` update | `main.js:2937` |
+| Grinding sparks only off calm roads | `scrapeAndSkid` |
+| `Bot.politeness`, `car.waiting` | `public/js/bot.js:39-47`, `bot.js:114-131`, `bot.js:138` |
+| `nearCamera`, `withNearFade`, `Car.veilNearCamera` | `public/js/car.js:59-90`, `car.js:770` |
+| Steady police lights | `car.js:290` |
+| `g.tapped` | `public/js/gates.js:46` |
+| Banner padding and size | `public/style.css:92` |
+| Town paper-card banner, `.floor` ring | `style.css:345-351` |
+| `howToPlay` text | `game.json` |
+| Debug hook (`gates`, `camera`, `respawn` on `__town`) | `main.js`, near the end |
+
+`delivery.js`, the shared helpers and the Blender assets are untouched.
+
+### Evidence
+
+Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish/crash-racers/r7/`. Speech was stubbed and logged, and every run had 0 page or console errors.
+
+- **`calmrace.mjs`, Easy mode.** The script counts `sparkBurst` calls, the peak camera shake, the player's damage, and the samples where a bot in view is under 7 m from the camera.
+
+  | Run | Gates | Sparks | Shake | Damage | Bot under 7 m |
+  | --- | --- | --- | --- | --- | --- |
+  | Stunt portrait race (`rp`) | 5/5, harder from gate 4 (`🍎🍐✓H 🎂🕯️✓H`) | 0 | 0 | 0 | 3 of 390 samples (11 before the manners) |
+  | Ubud landscape race holding 🚀 (`rl`) | 6/6 | 0 | 0 | 0 | 19 of 389, all veiled (`rl-close.png`) |
+  | Montreal Bumpers (`bs`) | 4/4 | 0 | 0 | 0 | — |
+  | Helsinki random (`rr`) | 4/6 | — | — | — | — |
+  | Phone 375×667 race (`rph`) | — | — | — | — | 0 |
+
+  - In the Helsinki random run, two house questions were asked and the ending was the general "look at the house" line.
+  - `rp-count2.png`: the "2" stands alone. `rp-intro.png`: the car banner shows before the countdown, and `bannerOnCount` was false in every run.
+- **`rescue.mjs` (bug 1).**
+  - (A) Tap the right present, rescue 200 m back so the gate leaves the window, then put the car back 12 m before the gate on the wrong side: scored right.
+  - (B) Tap, then a rescue carries the car from 8 m before the gate to 25 m past it, on the wrong side (lateral −3.5): scored right (🦴 ✓).
+- **`play.mjs` town drives.**
+  - Helsinki tier 1 careful (`c1`): 4/4 in 100 s with 12 lines. `c1-give2.png` shows the paper card "🐻 👋 🍌" low on the road, apart from the sign and the resident.
+  - Montreal tier 2 (`m2`): 8/8. The voice said the opening at 1 s, the pair question at 2 s and the road works at 6 s; that run was made with the earlier 4 s delay, now 7 s.
+  - Dino tier 3 (`g3`): the voice said the opening at 0 s, the question at 2 s, the side street at 8 s and the one-way line at 9 s.
+  - Fluent Ubud tier 1 (`f1`): the street stop shows `🌈↪️`, against `🧸🌈` for the non-fluent `n1`. 4/4, and the tier moved to 2.
+  - Phone tier 2 (`ph-give2.png`): the card fits beside the pedals.
+- **Floor (`fo`, a child who taps whatever wears the gold ring and otherwise taps at random).**
+  - Ubud tier 1: the ring showed at 106 s (`fo-floor.png`, the 🦴 tile ringed as the 🐶 house comes up). First handover at 109 s, second at 229 s: 2 of 4 in 300 s, against 0 of 4 for the plain random tapper.
+  - `help` was 6 and the tier stayed at 1.
+  - Re-arming after 60 s was added after this run.
+- **Checks.**
+  - `node --check` passes on every `public/js/*.js`.
+  - `browser.mjs --ids crash-racers --run crash-racers-c3` gives BOOT + PLAY ready with 0 errors.
+
+### Checklist
+
+- **Open checklist items:** none.
+- **Bugs:**
+  - Gate answer lost after a rescue: fixed and probed.
+  - Banner over the countdown: fixed.
+  - Door banners floating in the scene: fixed.
+  - Bot filling the camera and spark shower in Easy: fixed (manners, veil, no sparks).
+- **Blockers:**
+  - Easy Race and Bumpers are now as calm as Delivery Town: no sparks, dents or shake, polite bots, steady lights. The name and tagline "Crash Racers… Crashes welcome!" belong to the catalogue and are raised as a shared request.
+  - The youngest have a floor.
+- **Improvements:** 1–8 done.
+
+## 2026-10-11 — Round 4: gates only count real answers
+
+Review 1 scored 8.4, with no open checklist items. This pass fixes its three bugs and makes ranked improvements 1, 2, 3, 5, 6 and 7.
+
+### Design
+
+- **An Easy gate counts only when the child answered it (bug 1, improvement 1).** In Easy mode a gate scores only when the child tapped a present, or when their own ◀ or ▶ took the car into that lane in the last 4 s. The steering helper's drift of a metre or so is no longer read as a choice. A child who only holds 🚀 now gets no ticks, no puddles, no house questions and no closing line. Steering still counts as an answer, so a child who prefers ◀ ▶ to tapping is not ignored.
+- **A fair distractor (bug 2, improvement 3).** `gates.js` uses a seeded Fisher–Yates shuffle and remembers the last two houses that lent the wrong present (`recentWrong`), so each gate brings a new distractor.
+- **The results teach the match (improvement 2).** Next to each missed gate, the present that house wanted shows small and faint, after a dashed divider. The title and aria-label say "they wanted …".
+- **A thinner Easy HUD (bug 3, improvement 5).** Easy cars are never dented, so 🔧 is hidden under `#hud.easy`, along with the 🎥 camera switch. 📯 stays as a harmless toy.
+- **Leaving a struggling drive (improvement 6).** A tier 2 or 3 drive left unfinished after two or more wrong offers now steps the tier down, as two or more helps already did. The careful streak is reset.
+- **No petals (improvement 7).** The 12 paper petals on every result are gone (`softFinish`, `.party` CSS, `RAINBOW`). The recap map, ribbons and gate chips stand alone.
+- **Not done: improvement 4 (a route fork in Race, or presents riding to a finish house).** It needs new track topology or a new finish ritual in every city, which is too much for a final round. With Easy gates now honest, each of the 3 gates per lap is a real decision. Recorded as the next depth step.
+
+### Changes
+
+| What | Where |
+| --- | --- |
+| `steeredAt` and `steeredSide` on the gate run; `STEERED_SECONDS` | `public/js/main.js:1210-1212` |
+| Easy untapped and unsteered gate gives no answer; `want` recorded | `main.js:1253-1261` |
+| Child's own steering remembered | `main.js:2599-2604` (`humanController`) |
+| Recap shows the wanted present | `main.js:1315-1318` |
+| Tier steps down on leaving with 2+ wrong offers | `main.js:1857-1863` |
+| Petals removed | `main.js` (`renderResults`, `clearTimers`), `style.css` |
+| Fisher–Yates `shuffled()`, `recentWrong` | `public/js/gates.js:31-53`, reset in `configure` |
+| `#hud.easy #fix-btn`, camera hidden | `style.css:292-293` |
+| `.gate-recap .gate u` | `style.css:413` |
+| `howToPlay` text | `game.json` |
+
+### Evidence
+
+Scripts, logs and screenshots are in `scratchpad/polish/crash-racers/r8/`. Speech was stubbed, and every run had 0 page or console errors.
+
+- **`none`: Montreal Easy Race, no taps, portrait.** 0 gates scored, no puddles, no house questions and no closing line. The only line spoken was the gate intro.
+- **`st`: Montreal, landscape, steering with ◀ ▶ only.** 2 gates scored, both right (🌸🌷✓ 🍎🍌✓). Steered answers still count.
+- **`rr` and `rr2`: Helsinki random tapper.**
+  - Distractors in `rr2` were 🌷 🎈 🪁 🦴 🍌 🌷, with none repeated within 2 gates.
+  - `rr2-results.png` shows the missed chips with the wanted present, faint (🧸🎈 ┆ 🪁, 🐶🪁 ┆ 🦴).
+  - The voice asked 2 house questions and gave one closing line.
+- **`bl`: Montreal Bumpers, careful tapper, landscape.** 4/4, with the harder tier from gate 4 (📚📕✓H). `bl-gate1.png` shows the HUD without 🔧 or 🎥. Sparks, shake and damage were all 0, and `.party` was absent.
+- **`sim.mjs`.** 24 dressings of the new shuffle: no distractor repeats within 2 gates.
+- **`leave.mjs`.** Tier 2 town with 2 wrong offers, then left for a race: the stored tier went 2 → 1.
+- **Checks.**
+  - `node --check` passes on `main.js` and `gates.js`.
+  - `browser.mjs --ids crash-racers --run crash-racers-c4` gives BOOT + PLAY ready with 0 errors.
+
+### Checklist
+
+- **Open items:** none.
+- **Bugs 1–3:** fixed and probed.
+- **Improvements:**
+  - 1, 2, 3, 5, 6 and 7: done.
+  - 4: deferred, with the reason above.

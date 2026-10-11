@@ -51,6 +51,42 @@ function colouredGeometry(mesh, matrix) {
   return solidColor(g, mesh.material.color ?? new THREE.Color(1, 1, 1))
 }
 
+/**
+ * Where the camera is, for the near veil below (main.js updates it every frame).
+ * Another car that comes right up to the camera (alongside the child's car on a
+ * bend, or just behind it) thins to an even dither instead of filling the screen.
+ */
+export const nearCamera = { value: new THREE.Vector3(0, -1e4, 0) }
+function withNearFade(m) {
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.nearCamera = nearCamera
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vNearWorld;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvNearWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;')
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vNearWorld;\nuniform vec3 nearCamera;')
+      .replace(
+        '#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
+        float nearFade = (1.0 - smoothstep(3.0, 6.5, distance(vNearWorld, nearCamera))) * 0.85;
+        // The same even 4x4 ordered screen as the see-through trees: a soft veil, not grain.
+        vec2 nearP = mod(floor(gl_FragCoord.xy), 2.0);
+        vec2 nearQ = mod(floor(gl_FragCoord.xy * 0.5), 2.0);
+        float nearBayer = 4.0 * (nearP.x * 2.0 + nearP.y * 3.0 - 4.0 * nearP.x * nearP.y) + (nearQ.x * 2.0 + nearQ.y * 3.0 - 4.0 * nearQ.x * nearQ.y);
+        if ((nearBayer + 0.5) / 16.0 < nearFade) discard;`,
+      )
+  }
+  m.customProgramCacheKey = () => 'nearFade'
+  m.needsUpdate = true
+  return m
+}
+/** Shared materials (the toy body, the template's) each get one veiled copy, used by every other car. */
+const nearCopies = new WeakMap()
+const nearCopy = (m) => {
+  if (!nearCopies.has(m)) nearCopies.set(m, withNearFade(m.clone()))
+  return nearCopies.get(m)
+}
+
 /** Paint that a car's tint recolours. */
 const TINTABLE = /^(paint|accent)_/
 
@@ -232,7 +268,7 @@ function cloneTemplate(template) {
 
 /**
  * The cartoon bits: eyes that blink, squint when hurt and look where the car
- * steers, a grin that turns to a frown, flashing police lights and the
+ * steers, a grin that turns to a frown, steady police lights and the
  * rocket's booster flame. All optional.
  */
 class Face {
@@ -251,7 +287,7 @@ class Face {
     this.flameBase = this.flame?.scale.clone()
     this.blinkAt = 1 + Math.random() * 3
     this.time = Math.random() * 10
-    // Police lights: this car's own copies of the red and blue materials, so they flash alone.
+    // Police lights: this car's own copies of the red and blue materials. Calm pass: they glow steadily (they used to flash red and blue five times a second).
     this.flashers = []
     get('extra_lightbar')?.traverse((o) => {
       if (o.isMesh && /light_(red|blue)/.test(o.material.name)) {
@@ -286,10 +322,6 @@ class Face {
       const flicker = 0.85 + Math.sin(this.time * 41) * 0.1 + Math.sin(this.time * 23) * 0.08
       const s = car.turboActive ? 2.6 : car.controls.throttle > 0 ? 1 : 0.55
       this.flame.scale.set(this.flameBase.x * (0.8 + 0.2 * s), this.flameBase.y * (0.8 + 0.2 * s), this.flameBase.z * s * flicker)
-    }
-    if (this.flashers.length) {
-      const redOn = Math.floor(this.time * 5) % 2 === 0
-      for (const f of this.flashers) f.material.emissiveIntensity = f.base * (f.red === redOn ? 1.6 : 0.15)
     }
   }
 
@@ -728,6 +760,21 @@ export class Car {
     body.quaternion.set(_quat.x, _quat.y, _quat.z, _quat.w)
     this.steerAngle = b.s
     this.turboTime = b.b ? 0.1 : 0
+  }
+
+  /**
+   * Every car but the child's own: veiled where it comes right up to the camera
+   * (see nearCamera). This car's own materials take the veil in place; shared ones
+   * are swapped for their veiled copy.
+   */
+  veilNearCamera() {
+    const d = this.damage
+    const own = new Set([...this.tintMaterials, ...this.face.flashers.map((f) => f.material), ...d.glass.flatMap((p) => p.materials), ...d.lights.flatMap((p) => p.materials), d.crackedGlass])
+    for (const m of own) withNearFade(m)
+    const swap = (m) => (!m || m.visible === false || own.has(m) ? m : nearCopy(m))
+    this.root.traverse((o) => {
+      if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material)
+    })
   }
 
   dispose() {

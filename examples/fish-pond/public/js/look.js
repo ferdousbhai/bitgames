@@ -27,6 +27,10 @@
  *   turtle     https://en.wikipedia.org/wiki/Turtle_shell (the shell is joined to the backbone and ribs)
  *   narwhal    https://www.fisheries.noaa.gov/species/narwhal (tusk mostly in males, up to about 3 m)
  *   fins       pectoral fins sit where our arms are: https://en.wikipedia.org/wiki/Pectoral_fin
+ *   seal       https://www.fisheries.noaa.gov/species/ringed-seal (light rings round dark spots; claws on the front
+ *              flippers keep breathing holes open in the ice); whiskers feel for fish: https://en.wikipedia.org/wiki/Whiskers
+ *   cod        https://en.wikipedia.org/wiki/Gadidae (cods have three dorsal fins and a chin barbel)
+ *              https://en.wikipedia.org/wiki/Barbel_(anatomy) (barbels carry taste buds, for finding food)
  *
  * `facts`: two ways to tell it, so a second catch in a trip hears something new (main.js lookFact).
  * A look whose facts have all been heard this trip doesn't glow again.
@@ -69,7 +73,7 @@ export const LOOK = {
     { part: 'tail', at: [-0.64, -0.02, 0.02], fact: 'A fish swishes its tail from side to side to push itself along.' },
     { part: 'back fin', at: [-0.02, 0, 0.44], fact: 'The fin on its back keeps a fish steady, so it does not roll over.' },
   ],
-  bluefish: [{ part: 'side fins', at: [0.0, -0.22, -0.12], facts: ['Fish use their side fins to turn and to stop.', 'Its side fins are where your arms are. They help it steer.'] }],
+  bluefish: [{ part: 'side fins', at: [0.0, -0.22, -0.12], facts: ['Blue Fish is pretend, but real fish have side fins like these. They turn and stop with them.', 'Its side fins are where your arms are. They help it steer.'] }],
   trout: [
     { part: 'stripe', at: [0.0, -0.2, -0.02], fact: 'That pinky-red stripe is why it is called a rainbow trout.' },
     { part: 'spots', at: [-0.08, -0.18, 0.1], fact: 'Rainbow trout have lots of little black spots all along the body.' },
@@ -119,12 +123,28 @@ export const LOOK = {
     { part: 'skin', at: [0.0, -0.28, 0.02], fact: 'A frog breathes with its lungs, and a little through its wet skin too.' },
   ],
   crayfish: [
-    { part: 'claws', at: [0.6, -0.3, 0.01], fact: 'A crayfish grabs its food with its big claws.' },
+    { part: 'claws', at: [0.64, -0.3, 0.02], fact: 'A crayfish grabs its food with its big claws.' },
     { part: 'tail', at: [-0.42, -0.08, -0.02], fact: 'Scared? A crayfish flips its tail and zooms away backwards!' },
   ],
   snail: [
     { part: 'shell', at: [-0.06, -0.14, 0.14], facts: ['Its shell grows with it, round and round in a spiral.', 'Scared? A snail pulls its soft body right inside its shell.'] },
     { part: 'feelers', at: [0.46, -0.14, 0.2], fact: 'A snail feels and smells its way with its feelers.' },
+  ],
+  // Arctic cod (blender/models.py creature_cod): three back fins at x 0.16, -0.04, -0.24; the barbel under the chin
+  cod: [
+    {
+      part: 'back fins',
+      at: [-0.04, 0, 0.3],
+      count: [[0.16, 0, 0.3], [-0.04, 0, 0.31], [-0.24, 0, 0.29]],
+      facts: ['A cod has three fins on its back. Lots of fish have just one.', 'Three back fins help a cod turn and stay steady.'],
+    },
+    { part: 'chin whisker', at: [0.45, -0.02, -0.2], fact: 'A cod feels and tastes for food on the sea floor with its chin whisker.' },
+  ],
+  // Ringed seal (blender/models.py creature_seal): ringed spots on the side, whiskers on the muzzle, a front flipper
+  seal: [
+    { part: 'spots', at: [-0.12, -0.25, 0.09], facts: ['Each dark spot has a pale ring round it. That is why it is called a ringed seal.'] },
+    { part: 'whiskers', at: [0.68, -0.12, -0.01], fact: 'A seal feels for fish in dark water with its whiskers.' },
+    { part: 'flippers', at: [0.06, -0.3, -0.14], fact: 'A ringed seal scratches a breathing hole in the ice with the claws on its flippers.' },
   ],
   duck: [{ part: 'beak', at: [0.47, -0.06, 0.32], fact: 'This duck is a toy. Real ducks scoop up food with their flat beaks.' }],
   boot: [{ part: 'laces', at: [0.05, -0.06, 0.36], fact: 'Laces and rubbish can tangle sea animals. Taking it out helps them.' }],

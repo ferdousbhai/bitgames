@@ -233,23 +233,24 @@ export class DuckView {
     }
     if (this.ring) {
       this.ring.visible = !d.fly
-      this.ring.scale.setScalar(s * (1 + Math.sin(t * 5) * 0.05 + Math.sin(this.hop * Math.PI) * 0.35))
-      this.ring.material.opacity = 0.6 + Math.sin(t * 5) * 0.25
+      // A steady ring under your own duck (it grows only for the hello hop): no pulsing during play.
+      this.ring.scale.setScalar(s * (1 + Math.sin(this.hop * Math.PI) * 0.35))
+      this.ring.material.opacity = 0.7
     }
     this.shield.visible = d.power === 'shield'
     if (this.shield.visible) {
-      const blink = d.powerT < 1.5 ? (Math.sin(t * 20) > 0 ? 1 : 0.85) : 1
-      this.shield.scale.setScalar(1.75 * s * blink * (1 + Math.sin(t * 4) * 0.03))
+      // As the shield runs out it shrinks smoothly away (never a blink).
+      const fade = Math.min(1, Math.max(0, d.powerT / 1.5))
+      this.shield.scale.setScalar(1.75 * s * (0.7 + 0.3 * fade))
       this.shield.position.y = 0.6 * s + y
     }
-    // Foam behind a moving boat; sparkles behind a speedy one.
+    // Foam behind a moving boat (a speedy one leaves the same foam, without a trail of sparkles).
     this.wakeT -= dt
     if (!d.fly && sp > 2 && this.wakeT <= 0) {
       this.wakeT = 0.06
       const bx = d.x - (d.vx / sp) * 1.1 * s
       const bz = d.z - (d.vz / sp) * 1.1 * s
       effects.wake(bx, bz, sp)
-      if (d.power === 'speedy') effects.sparkle(bx, 0.6, bz, '#ffe14d', 2)
     }
   }
 
@@ -375,6 +376,44 @@ export class ObstacleView {
     if (this.frog) this.hopT = 0.6
   }
 
+  /**
+   * Frog order: the number this frog holds, on a round sign above it. A frog already in the line wears a
+   * soft green sign (`done`); null takes the sign away.
+   */
+  sign(n, done = false) {
+    const key = n == null ? '' : `${n}${done ? '+' : ''}`
+    if (!this.frog || key === this.signKey) return
+    this.signKey = key
+    if (this.signSprite) {
+      this.signSprite.material.map.dispose()
+      this.signSprite.material.dispose()
+      this.signSprite.removeFromParent()
+      this.signSprite = null
+    }
+    if (n == null) return
+    const map = canvasTexture(128, 128, (g, w) => {
+      g.beginPath()
+      g.arc(w / 2, w / 2, w / 2 - 6, 0, Math.PI * 2)
+      // Frog green with a white number, so a frog's number never looks like the jar's goal (a white card
+      // with a dark number); a frog already in line turns pale.
+      g.fillStyle = done ? '#e3f6da' : '#4f9e3a'
+      g.fill()
+      g.lineWidth = 8
+      g.strokeStyle = done ? '#7cc46a' : '#2a5f24'
+      g.stroke()
+      g.fillStyle = done ? '#3f7a35' : '#ffffff'
+      g.font = `900 ${String(n).length > 1 ? 64 : 76}px system-ui, sans-serif`
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText(String(n), w / 2, w / 2 + 4)
+    })
+    this.signSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, depthTest: false }))
+    this.signSprite.renderOrder = 5
+    this.signSprite.scale.setScalar(1.2)
+    this.signSprite.position.y = 3.3
+    this.root.add(this.signSprite)
+  }
+
   update(t, dt) {
     const o = this.o
     this.root.position.set(o.x, 0, o.z)
@@ -390,8 +429,8 @@ export class ObstacleView {
       this.body.rotation.y += dt * 0.05
       if (this.frog) {
         this.hopT = Math.max(0, this.hopT - dt)
-        // Hop when bumped, and now and then just for fun.
-        if (this.hopT === 0 && Math.random() < dt * 0.15) this.hopT = 0.6
+        // Hop when bumped, and very now and then just for fun (never while holding a number).
+        if (this.hopT === 0 && !this.signKey && Math.random() < dt * 0.04) this.hopT = 0.6
         const k = this.hopT > 0 ? Math.sin((1 - this.hopT / 0.6) * Math.PI) : 0
         this.frog.position.y = 0.08 + k * 1.2
         this.frog.scale.set(1.2 * (1 - k * 0.1), 1.2 * (1 + k * 0.2), 1.2 * (1 - k * 0.1))

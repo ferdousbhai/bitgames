@@ -64,11 +64,15 @@ const save = {
   hinted: !!saved.hinted,
   // Robot has told the child about the workshop's race challenge (once, on reaching the top tier)
   raceTold: !!saved.raceTold,
+  // The last landing was carried one stop past the boosters' reach by the turbo (the reach bar marks it ⚡)
+  landedTurbo: !!saved.landedTurbo,
   flown: new Set(Array.isArray(saved.flown) ? saved.flown.filter((id) => PARTS.booster.some((p) => p.id === id)) : PARTS.booster.filter((p) => visited[Math.min(DESTS.length - 1, p.power)] && Number.isFinite(saved.flights)).map((p) => p.id)),
 }
 if (save.mission.own) save.mission.own = sanitize(save.mission.own, visited)
+/** Missions appear after a few landings; the card waits quietly until the child taps it. */
+const MISSION_AFTER = 3
 function persist() {
-  store.set(SAVE, { visited: save.visited, rocket: save.rocket, fresh: [...save.fresh], stars: save.stars, flights: save.flights, picked: save.picked, last: save.last, notes: save.notes, notesNew: save.notesNew, landed: save.landed, guessRun: save.guessRun, mission: save.mission, flown: [...save.flown], turbos: save.turbos, known: save.known, hinted: save.hinted, raceTold: save.raceTold })
+  store.set(SAVE, { visited: save.visited, rocket: save.rocket, fresh: [...save.fresh], stars: save.stars, flights: save.flights, picked: save.picked, last: save.last, notes: save.notes, notesNew: save.notesNew, landed: save.landed, guessRun: save.guessRun, mission: save.mission, flown: [...save.flown], turbos: save.turbos, known: save.known, hinted: save.hinted, raceTold: save.raceTold, landedTurbo: save.landedTurbo })
 }
 
 // --- Renderer, scene, camera --------------------------------------------------------
@@ -547,14 +551,19 @@ function renderSound() {
  */
 function renderReach(ping = -1) {
   // Robot's rocket has not flown yet: the 🚀 record belongs to the child's own rocket, so it waits
+  // A tier 1-2 card waiting for its "as it is" guess about the child's own rocket: the 🚀 record
+  // would give the answer away, so it waits until the guess is made
   const card = save.mission.on ? save.mission.card : null
-  const r = card?.robot && save.mission.own && !card.flew ? -1 : save.landed
+  const waiting = save.mission.card
+  const guessing = !!waiting && !waiting.robot && waiting.diag === null && save.flights >= MISSION_AFTER && game.state === 'garage'
+  const r = (card?.robot && save.mission.own && !card.flew) || guessing ? -1 : save.landed
   const el = $('reach')
   el.innerHTML = ''
   DESTS.forEach((d, i) => {
     if (i > 0) {
       const dash = document.createElement('span')
-      dash.className = 'dash' + (i <= r ? ' lit' : '')
+      // The last stop of a turbo landing wears a small ⚡: the boosters reached one stop less far
+      dash.className = 'dash' + (i <= r ? ' lit' : '') + (i === r && save.landedTurbo ? ' turbo' : '')
       el.append(dash)
     }
     const s = document.createElement('span')
@@ -990,6 +999,8 @@ const where = createWhere({
     backToBuilding()
   },
   // Robot's rocket "as it is": the guess and whether it was right ride on the card
+  // The last flight's record came from the turbo: say so, so the reach bar and the boosters never disagree silently
+  aside: (card, build) => (!card.robot && save.landedTurbo && save.last && changesFrom(save.last, build) === 0 && reach(build) + 1 === save.landed ? ` Last time the turbo carried it one stop farther, to ${placeName(save.landed)}.` : ''),
   onDiagnose: (dest, ok) => {
     const card = save.mission.card
     if (!card) return
@@ -1001,8 +1012,6 @@ const where = createWhere({
 
 // --- Robot's missions (the harder tier) ------------------------------------------------------
 
-/** Missions appear after a few landings; the card waits quietly until the child taps it. */
-const MISSION_AFTER = 3
 let missionTold = false
 function missionCard() {
   const m = save.mission
@@ -1984,6 +1993,7 @@ function startParty() {
   if (party.found) save.notesNew = true
   if (flight.test) save.guessRun = verdict(flight.test).matched ? save.guessRun + 1 : 0
   save.landed = d
+  save.landedTurbo = !!flight.used && d === reach(save.rocket) + 1
   // Only a flight that lands counts as flown (one left mid-air never claims a landing)
   save.last = partsOf(save.rocket)
   save.flown.add(save.rocket.booster)
@@ -2265,9 +2275,10 @@ canvas.addEventListener('pointerdown', (e) => {
   if (raycaster.intersectObject(robot.obj, true).length) {
     robot.spin = 1
     robot.wave = 2
-    audio.tone(880, { dur: 0.12, vol: 0.1, type: 'square', echo: false })
-    audio.tone(660, { when: 0.13, dur: 0.12, vol: 0.1, type: 'square', echo: false })
-    audio.tone(990, { when: 0.26, dur: 0.18, vol: 0.1, type: 'square' })
+    // Robot's hello: three soft rounded notes (sine and triangle, never a harsh square buzz)
+    audio.tone(880, { dur: 0.16, vol: 0.08, type: 'sine', echo: false })
+    audio.tone(660, { when: 0.15, dur: 0.16, vol: 0.07, type: 'triangle', echo: false })
+    audio.tone(990, { when: 0.3, dur: 0.24, vol: 0.07, type: 'sine' })
   }
 })
 

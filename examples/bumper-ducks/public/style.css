@@ -465,3 +465,47 @@ body.calm-round #timer, body.calm-round #scores { display: none; }
 .place .tally .t-ones { grid-template-columns: repeat(5, 9px); gap: 3px; }
 .place .tally .t-ones i { width: 9px; height: 9px; }
 .place.me .tally .t-ones i { background: #5b3a00; }
+
+/* 2026-10-11 (round 5): bumper play gathers five tens together (no clock), and the frogs hold numbers. */
+/* The team's tens: a raft per ten, two rows of five dots that fill in. The same picture is on the menu. */
+.team-tally { display: inline-flex; gap: 4px; align-items: center; }
+.tr { display: inline-grid; grid-template-columns: repeat(5, 7px); gap: 2px; padding: 3px; border-radius: 6px; border: 2px solid rgba(255,176,77,.75); background: rgba(255,244,214,.18); }
+.tr i { width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
+.tr i.on { background: #fff; box-shadow: none; }
+.tr.full { border-color: #ffb04d; background: #ffb04d; }
+#timer { display: flex; align-items: center; padding: 6px 12px; }
+#timer .tr { grid-template-columns: repeat(5, 9px); }
+#timer .tr i { width: 9px; height: 9px; }
+body:not(.calm-round) #scores { display: none; }
+.mode .pic .big { font-size: 30px; line-height: 1; }
+.mode .pic .team-tally .tr { border-color: #ff9a2e; }
+.mode .pic .team-tally .tr i { box-shadow: inset 0 0 0 1.5px rgba(36,48,110,.35); }
+.mode .pic .team-tally .tr i.on { background: #fff; }
+.team-sum { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 6px 12px; border-radius: 18px; background: rgba(20,40,110,0.32); font-size: 22px; font-weight: 900; }
+.team-sum .tr { grid-template-columns: repeat(5, 10px); }
+.team-sum .tr i { width: 10px; height: 10px; }
+@media (max-height: 500px) { .team-sum { font-size: 16px; padding: 2px 8px; } .team-sum .tr { grid-template-columns: repeat(5, 6px); } .team-sum .tr i { width: 6px; height: 6px; } }
+.mode .pic .team-tally { gap: 2px; }
+.mode .pic .team-tally .tr { grid-template-columns: repeat(5, 4px); gap: 1px; padding: 2px; border-width: 1.5px; border-radius: 4px; }
+.mode .pic .team-tally .tr i { width: 4px; height: 4px; }
+.mode.lively .pic { flex-wrap: nowrap; }
+/* Bumper play: the team's tally is the one count on screen (no per-duck tallies to compare). */
+#scores { display: none; }
+/* Bumper play's results: the child's own catch as rafts and dots, beside their note. */
+.helper .tally { display: inline-flex; align-items: center; gap: 3px; }
+.helper .tally .t-raft { width: 9px; height: 24px; }
+.helper .tally .t-ones { grid-template-columns: repeat(5, 8px); gap: 2px; }
+.helper .tally .t-ones i { width: 8px; height: 8px; }
+.podium .pond { width: 100%; }
+/* Level 1's "one more than" step: the colour before, as a row of dots beside the frame. */
+.jar-compare { display: inline-grid; grid-template-columns: repeat(5, 14px); gap: 3px; align-self: center; padding: 4px 6px; border-radius: 10px; background: rgba(255,255,255,0.25); }
+.jar-compare i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.7); }
+
+/* 2026-10-11 (round 3): bumper play's goal grows (a goal with ones ends on a short dashed frame), the
+   youngest jars are larger on tablets, and place value's goal reads "make 28" in gold beside the white
+   progress number. */
+.tr.ones { border-style: dashed; }
+.mode .pic .goal-n { font-size: 26px; font-weight: 900; line-height: 1; }
+.jar-num.make { color: #ffd23f; text-align: center; }
+.jar-num.make small { display: block; font-size: calc(var(--cell) * 0.36); font-weight: 800; color: #fff; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
+@media (min-width: 768px) and (min-height: 700px) { body.young-jar { --cell: 46px; } body.young-jar .jar { gap: 12px; padding: 10px 16px; } }

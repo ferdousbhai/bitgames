@@ -174,16 +174,17 @@ export class Penguin {
     const hopY = Math.sin(this.hop * Math.PI) * 0.35
     this.group.position.set(this.x, STAND_Y + hopY, LANE.start)
     this.pose.position.y = 0
-    this.pose.rotation.set(0, 0, Math.sin(t * 4) * 0.08)
+    // Standing to aim it only breathes: a slow, small sway, so the spot it stands on reads clearly.
+    this.pose.rotation.set(0, 0, Math.sin(t * 1.6) * 0.025)
     this.yaw.rotation.y = Math.PI + this.spin * this.spin * Math.PI * 2
     // Now and then look back at the camera
     const look = Math.max(0, Math.sin(t * 0.7)) ** 6
     if (head) head.rotation.set(-0.1, Math.PI * 0.75 * look * (Math.sin(t * 0.35) > 0 ? 1 : -1), Math.sin(t * 2) * 0.1)
-    const flap = this.hop > 0 ? Math.sin(t * 30) * 0.5 + 0.6 : Math.sin(t * 4) * 0.12
+    const flap = this.hop > 0 ? Math.sin(t * 30) * 0.5 + 0.6 : Math.sin(t * 1.6) * 0.04
     if (flipperL) flipperL.rotation.set(0, 0, -0.15 - flap)
     if (flipperR) flipperR.rotation.set(0, 0, 0.15 + flap)
-    if (footL) footL.rotation.x = Math.max(0, Math.sin(t * 4)) * 0.3
-    if (footR) footR.rotation.x = Math.max(0, -Math.sin(t * 4)) * 0.3
+    if (footL) footL.rotation.x = 0
+    if (footR) footR.rotation.x = 0
   }
 }
 
