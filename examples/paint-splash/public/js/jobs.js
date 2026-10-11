@@ -183,6 +183,9 @@ export function chooseJob(tier, history = [], rnd = Math.random) {
   names = names.filter((n) => times(n) <= fewest + 1)
   const asked = new Set(history.map((h) => `${h.shape}:${h.targets.join()}`))
   const last = history.at(-1)
+  // A rule as a key, so "no blue" is not asked twice running and the picture keeps a mix of colours.
+  const ruleKey = (r) => (r ? `${r.with ?? 0}-${r.without ?? 0}` : '')
+  const lastRules = history.filter((h) => h.rules?.[0] && !h.rules[0].any).slice(-2).map((h) => ruleKey(h.rules[0]))
   for (let k = 0; k < 30; k++) {
     const shape = names[Math.floor(rnd() * names.length)]
     const tilt = Math.round((rnd() - 0.5) * 30) / 100
@@ -195,6 +198,7 @@ export function chooseJob(tier, history = [], rnd = Math.random) {
     if (choice || ruled) {
       // The rule goes on the first part (the one that may be more than one colour); a trunk stays brown.
       const rules = targets.map((_, i) => (i ? null : choice ? { any: 1, ...(tier >= 5 ? { light: 1 } : {}) } : makeRule(tier, rnd)))
+      if (ruled && k < 24 && lastRules.includes(ruleKey(rules[0]))) continue
       return { shape, targets: targets.map((m, i) => (rules[i] ? 0 : m)), rules, tilt }
     }
     // Something not asked yet this round, and a new colour each time where there is a choice.
@@ -257,7 +261,7 @@ export class Job {
       const ok = rule ? ruleColours(rule) : [target]
       return {
         poly, cells: Int32Array.from(cells), target, lean, code, rule, ok, word: part.word,
-        done: false, share: 0, wrong: 0, near: 0, slipping: false, byMix: new Int32Array(16), t0: spec.t0,
+        done: false, share: 0, wrong: 0, near: 0, off: 0, slipping: false, byMix: new Int32Array(16), t0: spec.t0,
         // The paints rolled onto this part by the child, one entry per change of pot (see `roll`).
         runs: [], runAt: [], firstCover: 1, carry: 0, from: 0, cellSet: new Set(cells),
       }
@@ -322,15 +326,20 @@ export class Job {
     const T = paint.times
     for (const part of this.parts) {
       if (part.done) continue
-      let hit = 0, bad = 0, near = 0
+      let hit = 0, bad = 0, near = 0, off = 0
       const coats = part.rule ? 2 : colourOf(part.code).recipe.length
       part.byMix.fill(0)
       for (const i of part.cells) {
         const m = paint.mix[i]
         part.byMix[m]++
         if (!m) continue
-        // A ratio is its mix with more of the right paint; the even mix (or one leaning the other way) is on its way there.
-        if (part.ok.includes(m)) part.lean && paint.lean[i] !== part.lean ? (near += 2 / 3) : hit++
+        // A ratio is its mix with more of the right paint. The even mix is on its way there (two of its three coats);
+        // one leaning the other way is a ratio mistake (`off`), a step back: the other paint evens it out again.
+        if (part.ok.includes(m)) {
+          if (!part.lean || paint.lean[i] === part.lean) hit++
+          else if (paint.lean[i]) [off, near] = [off + 1, near + 1 / 3]
+          else near += 2 / 3
+        }
         // A coat on its way counts by how many of the colour's coats are on (yellow is a third of a yellowish orange).
         else if (Job.fits(part, m)) near += Math.min(1, coatsIn(m) / coats)
         else if (!part.carry && part.ok.every((c) => [0, 1, 2, 3].some((k) => m & ~c & (1 << k) && T[k][i] >= Math.max(part.t0, part.from)))) bad++
@@ -339,6 +348,7 @@ export class Job {
       part.share = hit / n
       part.near = near / n
       part.wrong = bad / n
+      part.off = off / n
       if (part.share >= DONE_SHARE) finished.push(part)
       // The part being painted is the one with the most of its own paint on it (the first, when none has any).
       const mine = hit + near
@@ -460,7 +470,7 @@ export class Job {
    * A quiet picture of how to do it, for a child who is stuck: two soft crossing stripes on the
    * shape, one in each paint, with their mix where they cross. Still (no motion); `null` clears it.
    */
-  ghost(part, at = null) {
+  ghost(part, at = null, plan = null) {
     if (this.ghostGroup) {
       for (const m of this.ghostGroup.children) {
         m.geometry.dispose()
@@ -470,8 +480,9 @@ export class Job {
       this.ghostGroup = null
     }
     if (!part) return
-    const colour = part.rule ? part.ok[0] : part.code
-    const paints = colourOf(colour).recipe
+    // The colour and its paints in the order the child is told (see planOf in main.js).
+    const colour = plan?.colour ?? (part.rule ? part.ok[0] : part.code)
+    const paints = plan?.order ?? colourOf(colour).recipe
     // Where the child can see it (`at`, chosen on screen), or the middle of the part.
     const c = at ? [at.x, at.z] : part.poly.reduce((s, [x, z]) => [s[0] + x / part.poly.length, s[1] + z / part.poly.length], [0, 0])
     const g = new THREE.Group()

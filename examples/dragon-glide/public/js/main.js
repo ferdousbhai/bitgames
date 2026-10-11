@@ -143,9 +143,28 @@ const adventure = createAdventure({
     { emoji: '🐢', label: 'Gentle flight', pace: 0.6 },
     { emoji: '⭕', label: 'Count 4 rings', pace: 0.75, goal: 'Fly through 4 cloud rings', target: 4, icon: () => document.createElement('i'), reward: 'Four cloud rings!' },
   ],
+  renderProgress: missionRings,
 })
+/** The counting mission's chip: one ring per cloud ring, lit as each is flown, and "2 / 4" while counting. Once all are lit, the lit row says it (no ⭐). */
+function missionRings(chip, option, count) {
+  const row = document.createElement('span')
+  row.className = 'adventure-steps'
+  row.setAttribute('aria-hidden', 'true')
+  for (let i = 0; i < option.target; i++) {
+    const step = row.appendChild(document.createElement('span'))
+    step.className = `adventure-step${i < count ? ' adventure-got' : ''}${i === count - 1 ? ' adventure-new' : ''}`
+    step.append(option.icon())
+  }
+  const tally = document.createElement('b')
+  tally.textContent = `${count} / ${option.target}`
+  chip.replaceChildren(row, ...(count < option.target ? [tally] : []))
+}
 /** The counting mission only runs in worlds without numbered rings. */
 const missionFits = (wi) => WORLDS[wi].goal?.type !== 'rings'
+/** How far Ember still has to fly to the nest's run-in. */
+const homeLeft = () => (game.world + 1) * WORLD_LENGTH - 55 - game.z
+/** Is the counting mission still counting in this world? */
+const counting = () => !!adventure.option.goal && missionFits(game.world) && !adventure.complete
 function beginMission(wi) {
   adventure.enable(missionFits(wi))
   adventure.begin()
@@ -156,6 +175,18 @@ function say(text) {
   if (text) voice.say(text)
 }
 
+/**
+ * The lines naming what Ember needs next ("We need 4!", "4 is waiting for you!", "4 is coming!", "Here it
+ * comes, close to you!", "3 stars! Now hearts.") often name the same thing, so they never come back to back:
+ * `quiet` lines are skipped within a few seconds of another one. `once` lines are said once a world.
+ */
+function holdSay(g, text, once = false, quiet = false) {
+  if (quiet && game.time - (g.saidT ?? -1e9) < 6) return
+  g.saidT = game.time
+  if (once) voice.sayOnce(text)
+  else say(text)
+}
+
 const numberWord = (n) => ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] ?? String(n)
 
 /** Says the world's goal (and the counting mission's) as each world starts, for children who can't read yet. */
@@ -164,7 +195,12 @@ function sayGoal() {
   const w = WORLDS[game.world]
   voice.newRound() // each world's hints may be said once again
   const parts = [`${w.name}!`, game.goal ? goalSentence(game.goal.goal) : '']
-  if (adventure.option.goal && missionFits(game.world)) parts.push(`And let's count ${numberWord(adventure.option.target)} rings!`)
+  // the counting mission is named in the trip's first gathering world only: after that its chip says it,
+  // and the world's own goal is the one sentence a young child holds on to
+  if (adventure.option.goal && missionFits(game.world) && !game.toldMission) {
+    game.toldMission = true
+    parts.push(`And let's count ${numberWord(adventure.option.target)} rings!`)
+  }
   say(parts.filter(Boolean).join(' '))
 }
 
@@ -280,8 +316,10 @@ function start(from = 0) {
   game.invuln = 0
   game.time = 0
   game.tipT = 0
+  game.greetT = 0
   game.fired = 0
   game.toldFire = false
+  game.toldMission = false
   game.steered = 0
   game.learned = []
   voice.hush() // a new trip: nothing left over from the last one
@@ -313,8 +351,12 @@ function finishTrip() {
   if (nest) nest.cheer = 1e6
   // No grade: the end card shows each world Ember flew through and what Ember brought home and learned there.
   const flown = WORLDS.slice(game.startWorld, game.world + 1).map((w, k) => [w, game.learned.find((l) => l.world === game.startWorld + k)])
-  $('learned').innerHTML = flown.map(([w, e]) => `<div class="learn"><span class="w">${w.emoji}</span>${e ? goalPicture(e, 'end') : ''}</div>`).join('')
+  // one quiet line for a grown-up: the way of counting Ember starts with next time (the level that adapts, never a score)
+  const next = countChoices(WORLDS[0].goal).find((c) => c.level === game.levels.rings)
+  $('learned').innerHTML = flown.map(([w, e]) => `<div class="learn"><span class="w">${w.emoji}</span>${e ? goalPicture(e, 'end') : ''}</div>`).join('') +
+    (next ? `<p class="next-time">Next time 🐉 ${next.seq.join(' ')}</p>` : '')
   const words = flown.map(([, e]) => (e ? learnedSentence(e) : '')).filter(Boolean)
+  if (next) words.push(`Next time: ${next.words.toLowerCase()}, ${next.seq.join(', ')}.`)
   $('learned').setAttribute('aria-label', words.join(' ') || 'The worlds you flew through')
   clearSort()
   // each world's sentence was already said at its own nest, so the end card says only one short line
@@ -329,7 +371,8 @@ function finishTrip() {
 const extraCount = (g) => Object.values(g.extra || {}).reduce((a, b) => a + b, 0)
 
 /** The 🔥 button shows only where fire has a job: the gathering worlds' treasure bubbles. */
-const showFire = (wi) => fireBtn.classList.toggle('hidden', WORLDS[wi].goal?.type !== 'gather')
+const fireFits = (wi) => WORLDS[wi].goal?.type === 'gather'
+const showFire = (wi) => fireBtn.classList.toggle('hidden', !fireFits(wi))
 
 function startGoal(wi) {
   showFire(wi)
@@ -414,6 +457,9 @@ function worldBanner(w, fallback) {
 let sortPlan = [] // [{ at, run }] in nest time
 function clearSort() {
   sortPlan = []
+  // the nest's keepsakes, rested while an upright tray stood over them, come back as the tray goes
+  const kept = world?.nestFor(game.world)?.kept
+  if (kept) kept.visible = true
   game.sortEnd = 0
   $('sort').classList.add('hidden')
   $('sort').classList.remove('puzzle', 'solved')
@@ -459,6 +505,8 @@ function sortAtNest(g) {
           store.set('dragon-glide-kept', world.kept)
           const nest = world.nestFor(g.world)
           if (nest) world.keepsakes(nest, g.got)
+          // upright, the new keepsakes wait (like the old ones) until the tray goes, so none peek over it
+          if (nest?.kept && view.portrait) nest.kept.visible = false
         }
         say([learnedSentence(g), extra].filter(Boolean).join(' '))
         game.sortEnd = game.nestT + 1.4
@@ -694,7 +742,8 @@ $('to-title').addEventListener('click', () => {
 const FIRE_COLORS = ['#ffd23f', '#ff9f43', '#ff6b6b', '#fff3a0', '#ff7eb9']
 function fire() {
   if (game.state === 'nest' && game.nestReady) return flyOn()
-  if (game.state !== 'play' || game.fireCd > 0) return
+  // where the 🔥 button is hidden, a tap on the sky stays quiet too
+  if (game.state !== 'play' || game.fireCd > 0 || !fireFits(game.world)) return
   game.fireCd = 0.28
   game.fired++
   dragon.puff()
@@ -760,7 +809,7 @@ function handle(events) {
       const rides = g.goal.level >= 1 && g.flown.filter((f) => f.wrong).length < 2
       if (rides) g.flown.push({ n: ev.picked, wrong: true })
       // said once a world; after that the chip and the dimmed ring do the reminding
-      if (!g.toldWrong) say(rides ? `That's ${ev.picked}. It rides along to the nest. We need ${ev.number}!` : `That's ${ev.picked}. We need ${ev.number}!`)
+      if (!g.toldWrong) holdSay(g, rides ? `That's ${ev.picked}. It rides along to the nest. We need ${ev.number}!` : `That's ${ev.picked}. We need ${ev.number}!`)
       g.toldWrong = true
       renderGoal()
     } else if (ev.type === 'numMiss') {
@@ -769,7 +818,7 @@ function handle(events) {
       const g = game.goal
       if (!g) continue
       g.misses++
-      if (ev.waits && !g.toldMiss) say(`${ev.number} is waiting for you!`)
+      if (ev.waits && !g.toldMiss) holdSay(g, `${ev.number} is waiting for you!`)
       g.toldMiss = true
     } else if (ev.type === 'treasureMiss') {
       if (game.goal) game.goal.misses++
@@ -799,7 +848,8 @@ function handle(events) {
         g.wrongRun++
         const left = stillWanted(g)
         const full = !g.goal.total && g.goal.wants.find(([w]) => w === k)
-        voice.sayOnce(full ? `We have ${countOf(k, full[1])} already!` : `That's a ${TREASURES[k].one}. We need ${neededWords(left)}!`)
+        if (full) voice.sayOnce(`We have ${countOf(k, full[1])} already!`)
+        else holdSay(g, `That's a ${TREASURES[k].one}. We need ${neededWords(left)}!`, true, true)
         if (g.wrongRun >= 2) course.hintKinds = new Set(bestKinds(g))
         continue
       }
@@ -821,10 +871,13 @@ function handle(events) {
       // the rule is named at the moment it was broken, even when that treasure also filled the basket
       if (broke) voice.sayOnce(`Oh! Remember, ${moreWords(g.goal.more, g.goal.rule)}.`)
       if (!left.length) {
-        // the basket is full: the rest float away, and the nest is next
-        say('The basket is full. Home to the nest!')
+        // the basket is full: the rest float away, and the nest is next (after the counting mission's last
+        // cloud rings, which come straight away, so "home" is never said while Ember still has rings to fly)
+        // (close to the nest there is no room for them: Ember just flies home)
+        const rings = counting() && homeLeft() >= 150 ? adventure.option.target - adventure.progress : 0
+        say(rings ? `The basket is full! ${numberWord(rings)[0].toUpperCase()}${numberWord(rings).slice(1)} more cloud ring${rings > 1 ? 's' : ''}, then home.` : 'The basket is full. Home to the nest!')
         course.release(game.world)
-      } else if (!g.goal.total && n === g.goal.wants.find(([w]) => w === k)[1]) say(`${countOf(k, n)}! Now ${neededWords(left)}.`)
+      } else if (!g.goal.total && n === g.goal.wants.find(([w]) => w === k)[1]) holdSay(g, `${countOf(k, n)}! Now ${neededWords(left)}.`)
       renderGoal()
     } else if (ev.type === 'bubble') {
       sound.pop()
@@ -862,6 +915,8 @@ function handle(events) {
 let nestClear = 0 // px from the top that the nest banner covers
 const FACES_Y = NEST_Y + 5.4 // the parents' heads as they hop and cheer (wing tips may go higher)
 const NEST_FLOOR = NEST_Y - 0.3 // just under the nest's twigs
+// sideways, the lowest thing to keep in view is the keepsake row on the island's front ([height, nearer by])
+const KEPT_FLOOR = [NEST_Y + 0.3, 2.2]
 
 function arriveAtNest() {
   game.state = 'nest'
@@ -910,7 +965,8 @@ function offerFlyOn() {
   game.nestReady = true
   pickNext()
   const last = game.world === WORLDS.length - 1
-  $('fly-on').textContent = last ? '🪺 ▶' : `▶ ${WORLDS[game.world + 1].emoji}`
+  // the next world's emoji sits on a little night-sky chip, so a yellow moon still shows on the yellow button
+  $('fly-on').innerHTML = last ? '🪺 ▶' : `▶ <span class="next">${WORLDS[game.world + 1].emoji}</span>`
   $('fly-on').setAttribute('aria-label', last ? 'See the trip' : `Fly on to ${WORLDS[game.world + 1].name}`)
   $('fly-on').classList.remove('hidden')
 }
@@ -931,12 +987,14 @@ function pickNext() {
   row.setAttribute('role', 'radiogroup')
   row.setAttribute('aria-label', `How shall we count in ${WORLDS[wi].name}?`)
   row.innerHTML = `<span class="w" aria-hidden="true">${WORLDS[wi].emoji}</span>`
-  // (left as it is, by threes or fives stays a surprise)
-  const choose = (c, b, auto = false) => {
-    game.picked = { world: wi, level: c.level, step: auto ? undefined : c.step }
+  // the chip that is lit is always the way that is flown
+  const choose = (c, b) => {
+    game.picked = { world: wi, level: c.level, step: c.step }
     for (const o of row.querySelectorAll('button')) o.setAttribute('aria-checked', String(o === b))
   }
-  const fits = choices.findIndex((c) => c.level === game.levels.rings)
+  // where two ways share the child's tier (by threes, by fives), either may be the one that fits this time
+  const fitting = choices.flatMap((c, i) => (c.level === game.levels.rings ? [i] : []))
+  const fits = fitting.length ? fitting[Math.floor(Math.random() * fitting.length)] : 0
   choices.forEach((c, i) => {
     const b = document.createElement('button')
     b.type = 'button'
@@ -944,7 +1002,7 @@ function pickNext() {
     b.setAttribute('aria-checked', 'false')
     // the way that fits the child wears Ember's little mark; ways more than one step harder rest dimmed
     // (still there for a grown-up or a keen child), so a three-year-old rarely lands on "by fives" by chance
-    const fit = i === Math.max(0, fits)
+    const fit = i === fits
     const far = c.level > (game.levels.rings ?? 0) + 1
     b.classList.toggle('fit', fit)
     b.classList.toggle('far', far)
@@ -955,7 +1013,7 @@ function pickNext() {
       choose(c, b)
     }
     row.append(b)
-    if (fit) choose(c, b, true)
+    if (fit) choose(c, b)
   })
   tray.append(row)
   if (!toldPick) voice.say('How shall we count next? Pick one, then fly on.')
@@ -978,6 +1036,7 @@ function flyOn() {
 }
 
 function leaveNest() {
+  world.leaveNest(game.world)
   game.world++
   game.state = 'play'
   game.speed = 2
@@ -987,8 +1046,8 @@ function leaveNest() {
   $('hud').classList.remove('resting')
   beginMission(game.world)
   startGoal(game.world)
-  worldBanner(w, 'Off we go! 🐉')
-  sayGoal()
+  // the new world's name and goal wait until Ember is clear of the nest and under the new sky (updatePlay)
+  game.greetT = 1.3
   sound.play(w.music)
   target.set(0, 4.5)
 }
@@ -1062,6 +1121,10 @@ function updatePlay(dt) {
   game.invuln = Math.max(0, game.invuln - dt)
   game.slow = Math.min(1, game.slow + dt * 0.6)
   game.tipT += dt
+  if (game.greetT > 0 && (game.greetT -= dt) <= 0) {
+    worldBanner(WORLDS[game.world], 'Off we go! 🐉')
+    sayGoal()
+  }
   // fire is for the gathering worlds' bubbles (each holds a treasure): the tip waits until one is coming
   if (!game.fired && !game.toldFire && game.goal?.goal.type === 'gather' && course.items.some((it) => it.type === 'bubble' && it.kind && it.z < pos.z - 18 && it.z > pos.z - 45)) {
     game.toldFire = true
@@ -1084,15 +1147,16 @@ function updatePlay(dt) {
     if (!g.holding) {
       g.holding = true
       g.spareT = 0
-      say(g.goal.type === 'rings' ? `${g.goal.seq[g.reached]} is coming!` : `More ${neededWords(bestKinds(g))} are coming!`)
+      // (unless the waiting number or treasure was named a moment ago: one sentence says it, not two)
+      holdSay(g, g.goal.type === 'rings' ? `${g.goal.seq[g.reached]} is coming!` : `More ${neededWords(bestKinds(g))} are coming!`, false, true)
     }
     // Spare groups only need checking now and then, not every frame
     g.spareT -= dt
     if (g.spareT <= 0) {
       g.spareT = 0.5
       // after two spares have floated by (or most of a minute), the next one comes up close to Ember, with the
-      // wrong one dimmed, so one small move reaches it; only after a long wait does it come right onto Ember.
-      // A child who finds steering hard is never left hovering, but the last step is still the child's.
+      // wrong one dimmed, so one small move reaches it; after a long wait it also follows Ember as it comes, but
+      // still stops one small move away. A child who finds steering hard is never far from it, and the last step is the child's.
       const help = g.spares >= 2 || g.holdT > 45
       if (course.spare(game.z, lane, game.world, help ? { x: pos.x, y: pos.y, close: g.holdT > 75 } : null)) {
         g.spares++
@@ -1100,7 +1164,7 @@ function updatePlay(dt) {
           if (g.goal.type === 'rings') course.wrongRun.set(game.world, 2)
           else course.hintKinds = new Set(bestKinds(g))
           course.relabel(game.world)
-          voice.sayOnce('Here it comes, close to you!')
+          holdSay(g, 'Here it comes, close to you!', true, true)
         }
       }
     }
@@ -1111,10 +1175,12 @@ function updatePlay(dt) {
   if (g?.veilT != null) cloudHome(g, dt)
   else if (g && goalDone(g) && !g.homeward) {
     g.doneT = (g.doneT || 0) + dt
-    const left = (game.world + 1) * WORLD_LENGTH - 55 - game.z
-    const counting = adventure.option.goal && missionFits(game.world) && !adventure.complete
-    if (left < 150 || counting) g.homeward = left < 150
-    else if (g.doneT > 2.5) cloudHome(g)
+    if (homeLeft() < 150) g.homeward = true
+    else if (counting()) {
+      // the counting mission's last rings come straight away; the breath before home starts once they're counted
+      g.doneT = 0
+      course.ringsAhead(game.z, adventure.option.target - adventure.progress, pos.x, pos.y)
+    } else if (g.doneT > 2.5) cloudHome(g)
   }
 
   // Steering: keys nudge the target, mouse points at it, fingers drag it
@@ -1191,7 +1257,7 @@ function cloudHome(g, dt = 0) {
 function bannerMakesWay() {
   const el = $('banner')
   if (!el.classList.contains('show') || !el.querySelector('.goal-pic')) return
-  const near = course.items.some((it) => (it.type === 'numring' || it.type === 'treasure' || (it.type === 'bubble' && it.kind)) && it.wi === game.world && !it.gone && !it.off && it.z < pos.z && it.z > pos.z - 48)
+  const near = course.items.some((it) => (it.type === 'numring' || it.type === 'treasure' || (it.type === 'bubble' && it.kind)) && it.wi === game.world && !it.gone && !it.off && it.z < pos.z && it.z > pos.z - 64)
   if (!near) return
   clearTimeout(bannerTimer)
   el.classList.remove('show')
@@ -1259,11 +1325,17 @@ function trayShift(depth) {
   return traySide
 }
 
-/** Upright screens: the top of the nest puzzle's tray, which the nest should stay above (0 when there is none). */
+/**
+ * The bottom of the family's room at the nest. Upright: the top of the puzzle's tray (0 when there is none).
+ * Sideways: the top of ▶ (where it stands, or will stand), so the keepsakes on the island's front stay above it.
+ */
+let flyOnTop = 0
 function nestFloorPx() {
   const tray = $('sort')
-  if (!view.portrait || tray.classList.contains('hidden')) return 0
-  return tray.getBoundingClientRect().top
+  if (view.portrait) return tray.classList.contains('hidden') ? 0 : tray.getBoundingClientRect().top
+  const box = $('fly-on').getBoundingClientRect()
+  if (box.height) flyOnTop = innerHeight - box.top
+  return innerHeight - (flyOnTop || 124)
 }
 /** The end card's rows above and its buttons below: the room left for the family between them. */
 function endCardRoom() {
@@ -1315,10 +1387,12 @@ function updateCamera(dt) {
       const room = Math.atan((1 - (2 * (top + 10)) / innerHeight) * t)
       const low = Math.atan((bottom ? 1 - (2 * (bottom - 8)) / innerHeight : -0.82) * t)
       let d = pz - nestZ
-      while (d < pz - nestZ + 12 && Math.atan2(FACES_Y - py, d) - Math.atan2(NEST_FLOOR - py, d) > room - low) d += 0.25
+      const [fy, fz] = s === 'nest' && !view.portrait ? KEPT_FLOOR : [NEST_FLOOR, 0]
+      const floor = (d) => Math.atan2(fy - py, d - fz)
+      while (d < pz - nestZ + 12 && Math.atan2(FACES_Y - py, d) - floor(d) > room - low) d += 0.25
       // the camera's tilt: faces under the top edge first, then (if there is room) the nest above the bottom
       const p0 = Math.atan2(ly - py, pz - nestZ)
-      const p = Math.max(Math.atan2(FACES_Y - py, d) - room, bottom ? Math.min(p0, Math.atan2(NEST_FLOOR - py, d) - low) : p0)
+      const p = Math.max(Math.atan2(FACES_Y - py, d) - room, bottom ? Math.min(p0, floor(d) - low) : p0)
       if (Math.abs(p - p0) > 1e-4) {
         ly = py + d * Math.tan(p)
         pz = nestZ + d
@@ -1326,11 +1400,14 @@ function updateCamera(dt) {
     }
     rate = 2
   } else {
+    // upright, the camera rides a little higher, so a ring at or just below Ember's height shows above Ember
+    // as it comes instead of sitting behind Ember's wings (the whole view just sits a little lower)
+    const lift = view.portrait ? 1.2 : 0
     px = pos.x * 0.55
-    py = pos.y * 0.6 + 2.7
+    py = pos.y * 0.6 + 2.7 + lift
     pz = pos.z + view.back
     lx = pos.x * 0.8
-    ly = pos.y * 0.75 + 1.4
+    ly = pos.y * 0.75 + 1.4 + lift
     lz = pos.z - 14
     rate = s === 'play' && game.time > 1.5 ? 6 : 2.2
   }

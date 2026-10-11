@@ -179,12 +179,13 @@ export function makeTrip(level, rand = Math.random) {
   // 50), or a ten and some ones that cross again (43 and 17 more make 60: a raft, then ones over the ten).
   // Single bubbles float scarce on crossing steps, so breaking a raft into ten ones is the way to finish
   // (see Sim.calmSpawn).
-  const over = 1 + pick(4, rand)
+  // Each crossing ends on fewer ones than it starts from, so the ones really pass a ten: a step of exactly
+  // 10 or 20 more (41 to 51) would be just rafts, and a raft-shaped answer must never be refused. The last
+  // step mostly leaves a few ones to place after the crossing (a whole ten only when it starts from 1 over).
+  const over = 1 + pick(Math.min(4, mid.ones - 1), rand)
   const cross = { level: l, kind: 'place', tens: mid.tens + 1, ones: over, carry: true, regroup: true }
   const jump = cross.tens + 2 <= 9 && rand() < 0.5
-  const last = jump
-    ? { level: l, kind: 'place', tens: cross.tens + 2, ones: pick(4, rand), carry: true, regroup: true }
-    : { level: l, kind: 'place', tens: cross.tens + 1, ones: pick(4, rand), carry: true, regroup: true }
+  const last = { level: l, kind: 'place', tens: cross.tens + (jump ? 2 : 1), ones: over > 1 ? 1 + pick(over - 1, rand) : 0, carry: true, regroup: true }
   return [{ level: l, kind: 'place', tens, ones }, mid, cross, last]
 }
 /**

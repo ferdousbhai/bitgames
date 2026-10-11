@@ -97,7 +97,7 @@ const game = {
   cueHold: 0, // a finished row stays in its tray for a moment
   asking: null, // the rhythm paused on "What comes next?"
   gentle: false, // the 🐢 slow pace for the littlest hoppers
-  goal: 0, // carrots Pip needs in the pantry for winter (four in five of every row)
+  goal: 0, // carrots Pip wants in the pantry for winter (what careful play brings home, less a slip)
   justRight: 0, // "Just right!" is said once a trip; after that a soft bell and the basket speak for themselves
   baskets: 0, // basket rows cued this trip: "Pip needs 4." is said for the first two (each number once), then the 🧺4 speaks
   aways: 0, // "4 of 6. 2 got away." is said twice a trip; after that the tray shows it
@@ -114,6 +114,9 @@ const game = {
   // streak/right count good rows and right first answers; two in a row step up. wrong counts
   // patterns in a row whose first answer missed: two step down, even when the second go was right.
   tier: { row: 0, pattern: 0, streak: 0, slips: 0, right: 0, wrong: 0 },
+  // the highest tiers this trip can climb to: the 🐢 pace stays a little-ones mode (tier 1), unless
+  // the child was already further along when the trip began
+  top: { row: 2, pattern: 2 },
 }
 try {
   game.gentle = localStorage.getItem('bunny-hop:gentle') === '1'
@@ -296,6 +299,7 @@ function start() {
   game.flowers = { blue: 0, yellow: 0, pink: 0 }
   game.flowerHint = false
   Object.assign(game.tier, { streak: 0, slips: 0, right: 0, wrong: 0 })
+  game.top = game.gentle ? { row: Math.max(1, game.tier.row), pattern: Math.max(1, game.tier.pattern) } : { row: 2, pattern: 2 }
   voice.newRound()
   told.clear()
   // ?biome=2 starts further along the trip (for trying out the later places)
@@ -306,11 +310,13 @@ function start() {
   world.reset(game.x)
   // the 🐢 pace keeps every row to one ten-frame row of 5 or fewer; a basket hopper gets room for spares
   course.reset(game.x, game.gentle ? 5 : Infinity, game.tier.row > 0)
-  // basket hoppers meet one fork a trip, in the autumn wood (counting hoppers: the snow, with bigger
-  // numbers), at its longer row, where they choose the patch that makes Pip's number
-  if (game.tier.row > 0) {
+  // one fork a trip, in the autumn wood (counting hoppers: the snow, with bigger numbers), at its
+  // longer row, where a basket hopper chooses the patch that makes Pip's number. A trip that starts
+  // on whole rows keeps it for the autumn or the snow, in case the child has stepped up by then
+  // (if not, it is an ordinary row).
+  {
     const rows = (b) => course.segments.filter((seg) => seg.kind === 'row' && seg.biome === b && seg.room >= seg.planned + 2 && seg.planned >= 4)
-    const places = game.tier.row >= 2 ? [3, 2, 1] : [2, 1, 3]
+    const places = game.tier.row >= 2 ? [3, 2, 1] : game.tier.row ? [2, 1, 3] : [2, 3]
     const fork = places.map(rows).find((list) => list.length)?.reduce((a, b) => (b.planned > a.planned ? b : a))
     if (fork) fork.fork = true
   }
@@ -318,11 +324,13 @@ function start() {
   world.quiet = (x) => course.segments.some((seg) => seg.kind === 'rhythm' && x > seg.x - 10 && x < seg.end + 6)
   // and no scenery flowers in the near grass beside a flower to pick, so the one on its mound stands out
   world.flowerQuiet = (x) => course.flowers.some((f) => Math.abs(f.x - x) < 10)
-  // Pip's winter goal: the carrots the rows are sure to ask for, whatever tier the child reaches on
-  // the way, down to a five. Careful looking and counting always get there, even on the top tier,
-  // and the patterns' carrots leave room for a slip or two; hopping at everything falls short, as it
-  // sails over the carrots in the grass and over-fills baskets.
-  game.goal = Math.max(5, Math.floor(course.surest() / 5) * 5)
+  // Pip's winter goal: what careful play brings home from the rows (each shaped for the tier careful
+  // play will be on when it is cued) and the pattern carrots it is sure to munch, less two for a slip
+  // on the way (every pattern but one a trip has three carrots or more, see `shapeRhythm`). Careful
+  // looking and counting get there, on any tier; hopping at everything falls
+  // short, as it sails over the carrots in the grass and over-full baskets tip carrots out.
+  const patterns = course.segments.filter((seg) => seg.kind === 'rhythm').length
+  game.goal = Math.max(5, course.careful(game.tier.row, game.top.row) + 3 * Math.max(0, patterns - 1) - 2)
   $('score-goal').textContent = `/${game.goal}`
   resetLessons()
   // swoop out from a close-up of Pip (and never pan across the whole trip)
@@ -336,7 +344,8 @@ function start() {
   fitPopups()
   banner(`${BIOMES[game.biome].emoji} ${BIOMES[game.biome].name}`)
   if (adventure.option.goal) voice.say(adventure.option.goal)
-  voice.say(`Pip needs ${game.goal} carrots for winter.`)
+  // (said apart from a basket's "Pip needs 3.": the trip's goal is the pantry's)
+  voice.say(`Pip wants ${game.goal} carrots in his pantry for winter.`)
 }
 
 // Floating words start a little below the score and the trip bar, so a word
@@ -422,14 +431,19 @@ function pantryTotal() {
   game.homeAsk = null
   const total = pantryTotalOf()
   showPantryTotal($('pantry'), total, game.goal)
-  $('pantry').querySelectorAll('.pantry-shelf').forEach((el) => el.classList.remove('asked', 'quiet'))
+  $('pantry').querySelectorAll('.pantry-shelf').forEach((el) => el.classList.remove('asked', 'quiet', 'compare'))
   // basket hoppers work out the gap to the winter goal themselves (when it is 1 to 20: past ten,
   // the count-on line starts with a crate of ten)
+  // (not on the 🐢 pace: there the total and the goal are enough)
   const gap = total - game.goal
-  const winter = game.tier.row > 0 && gap !== 0 && Math.abs(gap) <= 20
-  voice.say(pantryWords(total, game.goal, game.tier.row > 0 && !winter))
-  if (winter) askWinter(total, game.goal)
-  else gardenSoon()
+  const winter = game.tier.row > 0 && !game.gentle && gap !== 0 && Math.abs(gap) <= 20
+  if (!winter) {
+    voice.say(pantryWords(total, game.goal, game.tier.row > 0))
+    return gardenSoon()
+  }
+  // the total on screen speaks for itself: a breath to look at it, then the one question about it
+  clearTimeout(game.gardenTimer)
+  game.gardenTimer = setTimeout(() => game.state === 'results' && askWinter(total, game.goal), 1800)
 }
 
 /** A moment to see the full shelves and the total, then they fold into one line and the garden opens. */
@@ -466,10 +480,11 @@ function openGarden() {
   // a pattern needs two goes of two colours: with fewer flowers they are simply planted
   voice.say(picked < 4 ? 'Plant your flowers by Pip’s door.' : three ? 'Plant a pattern with three colours, by Pip’s door.' : 'Plant your flowers in a pattern, by Pip’s door.')
   let wondered = false
+  let nudged = false
   let wonder = 0
   const room = Math.min(8, picked)
   const garden = renderGarden($('pantry'), counts, cue, (row, color) => {
-    world.plantRow(row)
+    world.plantRow(row, innerWidth < innerHeight)
     garden.lead(0)
     clearTimeout(wonder)
     if (!color) return
@@ -492,9 +507,12 @@ function openGarden() {
     }
     if (!unit || said.has(key) || row.length !== unit.length * 2) return
     said.add(key)
-    // the row sung back, then its group named
+    // the row sung back, then its group named; asked for three colours, a two-colour pattern hears
+    // (once) that one with all three is still to make
     row.forEach((c, i) => sound.step(FLOWERS[c].note, 0.5 + i * 0.32))
-    voice.sayNow(capital(`${flowerNames(unit)}, again and again. ${three && new Set(unit).size === 3 ? 'Three colours!' : 'A pattern!'}`))
+    const tri = new Set(unit).size === 3
+    const more = three && !tri && !nudged && (nudged = true) ? ' Can you make one with three colours?' : ''
+    voice.sayNow(capital(`${flowerNames(unit)}, again and again. ${tri ? 'Three colours!' : 'A pattern!'}${more}`))
   })
   garden.buttons[0]?.focus({ preventScroll: true })
 }
@@ -510,24 +528,32 @@ function askPantry(allCrates) {
   const crates = allCrates.filter((c) => !c.row.pattern)
   const shelves = [...new Set(crates.map((c) => c.shelf))].filter((shelf) => crates.filter((c) => c.shelf === shelf).length === 2)
   const adding = game.tier.row > 0
+  // the 🐢 pace adds two crates at most
+  const three = game.tier.row >= 2 && !game.gentle
   const pair = (sh) => crates.filter((c) => c.shelf === sh)
   const tune = (sh) => allCrates.find((c) => c.shelf === sh && c.row.pattern && c.row.got > 0)
   let shelf, third
   if (adding) {
     // not a double when there is a choice (5 + 6, not 5 + 5); counting hoppers add the shelf's
     // 🎵 crate too, and so does anyone whose shelves are all doubles
-    const sums = shelves.filter((sh) => pair(sh).some((c) => c.row.got > 0))
+    // (both crates with carrots in: 0 + 5 is no sum to work out)
+    const sums = shelves.filter((sh) => pair(sh).every((c) => c.row.got > 0))
     const differ = sums.filter((sh) => pair(sh)[0].row.got !== pair(sh)[1].row.got)
     const threes = sums.filter(tune)
-    if (game.tier.row >= 2 && threes.length) shelf = threes.filter((sh) => differ.includes(sh)).at(-1) ?? threes.at(-1)
-    else shelf = differ.at(-1) ?? threes.at(-1) ?? sums.at(-1)
-    if (shelf && (game.tier.row >= 2 || !differ.includes(shelf))) third = tune(shelf)
-  } else shelf = shelves.findLast((sh) => pair(sh)[0].row.got !== pair(sh)[1].row.got)
+    if (three && threes.length) shelf = threes.filter((sh) => differ.includes(sh)).at(-1) ?? threes.at(-1)
+    else shelf = differ.at(-1) ?? (game.gentle ? null : threes.at(-1)) ?? sums.at(-1)
+    if (shelf && !game.gentle && (three || !differ.includes(shelf))) third = tune(shelf)
+  } else {
+    // two crates worth comparing: they differ, and each holds at least two (not 1 against 0)
+    shelf = shelves.findLast((sh) => pair(sh)[0].row.got !== pair(sh)[1].row.got && pair(sh).every((c) => c.row.got >= 2))
+  }
   if (!shelf) return false
   const [p, q] = pair(shelf)
   const [a, b] = [p.row.got, q.row.got]
   const pantry = $('pantry')
   pantry.querySelectorAll('.pantry-shelf').forEach((el) => el.classList.toggle(el === shelf ? 'asked' : 'quiet', true))
+  // the shelf's 🎵 crate stays in view only when it is part of the sum
+  shelf.classList.toggle('with-tune', !!third)
   const panel = pantry.querySelector('.pantry-ask')
   const title = document.createElement('p')
   title.className = 'ask-title'
@@ -539,6 +565,12 @@ function askPantry(allCrates) {
   $('again').hidden = true
   sound.wonder()
   if (!adding) {
+    // only the carrots that came home, side by side with no plus between: the longer crate has more
+    shelf.classList.add('compare')
+    for (const { el, row } of [p, q]) {
+      el.querySelectorAll('.away').forEach((c) => c.remove())
+      el.querySelector('.pantry-crate').style.setProperty('--cols', String(Math.min(row.got, 5)))
+    }
     title.textContent = 'Which has more?'
     voice.say('Which crate has more carrots?')
     game.homeAsk = { choices: [p.el, q.el] }
@@ -747,6 +779,8 @@ const smoothPattern = (seg) => !seg.bumps && !seg.missed
 
 function beginSegment(seg) {
   game.seg = seg
+  // a fork kept for a child still catching whole rows is an ordinary row
+  if (seg.fork && game.tier.row === 0) [seg.fork, seg.shaped] = [false, null]
   // shaped again for the child's level right now, so a step up or down shows in this very row
   course.reshape(seg, game.tier)
   $('tap-hint').classList.add('gone')
@@ -761,8 +795,10 @@ function beginSegment(seg) {
       const how = fresh(seg.counting ? 'Count them in, then let the rest go by.' : 'Fill the basket, then let the others go by.')
       const need = `Pip needs ${seg.n}.`
       // (a new way of filling it is still said, even for a number already heard: the 🧺 shows it;
-      // and not just after "That's 6. Too heavy!", so two different numbers never come back to back)
-      const said = told.has(need) || game.time - game.spokeSpill < 8
+      // and not just after "That's 6. Too heavy!", nor just before the fork asks for its own number,
+      // so two different numbers never come back to back)
+      const beforeFork = course.segments[course.segments.indexOf(seg) + 1]?.fork
+      const said = told.has(need) || game.time - game.spokeSpill < 8 || beforeFork
       if (how || (++game.baskets <= 2 && !said)) words = `${said ? '' : need}${how}`.trim()
       if (!said) told.add(need)
     } else {
@@ -830,8 +866,8 @@ function finishSegment(seg) {
   seg.finished = true
   game.cueHold = 1
   // the pantry keeps what Pip needed: spare carrots went back to the field, and an over-full basket
-  // lost one for every carrot past full (7 asked, 10 caught: 4 come home)
-  if (seg.kind === 'row') game.rows.push({ got: Math.max(0, Math.min(seg.got, seg.n) - seg.over), n: seg.n, biome: seg.biome })
+  // lost two for every carrot past full (7 asked, 9 caught: 3 come home)
+  if (seg.kind === 'row') game.rows.push({ got: keptIn(seg), n: seg.n, biome: seg.biome })
   else {
     // the results picture a growing pattern by its first two groups (a b, a a b)
     game.patterns.push({ unit: seg.growing ? seg.items.slice(0, seg.starts[2]) : seg.unit, biome: seg.biome })
@@ -881,7 +917,9 @@ function answer(seg, name) {
     const from = seg.starts[Math.max(0, seg.starts.findLastIndex((i) => i < seg.ask) - 1)]
     cue.replay(from, seg.ask, (i, at) => sound.step(OBSTACLE_NOTES[seg.items[i]], at))
     // little hoppers hear the steps named; older ones listen to the notes and watch the strip
-    voice.sayNow(tier.pattern === 0 ? `Listen. ${capital(patternWords(seg.items.slice(from, seg.ask)))}…` : 'Listen.')
+    // ("Listen." once a trip: after that the notes and the faded picture say it)
+    if (tier.pattern === 0) voice.sayNow(`Listen. ${capital(patternWords(seg.items.slice(from, seg.ask)))}…`)
+    else voice.sayOnce('Listen.', { interrupt: true })
     return
   }
   game.asking = null
@@ -893,14 +931,18 @@ function answer(seg, name) {
   if (at) effects.sparkle(tmp.set(at.x, 1, 0), 10, ['#ffffff', '#ffd23f'], 2.5)
   const said = OBSTACLE_NAMES[real]
   if (name === real && !seg.tried) {
-    // two right first answers in a row step up (a lucky tap on two pictures is not enough)
+    // two right first answers in a row step up (a lucky tap on two pictures is not enough), and
+    // each one after that while the run lasts, so a strong first trip meets a growing pattern
     tier.wrong = 0
-    if (++tier.right >= 2) Object.assign(tier, { pattern: Math.min(2, tier.pattern + 1), right: 0 })
-    voice.sayNow(`Yes, a ${said}!`)
+    if (++tier.right >= 2) tier.pattern = Math.min(game.top.pattern, tier.pattern + 1)
+    // "Yes, a carrot!" once a trip; after that the rule the child just read
+    const yes = `Yes, a ${said}!`
+    voice.sayNow(told.has(yes) ? `Yes! ${ruleWords(seg)}` : (told.add(yes), yes))
   } else if (name === real) {
     // right on the second go: the ladder follows first answers, so two of these in a row step down
     if (++tier.wrong >= 2) Object.assign(tier, { pattern: Math.max(0, tier.pattern - 1), wrong: 0 })
-    voice.sayNow(`A ${said}.`)
+    const a = `A ${said}.`
+    voice.sayNow(told.has(a) ? ruleWords(seg) : (told.add(a), a))
   } else {
     Object.assign(tier, { pattern: Math.max(0, tier.pattern - 1), wrong: 0 })
     voice.sayNow(`Look, a ${said}! ${ruleWords(seg)}`)
@@ -931,22 +973,27 @@ function lessonCarrot(ev) {
     seg.over++
     effects.puff(ev.pos, 6, '#ffffff', 0.8)
     popups.show('↩', tmp.set(game.x + 0.4, overPip(), 0), 'oops', true)
-    // too many: the basket is too heavy and, for every carrot past full, one that was in it rolls
-    // back out, so the further over it goes the less comes home, and stopping when it is full wins
-    if (seg.over <= seg.n) {
-      cue.spill()
-      game.score = Math.max(0, game.score - 1)
+    // too many: the basket is too heavy and, for every carrot past full, it wobbles and two that were
+    // in it roll back out, so the further over it goes the less comes home, and stopping when it is
+    // full wins (careful counting brings home more than hopping at everything)
+    const lost = keptIn({ ...seg, over: seg.over - 1 }) - keptIn(seg)
+    for (let i = 0; i < lost; i++) cue.spill()
+    if (lost) {
+      game.score = Math.max(0, game.score - lost)
       bumpScore()
     }
     // said for the first two over-full baskets, each line once a trip
     if (seg.over === 1 && ++game.spills <= 2) {
-      voice.sayNow(game.spills === 1 ? `That's ${seg.got}. Too heavy! One rolled out.` : 'Too heavy again! Stop when the basket is full.')
+      voice.sayNow(game.spills === 1 ? `That's ${seg.got}. Too heavy! ${lost === 1 ? 'One' : 'Two'} rolled out.` : 'Too heavy again! Stop when the basket is full.')
       game.spokeSpill = game.time
     }
   }
   rowDone(seg)
   return kept
 }
+
+/** The carrots of a row that come home: up to the basket's number, less two for every carrot past full. */
+const keptIn = (seg) => Math.max(0, Math.min(seg.got, seg.n) - 2 * seg.over)
 
 /** A carrot growing in a pattern: munched (stayed down) or hopped over. Either way it is a step of the tune. */
 function patternCarrot(ev, got) {
@@ -983,16 +1030,17 @@ function rowDone(seg) {
       else sound.step(OBSTACLE_NOTES.snowman, 0.1) // a soft bell does the job by now
       adventure.event('row')
       tier.slips = 0
-      if (++tier.streak >= 2 && tier.row < 2) Object.assign(tier, { row: tier.row + 1, streak: 0 })
+      if (++tier.streak >= 2 && tier.row < game.top.row) Object.assign(tier, { row: tier.row + 1, streak: 0 })
     } else {
       tier.streak = 0
-      if (seg.got < seg.n && ++game.aways <= 2) voice.say(`${seg.got} of ${seg.n}.`)
+      // (the first two times, and never the same words twice in a trip)
+      if (seg.got < seg.n && game.aways < 2 && voice.sayOnce(`${seg.got} of ${seg.n}.`)) game.aways++
     }
     // too many twice: a step back down (the counting basket gets its empty places back, then whole rows)
     if (seg.over && ++tier.slips >= 2) Object.assign(tier, { row: Math.max(0, tier.row - 1), slips: 0, streak: 0 })
   } else {
     // the tray shows what got away; Pip says it the first two times
-    if (seg.missed && ++game.aways <= 2) voice.say(`${seg.got} of ${seg.n}. ${seg.missed} got away.`)
+    if (seg.missed && game.aways < 2 && voice.sayOnce(`${seg.got} of ${seg.n}. ${seg.missed} got away.`)) game.aways++
     // two whole rows of three or more, caught by looking (not by hopping at everything): next time
     // Pip's basket is smaller than the row. Hopping for the high carrots and staying down for the
     // ones in the grass takes about one hop per high carrot, and a row of only high ones doesn't count.
@@ -1001,7 +1049,7 @@ function rowDone(seg) {
     // only a row that asked for looking (with carrots in the grass) shows the child is ready
     if (!whole) tier.streak = 0
     else if (seg.n >= 3 && seg.low.slice(0, seg.count).some(Boolean)) tier.streak++
-    if (tier.streak >= 2) Object.assign(tier, { row: 1, streak: 0, slips: 0 })
+    if (tier.streak >= 2) Object.assign(tier, { row: Math.max(tier.row, 1), streak: 0, slips: 0 })
   }
   finishSegment(seg)
 }
@@ -1308,7 +1356,8 @@ function frame(now) {
   world.flutterCeil = game.state === 'menu' && !upright && innerHeight > 480 ? 0.12 : 0.55
   world.update(dt, camera.position.x, game.x, game.time)
   weather.update(dt, camera.position, game.time)
-  glints.update(dt, camera, game.time, weather.kind === 'snow' && game.state !== 'menu')
+  // (on the way only: the home questions and the garden have the snow to themselves)
+  glints.update(dt, camera, weather.kind === 'snow' && game.state === 'play')
   effects.update(dt)
   renderer.render(scene, camera)
 }

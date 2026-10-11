@@ -152,6 +152,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 
 .hint-swipe { position: fixed; left: 50%; bottom: min(120px, 22vh); font-size: 60px; pointer-events: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); animation: swipe 2.4s ease-in-out 3 both; }
+/* The swipe hand waits while a plan or "where?" card is open, so it never covers the choice; it plays when the card closes. */
+#hud:has(#plan:not([hidden])) .hint-swipe, #hud:has(#where:not([hidden])) .hint-swipe, body:has(#pin-prediction[open]) .hint-swipe { display: none; }
+/* 💭 rests while a slide rolls or a plan is this slide's decision. */
+#predict-pins { transition: opacity .3s; }
+#predict-pins:disabled { opacity: .45; }
 @keyframes swipe {
   0% { transform: translate(-50%, 40px); opacity: 0; }
   15% { opacity: 1; }
@@ -515,3 +520,5 @@ body.veiled .plan-pill { display: none; }
 .plan button.rough small { font-size: 14px; font-weight: 900; line-height: 1; }
 .plan button.rough .ten { grid-template-columns: repeat(5, 10px); gap: 3px; }
 .plan button.rough .ten i { width: 10px; height: 10px; }
+/* Tier 1's picture: the pins knocked down are the bright ones, lying flat, so "a few" looks like a few. */
+.plan button.rough .ten i.f, .ten.rough i.f { background: #ff9f43; height: 5px; align-self: center; transform: none; border-radius: 3px; }

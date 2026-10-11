@@ -553,3 +553,89 @@ journey rocket, panel corners and title planets still overlapped.
 - The 124×92 panel on sideways phones is still tight for three plates in a pattern. The chip carries the order there.
 - The voice adds one line per planet for the card pair (once per pair). Watch that it stays welcome.
 - WebKit was not rerun.
+
+## 2026-10-11 — bug pass (round 1 of the third review)
+
+Fixes for the five bugs in the latest review. There is no redesign, and the score-bearing flows are unchanged.
+
+- **The journey rocket touched a stop emoji** (`🏠🚀` at 390 px, `🚀🌙` at 834 px). The active track had no margin, and the rocket rides from edge to edge of it, so the gap at fill 0 or 1 was 0.6–2.5 px. Fix: `.journey .track.on` gets `margin: 0 .3em; flex: none` (`public/style.css:91`), and the inactive tracks on sideways phones are 12 px (`:138`) so the bar still fits. Measured gaps from the rocket to its neighbour stop are now 6.8–10.4 px at 390, 360, 667×375, 834, 1194 and 1280 wide (they were 0.6–2.5 px), with no overflow.
+- **The wanted card's glow after a wrong tap at home was invisible.** Fix: the wanted `.finale-cell` gets a `wanted` class for 1.6 s, a gold border with a soft glow that eases in and out with no pulse (`public/style.css:254–256`, `public/js/main.js:902–906`), alongside `sky.highlight(want)`. Only one card holds the class at a time. Shot: `pc-finale-wrong.png`, taken 0.8 s after a wrong tap; the wanted card stands out clearly.
+- **At 667×375, Kitty was cut off at the bottom during join and choose.** The waiting target was `view.yMin - 0.3`, and the rocket's lowest edge sat at the screen edge at every size (374/375 px at 667×375, 1188/1194 px at 834×1194). Fix: the target is now `view.yMin + 0.3` (`public/js/main.js:1222`). The rocket's bottom is now 22 px above the edge at 667×375, 38 px at 390×844 and 54 px at 834×1194, and it stays clear of the cards. The join card's DOM top is 48 px against a journey bottom of 40 px at 667×375 in all five legs, so the card does not cover the bar.
+- **Planets sat behind the falling number rows.** Fix: while `game.phase === 'build'`, `world.quiet` is set (`public/js/main.js:1449`), and the waiting planet and the drifters ease to 30% opacity (`public/js/world.js:5–27`, `:265–272`). Each clone owns its materials, and drifter materials are disposed on removal (`:244`). The planets come back to full strength at arrival, join, choose and on the title. All 20 build-phase samples read `world.fade = 0.3`. Shots: `ph-leg3-lit2.png`, `lm-leg4-lit2.png`, `sl-leg1-lit2.png`.
+- **The 1..n arrival rhyme repeated on every match shape.** Fix: the rhyme is skipped when the values are `1..n` and the shape is not the trip's first (`public/js/main.js:676–679`). In a random run at match for all five shapes, the plain shapes now say the fact alone. The 5..11 match shapes keep their rhyme, which still teaches.
+- The `?debug` hook also exposes `rocket` and `world` as getters, for the probes only.
+
+**Evidence** (session scratchpad `polish3/star-catcher/after/`). Real-mouse play with speech stubbed and logged:
+
+| Run | Flight | Path | Console errors |
+|---|---|---|---|
+| 834×1194, careful, from level 0 | 173 s | back, fives, big, tens, pattern | 0 |
+| 1194×834, mixed, from level 5 | 208 s | tens, pattern, leap ×3 | 0 |
+| 667×375, careful, from level 3 | 200 s | fives, big, tens, pattern, leap | 0 |
+| 390×844, gentle mission | 218 s | next, back ×3, twos | 0 |
+| 834×1194, random, from level 0 | 382 s | match ×5 | 0 |
+
+Probes: `jbar.mjs` for the journey gaps and `kitty.mjs` for the rocket bounds. `node --check` passes on main.js and world.js. `browser.mjs --ids star-catcher --run star-catcher-f1` gives BOOT + PLAY ready with 0 errors.
+
+## 2026-10-11 — bug pass (round 2 of the third review)
+
+Both reviews scored 8.5. This pass fixes every bug they listed and takes three small, safe items from their top improvements. There is no redesign: the flight, the join, the cards and the home sky work as before.
+
+**Bugs**
+
+- **Planets sat inside the star lanes, faded but not moved** (both reviews). `PLANET_QUIET` is now 0.15, down from 0.3 (`public/js/world.js:5`). While the planets are quiet, the waiting planet also eases out toward its own edge (`x = side · w · (0.6 + 0.45 · aside)`, `:291–292`). New drifters start toward the sides (`:229`), and none start while numbers fall (`:319`). Quiet now covers the join too (`public/js/main.js:1473`), so the planet no longer sits behind Kitty under the join card. It comes back at arrival. In every run, each build sample with three or more stars lit read `fade = 0.15`, with the planet's centre off screen (x = 851–858 at 834 wide, −17 to −37 or 1217–1233 at 1194, 678–689 or −12 to −22 at 667). Shots: `ph-leg3-lit2.png`, `lm-leg2-first.png`.
+- **At 667×375 during choose, Kitty's flame touched the bottom-right edge.** On screens shorter than 500 px, the waiting target is `view.yMin + 0.75` (it was `+ 0.3`, `main.js:1245`). The mesh bottom moved from 364 to 348 px, and the flame clears the edge (`kitty2.mjs`, `after-choose-667x375.png`). Tablets are unchanged.
+- **At 390×844 during join, Kitty's nose cone overlapped the join card.** The join card's bottom padding on portrait phones is 166 px (it was 132, `public/style.css:210`). Card bottom and Kitty top are now 678/689 px at 390×844 and 574/605 px at 360×740. Before, they overlapped (704/690 and 608/604). No size overlaps now. Shot: `np-leg1-join0.png`.
+- **The '11' join label sat on the start of its line to 10** (667×375). `placeLabels` now also scores each of the 12 spots by how close it lies to a direction one of the star's own lines leaves in. Within 1 rad it costs up to one label height (`public/js/sky.js:309–327`). Shots: `sl-leg2-join0.png` and `sl-leg1-join0.png`, where every label sits beside its lines.
+- **Fast correct taps at home cut off each 'Yes! fact' line.** A counter, `finale.telling`, tracks found-lines still being said (`main.js:850`, `:905–912`). A correct tap while one is still playing queues only `<Name>! <next riddle>`, with no cut and no stale fact. Wrong taps still cut in and reset the counter (`:915`). In seven runs with five correct taps 0.5 s apart, there was 0 `<cancel>`.
+- **Tapping a found card replayed its whole fact every time.** The first replay says the fact. Later taps say only `That's <spoken name>.` (`main.js:917–921`). The log reads "Cygnus is a swan flying…", then "That's Cygnus the swan." three times.
+
+**Small improvements from the reviews' top items**
+
+- **The first pick of a '?' level is now a reasoning pick** (both reviews' #1). `beginConstellation` pre-lights the first star at 'ask' levels and the first two at pattern and leap (`sky.prelight`, `public/js/sky.js:698`, called at `main.js:837`). They are given, so there is no bell and no catch. The first catch is the step: 'Count on +1 · 6 → ?', 'By tens +10 · 6 → ?', '76 → 65 → ?'. Across all 33 logged first picks at 'ask'/'ask2', the needed star was never the number on show. The pattern rule line drops its words (`main.js:504`), so the three numbers fit the 124 px phone panel without an ellipsis. The banner still names the rule. Match (and the gentle mission) is unchanged.
+- **The choice cards show a number picture, not words** (#2/#3). Each level has a `sample` ('2 → 4 → ?', '7 → 17 → ?', '9 → 20 → ?', '3 = 3'), and the card chip reads `5 ⭐ · 2 → 4 → ?` (`main.js:740`). The rule's words move to the card's `title` and stay in its `aria-label`. Shots: `pc-leg2-choose.png`, `sl-leg3-choose.png`.
+- **A scaffold for a struggling child** (#4). After three wrong picks in a row for one star, the next row falls at 70% speed. The needed star is 1.25× larger and steady, with no pulse (`main.js:385–391`, `:1357`). Misses still count for `adapt()`. In the random run it fired 4 times (`pr-help.png`). The run took 273 s, down from 382 s for last pass's random run.
+
+**Evidence** (session scratchpad `polish3/star-catcher/r2/`, `play6.mjs` with real mouse steering and clicks and speech stubbed and logged, plus the `kitty2.mjs` bounds probe):
+
+| Run | Flight | Path | Console errors |
+|---|---|---|---|
+| 834×1194, careful, from level 2 | 150 s | twos, fives, tens, pattern, leap | 0 |
+| 1194×834, mixed, from level 5 | 180 s | tens, pattern, leap ×3 | 0 |
+| 667×375, careful, from level 3 | 185 s | fives, big, pattern, leap ×2 | 0 |
+| 667×375, careful, from level 6 | 164 s | pattern, leap ×4 | 0 |
+| 1194×834, mixed, from level 3 | 188 s | twos, fives, big, tens ×2 | 0 |
+| 390×844, gentle mission | 189 s | next, back, twos ×3 | 0 |
+| 834×1194, random, from level 0 | 273 s | match, next, back ×3 | 0 |
+
+`node --check` passes on main.js, sky.js and world.js. `browser.mjs --ids star-catcher --run star-catcher-f2` gives BOOT + PLAY ready with 0 errors. The flows that `original-quality.mjs` drives (mission choice and start) are unchanged.
+
+**Still open (design, not bugs):** a second kind of flight decision for 6–8, such as a gap row ('3, 4, _, 6'). Both reviews list it as the remaining fun-depth blocker. It is a redesign-sized change and was left for a design pass.
+
+## 2026-10-11 — bug pass (round 3 of the third review)
+
+Both reviews scored 8.6–8.7. This pass fixes every bug they listed. There is no redesign: the flight, the join, the cards and the home sky play as before.
+
+- **The gentle mission said its goal twice** ('Catch stars 1 to 5' from the picker, then 'Catch stars 1 to 5!' from `start()`). The game now passes its own `announce` to `createAdventure` and records when a goal was said (`public/js/main.js:204`, `:215–218`). If the picker said it in the last 20 s, `start()` queues only `Find number 1!` after it, with no cut (`:1143–1147`). A mission restored from storage says `Catch stars 1 to 5! Find number 1!` once. Logs (`r3/mission.mjs`): picked: "Catch stars 1 to 5", then "Find number 1!" with no `<cancel>`. Stored: "Catch stars 1 to 5! Find number 1!". Free flight is unchanged.
+- **At 390×844 during the join, Kitty's nose and antenna touched the join card.** On tall phones (aspect < 0.6), Kitty now waits at `view.yMin + 0` (it was `+ 0.3`, `main.js:1266`). Short sideways screens and tablets are unchanged. In a real join (`r3/join.mjs`), the gap from the card's bottom to Kitty's top is now 9 px at 390×844 (it was −7), 25 px at 360×740 (12), 18 px at 412×915 (0) and 39 px at 375×667. Kitty's flame stays 26 px above the bottom edge at 390×844. Shot: `after-join-390x844.png`.
+- **During choose, the waiting planet sat at full size behind the right-hand card.** `world.quiet` now covers `choose` too (`main.js:1496`), so the planet stays at 15% and set to one side while the cards are read. It comes forward only at arrival. Every choose sample in the runs read `fade = 0.15`.
+- **The answer-revealing scaffold followed misses on the whole shape, not on this star.** `wrongStar` now opens the '?' only after two wrong picks for the current star: `if (game.streak >= 2)` (it was `game.misses >= 2`, `main.js:476`). A right catch closes it again, as before. The probe (`r3/unit.mjs`, level 'next') gave: wrong, wrong → 'all' ('2 → 3'). Right → 'ask'. One wrong on a later star stays 'ask' ('3 → ?'). Two wrongs open it again.
+- **'Big jumps' could draw jumps of −3 and −4**, which are smaller than the pattern level's jumps. The leap tiers are now `[[9, 11, -11], [20, -9, 12], [12, -9, 11, -11, 20]]` (`main.js:167`). Over 600 draws with 5–7 stars, leap jumps were {−11, −9, 9, 11, 12, 20}, and every number stayed within 1–99. Pattern jumps stay {−10, −5, 3, 4} after its first tier.
+- **Home sky: tapping a found card cut off the queued riddles of fast finds.** While a find is still being told and the voice is speaking, a found card now only glows (`main.js:924–933`). The `telling` counter is reset only by a wrong tap, which cuts in by design. The `voice.speaking` guard means a counter left stuck after a hush can never silence the cards.
+- **Home sky: a found card tapped twice said 'That's Lyra the harp.' twice.** A tap on the same found card within 2.5 s of the last one says nothing new (`finale.lastCard` / `lastAt`, `main.js:927–931`).
+- **The '10' and '8' pills touched in the pattern panel.** This reproduced every time on Orion at 'ask2', where '62' and '53' overlapped by 8 px: the first label took the only free spot the second one had, and the old hard 'inside' test refused a spot that was 1 px over the edge. `placeLabels` (`public/js/sky.js:288–360`) now does three things. It scores each spot after nudging it inside, so a slight spill costs 4 per px and only a spill over 0.3 × h rules it out (`:325–333`). Any overlap with a placed number, including a 0.12 × h margin, costs 3 × h. If the numbers still touch, it places the list in reverse order and keeps the result with fewer touches (`:342–345`). Probe (`lab.mjs`, every shape at pattern/leap, panel plus join card): 0 touching pairs in 70 samples at 1194×834, 50 at 667×375 and 50 at 390×844 (it was 8 of 8 on Orion). Shot: `f/lh-leg3-lit2.png` ('7', '11' and '?' apart).
+- The `?debug` hook also exposes `catchItem`, for the probes only.
+
+**Evidence.** `/tmp` (tmpfs) filled up during this pass, so the probes and shots are in `~/.cache/star-catcher-pw/r3/`. Runs used `play7.mjs` with real mouse steering, speech stubbed and logged, and Chromium `--use-angle=gl`. Each finale does fast finds 0.45 s apart, with a tap on the last found card between finds, then double taps on one found card.
+
+| Run | Flight | Path | Console errors |
+|---|---|---|---|
+| 1194×834, careful, from level 7 | 145 s | tens, twos, pattern ×3 (−2, +4, −10) | 0 |
+| 1194×834, careful, from level 7 (before the label fix) | 156 s | tens ×2, pattern, leap ×2 (−9, +11) | 0 |
+| 834×1194, mixed, from level 3 | 167 s | back, twos, fives ×2, big | 0 |
+| 390×844, gentle mission, careful | 178 s | match, next, back ×2, twos | 0 |
+| 390×844, gentle mission, random | 343 s | match ×5; the streak scaffold helped 8 times | 0 |
+
+In every finale, each queued '<Name>! <next riddle>' line was spoken, and the taps on found cards in between stayed silent. Double taps gave one line: the fact, then 'That's Cygnus the swan.' once per pair. `node --check` passes on main.js and sky.js. `browser.mjs --ids star-catcher --run star-catcher-f3` gives BOOT + PLAY ready with 0 errors. `original-quality.mjs` drives the mission choice and start, and only the spoken start line changed: 'Find number 1!' after a goal that was just picked.
+
+**Still open (design, not bugs):** a second kind of flight decision for 6–8, such as a gap row ('3, 4, _, 6') or two stars caught in order. Both reviews list it as the fun-depth blocker. It is redesign-sized and was left out of this bug pass.

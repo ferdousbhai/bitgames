@@ -247,6 +247,18 @@ function plainPlanCrossing(L, start, dists, { from, span }) {
   return crossing
 }
 
+/** A layout from the network is used only when it fits this town: the right number of houses, known kinds, distances on the loop and a full tray. */
+function validLayout(l, count, L) {
+  const list = (a, n) => Array.isArray(a) && a.length === n
+  const onLoop = (d) => Number.isFinite(d) && d >= 0 && d < L
+  if (!list(l.kinds, count) || !list(l.dists, count) || !list(l.sides, count) || !list(l.streets, count)) return false
+  if (new Set(l.kinds).size !== count || !l.kinds.every((k) => Number.isInteger(k) && KINDS[k])) return false
+  if (!l.dists.every(onLoop) || !l.sides.every((s) => s === 1 || s === -1)) return false
+  if (l.closed != null && !onLoop(l.closed)) return false
+  if (l.oneWay != null && !(onLoop(l.oneWay.from) && Number.isFinite(l.oneWay.span) && [1, -1].includes(l.oneWay.dir))) return false
+  return Array.isArray(l.tray) && l.tray.every((p) => Number.isInteger(p) && p >= 0) && new Set(l.tray).size === l.tray.length
+}
+
 export function createTown(scene) {
   const group = new THREE.Group()
   group.visible = false
@@ -284,7 +296,10 @@ export function createTown(scene) {
     roof = null
   }
 
-  /** The packed parcels sit side by side on the roof. */
+  /**
+   * The packed parcels sit side by side, low at the back of the roof, with small
+   * pictures: the house sign and the resident ahead stay in view over them.
+   */
   function dressRoof(car) {
     roof?.traverse((o) => o.isSprite && o.material.dispose())
     roof?.removeFromParent()
@@ -292,11 +307,13 @@ export function createTown(scene) {
     if (!load.length || !car) return
     roof = new THREE.Group()
     load.forEach((p, k) => {
-      const box = parcel(parcels[p], 0.85)
-      box.position.x = (k - (load.length - 1) / 2) * 1.05
+      const box = parcel(parcels[p], 0.55)
+      box.userData.label.scale.setScalar(0.5)
+      box.userData.label.position.y = 0.42
+      box.position.x = (k - (load.length - 1) / 2) * 0.7
       roof.add(box)
     })
-    roof.position.set(0, car.dims.top + 0.45, 0.4)
+    roof.position.set(0, car.dims.top + 0.25, car.dims.length * 0.22)
     car.root.add(roof)
   }
 
@@ -325,11 +342,21 @@ export function createTown(scene) {
     get tray() { return tray },
     show(value) { group.visible = value; if (roof) roof.visible = value },
 
-    /** Lays out this drive's houses. Deterministic in `seed`, so friends in the same town see the same houses. */
-    configure(track, seed, tier = 1, { behind = false } = {}) {
+    /** This drive's town as laid out here: what a friend's device needs to build the very same one (see configure's `layout`). */
+    get layout() {
+      return { kinds: houses.map((h) => h.kindIndex), dists: houses.map((h) => h.dist), sides: houses.map((h) => h.sign), streets: houses.map((h) => STREETS.indexOf(h.street)), closed, oneWay, tray }
+    },
+
+    /**
+     * Lays out this drive's houses. Deterministic in `seed`. With friends, the
+     * host's `layout` (see the getter) is used as it is, so every device drives
+     * the same town even if its own search for a telling layout went another way.
+     */
+    configure(track, seed, tier = 1, { behind = false, layout = null } = {}) {
       clear()
       const r = rng((seed ^ 0x70f7) >>> 0)
       const count = TIERS[tier]?.houses ?? HOUSES
+      if (layout && !validLayout(layout, count, track.length)) layout = null
       // Four (or all six) of the kinds, shuffled onto spots spread round the loop.
       const kinds = KINDS.map((k, i) => i).sort(() => r() - 0.5).slice(0, count)
       const places = kinds.slice().sort(() => r() - 0.5)
@@ -358,10 +385,20 @@ export function createTown(scene) {
       }
       const onOneWay = (d) => oneWay && wrap(d - oneWay.from + 10, L) < oneWay.span + 20
       // Where the houses go: one at the end of each side street, the rest spread round the loop as far from each other (and the start) as they can be.
-      const slots = spurs.map((spur, j) => ({ dist: spur.dist, spur, street: STREETS[j], pin: spur.door }))
+      let slots = spurs.map((spur, j) => ({ dist: spur.dist, spur, street: STREETS[j], pin: spur.door }))
+      if (layout) {
+        // The host's town: its kinds, places, road works and one-way street. A side street this city also has keeps its house down it.
+        places.splice(0, places.length, ...layout.kinds)
+        closed = layout.closed
+        oneWay = layout.oneWay && { ...layout.oneWay }
+        slots = layout.dists.map((d, i) => {
+          const spur = spurs.find((sp) => Math.abs(track.offset(sp.dist, d)) < 1)
+          return spur ? { dist: spur.dist, spur, street: STREETS[layout.streets[i]] ?? STREETS[spurs.indexOf(spur)] } : { dist: d, pin: track.sampleAt(d).p }
+        })
+      }
       // A child who already finds the short way in tier 1: one house stands a little way behind the start, so the
       // first real choice is often ↩️ (a short way back) against driving all the way round. Unless a street is already there.
-      if (behind && tier === 1 && !slots.some((q) => wrap(start - q.dist, L) < 100)) {
+      if (!layout && behind && tier === 1 && !slots.some((q) => wrap(start - q.dist, L) < 100)) {
         for (let back = 44; back <= 96; back += 4) {
           const d = wrap(start - back, L)
           if (track.nearRamp(d, 6) || nearJunction(d, 16)) continue
@@ -391,7 +428,7 @@ export function createTown(scene) {
       places.forEach((kindIndex, i) => {
         const kind = KINDS[kindIndex]
         const { dist, spur, street } = slots[i]
-        const sign = spur ? spur.sign : i % 2 ? -firstSide : firstSide
+        const sign = spur ? spur.sign : layout ? layout.sides[i] : i % 2 ? -firstSide : firstSide
         const f = track.frameAt(dist)
         // The doorstep, and which ways are "away from the road" and "along it" there: by the kerb, or on a side street's turning place.
         const out = spur ? spur.u.clone() : f.side.clone().multiplyScalar(sign)
@@ -426,7 +463,7 @@ export function createTown(scene) {
         houses.push({ kind, kindIndex, wants: [], dist, x: door.x, z: door.z, sign, resident, hand, wave: 0, residentY: 1.05, spur: spur ?? null, street: street ?? null })
       })
       // Tier 3: the arrows forbid the way the plain shortest plan would cross the one-way street, so they must be read, not just the distances.
-      if (oneWay) oneWay.dir = -(plainPlanCrossing(L, start, houses.map((h) => h.dist), oneWay) || -oneWay.dir)
+      if (oneWay && !layout) oneWay.dir = -(plainPlanCrossing(L, start, houses.map((h) => h.dist), oneWay) || -oneWay.dir)
       if (closed != null) group.add(roadworks(track, closed))
       if (oneWay) group.add(oneWayStreet(track, oneWay))
       // Tier 1: one easy gift per house. Tier 2: both of the house's gifts.
@@ -438,7 +475,8 @@ export function createTown(scene) {
         }
       })
       tray = parcels.map((p, i) => i).sort((a, b) => houses[parcels[a].house].kindIndex - houses[parcels[b].house].kindIndex)
-      if (TIERS[tier]?.pairs) {
+      if (layout && layout.tray.length === parcels.length && layout.tray.every((p) => p < parcels.length)) tray = layout.tray.slice()
+      else if (TIERS[tier]?.pairs) {
         // Mixed up, with no pair side by side: which two go together is the child's to work out.
         for (let tries = 0; tries < 50; tries++) {
           tray.sort(() => r() - 0.5)

@@ -1146,6 +1146,8 @@ async function checkCount() {
     // The mission counts the layers (quietly: the friend just did) and says its reward line.
     // The cake is finished: game.counting stays set until the party starts, so no layer, pantry or candle
     // can change the cake between the right count and its party.
+    // A cake counted right only after a miscount says so plainly: careful counting and guessing sound different.
+    if (game.miscounts) adventure.option.reward = `${NUMBER_WORDS[n]} layers. We got there!`
     for (const L of cake.layers) adventure.event(L)
     $('done').classList.add('hidden')
     setTimeout(() => run === game.run && finishCake('done'), Math.max(450, missionUntil - performance.now()))
@@ -1168,7 +1170,8 @@ async function checkCount() {
   await wait(1.2)
   if (run !== game.run) return
   game.counting = false
-  $('done').classList.toggle('hidden', !built() || !!cake.surprise)
+  // The candle stays away until the cake changes (a layer lands, or one is taken off), so it never
+  // recounts the same cake: each count answers a new decision.
   if (!game.over && !cake.surprise && !mover && built() < countCap()) spawnMover()
 }
 
@@ -1557,6 +1560,7 @@ function updateHud() {
       p.classList.toggle('design', blank && i < game.order.design)
       if (blank) {
         p.classList.remove('mystery', 'oops')
+        p.dataset.oops = ''
         p.textContent = i < game.order.design ? '' : '?'
         // The "?" of the part still to keep going is drawn in the order's pink, so it reads on its white dot.
         p.style.color = i < game.order.design ? '' : '#b04a7a'
@@ -1568,12 +1572,14 @@ function updateHud() {
       }
       const mystery = isMystery(i)
       const f = FLAVOURS[game.order.layers[i]]
-      // A wrong layer sitting on the cake shows on its dot, tilted, until the child takes it off.
+      // A wrong layer sitting on the cake shows as a small tilted badge above its dot, until the child takes
+      // it off. The dot keeps the wanted picture, so "wanted" and "placed" can be compared side by side.
       const oops = i === n && cake?.surprise ? cake.surprise.flavour : null
       p.classList.toggle('mystery', mystery)
       p.classList.toggle('oops', !!oops)
+      p.dataset.oops = oops ? FLAVOURS[oops].emoji : ''
       p.style.color = ''
-      p.textContent = oops ? FLAVOURS[oops].emoji : mystery ? '?' : f.emoji
+      p.textContent = mystery ? '?' : f.emoji
       p.style.setProperty('--want', mystery ? '#fff' : f.rainbow ? '#ffe3ef' : f.icing)
       p.style.setProperty('--want-rim', mystery ? '#d9a7c0' : f.sponge)
       p.setAttribute('aria-label', `Layer ${i + 1}: ${oops ? `${oops} is on the cake, tap to take it off` : mystery ? 'what comes next?' : game.order.layers[i]}`)

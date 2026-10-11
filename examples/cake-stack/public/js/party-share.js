@@ -267,7 +267,8 @@ export function createPartyShare({ root, speak, speakOnce = speak, sound, onDone
         sound?.unlock?.()
         sound?.click()
         cutCake(n)
-        speak(`${n} slices. Share them fairly!`)
+        // The cut is the decision, so its consequence is said straight away: this cut goes round, or it leaves some over.
+        speak(n % guests.length ? `${n} slices. Some will be left over, for the baker. Share them fairly!` : `${n} slices. None will be left over. Share them fairly!`)
       })
       return b
     }))

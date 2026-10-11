@@ -280,13 +280,13 @@ class ConstellationView {
   }
 
   /**
-   * Numbers beside their stars: `list` is [{ i, text, opacity }], placed in order. Each takes the
-   * one of twelve spots around its star that stays inside the box and is clearest of every other
-   * star and of the numbers already placed, so close stars (Orion's belt) never share a number's spot.
+   * Numbers beside their stars: `list` is [{ i, text, opacity }]. Each takes the one of twelve
+   * spots around its star that stays inside the box and is clearest of every other star and of the
+   * numbers already placed, so close stars (Orion's belt) never share a number's spot. When the
+   * first number takes the only spot the next one had, the list is placed the other way round.
    */
   placeLabels(list) {
     const shown = new Set()
-    const placed = []
     // Kept a little inside the box, clear of its rounded corners
     const m = Math.min(this.box.w, this.box.h) * 0.04
     const b = { x: this.box.x + m, y: this.box.y + m, w: this.box.w - m * 2, h: this.box.h - m * 2 }
@@ -295,37 +295,64 @@ class ConstellationView {
     for (const { a, b: e } of this.lines) for (let t = 0.2; t < 0.85; t += 0.15) along.push(new THREE.Vector2().lerpVectors(this.pts[a], this.pts[e], t))
     // Digits about 24 px tall on a tablet panel (a little bigger in the join card)
     const h = Math.min(46, Math.max(20, this.size * (this.labels === 'join' ? 2.9 : 2.5)))
-    for (const { i, text, opacity } of list) {
-      const sp = this.starLabels[i]
+    const gap = h * 0.12 // numbers never touch one another
+    const items = list.map((item) => {
+      const tex = numberTexture(item.text)
+      const p = this.pts[item.i]
+      // The directions this star's own lines leave in: a number there would hide where the line starts
+      const leave = this.lines.filter((l) => l.a === item.i || l.b === item.i).map((l) => {
+        const q = this.pts[l.a === item.i ? l.b : l.a]
+        return Math.atan2(q.y - p.y, q.x - p.x)
+      })
+      return { ...item, tex, hw: (h * tex.userData.aspect) / 2, leave }
+    })
+    const place = (order) => {
+      const placed = []
+      let touching = 0
+      for (const it of order) {
+        const { i, hw, leave } = it
+        const p = this.pts[i]
+        const off = this.size * 1.1 + h * 0.42
+        let best = null
+        for (let k = 0; k < 12; k++) {
+          const a = (k / 12) * Math.PI * 2 + Math.PI / 2
+          const ax = p.x + Math.cos(a) * (off + Math.abs(Math.cos(a)) * (hw - h / 2))
+          const ay = p.y + Math.sin(a) * off
+          // A spot a little over the edge is nudged inside; one far over it is not a spot
+          const x = Math.min(Math.max(ax, b.x + hw), b.x + b.w - hw)
+          const y = Math.min(Math.max(ay, b.y + h / 2), b.y + b.h - h / 2)
+          const moved = Math.hypot(x - ax, y - ay)
+          let clear = Infinity
+          this.pts.forEach((q, j) => j !== i && (clear = Math.min(clear, Math.max(Math.abs(q.x - x) - hw, Math.abs(q.y - y) - h / 2))))
+          for (const q of along) clear = Math.min(clear, Math.max(Math.abs(q.x - x) - hw, Math.abs(q.y - y) - h / 2) + h * 0.35)
+          // Any overlap with a number already placed outweighs every other wish
+          let overlap = 0
+          for (const o of placed) overlap += Math.max(0, Math.min(x + hw, o.x + o.hw) - Math.max(x - hw, o.x - o.hw) + gap) * Math.max(0, Math.min(y + h / 2, o.y + h / 2) - Math.max(y - h / 2, o.y - h / 2) + gap)
+          let onLine = 0
+          for (const d of leave) onLine = Math.max(onLine, 1 - Math.abs(Math.atan2(Math.sin(a - d), Math.cos(a - d))))
+          const score = Math.min(clear, h) - (moved > h * 0.3 ? 1000 : moved * 4) - (overlap > 0 ? h * 3 : 0) - overlap * 0.2 + Math.sin(a) * 0.5 - onLine * h
+          if (!best || score > best.score) best = { x, y, score, overlap }
+        }
+        if (best.overlap > 0) touching++
+        placed.push({ it, x: best.x, y: best.y, hw })
+      }
+      return { placed, touching }
+    }
+    let result = place(items)
+    if (result.touching && items.length > 1) {
+      const other = place([...items].reverse())
+      if (other.touching < result.touching) result = other
+    }
+    for (const { it, x, y, hw } of result.placed) {
+      const sp = this.starLabels[it.i]
       shown.add(sp)
-      const tex = numberTexture(text)
-      if (sp.material.map !== tex) {
-        sp.material.map = tex
+      if (sp.material.map !== it.tex) {
+        sp.material.map = it.tex
         sp.material.needsUpdate = true
       }
-      const hw = (h * tex.userData.aspect) / 2
       sp.scale.set(hw * 2, h, 1)
-      const p = this.pts[i]
-      const off = this.size * 1.1 + h * 0.42
-      let best = null
-      for (let k = 0; k < 12; k++) {
-        const a = (k / 12) * Math.PI * 2 + Math.PI / 2
-        const x = p.x + Math.cos(a) * (off + Math.abs(Math.cos(a)) * (hw - h / 2))
-        const y = p.y + Math.sin(a) * off
-        const inside = x - hw >= b.x && x + hw <= b.x + b.w && y - h / 2 >= b.y && y + h / 2 <= b.y + b.h
-        let clear = Infinity
-        this.pts.forEach((q, j) => j !== i && (clear = Math.min(clear, Math.max(Math.abs(q.x - x) - hw, Math.abs(q.y - y) - h / 2))))
-        for (const q of along) clear = Math.min(clear, Math.max(Math.abs(q.x - x) - hw, Math.abs(q.y - y) - h / 2) + h * 0.35)
-        let overlap = 0
-        for (const o of placed) overlap += Math.max(0, Math.min(x + hw, o.x + o.hw) - Math.max(x - hw, o.x - o.hw)) * Math.max(0, Math.min(y + h / 2, o.y + h / 2) - Math.max(y - h / 2, o.y - h / 2))
-        const score = Math.min(clear, h) - (inside ? 0 : 1000) - overlap * 0.2 + Math.sin(a) * 0.5
-        if (!best || score > best.score) best = { x, y, score }
-      }
-      const x = Math.min(Math.max(best.x, b.x + hw), b.x + b.w - hw)
-      const y = Math.min(Math.max(best.y, b.y + h / 2), b.y + b.h - h / 2)
-      placed.push({ x, y, hw })
       sp.position.set(x, y, 0)
-      sp.material.opacity = opacity
+      sp.material.opacity = it.opacity
       sp.visible = true
     }
     for (const sp of this.starLabels) if (!shown.has(sp)) sp.visible = false
@@ -685,6 +712,14 @@ export class Sky {
     const i = this.claimed++
     this.fly(x, y, this.view.stars[i].color, (out) => out.copy(this.view.pts[i]), () => this.land(i, data))
     return true
+  }
+
+  /** The first `k` stars start lit (given, not caught: no bell), so the first catch is already a step of the rule. */
+  prelight(k) {
+    const v = this.view
+    if (!v) return
+    for (let i = 0; i < Math.min(k, this.total - 1); i++) v.light(i, this.time - 1)
+    this.claimed = v.lit
   }
 
   /** How the panel numbers the stars: 'all' shows the next number, 'ask' shows "?" there. */

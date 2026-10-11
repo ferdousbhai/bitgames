@@ -395,7 +395,8 @@ export function renderPantry(el, rows) {
   const sum = document.createElement('div')
   sum.className = 'pantry-total'
   sum.hidden = true
-  el.append(shelves, ask, sum)
+  // the total sits above the question, so a question about the total (the winter gap) reads top down
+  el.append(shelves, sum, ask)
   return crates
 }
 
@@ -525,5 +526,5 @@ export function showPantryTotal(el, total, goal) {
 /** What Pip says at home about winter: the total, and whether it is enough (with spares or a gap, for older hoppers). */
 export function pantryWords(total, goal, older) {
   if (total >= goal) return `${carrotWords(total)}. Enough for winter${older && total > goal ? `, and ${total - goal} to spare` : ''}!`
-  return `${carrotWords(total)}. Pip needs ${goal} for winter${older ? `: ${goal - total} more next time` : ''}.`
+  return `${carrotWords(total)}. Pip wants ${goal} for winter${older ? `: ${goal - total} more next time` : ''}.`
 }

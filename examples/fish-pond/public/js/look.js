@@ -18,9 +18,10 @@
  *   octopus    https://www.montereybayaquarium.org/animals/animals-a-to-z/giant-pacific-octopus (eight arms; suckers grip and taste)
  *   jellyfish  https://en.wikipedia.org/wiki/Jellyfish (stinging tentacles catch prey; no bones; no true brain)
  *   narwhal    https://www.fisheries.noaa.gov/species/narwhal (the tusk is a tooth through the front of the jaw)
- *   whale      https://ocean.si.edu/ocean-life/marine-mammals/whales (blowhole); whales beat their tails up and down
+ *   whale      https://ocean.si.edu/ocean-life/marine-mammals/whales (blowhole, the spout of breath); whales beat their tails up and down
  *   frog       https://en.wikipedia.org/wiki/Frog (webbed hind feet for swimming; lungs and breathing through the skin)
- *   crayfish   https://en.wikipedia.org/wiki/Crayfish (claws; the tail flip that shoots it backwards to escape)
+ *   crayfish   https://en.wikipedia.org/wiki/Crayfish (claws; the tail flip that shoots it backwards to escape;
+ *              it moults its exoskeleton to grow)
  *   snail      https://en.wikipedia.org/wiki/Planorbidae (ramshorn: flat coiled shell, tentacles)
  *              https://en.wikipedia.org/wiki/Gastropod_shell (the shell grows with the snail, coiling as it grows)
  *   octopus    https://www.montereybayaquarium.org/animals/animals-a-to-z/giant-pacific-octopus (can regrow a lost arm)
@@ -30,6 +31,13 @@
  *   seal       https://www.fisheries.noaa.gov/species/ringed-seal (light rings round dark spots; claws on the front
  *              flippers keep breathing holes open in the ice); whiskers feel for fish: https://en.wikipedia.org/wiki/Whiskers
  *   cod        https://en.wikipedia.org/wiki/Gadidae (cods have three dorsal fins and a chin barbel)
+ *   gills      https://en.wikipedia.org/wiki/Fish_gill (water in at the mouth, out over the gills under the gill cover)
+ *   octopus    https://en.wikipedia.org/wiki/Octopus (gills inside the mantle, the soft "head")
+ *   jellyfish  https://oceanservice.noaa.gov/facts/jellyfish.html (no gills; mostly water; the bell pulses to swim)
+ *   narwhal    https://www.fisheries.noaa.gov/species/narwhal (mottled grey, whitening with age; one blowhole,
+ *              closed by a muscular flap under water: https://en.wikipedia.org/wiki/Blowhole_(anatomy))
+ *   frog       https://en.wikipedia.org/wiki/Northern_leopard_frog (dark spots that camouflage it among plants)
+ *   cod        https://en.wikipedia.org/wiki/Countershading (a dark back is hard to see from above)
  *              https://en.wikipedia.org/wiki/Barbel_(anatomy) (barbels carry taste buds, for finding food)
  *
  * `facts`: two ways to tell it, so a second catch in a trip hears something new (main.js lookFact).
@@ -59,6 +67,9 @@ const octoArms = (() => {
   })
 })()
 
+/** The gill cover behind the eye, on the fish that answer "breathes under water" (goldfish, trout, cod). */
+const GILLS = ['Behind its eye are its gills. Water goes in at its mouth and out over its gills.', 'Gills take what a fish needs to breathe right out of the water.']
+
 export const LOOK = {
   clownfish: [
     {
@@ -72,11 +83,14 @@ export const LOOK = {
   goldfish: [
     { part: 'tail', at: [-0.64, -0.02, 0.02], fact: 'A fish swishes its tail from side to side to push itself along.' },
     { part: 'back fin', at: [-0.02, 0, 0.44], fact: 'The fin on its back keeps a fish steady, so it does not roll over.' },
+    // The curved edge behind the eye (blender/models.py fish_face gill): where "breathes under water" glows
+    { part: 'gills', at: [0.06, -0.28, -0.03], facts: GILLS },
   ],
   bluefish: [{ part: 'side fins', at: [0.0, -0.22, -0.12], facts: ['Blue Fish is pretend, but real fish have side fins like these. They turn and stop with them.', 'Its side fins are where your arms are. They help it steer.'] }],
   trout: [
     { part: 'stripe', at: [0.0, -0.2, -0.02], fact: 'That pinky-red stripe is why it is called a rainbow trout.' },
     { part: 'spots', at: [-0.08, -0.18, 0.1], fact: 'Rainbow trout have lots of little black spots all along the body.' },
+    { part: 'gills', at: [0.17, -0.19, -0.02], facts: GILLS },
   ],
   pufferfish: [
     {
@@ -99,13 +113,20 @@ export const LOOK = {
       facts: ['Its top shell is called a carapace. Pond turtles warm their shells in the sun.', 'A turtle can never take its shell off. It is joined to its backbone.'],
     },
   ],
-  octopus: [{ part: 'arms', at: [0.24, -0.42, -0.06], count: octoArms, facts: ['The suckers on its arms can grab, and even taste.', 'If an octopus loses an arm, a new one grows back.'] }],
+  octopus: [
+    { part: 'arms', at: [0.24, -0.42, -0.06], count: octoArms, facts: ['The suckers on its arms can grab, and even taste.', 'If an octopus loses an arm, a new one grows back.'] },
+    // Where "breathes under water" glows: an octopus's gills are inside the soft body behind its eyes
+    { part: 'head', at: [-0.06, -0.24, 0.58], fact: 'Its gills are tucked inside its big soft head, so it breathes under water.' },
+  ],
   jellyfish: [
     {
       part: 'tentacles',
       at: [0.1, -0.14, -0.34],
       facts: ['Jellyfish catch tiny food with their stingy tentacles. A jellyfish has no bones at all.', 'A jellyfish drifts with the water, its tentacles trailing behind.'],
     },
+    // Where "breathes under water" glows: it has no gills, and takes in what it needs through its thin skin
+    // (the riddle's reason says so; the look adds something new)
+    { part: 'bell', at: [-0.06, -0.2, 0.36], fact: 'Its bell is mostly water. It squeezes shut and opens again to swim.' },
   ],
   narwhal: [
     {
@@ -113,17 +134,25 @@ export const LOOK = {
       at: [0.8, 0, 0.14],
       facts: ['That long tusk is really a tooth! It grows out through the front of its jaw.', 'Mostly the boy narwhals grow a tusk. It can be longer than a grown-up is tall.'],
     },
+    { part: 'spots', at: [-0.12, -0.3, 0.16], fact: 'Narwhals are grey with dark spots. Old narwhals turn almost white.' },
+    // The blowhole on top of its head (blender/models.py creature_narwhal): where "breathes air" glows
+    { part: 'blowhole', at: [0.2, 0, 0.32], fact: 'Its blowhole shuts tight when it dives, so no water gets in.' },
   ],
   whale: [
-    { part: 'blowhole', at: [0.25, 0, 0.56], fact: 'Whales breathe air through the blowhole on top of their head.' },
+    { part: 'blowhole', at: [0.25, 0, 0.56], fact: 'Whoosh! When a whale breathes out through its blowhole, it makes a misty spout.' },
     { part: 'tail', at: [-0.98, 0, 0.05], fact: 'A whale swims by moving its tail up and down. Fish swish theirs side to side.' },
   ],
   frog: [
     { part: 'back legs', at: [-0.3, -0.42, -0.1], fact: 'Long back legs and webbed feet push a frog through the water.' },
+    // Its dark back spots (blender/models.py creature_frog): where "something with spots" glows
+    { part: 'spots', at: [-0.02, -0.2, 0.2], fact: 'Its spots help a frog hide among the pond weeds.' },
     { part: 'skin', at: [0.0, -0.28, 0.02], fact: 'A frog breathes with its lungs, and a little through its wet skin too.' },
   ],
   crayfish: [
     { part: 'claws', at: [0.64, -0.3, 0.02], fact: 'A crayfish grabs its food with its big claws.' },
+    // The shell over its body (blender/models.py creature_crayfish, crayfish_body): where "a hard shell" and
+    // "no bones" glow, so the look confirms the clue the child used
+    { part: 'shell', at: [0.06, -0.12, 0.1], fact: 'Its shell cannot stretch. To grow, a crayfish climbs out of it and grows a new one.' },
     { part: 'tail', at: [-0.42, -0.08, -0.02], fact: 'Scared? A crayfish flips its tail and zooms away backwards!' },
   ],
   snail: [
@@ -138,6 +167,8 @@ export const LOOK = {
       count: [[0.16, 0, 0.3], [-0.04, 0, 0.31], [-0.24, 0, 0.29]],
       facts: ['A cod has three fins on its back. Lots of fish have just one.', 'Three back fins help a cod turn and stay steady.'],
     },
+    { part: 'spots', at: [-0.16, -0.16, 0.1], fact: 'Its dark, spotty back is hard to see from above, in the dark sea.' },
+    { part: 'gills', at: [0.14, -0.17, -0.02], facts: GILLS },
     { part: 'chin whisker', at: [0.45, -0.02, -0.2], fact: 'A cod feels and tastes for food on the sea floor with its chin whisker.' },
   ],
   // Ringed seal (blender/models.py creature_seal): ringed spots on the side, whiskers on the muzzle, a front flipper

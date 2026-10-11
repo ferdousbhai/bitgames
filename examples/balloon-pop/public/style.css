@@ -21,10 +21,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   box-shadow: 0 10px 0 rgba(108, 74, 182, 0.25), 0 20px 50px rgba(0, 0, 0, 0.15); max-width: min(640px, 100%);
   display: flex; flex-direction: column; align-items: center; gap: 14px; color: #5b3fa0;
   /* Solid, not backdrop-filter: balloons rise behind the card, so a blur would redraw every frame */
-  /* A soft rise into place, with no overshoot or bounce. */
-  animation: float-in .7s ease-out;
+  /* A soft rise into place, with no overshoot or bounce. It stays opaque throughout, so the logo and Play never show
+     over the 3D scene, on first load or on every return home. */
+  animation: float-in .45s ease-out;
 }
-@keyframes float-in { from { transform: translateY(24px); opacity: 0; } }
+@keyframes float-in { from { transform: translateY(16px); } }
 
 .logo { font-size: clamp(36px, 10.5vw, 72px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1; }
 .logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.08); text-shadow: 0 5px 0 rgba(91, 63, 160, 0.3); }
@@ -58,6 +59,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .round-btn { pointer-events: auto; width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.75); font-size: 24px; box-shadow: 0 4px 0 rgba(91,63,160,.3); }
 .round-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(91,63,160,.3); }
 .round-btn.off { opacity: .45; }
+/* A first tap on the house during a visit: a steady ring asks for a second tap (no pulse). */
+#home.sure { background: #fff; box-shadow: 0 0 0 4px #ffca3a, 0 4px 0 rgba(91,63,160,.3); }
 /* Balloons rise from behind the level bar: it is see-through, and taps pass through the HUD to them. */
 .level-wrap {
   opacity: .85;
@@ -210,6 +213,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .sky-cell.part2 { background: #ffe8f1; box-shadow: inset 0 0 0 2px #e4598d77; }
 /* Balloons a friend already holds (make-the-same): they stay put on a lilac cell. */
 .sky-cell.own { background: #ece3ff; }
+.sky-group.own { background: #ece3ff; border-radius: 14px; padding: 4px 6px; }
 .sky .sky-cell .mission-picture { width: 26px; height: 32px; font-size: 22px; }
 .sky .sky-cell .colour-balloon::before { width: 19px; height: 23px; }
 .sky .sky-cell .colour-balloon::after { top: 24px; left: 13px; height: 6px; }

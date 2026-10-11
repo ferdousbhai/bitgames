@@ -382,7 +382,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .garden-bed { max-width: 224px; }
   .pantry-sums { font-size: 15px; gap: 0 5px; }
 }
+/* A question about the two rows: the little 🎵 crate steps aside meanwhile (it stays when it is in the sum) */
+#results .pantry-shelf.asked:not(.with-tune) :is(.pantry-row.pattern, .pantry-plus.to-pattern) { display: none; }
+/* "Which has more?": two crates side by side, with no plus between (the faded carrots that got away are taken out) */
+#results .pantry-shelf.compare .pantry-plus { visibility: hidden; }
+/* sideways phones: the flowers planted by the door are the garden's picture, so the pattern strips step aside */
 @media (max-height: 480px) and (orientation: landscape) {
-  /* Pip's question is about the two rows: the little 🎵 crate steps aside meanwhile, so Pip stays clear */
-  #results .pantry-shelf.asked :is(.pantry-row.pattern, .pantry-plus.to-pattern) { display: none; }
+  #results:has(.garden) .found { display: none; }
 }

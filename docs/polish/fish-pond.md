@@ -811,3 +811,104 @@ Everything is in `scratchpad/polish/fish-pond/r8/`. Chromium was run with `--use
 
 - The reef crab still answers only one-look and idea riddles at tier 3: its red, shell and claws are each unique on the reef. A reef hermit crab or a spotted reef crab would give it a two-clue riddle.
 - A seal-pup snow den on the ice shore, for a "where does it live" look.
+
+## 2026-10-11 — Round 9 (review: 8.4)
+
+### Bugs fixed
+
+1. **Crayfish "hard shell" glowed on its claws.** It had no shell look, so `clueLook` fell through to the next feature. `public/js/look.js:130` adds a crayfish `shell` look, on the body plate of `creature_crayfish`, with its own fact: its shell can't stretch, so it climbs out and grows a new one. "A hard shell", "no bones" and "breathes under water and has a hard shell" now glow on the shell (`l-cray-shell.png`, `p-cray-water-shell.png`).
+2. **Icy Sea tier 3 swung narwhal, seal, narwhal, seal.** `riddles.js:337-351`: who answers is now a weighted pick. Recent answers have lower weight: `LATELY` 0.1 (0 below tier 3), then 0.35 and 0.7. This replaces the "not the last animal" and "fresh answer" filters. The "lead with another idea" turn now applies only below tier 3 (`:320`). In 2,000 Icy Sea tier-3 riddles, sole-answer A-B-A-B runs went from 47 to 0, A-B-A from 335 to 61, and the same answer twice running from 92 to 2 (`pingpong.mjs` against the HEAD copy).
+3. **Some animals never answered at tier 3.** There are two changes:
+   - A new idea, **breathes under water** (`riddles.js:97`, with `HAS` entries, `WHY.water` at `:112` and `NOT_IDEA.water`). It is true of the fish, crab, crayfish and octopus (gills) and the jellyfish (through its skin). It is the other side of "breathes air". At the lake, the crayfish now answers "breathes under water and has a hard shell". At the Icy Sea, the cod answers "breathes under water and has spots".
+   - The reef crab's red, shell and claws are each unique there, so no strict two-clue riddle can single it out. A fallback adds idea-and-look riddles only it fits, such as "no bones and has pinching claws" (`:268-286`). These riddles are weighted at 0.6.
+   - `ok` now needs a real animal that doesn't fit (`:250`), so "breathes under water" isn't asked where only a duck or a boot is left out.
+   - Results from `sim.mjs`, 300 riddles at tier 3:
+     - Reef: clownfish 97, pufferfish 85, crab 74, octopus/jellyfish 44. Before, 80% of answers were the two fish.
+     - Lake: the crayfish answers alone 33 times.
+     - Icy Sea: the cod answers alone 29 times, and in 3 other groups.
+4. **Voice stacked at a tier change, and right answers ran to 3–4 sentences.**
+   - `setTier` (`main.js:1360`) no longer speaks. It leaves `game.tierNote`, and `sayRiddle` (`:1234`) says the note and the riddle as one line: "Now two clues at once! Find a fish that has no spots." A Bear's list riddle is not chosen in that same turn (`:1170`).
+   - "Bear has a list for you!" now waits until the child is home, where the list sits (`:1698`).
+   - Right answers are at most two short sentences. `whyLine` and `named` (`riddles.js:501-506`) let the reason name the catch, for example "Yes! A crayfish wears its hard shell outside, with no bones inside." or "Yes! A rainbow trout has fins, and gills to breathe under water." The two-sentence WHY lines were folded into one.
+   - Playing 18 riddles from tier 1 to 3 in portrait gave no repeated sentence, and every tier change was followed by exactly one line.
+
+### Improvements
+
+- The night lantern no longer flickers. It breathes slowly instead: `world.js:590`, 0.8 rad/s at ±6%. The tail wag on stage is halved to 6 rad/s (`main.js:796`).
+- Sort page, tier 1 (`book.js:447`): the first wrong basket gives the place clue ("You catch goldfish at the sunny lake…"). The answer and the ringed basket come on the second miss. Verified with `sort.mjs`: sea → place clue, no ring; pretend → answer, fresh ringed.
+
+### Evidence
+
+All files are in `scratchpad/polish3/fish-pond/`.
+
+- Every play was in Chromium with `--use-angle=gl` and speech stubbed:
+  - lake from tier 1, 20 riddles (landscape) and 18 (portrait)
+  - lake, Icy Sea and reef at tier 3 (portrait and landscape)
+  - night pond
+  - a random lake trip
+
+  Every trip had 0 console errors, and every careful riddle was answered.
+- `browser.mjs --ids fish-pond --run fish-pond-f1`: BOOT + PLAY ready, 0 errors.
+- `node --check` passed on every edited file, and `tests/colours.mjs` passed.
+
+### Remaining ideas
+
+- At tier 3, counting could let taps on the real arm or stripe count, instead of pre-placed dots.
+- The sort page could hide the place emojis at tier 3.
+- The reef crab still answers only the easier fallback two-clue riddles. A spotted reef crab would give it a strict one, but the same model is the Icy Sea snow crab.
+
+## 2026-10-11 — Round 10 (reviews: 8.6, 8.6)
+
+### Bugs fixed
+
+1. **Reef tier 3 was mostly clownfish vs pufferfish, in five "a fish that has no X" phrasings, and the crab could be answered from one look.**
+   - `riddles.js:256` `groupOf`: every fish-led riddle is one answer group, "the fish", weighted ×0.5 at tier 3 (`:346`). The recent-riddle filter now works inside each group (`:303`), so five fish keys can't push out the two non-fish riddles.
+   - `:297` one way to ask for each answer per trip (`trip`, the new `game.asked` in `main.js:1188`), so a trip has two fish phrasings, not five.
+   - `:106` `nobones.nor` adds `tentacles`: "an animal with no bones and no tentacles" (crab or octopus) is a real two-clue riddle, where each clue rules someone out. The `loose` one-look fallback for the crab ("not a fish, but is red") is removed.
+   - `:331` a "find two" is not forced straight after another, so the reef's two pair riddles don't swing back and forth.
+   - Sim (`r2/trip.mjs`, 30 trips of 22 riddles): reef tier 3 is octopus/jellyfish 30%, octopus/crab 27%, clownfish 22%, pufferfish 21%, with 2.0 fish phrasings per trip. Before: fish 57–61% in five phrasings, and the octopus and jellyfish about 6% each.
+2. **The glow didn't always land on the part the child reasoned with.**
+   - New looks in `look.js`: frog `spots` (`:148`), cod `spots` and `gills` (`:170-171`), narwhal `spots` and `blowhole` (`:137-139`), goldfish and trout `gills` (`:87`, `:93`), octopus `head` (`:119`), jellyfish `bell` (`:129`).
+   - `main.js:652-654` `CLUE_PARTS` gains `water` (gills, shell, head, bell) and `notfish` (legs, flippers, blowhole, arms, tentacles, shell).
+   - The crab's "not a fish" reason now names its shell (`riddles.js` `WHY.notfish.crab`).
+   - Look facts that repeated the reason were replaced: the narwhal and whale blowholes, and the jellyfish bell.
+   - Blender (`blender/models.py:402` `fish_face(gill=)`) draws a gill-cover curve on the goldfish, trout and cod, and a blowhole on the narwhal (`:780`). Only `creatures.glb` changed; the other GLBs are byte-identical.
+   - Verified (`r2/glow.mjs`, screenshots `p-narwhal-air`, `l-frog-spots`, `p-cod-spots`, `p-trout-water`, `l-goldfish-water`, `p-octo-water`, `l-jelly-water`, `l-cod-water`, `p-crab-notfish`, and `glows.png`): each glow sits on the named part.
+3. **The narwhal was taught as blue.**
+   - `models.py:763`: the narwhal is now mottled grey (`#9aa1a8`, darker grey spots).
+   - `riddles.js:64` drops `blue` from it. "Something blue" on the Icy Sea is now the whale or Blue Fish.
+   - The seal's comment was updated to match.
+4. **Reef tier 2 swung between fish and not-fish.**
+   - `riddles.js:314`: the "different answer from last time" rule only applies where three or more answer groups are in the pool.
+   - The harder-idea filter is 0.65 (`:326`).
+   - Sim: reef tier 2 "a fish" is 23% (was 50%). Lake and Icy Sea tier 2 still have 0 same-group repeats.
+5. **First counts said every number up to 8.** `main.js:1012` now uses the shared `COUNT_ALOUD` (5). Play log: "1 … 5", then "Eight arms! Just as you guessed!"
+6. **The list tick and the next riddle were two lines.**
+   - `game.listTick` (`main.js:1153`) is now said as the lead of `sayRiddle`: "One for Bear's list! Next: a fish that is not orange."
+   - It is said alone if the riddle is not read.
+7. **Place names differed between screens.** `book.js:30` `placeWord` uses the button names everywhere, with an or-list for mystery tiles: "Try the sunny lake, the sunset river, or the starry night."
+8. **Random jokes were welcomed with "Wow!".**
+   - `SAY` drops "Wow" (`main.js:684`).
+   - While a riddle is out, a joke catch is kept quietly (`JOKE_SAY`, `:693`): "An old boot! Not an animal.", with the one-star tune and no bubbles (`:738`).
+
+### Improvements
+
+- Sort page: from tier 2 the fresh-water and sea baskets hide their place emojis (`book.js:299`, `style.css:217`). From tier 3 the mystery tiles hide them too (`book.js:163`). Verified with `r2/sort.mjs`: the place pictures are `hidden` at tier 3 and `visible` at tier 1.
+
+### Evidence
+
+All files are in `scratchpad/polish3/fish-pond/r2/`. Every play was in Chromium with `--use-angle=gl` and speech stubbed.
+
+- **Careful trips**, every riddle answered and 0 console errors:
+  - reef tier 3: portrait 22/22 and 16/16, landscape 22/22
+  - Icy Sea: tier 2→3 landscape 18/18, tier 3 portrait 14/14
+  - lake from tier 1: portrait 18/18, landscape 18/18
+- **Random trips:** lake and reef, 0 errors. The only joke line was "An old boot! Not an animal."
+- No sentence of more than four words was said twice in a trip.
+- `browser.mjs --ids fish-pond --run fish-pond-f2`: BOOT + PLAY ready, 0 errors. `node --check` passes on every file in `public/js`.
+
+### Remaining ideas
+
+- No fresh-water place has a counting moment yet. The turtle's four legs could be one.
+- On the Icy Sea the narwhal only answers tier 3 alongside the seal ("not a fish, but has spots"), since its tusk alone singles it out.
+- The sort page's tier-1 second hint (review idea 7) was not added. With three baskets, two misses always leave the right one.

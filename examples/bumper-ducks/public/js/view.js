@@ -378,9 +378,13 @@ export class ObstacleView {
 
   /**
    * Frog order: the number this frog holds, on a round sign above it. A frog already in the line wears a
-   * soft green sign (`done`); null takes the sign away.
+   * soft green sign (`done`); null takes the sign away. A frog holding the stuck bubble or raft (`high`)
+   * carries a smaller sign higher up; one with a raft floating just behind it moves its sign to the other
+   * side (`side`: -1 left, 1 right). Either way the number never covers a raft.
    */
-  sign(n, done = false) {
+  sign(n, done = false, high = false, side = 0) {
+    this.signHigh = high
+    this.signSide = side
     const key = n == null ? '' : `${n}${done ? '+' : ''}`
     if (!this.frog || key === this.signKey) return
     this.signKey = key
@@ -409,9 +413,19 @@ export class ObstacleView {
     })
     this.signSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, depthTest: false }))
     this.signSprite.renderOrder = 5
-    this.signSprite.scale.setScalar(1.2)
-    this.signSprite.position.y = 3.3
+    this.signSprite.scale.setScalar(high ? 1 : 1.2)
+    this.signSprite.position.y = high ? 4.6 : 3.3
     this.root.add(this.signSprite)
+  }
+
+  /** The sign glides (never jumps) between its places as a raft comes and goes behind the frog. */
+  liftSign(dt) {
+    const s = this.signSprite
+    if (!s) return
+    const k = Math.min(1, dt * 4)
+    s.position.y += ((this.signHigh ? 4.6 : 3.3) - s.position.y) * k
+    s.position.x += ((this.signSide ?? 0) * 1.9 - s.position.x) * k
+    s.scale.setScalar(s.scale.x + ((this.signHigh ? 1 : 1.2) - s.scale.x) * k)
   }
 
   update(t, dt) {
@@ -434,6 +448,7 @@ export class ObstacleView {
         const k = this.hopT > 0 ? Math.sin((1 - this.hopT / 0.6) * Math.PI) : 0
         this.frog.position.y = 0.08 + k * 1.2
         this.frog.scale.set(1.2 * (1 - k * 0.1), 1.2 * (1 + k * 0.2), 1.2 * (1 - k * 0.1))
+        this.liftSign(dt)
       }
     } else {
       if (Math.hypot(o.vx, o.vz) > 0.05) this.body.rotation.y = Math.atan2(o.vx, o.vz)

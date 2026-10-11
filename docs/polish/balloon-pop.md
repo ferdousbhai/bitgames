@@ -781,3 +781,39 @@ The open audit item was the older tier's "which colour has most" and colour mixi
 
 - `original-quality.mjs` still drives the old "Count three balloons" mission (lines 48 and 99–124). The fix requested in round 3 still applies.
 - Free popping now has `#wish`. Nothing in `original-quality.mjs` touches it.
+
+## 2026-10-11: round 5 (review 8.3)
+
+**Design.** Adding at tiers 1–2 is now real counting on: the friend already holds the first group and the child adds the rest, heard from where the friend's group ends ("4, 5. That's 5!"). The first Counting sky visit stays on numbered slots, so a careful three-year-old is not met with two-colour baskets, mixing and which-has-most within half a minute. A child who taps without looking (wrong gives, or popping in and letting go) now hears the strategy hint once at tier 1. A stray tap on 🏠 no longer ends a visit.
+
+### Bugs fixed (under `examples/balloon-pop/public/`)
+
+- **"You met 🎈 💖 👑 🐰 ⭐" after a Counting sky visit with no friend helped** (`js/main.js:1495`). The met-friends line is free popping's only. A counting sky names only the friends helped, or shows nothing. Evidence: tier-3 save, Escape with 0 friends: `#last` is empty. Free popping at level 3 still reads "You met 🎈 💖 👑".
+- **See-through title card on load and on every return home** (`style.css:26-28`). `float-in` no longer fades opacity: the card rises 16 px in 0.45 s and stays opaque. Evidence: computed opacity is 1 at 100 ms after Escape (`834x1194-home-t3-100ms.png`).
+- **Hot-air balloon crossing the sun in portrait** (`js/world.js:76-83` measures the balloon, `:218-235` `sunDodge`, `:246-248`). Near the sun the balloon eases over or under it, whichever is nearer, then drifts back to its lane. Evidence: `hab.mjs` swept it past the sun at 834×1194 and 1194×834 and found 0 overlap of their screen boxes (`834x1194-hab-mid-0.png`: it passes under the sun).
+
+### Improvements
+
+- **Slower first step up** (`js/main.js:157-162` `visited`, `:206-219` `adapt`):
+  - Every step up needs 4 clean baskets in a row (tier 1 needed 3).
+  - Tier 1 moves to plain slots only on a visit after the first, or after Start easy. A focused sky still adapts within its own visit.
+  - Evidence (`careful.mjs`): with no save, all 8 friends were tier 1 (`colour:2 shape:3 colour:4 shape:3 colour:4 add:2 shape:4 dots:3`). The second visit (saved tier 1) moved to tier 2 after friend 4.
+- **Counting on** (`js/sky.js:265-292`; `js/main.js:288`, `:299`, `:331`, `:585-605`, `:715-719`; `style.css:216`):
+  - At tiers 1–2, `add` is "Panda has 3 purple balloons. Panda wants 2 more." The friend's 3 are drawn filled on a lavender ground and cannot be let go. `+` and 2 slots follow, numbered 4 and 5 in tier 1.
+  - The basket wants only the 2. Tier 1 hears "4", then "5. That's 5!". It always adds at least 2.
+  - The hint is "Start at 3, then count on 2 more." An over-full hand-over says "That's 3 more. Too many!".
+  - Tier 3 keeps "10, then 3 more" on ten-frames.
+  - Evidence: "Pig has 3 orange balloons. Pig wants 1 more." gave "4. That's 4!" and "3 and 1 more make 4! Just right!" (before the at-least-2 rule). 1,800 sampled tier 1–2 requests all had `has = parts[0]`, `total = parts[1] ≥ 2`.
+- **Stuck help reaches random tapping at tier 1** (`js/main.js:755-760`, `:782-805`):
+  - A third hand-over that is not right brings the strategy hint.
+  - So do 5 balloons let go in one sky, once the basket is no longer over-full (`CHURN`).
+  - Evidence: three wrong gives said "That's 1." and then "One balloon for each slot, then tap Give.". Five pop-and-release cycles said the same hint once.
+- **🏠 asks for a second tap during a visit** (`js/main.js:1608-1626`; `style.css:62-63`). Once a friend is helped or a basket has a balloon, the first tap rings the house in steady yellow for 3 s, and a second tap goes home. Escape still goes home at once. Evidence: one tap kept `state: play` with `#home.sure`, the ring cleared after 3 s, and two taps went home (`834x1194-home-armed.png`).
+- **Free popping's wishes come sooner** (`js/main.js:1363-1364`): the first comes at 10 s, then 12 s after each is found (it was 14 and 22). Evidence (`wish.mjs`): the first wish came at 10.0 s, and the next 16.0 s after one was found (4 s leaving plus 12 s).
+- **`game.json`** `howToPlay`: "2 more for a friend who has 3", and the first visit stays on numbered slots.
+- The `?debug` hook also exposes `world` (`js/main.js:1893`), for the sun test.
+
+### Evidence (scratchpad `polish3/balloon-pop/`)
+
+- **Checks.** `node --check` passes on `main.js`, `sky.js` and `world.js`. `browser.mjs --ids balloon-pop --run balloon-pop-f1`: BOOT + PLAY ready, 0 errors.
+- **Scripts.** `a.mjs` and `hab.mjs` ran at 834×1194 and 1194×834, and `careful.mjs` at both sizes. All had 0 console errors.

@@ -186,11 +186,18 @@ export function createRecipeStudio({ cakeKit, openButton, sound = null, voice })
       wedge.position.set(Math.sin(middle) * 0.14, 0, Math.cos(middle) * 0.14)
       return
     }
-    // Earlier slices on the same plate set where this one sits, two per row.
+    // The slices on a plate fan out side by side, tips at its middle, like the part of the cake that
+    // friend has, each a little apart from the next so every slice on the plate can be counted.
     const onPlate = owners.slice(0, index).filter((o) => o === owner).length
-    const [x, z] = owner === BAKER_PLATE ? [BAKER.x, BAKER.z - 0.15] : [plateX(owner), 2.5]
-    wedge.position.set(x + ((onPlate % 2) - 0.5) * 0.45, 0, z + Math.floor(onPlate / 2) * 0.3)
-    wedge.rotation.y = -start
+    const total = owners.filter((o) => o === owner).length
+    const [x, z] = owner === BAKER_PLATE ? [BAKER.x, BAKER.z] : [plateX(owner), 2.6]
+    // The fan faces the camera (which looks from +x, +z), so the sponge sides of the slices show.
+    const facing = Math.atan2(7, 11.4)
+    const from = facing - (total * angle) / 2 + onPlate * angle
+    const middle = from + angle / 2
+    wedge.rotation.y = from - start
+    // Tips step back from the plate's middle, so the whole fan sits on the plate.
+    wedge.position.set(x + Math.sin(middle) * 0.1 - Math.sin(facing) * 0.3, 0, z + Math.cos(middle) * 0.1 - Math.cos(facing) * 0.3)
     wedge.scale.setScalar(0.6)
   }
 

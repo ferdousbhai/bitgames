@@ -122,15 +122,16 @@ export class Course {
     let y0 = upright ? rand(3.1, 4.1) : rand(3.6, 5)
     const off = helpOffset(near)
     if (near) {
-      // the right ring on Ember's outer side, so the other one sits toward the middle and stays in view
-      const side = near.x >= 0 ? 1 : -1
+      // the right ring where help puts it; the other one toward the middle, so it stays in view
+      const x = near.x + off.x
+      const side = x >= 0 ? 1 : -1
       right = side < 0 ? 0 : 1
-      x0 = near.x - side * dx
+      x0 = x - side * dx
       y0 = clamp(near.y + off.y - side * up * dy, 2.5, 6.5)
     }
-    // a pair helped after a long wait keeps easing onto Ember as it comes (otherwise it stays where it was put,
-    // just beside Ember, so it never runs away from a child who steers toward it)
-    const gate = { wi: this.wi, z: -(z + 6), right, done: false, decoys: {}, rings: [], home: !!near?.close }
+    // a pair helped after a long wait keeps following Ember as it comes, still one small move away (otherwise
+    // it stays where it was put), and holds still for the last stretch, so it never runs from a child who steers to it
+    const gate = { wi: this.wi, z: -(z + 6), right, done: false, decoys: {}, rings: [], home: near?.close ? off : null }
     for (const side of [-1, 1]) {
       const obj = new THREE.Group()
       const ring = copy(this.t.hoop, { hoop_cloud: PALE_RING })
@@ -234,9 +235,12 @@ export class Course {
     })
     const wanted = near && (made.find((it) => this.helps(it.kind)) ?? made.find((it) => this.wants(it.kind)))
     if (wanted) {
-      // put just beside Ember; after a long wait it also keeps easing onto Ember as it comes
-      if (near.close) group.lead = wanted
+      // put just beside Ember (one small move away); after a long wait it also keeps following Ember as it comes
       const off = helpOffset(near)
+      if (near.close) {
+        group.lead = wanted
+        group.off = off
+      }
       const mx = near.x + off.x - wanted.x
       const my = near.y + off.y - wanted.y
       for (const it of made) {
@@ -277,17 +281,40 @@ export class Course {
     return true
   }
 
-  /** Slides `group` together so that `lead` drifts toward Ember's x/y (a spare helped after a long wait). */
-  ease(group, lead, p, dt) {
+  /**
+   * Slides `group` together so that `lead` drifts toward Ember's x/y plus `off` (a spare helped after a long
+   * wait): just beside Ember, so the last small move is the child's. In the last stretch it holds still.
+   */
+  ease(group, lead, p, off, dt) {
+    if (p.z - lead.z < 14) return
     const k = Math.min(1, dt * 1.6)
-    const dx = (p.x - lead.x) * k
-    const dy = (p.y - lead.y) * k
+    const dx = (p.x + off.x - lead.x) * k
+    const dy = (clamp(p.y + off.y, 2.2, 6.8) - lead.y) * k
     for (const o of group) {
       o.x += dx
       o.y += dy
       o.obj.position.x = o.x
       o.obj.position.y = o.y
     }
+  }
+
+  /**
+   * The world's goal is met but the counting mission still wants `n` cloud rings: unless one is already
+   * coming, they are laid just ahead of Ember (clearing that stretch), so the count ends without an empty cruise.
+   */
+  ringsAhead(z, n, x, y) {
+    if (this.items.some((it) => it.type === 'hoop' && !it.done && !it.gone && it.z < -z && it.z > -z - 70)) return
+    const from = z + 32
+    const to = from + (n - 1) * 15
+    for (const it of this.items) if (it.type !== 'hoop' && !it.away && !it.gone && it.z < -from + 8 && it.z > -to - 8) it.gone = true
+    x = clamp(x, -this.lane.x * 0.6, this.lane.x * 0.6)
+    y = clamp(y, 2.5, 6)
+    for (let i = 0; i < n; i++) {
+      this.hoop(x, y, from + i * 15)
+      x = clamp(x + rand(-2.5, 2.5), -this.lane.x * 0.6, this.lane.x * 0.6)
+      y = clamp(y + rand(-1.5, 1.5), 2.5, 6)
+    }
+    this.nextZ = Math.max(this.nextZ, to + 12)
   }
 
   /** The basket is full: the world's other treasures float gently up and away. */
@@ -367,6 +394,8 @@ export class Course {
         else if (r < pObstacle + pLantern) len = this.lanterns(this.nextZ)
         else if (r < pObstacle + pLantern + pBubble) len = this.bubbles(this.nextZ)
         else if (r < pObstacle + pLantern + pBubble + pHoop) len = this.hoops(this.nextZ)
+        // no gem trail just before a treasure group either, so nothing golden sits in front of the choice
+        else if (goal.type === 'gather' && slots.length && slots[0].at - into < 60) len = 10
         else len = pick([this.line, this.wave, this.spiral, this.line]).call(this, this.nextZ)
       }
       this.nextZ += len + rand(9, 15)
@@ -672,7 +701,8 @@ export class Course {
       }
       switch (it.type) {
         case 'gem': {
-          it.spin.rotation.y += dt * 2.5
+          // a slow sway like the treasures, never a spin, so nothing sparkles for attention
+          it.spin.rotation.y = Math.sin(it.t * 1.1) * 0.45
           o.position.y = it.y + Math.sin(it.t * 2.2) * 0.15
           if (!playing) break
           if (o.position.distanceTo(p) < it.r + R) {
@@ -707,7 +737,7 @@ export class Course {
             it.z += it.drift * dt
             o.position.z = gate.z = it.z
           }
-          if (gate.home && !gate.done && it === gate.rings[gate.right]) this.ease(gate.rings, it, p, dt)
+          if (gate.home && !gate.done && it === gate.rings[gate.right]) this.ease(gate.rings, it, p, gate.home, dt)
           // Ember is past the pair (both rings share one z): which ring, if any, was flown through?
           if (!gate.done && it.z >= p.z) this.passGate(gate, p, events, playing)
           // the next world's rings wait unseen beyond the nest until Ember flies on
@@ -739,7 +769,7 @@ export class Course {
             if (k <= 0) it.gone = true
           }
           o.position.y = it.y + Math.sin(it.t * 1.6) * 0.18
-          if (it.group?.lead === it && !it.group.touched) this.ease(this.items.filter((o) => o.group === it.group && !o.away && !o.gone), it, p, dt)
+          if (it.group?.lead === it && !it.group.touched) this.ease(this.items.filter((o) => o.group === it.group && !o.away && !o.gone), it, p, it.group.off, dt)
           // spare treasures float toward Ember while Ember waits before the nest
           if (it.drift) {
             it.z += it.drift * dt
@@ -910,10 +940,14 @@ export class Course {
 }
 
 const NO_OFFSET = { x: 0, y: 0 }
-/** Where help brings the right ring or treasure: just above or below Ember, or (`close`) right onto Ember. */
+/**
+ * Where help brings the right ring or treasure: one small move from Ember (never onto Ember). Above Ember
+ * where there is room, since from behind, something just below Ember sits hidden behind Ember as it comes;
+ * otherwise beside Ember, toward the middle.
+ */
 function helpOffset(near) {
-  if (!near || near.close) return NO_OFFSET
-  return { x: 0, y: near.y > 4.5 ? -2.8 : 2.8 }
+  if (!near) return NO_OFFSET
+  return near.y + 2.8 <= 7 ? { x: 0, y: 2.8 } : { x: near.x > 0 ? -2.8 : 2.8, y: -0.6 }
 }
 const SMALL = new Set(['gem', 'bubble', 'lantern', 'power', 'treasure'])
 const GOLD_RING = { color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 0.55 }

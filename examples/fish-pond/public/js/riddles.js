@@ -6,8 +6,8 @@
  *
  * Tier 1 (little ones): one thing you can see: a colour, stripes, spots, a shell, spikes, claws,
  * eight arms, tentacles, a tusk.
- * Tier 2: an idea you can't see but can learn here: is it a fish or not, does it breathe air, does
- * it have bones. Several animals may fit; any of them answers it (sorting, not guessing).
+ * Tier 2: an idea you can't see but can learn here: is it a fish or not, does it breathe air or
+ * breathe under water, does it have bones. Several animals may fit; any of them answers it (sorting, not guessing).
  * Tier 3 (7-8): two clues at once, an idea and a thing you can see ("not a fish, but has spots";
  * "a fish with no spikes"; "an animal with no bones and no shell"). Each clue must rule someone out, so
  * both have to be used.
@@ -26,7 +26,8 @@
  *   crabs: hard outer shell, no bones https://www.fisheries.noaa.gov/species/alaska-snow-crab
  *   fish breathe with gills           https://en.wikipedia.org/wiki/Fish_gill
  *   frogs: amphibians, tadpoles, lungs and skin breathing  https://en.wikipedia.org/wiki/Frog
- *   crayfish: fresh-water crustaceans, shell outside, claws  https://en.wikipedia.org/wiki/Crayfish
+ *   crayfish: fresh-water crustaceans, shell outside, claws, gills under the shell  https://en.wikipedia.org/wiki/Crayfish
+ *   octopuses breathe with gills; jellyfish take oxygen in through their skin  https://en.wikipedia.org/wiki/Jellyfish
  *   ramshorn snails: fresh-water, air-breathing (lung) snails  https://en.wikipedia.org/wiki/Planorbidae
  *   Arctic cod: a fish of the icy sea, dark-spotted back  https://en.wikipedia.org/wiki/Polar_cod
  *   snails and octopuses are both molluscs  https://ocean.si.edu/ocean-life/invertebrates/octopuses-squids-and-relatives
@@ -35,30 +36,32 @@
 
 /** What each catch has, as the child sees the models. Toys, the boot and the treasure fit no idea clue. */
 export const HAS = {
-  goldfish: ['orange', 'fish'],
+  goldfish: ['orange', 'fish', 'water'],
   // Blue Fish and Golden Fish are pretend friends (the book sorts them into "Not real"), so they answer
   // what you can see (blue, yellow) but no idea clue: "a fish" means a real fish, with real gills
   bluefish: ['blue'],
-  clownfish: ['orange', 'stripes', 'fish'],
-  trout: ['spots', 'fish'],
-  pufferfish: ['yellow', 'spikes', 'spots', 'fish'],
+  clownfish: ['orange', 'stripes', 'fish', 'water'],
+  trout: ['spots', 'fish', 'water'],
+  pufferfish: ['yellow', 'spikes', 'spots', 'fish', 'water'],
   goldenfish: ['yellow'],
   turtle: ['shell', 'notfish', 'air'],
   frog: ['spots', 'notfish', 'air'],
   // Olive brown (wild crayfish are; they only go red when cooked), so it is never asked for as orange
-  crayfish: ['shell', 'claws', 'notfish', 'nobones'],
+  // It breathes with gills tucked under its shell, so it answers "breathes under water" with the fish
+  crayfish: ['shell', 'claws', 'notfish', 'nobones', 'water'],
   // The crab is drawn coral red, so it answers "red", never "orange"
-  crab: ['red', 'shell', 'claws', 'notfish', 'nobones'],
+  crab: ['red', 'shell', 'claws', 'notfish', 'nobones', 'water'],
   // A ramshorn pond snail: a coiled shell and a soft foot; it comes up to breathe air
   snail: ['shell', 'notfish', 'air', 'nobones'],
   // No spots: the model is plain lilac all over (its spots were too faint to see, so they are gone)
-  octopus: ['arms', 'notfish', 'nobones'],
+  octopus: ['arms', 'notfish', 'nobones', 'water'],
   // Arctic (polar) cod: a real fish of the icy sea, speckled with dark spots on a brown back
-  cod: ['spots', 'fish'],
+  cod: ['spots', 'fish', 'water'],
   // Ringed seal: grey (never blue), dark spots in pale rings; a mammal that breathes air
   seal: ['spots', 'notfish', 'air'],
-  jellyfish: ['tentacles', 'notfish', 'nobones'],
-  narwhal: ['blue', 'spots', 'tusk', 'notfish', 'air'],
+  jellyfish: ['tentacles', 'notfish', 'nobones', 'water'],
+  // Mottled grey, as real narwhals are (blender/models.py creature_narwhal), so it is never asked for as blue
+  narwhal: ['spots', 'tusk', 'notfish', 'air'],
   whale: ['blue', 'notfish', 'air'],
   duck: ['yellow'],
   boot: [],
@@ -89,27 +92,44 @@ export const TRAITS = {
     lead: 'an animal that is not a fish,', lead2: 'animals that are not fish,', but: true, short: 'not fish',
   },
   air: { tier: 2, icon: '🫧', word: 'breathes air', ask: 'an animal that breathes air', ask2: 'two different animals that breathe air', is: 'It breathes air', more: 'Who else breathes air?', lead: 'an animal that breathes air and', lead2: 'animals that breathe air and', short: 'air' },
-  // nor: the one look "no bones" may take as a "no" too, because it reads as one easy phrase and holds the idea:
-  // "an animal with no bones and no shell" (a crab has no bones, but wears a hard shell outside)
-  nobones: { tier: 2, icon: '🦴', not: true, word: 'no bones', ask: 'an animal with no bones', ask2: 'two different animals with no bones', is: 'It has no bones', more: 'Who else has no bones?', lead: 'an animal with no bones that', lead2: 'animals with no bones that', short: 'no bones', nor: ['shell'] },
+  // The other side of "breathes air": gills (fish, crabs, crayfish, octopus) or, for a jellyfish, its skin.
+  // It tells the crayfish from the turtle and the snail ("breathes under water and has a hard shell") and the
+  // cod from the narwhal and the seal ("breathes under water and has spots").
+  water: {
+    tier: 2, icon: '💧', word: 'breathes in water', ask: 'an animal that breathes under water', ask2: 'two different animals that breathe under water', is: 'It breathes under water',
+    more: 'Who else breathes under water?', lead: 'an animal that breathes under water and', lead2: 'animals that breathe under water and', short: 'under water',
+  },
+  // nor: the looks "no bones" may take as a "no" too, because each reads as one easy phrase and holds the idea:
+  // "an animal with no bones and no shell" (a crab has no bones, but wears a hard shell outside), and on the reef
+  // "an animal with no bones and no tentacles" (the crab or the octopus: the only two-clue riddle the crab answers
+  // there, since its red, shell and claws are each its own and one look alone would do)
+  nobones: { tier: 2, icon: '🦴', not: true, word: 'no bones', ask: 'an animal with no bones', ask2: 'two different animals with no bones', is: 'It has no bones', more: 'Who else has no bones?', lead: 'an animal with no bones that', lead2: 'animals with no bones that', short: 'no bones', nor: ['shell', 'tentacles'] },
 }
 
 /** Why the answer fits an idea clue: the learning. Two or three ways to say it, so a trip doesn't repeat. */
 const WHY = {
   fish: {
-    any: ['Fish have fins, and gills to breathe under water.', 'Fish swim with fins and breathe with gills.', 'A fish has a backbone, fins and gills.'],
+    // {a}: "A rainbow trout", so the line names the catch and gives the reason in one sentence
+    any: ['{a} has fins, and gills to breathe under water.', '{a} swims with fins and breathes with gills.', '{a} has a backbone, fins and gills.'],
+  },
+  water: {
+    any: ['{a} breathes with gills.', '{a} takes its breath from the water, with gills.'],
+    crayfish: ['A crayfish breathes with gills, tucked under its shell.'],
+    crab: ['A crab breathes with gills, under its shell.'],
+    octopus: ['An octopus breathes with gills, like a fish.'],
+    jellyfish: ['A jellyfish takes what it needs from the water, through its skin.'],
   },
   notfish: {
-    turtle: ['Turtles are reptiles, not fish.', 'A turtle walks on legs. It is a reptile.'],
-    frog: ['Frogs are amphibians. They start as tadpoles!', 'A frog has legs, not fins.'],
+    turtle: ['Turtles are reptiles, not fish.', 'A turtle is a reptile that walks on legs.'],
+    frog: ['Frogs are amphibians that start as tadpoles.', 'A frog has legs, not fins.'],
     narwhal: ['Narwhals are whales, not fish.', 'A narwhal comes up to breathe air.'],
-    whale: ['Whales are not fish. They breathe air.'],
-    seal: ['A seal is a mammal, like you. Not a fish!', 'A seal swims with flippers, not fins.'],
-    jellyfish: ["Jellyfish aren't fish at all!", 'No fins, no gills, no bones.'],
-    octopus: ['An octopus is not a fish. It has no bones.', 'An octopus crawls on its arms.'],
-    crab: ['Crabs are not fish. They walk on legs.', 'A crab has a shell and legs.'],
+    whale: ['Whales are not fish: they breathe air.'],
+    seal: ['A seal is a mammal, like you, not a fish.', 'A seal swims with flippers, not fins.'],
+    jellyfish: ["Jellyfish aren't fish at all!", 'A jellyfish has no fins, no gills and no bones.'],
+    octopus: ['An octopus is not a fish, and has no bones.', 'An octopus crawls on its arms.'],
+    crab: ['A crab has a hard shell and legs, not fins.', 'A crab walks on legs, under its hard shell.'],
     crayfish: ['A crayfish is a cousin of crabs, not a fish.', 'A crayfish walks on legs.'],
-    snail: ['A snail creeps along on one soft foot. No fins!', 'Snails are cousins of the octopus, not fish.'],
+    snail: ['A snail creeps along on one soft foot, with no fins.', 'Snails are cousins of the octopus, not fish.'],
   },
   air: {
     turtle: ['Turtles come up to breathe air.', 'A turtle has lungs, like you.', 'A turtle pokes its nose up for air.'],
@@ -121,10 +141,10 @@ const WHY = {
   },
   nobones: {
     octopus: ['No bones, so it can squeeze through tiny gaps.', 'An octopus is soft all over.'],
-    jellyfish: ['A jellyfish is soft all through. No bones!', 'A jellyfish is mostly water.'],
+    jellyfish: ['A jellyfish is soft all through, with no bones.', 'A jellyfish is mostly water.'],
     crab: ['A crab has a hard shell outside instead of bones.'],
-    crayfish: ['A crayfish wears its hard shell outside. No bones inside.'],
-    snail: ['A snail is soft inside its shell. No bones!', 'Its shell keeps it safe. Inside, it is soft.'],
+    crayfish: ['A crayfish wears its hard shell outside, with no bones inside.'],
+    snail: ['A snail is soft inside its shell, with no bones.', 'A snail keeps its soft body safe in its shell.'],
   },
 }
 
@@ -149,6 +169,7 @@ const NEAR = {
 const NOT_IDEA = {
   air: ['It breathes under water.', 'It breathes with gills, under water.', 'It stays under water to breathe.'],
   nobones: ['It has bones inside.', 'It has a backbone inside.', 'Inside, it has bones.'],
+  water: ['It comes up to breathe air.', 'It has lungs, and breathes air.'],
   notfish: ['It is a fish!', 'That one is a fish! It has fins and gills.', "It's a fish: fins, gills and a backbone."],
 }
 
@@ -192,7 +213,7 @@ function riddle(clues, tier) {
   // "an animal that is not a fish, but has spots" / "a fish that has no spikes" / "an animal that breathes air and has a shell"
   // (a "not" idea never takes a "not" look: see plainClues)
   const lead = a.but ? `${a.lead} but` : a.lead
-  // "an animal with no bones and no shell" (the one "no" look a "no" idea takes: see TRAITS.nobones.nor)
+  // "an animal with no bones and no shell" (the "no" looks a "no" idea takes: see TRAITS.nobones.nor)
   const ask = a.not && neg ? `${a.ask} and ${nor(clues[1])}` : `${lead} ${neg ? b.hasnt : b.has}`
   return {
     clues,
@@ -223,15 +244,18 @@ const nor = (c) => TRAITS[c.t].hasnt.replace(/^has /, '')
  * A riddle that makes the child choose: at least one swimmer here fits and at least one doesn't.
  * `kinds` are the animals the child can see now; `last` is the riddle just asked and `recent`
  * the keys of the last few, which are left out while there are others to ask. `answered` are the
- * animals that solved the last few riddles: a riddle with another answer is preferred.
+ * animals that solved the last few riddles: a riddle with another answer is preferred. `trip` is every
+ * riddle key asked this trip.
  */
-export function makeRiddle(kinds, tier, last, recent = [], answered = [], { two = false, want = null, avoid = [] } = {}) {
+export function makeRiddle(kinds, tier, last, recent = [], answered = [], { two = false, want = null, avoid = [], trip = [] } = {}) {
   const ids = [...new Set(kinds)]
   const who = (clues) => ids.filter((id) => clues.every((c) => has(id, c)))
-  const ok = (clues) => {
-    const n = who(clues).length
-    return n > 0 && n < ids.length
-  }
+  // Who answers, as the child sees it. Every riddle led by "a fish" is one answer, "the fish": on the reef
+  // "a fish that is not orange / has no spikes / has no spots..." is always clownfish or pufferfish, so five
+  // of them must not crowd out the octopus, jellyfish and crab
+  const groupOf = (c) => (c[0].t === 'fish' ? 'fish' : who(c).join())
+  // Someone fits, and some animal doesn't (a duck or a boot not breathing under water is no choice)
+  const ok = (clues) => who(clues).length > 0 && ids.some((id) => !NOT_ANIMAL.has(id) && !who(clues).includes(id))
   const single = (k) => Object.keys(TRAITS).filter((t) => TRAITS[t].tier === k).map((t) => [{ t }]).filter(ok)
   let pool = []
   if (tier >= 3) {
@@ -266,50 +290,64 @@ export function makeRiddle(kinds, tier, last, recent = [], answered = [], { two 
   // `avoid`: what an item still on Bear's list asks (that riddle is the list's), left out while others fit
   const open = pool.filter((c) => !avoid.includes(keyOf(c)))
   if (open.length) pool = open
+  // One way to ask for each answer in a trip: once "a fish that has no spikes" has asked for the clownfish,
+  // the clownfish is asked for that way again (`trip`: every riddle asked this trip), so the reef's fish
+  // riddles are two phrasings to read, not five ways round one coin flip
+  const said = (c) => trip.includes(keyOf(c))
+  const sameAsk = (c, d) => c.length > 1 && d.length > 1 && groupOf(d) === groupOf(c) && who(d).join() === who(c).join()
+  pool = pool.filter((c) => said(c) || !pool.some((d) => said(d) && sameAsk(c, d)))
   // (only as many as leaves a choice of two, so a small pool doesn't fall into one fixed order)
   const asked = recent.map((k) => k.replace(/\*2$/, '')).slice(0, Math.max(1, new Set(pool.map(keyOf)).size - 2)) // a "find two" counts as its riddle
-  const unasked = pool.filter((c) => !asked.includes(keyOf(c)))
-  if (unasked.length) pool = unasked
+  // (within each answer, so the reef's five fish riddles can't push out its two for the octopus, jellyfish
+  // and crab: which answer comes round is the weighting's job, below)
+  pool = pool.filter((c) => !asked.includes(keyOf(c)) || pool.every((d) => groupOf(d) !== groupOf(c) || asked.includes(keyOf(d))))
   // Two clues have to be read every time, so at tier 3 the same answer (or idea) may come twice running now
   // and then: always turning away from the last one made a pattern a careful child could learn instead of
   // the clues (on the reef the answer used to swing clownfish, pufferfish, clownfish...).
   const vary = () => tier < 3 || Math.random() < 0.6
-  // Never the same answer twice running (in the lake "not a fish" and "breathes air" can both be the turtle)
+  // Never the same answer twice running (in the lake "not a fish" and "breathes air" can both be the turtle),
+  // where there are three answers or more to go round: with two (the reef's tier 2 is fish, or the octopus,
+  // jellyfish and crab) that rule made a strict swing, fish, not fish, fish, a child could follow without reading
   if (last) {
-    const before = who(last.clues).join()
+    const before = groupOf(last.clues)
     const same = last.clues.map((x) => x.t).join()
-    const other = vary()
-    const fresh = pool.filter((c) => (!other || who(c).join() !== before) && c.map((x) => x.t).join() !== same)
+    const other = vary() && new Set(pool.map(groupOf)).size >= 3
+    const fresh = pool.filter((c) => (!other || groupOf(c) !== before) && c.map((x) => x.t).join() !== same)
     if (fresh.length) pool = fresh
     // and lead with a different idea where there is one ("not a fish" five times running is samey)
     const turn = pool.filter((c) => c[0].t !== last.clues[0].t)
-    if (turn.length && vary()) pool = turn
+    // (tier 3 is left to the answer weighting below: two clues are read anyway, and turning away from the
+    // fish-led riddles left the reef crab as the answer a third of the time)
+    if (turn.length && tier < 3) pool = turn
   }
-  // Never the animal that answered last (a Bear's list item too), so one octopus doesn't answer three in a row
-  if (answered[0] && vary()) {
-    const other = pool.filter((c) => !who(c).includes(answered[0]))
-    if (other.length) pool = other
-  }
-  // Lean away from the animals that answered the last few riddles, so the same frog isn't the answer every time
-  const freshAnswer = pool.filter((c) => who(c).some((id) => !answered.includes(id)))
-  if (freshAnswer.length) pool = freshAnswer
   // "A fish" is the easiest idea: tier 2 mostly asks the others (breathes air, no bones, not a fish)
   if (tier === 2) {
     const harder = pool.filter((c) => c[0].t !== 'fish')
-    if (harder.length && Math.random() < 0.75) pool = harder
+    if (harder.length && Math.random() < 0.65) pool = harder
   }
   // The step past two clues: two different animals that fit both, where two such kinds are in view
-  // (about half the time, and only one not asked lately, so the one-answer riddles keep coming round too)
-  if (two && Math.random() < 0.5) {
+  // (about half the time, and never forced straight after another "find two": the reef has two of those, and
+  // forcing one each time made them swing, no shell, no tentacles, no shell, with the one-answer riddles rare)
+  if (two && !(last?.need > 1) && Math.random() < 0.6) {
     const pair = pool.filter((c) => c.length > 1 && who(c).length >= 2)
     if (pair.length) pool = pair
   }
-  // Choose who answers first, then a riddle for them: the reef has five riddles with a fish answer and one
-  // for the octopus and jellyfish, and each answer should come round as often as the others
+  // Choose who answers first, then a riddle for them: on the reef the fish, the octopus or jellyfish ("no bones
+  // and no shell") and the crab or octopus ("no bones and no tentacles") each come round about as often. An answer
+  // that came lately is less likely (never the one just found below tier 3), so neither one octopus
+  // three times running nor a narwhal, seal, narwhal, seal swing is something to learn instead of the clues.
   const groups = new Map()
-  for (const c of pool) groups.set(who(c).join(), [...(groups.get(who(c).join()) ?? []), c])
+  for (const c of pool) groups.set(groupOf(c), [...(groups.get(groupOf(c)) ?? []), c])
   const byWho = [...groups.values()]
-  const group = byWho[(Math.random() * byWho.length) | 0] ?? []
+  const LATELY = [tier < 3 ? 0 : 0.1, 0.35, 0.7]
+  const weight = (g) => {
+    const d = Math.min(...g.flatMap(who).map((id) => answered.indexOf(id)).filter((i) => i >= 0))
+    // (at tier 3 the fish riddles, the easiest idea, come round less than the others: tier 2 has its own rule)
+    return (LATELY[d] ?? 1) * (tier >= 3 && groupOf(g[0]) === 'fish' ? 0.5 : 1)
+  }
+  const ws = byWho.map(weight)
+  let roll = Math.random() * ws.reduce((x, y) => x + y, 0)
+  const group = (ws.some((w) => w > 0) ? byWho.find((g, i) => (roll -= ws[i]) < 0) : null) ?? byWho[(Math.random() * byWho.length) | 0] ?? []
   const clues = group[(Math.random() * group.length) | 0]
   return clues ? riddle(clues, tier >= 3 && clues.length > 1 ? 3 : TRAITS[clues[0].t].tier) : null
 }
@@ -418,16 +456,15 @@ export function verdict(r, id, name, said) {
     // One of two found: the reason (or, for two clues, how it fits both), then "Who else breathes air?"
     if (r.found.length + 1 < r.need) {
       // Each part once a trip: "Who else breathes air?" said before is left to the chip's empty slot
-      const why = r.clues.length > 1 ? once(both(r, idea), '', said) : pick(WHY[idea.t]?.[id] ?? WHY[idea.t]?.any, said)
+      const why = r.clues.length > 1 ? once(both(r, idea), '', said) : whyLine(idea.t, id, a, said)
       const ask = once(more(r), '', said)
-      return `${yes} ${why} ${ask}`.replace(/ +/g, ' ').trim()
+      return `${named(yes, why, id)} ${ask}`.replace(/ +/g, ' ').trim()
     }
     // "Yes! A goldfish is orange!" (but not "a blue fish is blue")
     if (!idea) return lower(name).includes(TRAITS[r.clues[0].t].word) ? yes : once(`Yes! ${a} ${TRAITS[r.clues[0].t].has}!`, yes, said)
     // Two clues: say how it fits both, which is the thinking ("It's a fish, and it has spots.")
     if (r.clues.length > 1) return `${yes} ${once(both(r, idea), '', said)}`.trim()
-    const why = WHY[idea.t]
-    return `${yes} ${pick(why?.[id] ?? why?.any, said)}`.trim()
+    return named(yes, whyLine(idea.t, id, a, said), id)
   }
   // Explain the first clue it misses. The same animal missing the same clue again, in a row, or any
   // miss after two on this riddle, hears only the short reason, once a trip: the card shows it after
@@ -461,6 +498,14 @@ export function verdict(r, id, name, said) {
   // Every reason for this miss was said earlier in the trip: just the name (the card shows why)
   return reason ? `${a}. ${reason} Back you go!` : `${a}. Back you go!`
 }
+
+/** Why this catch fits an idea, a fresh line each time in a trip ("{a}" names it: "A rainbow trout has fins..."). */
+const whyLine = (t, id, a, said) => pick((WHY[t]?.[id] ?? WHY[t]?.any)?.map((w) => w.replace('{a}', a)), said)
+/**
+ * "Yes!" and the reason, which names the catch itself where it can ("Yes! A crayfish wears its hard shell
+ * outside..."), so a right answer is two short sentences at most, not "Yes! A crayfish! A crayfish...".
+ */
+const named = (yes, why, id) => (why && new RegExp(`\\b${id}`, 'i').test(why) ? `Yes! ${why}` : `${yes} ${why}`).trim()
 
 /** How a catch fits both of two clues: "It's a fish, and it has no spots." */
 function both(r, idea) {

@@ -171,7 +171,10 @@ export class World {
   reset(startZ) {
     for (const it of this.items) this.scene.remove(it.obj)
     this.items.length = 0
-    for (const n of this.nests) this.scene.remove(n.group)
+    for (const n of this.nests) {
+      for (const m of n.fade?.mats ?? []) m.dispose()
+      this.scene.remove(n.group)
+    }
     this.nests.length = 0
     this.nextZ = startZ - 30
     this.startWorld = worldAt(startZ)
@@ -300,16 +303,18 @@ export class World {
       family.push(d)
     }
     // trees around the edge so the nest sits in a little garden
+    const garden = []
     for (const a of [2.4, 3.6, 0.6]) {
       const kind = w.decor[0][0] === 'castle' ? 'tree' : w.decor[0][0]
       const d = copy(this.t[kind], decorRecolor(kind))
       d.position.set(Math.cos(a) * 3.2, 0.5, -Math.abs(Math.sin(a)) * 2.6)
       d.scale.setScalar(kind === 'windmill' ? 0.8 : 1.1)
       group.add(d)
+      garden.push(d)
     }
     group.position.set(0, NEST_Y, -z - 1.1) // a little beyond where Ember lands, so Ember sits in front
     this.scene.add(group)
-    const nestObj = { i, z, group, family, cheer: 0 }
+    const nestObj = { i, z, group, family, garden, cheer: 0 }
     this.nests.push(nestObj)
     this.keepsakes(nestObj, this.kept?.[i])
     return nestObj
@@ -346,6 +351,23 @@ export class World {
     shelf.position.set(0, 0.62, 3.3)
     nest.group.add(shelf)
     nest.kept = shelf
+  }
+
+  /**
+   * Ember flies on from nest `i`: its garden (lollipops, trees) fades in half a second, so as the camera swings
+   * in behind Ember it never fills the bottom of the picture. The family stays to wave Ember off.
+   */
+  leaveNest(i) {
+    const nest = this.nestFor(i)
+    if (!nest || nest.fade) return
+    nest.fade = { k: 1, mats: [] }
+    for (const d of nest.garden) {
+      d.traverse((o) => {
+        if (!o.isMesh) return
+        o.material = Object.assign(o.material.clone(), { transparent: true })
+        nest.fade.mats.push(o.material)
+      })
+    }
   }
 
   nestFor(i) {
@@ -437,9 +459,15 @@ export class World {
         d.root.rotation.y = Math.PI + (k === 0 ? 0.35 : -0.35) + Math.sin(this.time * 1.3 + k) * 0.1
       }
       nest.cheer = Math.max(0, nest.cheer - dt)
+      if (nest.fade?.k > 0) {
+        const k = (nest.fade.k = Math.max(0, nest.fade.k - dt * 2))
+        for (const m of nest.fade.mats) m.opacity = k
+        for (const d of nest.garden) d.visible = k > 0
+      }
     }
     for (let i = this.nests.length - 1; i >= 0; i--) {
       if (this.nests[i].group.position.z > behind + 60) {
+        for (const m of this.nests[i].fade?.mats ?? []) m.dispose()
         this.scene.remove(this.nests[i].group)
         this.nests.splice(i, 1)
       }

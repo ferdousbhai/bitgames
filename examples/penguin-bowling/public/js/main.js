@@ -138,8 +138,8 @@ const game = {
   onSpot: false, // the penguin stands on the footprints
   veil: null, // { f } while a bond question is open: frame f's numbers, the rack map and the plan result hide
   ignored: 0, // tier 1: counts in a row the child let the game do; after two, the rest light together
-  planHits: 0, // plans this game that came out exactly
-  planNear: 0, // plans this game that came out one away
+  planHits: 0, // plans at this tier that came out exactly
+  planNear: 0, // plans at this tier that came out one away
   curvePlans: 0, // tier 3: curved plans chosen this game; the first gets footprints
   plansMade: 0, // tier 2: plans chosen this game; only the first two get footprints...
   planOff: false, // ...unless the last plan came out two or more away
@@ -163,11 +163,20 @@ const prediction = createPrediction({
     else if (kind === 'exact') setTimeout(() => audio.jingle(10), 500)
   },
   // Drop any aim in progress so the penguin doesn't launch when the dialog closes.
+  // One decision a slide: a 💭 prediction stands in for the plan card, which waits behind it and comes
+  // back if the child closes the dialog without keeping a guess. (Picking a plan puts 💭 away instead.)
   onOpen: () => {
     keys.clear()
     drag.on = false
     drag.aim = null
+    planWaits = !$('plan').hidden
+    $('plan').hidden = true
   },
+})
+let planWaits = false
+$('pin-prediction').addEventListener('close', () => {
+  if (planWaits && prediction.guess === null && game.state === 'aim' && !game.plan) $('plan').hidden = false
+  planWaits = false
 })
 
 // --- Layout -----------------------------------------------------------------------------
@@ -380,6 +389,9 @@ const markBond = (flag) => {
 function finishRoll() {
   // Pins pushed off the deck are out of play: they puff away now, even ones that landed upright.
   for (const p of pins.clearOffDeck()) effects.puff(p, 6, 0.7)
+  // A pin still counted as standing but leaning on a fallen one stands up straight now, before the count,
+  // so "tap the pins standing up" matches what the child sees.
+  pins.straighten()
   const standing = pins.countStanding()
   const knocked = game.standingBefore - standing
   const guessed = prediction.guess !== null
@@ -468,7 +480,8 @@ function finishRoll() {
   else {
     $('bond').classList.add('tap')
     game.counting.hint = game.tapHints++ < 2
-    voice.sayOnce('Tap the pins still standing.')
+    // One sentence a slide: after a plan's or a prediction's line, the 👆 over a pin asks instead.
+    if (!game.planSpoke && !guessed) voice.sayOnce('Tap the pins still standing.')
     // A child who waits is counted along with, starting where they are. A child who has let the
     // game count twice in a row isn't made to sit through a slow count: the pins light together.
     if (game.ignored >= 2) counter.countRest(guessed ? 4 : 3, { all: true })
@@ -516,6 +529,8 @@ function setTier(t) {
   game.selfCounts = 0
   game.rights = 0
   game.misses = 0
+  game.planHits = 0 // the bumpers offer counts this tier's plans only
+  game.planNear = 0
   game.plansMade = 0 // a new tier's plans get their footprints again
   // Only a 6–8 game remembers where it got to; a 3–5 game always starts at the beginning.
   if (game.big) store.set('bigtier', (game.bigTier = Math.max(2, t)))
@@ -524,7 +539,7 @@ function setTier(t) {
 /** The child taps a pin on the lane (or its picture in the bond) to count it. */
 function countPin(i) {
   const c = game.counting
-  if (!c) return false
+  if (!c || c.waiting) return false
   if (!counter.left.some((q) => q.i === i)) return false
   const now = performance.now()
   // A careful finger points, looks and taps: taps closer than 0.4 s are a sweep, not a count.
@@ -619,7 +634,6 @@ function askHowMany(guessed, frameOver, part) {
   // the rack map and the plan's result wait behind a "?", and a snow cloud settles over the pins,
   // so the bond itself is the way to the answer, not counting the lane again.
   veil()
-  mist.show()
   const answer = c.part === 'fallen' ? c.fallen : s
   if (c.part === 'fallen') {
     $('bond').classList.add('guess-fallen')
@@ -631,17 +645,24 @@ function askHowMany(guessed, frameOver, part) {
     $('bond').classList.add('guess')
     $('bond-standing-n').textContent = '?'
   }
-  numberChoices(game.tier >= 3 ? Array.from({ length: 10 }, (_, k) => k + 1) : nearChoices(answer), c.part === 'fallen' ? 'fell' : 'standing')
-  $('howmany').setAttribute('aria-label', c.part === 'fallen' ? 'How many fell down?' : 'How many are still standing?')
-  // After a first slide the missing part is what the spare needs; after a last one, what was left.
-  // Spoken in full the first time; after that the "?" and the numbers ask it.
-  const asks = c.part === 'fallen' ? 'How many fell down?' : frameOver ? 'How many are still standing?' : 'How many more make 10?'
-  // The cloud is explained the first time it settles (not straight after a plan's line: two sentences
-  // ahead of the question would bury it); each question is spoken once a game.
-  const cloud = !game.planSpoke && voice.sayOnce('The pins are hiding in a cloud.')
-  if (!voice.sayOnce(asks) && !cloud) audio.tick(3)
-  // A child who doesn't answer is counted along with, with no fuss.
-  counter.countRest(guessed ? 8 : 7)
+  // The numbers and the question wait until the cloud hides the pins, so the lane can't be counted through it.
+  c.waiting = true
+  mist.show(() => {
+    if (game.counting !== c) return
+    c.waiting = false
+    numberChoices(game.tier >= 3 ? Array.from({ length: 10 }, (_, k) => k + 1) : nearChoices(answer), c.part === 'fallen' ? 'fell' : 'standing')
+    $('howmany').setAttribute('aria-label', c.part === 'fallen' ? 'How many fell down?' : 'How many are still standing?')
+    // After a first slide the missing part is what the spare needs; after a last one, what was left.
+    // Spoken in full the first time; after that the "?" and the numbers ask it. A slide whose plan or
+    // 💭 prediction has just been answered aloud already has its sentence: the "?" asks for itself.
+    const asks = c.part === 'fallen' ? 'How many fell down?' : frameOver ? 'How many are still standing?' : 'How many more make 10?'
+    // The cloud is explained the first time it settles; each question is spoken once a game.
+    const spoke = game.planSpoke || guessed
+    const cloud = !spoke && voice.sayOnce('The pins are hiding in a cloud.')
+    if (!spoke && !voice.sayOnce(asks) && !cloud) audio.tick(3)
+    // A child who doesn't answer is counted along with, with no fuss.
+    counter.countRest(guessed ? 8 : 7)
+  })
 }
 
 /**
@@ -736,7 +757,8 @@ function answerHowMany(btn) {
     mist.hide()
     unveil()
     btn.className = 'yes'
-    game.misses = 0
+    // Only a first-try answer ends a run of misses: re-dealt numbers always reach the answer in the end.
+    if (!c.missed) game.misses = 0
     audio.jingle(answer * 2)
     // The bond sentence that follows says the number; "Yes" is said aloud only while it is new.
     if (!voice.sayOnce('Yes!')) audio.tick(answer)
@@ -885,7 +907,8 @@ function offerPlan() {
   $('plan').hidden = false
   // A tier-3 bowler whose plans keep coming out right is offered the next challenge once a game:
   // bumpers down, so the aim has to be true too.
-  $('bumpers-down').hidden = !(game.tier >= 3 && game.bumpers && game.planHits >= 2 && game.planHits + game.planNear >= 4 && !game.bumperOffer)
+  // The plans counted are this tier's own (setTier starts them again), and the last frame keeps its bumpers.
+  $('bumpers-down').hidden = !(game.tier >= 3 && game.bumpers && game.planHits >= 2 && game.planHits + game.planNear >= 4 && !game.bumperOffer && card.frame < card.count - 1)
   if (!$('bumpers-down').hidden) game.bumperOffer = true
   // Asked aloud the first time in a game; after that the picture asks.
   if (game.plansAsked++ < 1) voice.say(`Make a plan. ${$('plan-text').textContent}`)
@@ -965,6 +988,7 @@ function choosePlan(k) {
   const curve = leave ? planCurve(k) : 0
   game.plan = { k, got: null, leave, curve, slid: null, rough }
   $('plan').hidden = true
+  $('predict-pins').disabled = true // the plan is this slide's decision; 💭 comes back for the next one
   if (curve) {
     game.curve = curve
     updateCurveBtn()
@@ -1005,7 +1029,9 @@ function updatePlanPill() {
     // A picture plan: what was planned in words, then a ✓ or how many fell.
     const ok = p.got !== null && roughHit(p.k, p.got)
     const done = p.got === null || game.veil ? '' : ok ? ' ✓' : ` → ${p.got}`
-    el.replaceChildren(Object.assign(document.createElement('span'), { textContent: `🎯 ${ROUGH[p.k]}${done}` }), tenFrame(p.k))
+    const pic = tenFrame(p.k)
+    pic.classList.add('rough')
+    el.replaceChildren(Object.assign(document.createElement('span'), { textContent: `🎯 ${ROUGH[p.k]}${done}` }), pic)
     el.classList.toggle('hit', !game.veil && ok)
     el.classList.remove('near')
     el.setAttribute('aria-label', p.got === null || game.veil ? `Plan: knock down ${ROUGH[p.k]}` : `Planned ${ROUGH[p.k]}, ${p.got} fell`)
@@ -1625,6 +1651,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (game.state === 'title' && onPenguin && penguin.poke()) audio.squeak(1 + Math.random() * 0.3)
   // Counting time: a tap on a standing pin counts it.
   if (game.state === 'result' && game.counting) {
+    if (game.counting.waiting) return // the cloud is still settling before the question
     const hit = pinAt(e.clientX, e.clientY)
     if (hit?.q && $('howmany').hidden) countPin(hit.q.i)
     else if (hit?.fallen && $('howmany').hidden) slipPin()

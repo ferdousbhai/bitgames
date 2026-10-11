@@ -81,13 +81,15 @@ export function createPrediction({ button, hud, getStanding, getLayout, onOpen, 
     $('#pin-total').textContent = `${pins(max)} ${max === 1 ? 'is' : 'are'} standing.`
     less.disabled = value === 0
     more.disabled = value === max
+    // Nothing is chosen until the child chooses: no number is suggested to anchor the guess.
+    $('#pin-confirm').disabled = value === 0
     drawPins()
   }
 
   button.onclick = () => {
     max = getStanding()
     layout = getLayout?.() ?? null
-    value = Math.min(guess ?? Math.ceil(max / 2), max)
+    value = Math.min(guess ?? 0, max)
     onOpen?.()
     draw()
     dialog.showModal()

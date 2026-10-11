@@ -5,7 +5,7 @@ import { Audio } from './audio.js'
 import { Bot } from './bot.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
-import { Sim, newStats, STAGE_PAUSE } from './sim.js'
+import { Sim, newStats, STAGE_PAUSE, TRICKLE_AFTER } from './sim.js'
 import { createVoice, listWords, COUNT_ALOUD } from './speech.js'
 import { DuckView, ItemView, ObstacleView, Rain, skyTexture, cloneTinted } from './view.js'
 import { makeWater } from './water.js'
@@ -281,7 +281,11 @@ function sayGoal() {
   }
   // Bumper play: the menu said the goal (50 together); a new goal on Again is said here. Then what a raft is worth, once.
   const goal = sim?.playGoal
-  playSay(goal && goal !== game.spokenPlay ? `Let's make ${goal} together! Each raft is ten bubbles.` : 'Each raft is ten bubbles!')
+  // (What a raft is worth is said for the first two rounds; after that the rafts and the tally show it.)
+  const explain = (Number(load('raft-play')) || 0) < 2
+  if (explain) save('raft-play', String((Number(load('raft-play')) || 0) + 1))
+  const fresh = goal && goal !== game.spokenPlay
+  if (fresh || explain) playSay(fresh ? `Let's make ${goal} together!${explain ? ' Each raft is ten bubbles.' : ''}` : 'Each raft is ten bubbles!')
   game.spokenPlay = null
 }
 
@@ -290,9 +294,18 @@ function sayGoal() {
  * split that ends the round, never pile up. A newer line with the same `key` replaces one still waiting,
  * and `text` may be a function, read when it is said (so a number is never stale; null drops the line).
  */
-function playSay(text, key = null) {
+function playSay(text, key = null, { first = false } = {}) {
   if (key) game.playLines = game.playLines.filter((l) => l.key !== key)
-  game.playLines.push({ text, key })
+  game.playLines[first ? 'unshift' : 'push']({ text, key })
+}
+/**
+ * Bumper play: one or two left with a bubble on the water, so the goal is about to be made. There is
+ * nothing left to decide, and a hint said now would only race the ending.
+ */
+function lastCatchSoon(sim) {
+  if (sim.left > 2) return false
+  for (const it of sim.items.values()) if (it.k === 'bubble' && it.stuck == null) return true
+  return false
 }
 function playVoice() {
   if (game.state !== 'play' || !game.playLines.length || voice.speaking || performance.now() - game.playEndAt < 2000) return
@@ -340,15 +353,22 @@ function catchSoon() {
 function scarceTalk() {
   const sim = game.sim
   if (game.state !== 'play' || !sim?.calm || !sim.goal?.regroup) return
-  if (!sim.dryOnes()) {
-    game.dryAt = null
-    return
-  }
+  // (Dry time counts from when this step first ran out of ones: a trickle bubble caught along the way
+  // doesn't start it again, so the later reminders still come for a child who hasn't thought of a raft.)
+  if (!sim.dryOnes()) return
   game.dryAt ??= sim.time
+  // (Waited out until single bubbles trickled in: see the adapting in endRound.)
+  if (sim.dryT > TRICKLE_AFTER) game.tripWaited = true
   if (resting()) return
   const dry = sim.time - game.dryAt
   if (dry > 1.5 && voice.sayOnce('Not enough ones. What can a ten become?')) hushFor(4)
   else if (dry > 14 && voice.sayOnce('Dash into a raft to break it into ten ones!')) hushFor(4)
+  // (Once a step, and never just after a regroup line: "50! Ten ones make one ten!" is a different idea.)
+  else if (dry > 45 && game.reminded !== sim.stage && performance.now() - (game.regroupAt ?? 0) > 8000) {
+    game.reminded = sim.stage
+    voice.say('A ten can become ten ones!')
+    hushFor(4)
+  }
 }
 
 /**
@@ -664,7 +684,7 @@ function renderModes() {
       <button class="next-goal" id="next-goal" aria-label="Another goal"${calm ? '' : ' hidden'}>▶</button>
     </span>
     <button class="mode lively${calm ? '' : ' selected'}" data-mode="lively" aria-pressed="${!calm}" aria-label="Bumper play: bump and bounce while the team makes exactly ${game.playGoal}">
-      <span class="pic"><span class="team-tally">${teamTally(27, 30)}</span><b class="big goal-n">${game.playGoal}</b></span><span class="name">💥 Bumper play</span></button>`
+      <span class="pic"><span class="tally">${tally(game.playGoal)}</span><b class="big goal-n">${game.playGoal}</b></span><span class="name">💥 Bumper play</span></button>`
   for (const el of $('modes').querySelectorAll('[data-mode]')) {
     el.onclick = () => {
       audio.unlock()
@@ -950,6 +970,8 @@ function startRound(setup) {
   game.results = null
   game.tensSaid = 0
   game.tensQueued = game.tensVoiced = 0
+  game.splitToTell = false
+  game.reminded = -1
   game.nearSaid = false
   game.raftSaid = false
   game.tensAt = -9
@@ -972,6 +994,9 @@ function startRound(setup) {
   game.playEndAt = 0
   game.playBounced = new Set()
   game.playSplits = 0
+  game.splitTold = false
+  game.tripWaited = false
+  game.splitStage = null
   voice.newRound()
   const entries = setup.entries.slice(0, MAX_PLAYERS).map((e) => ({ ...e, duck: validDuck(e.duck) ? e.duck : 'sunny', emoji: String(e.emoji ?? '🙂').slice(0, 8) }))
   setup.entries = entries
@@ -1127,7 +1152,8 @@ function endRound() {
         level,
         nopes: kids.reduce((n, d) => n + (d.stats.nopes ?? 0), 0),
         chosen: kids.reduce((n, d) => n + (d.stats.chosen ?? 0), 0),
-        caught: kids.reduce((n, d) => n + d.score, 0),
+        // (Bubbles of a raft broken by chance are left out: luck neither helps nor holds a child back.)
+        caught: kids.reduce((n, d) => n + d.score - (d.stats.luck ?? 0), 0),
         bumps: kids.reduce((n, d) => n + (d.stats.bumps ?? 0), 0),
         time: game.sim.time - game.sim.stage * STAGE_PAUSE,
       }
@@ -1141,9 +1167,14 @@ function endRound() {
       const steady = level < 2 || pace < 7
       // (Random paddling no longer looks careful: a dash into one that doesn't fit is a miss, place value
       // asks for a surer aim, and a raft broken by a random dash gives no careful catches; see Sim.missed.)
-      const climb = (rate <= 0.2 || trip.nopes <= 1) && rate < 0.34 && careful >= 0.55 && chosen >= 3 && steady
-      game.lastJudge = { level, nopes, chosen, caught, bumps, pace: +pace.toFixed(1) }
-      const back = (rate >= 0.5 && nopes >= 3) || (level >= 1 && caught >= 4 && careful < 0.35)
+      // Crossing a ten with the ones used up is solved by breaking a raft. A trip whose crossing was only
+      // waited out (trickled ones, no raft broken on purpose) has not shown it yet: no climb, and the top
+      // level (only the number shown) steps back to the one with the spaces to see.
+      const waited = game.tripWaited && !kids.some((d) => d.stats.meant)
+      game.tripWaited = false
+      const climb = (rate <= 0.2 || trip.nopes <= 1) && rate < 0.34 && careful >= 0.55 && chosen >= 3 && steady && !waited
+      game.lastJudge = { level, nopes, chosen, caught, bumps, pace: +pace.toFixed(1), waited }
+      const back = (rate >= 0.5 && nopes >= 3) || (level >= 1 && caught >= 4 && careful < 0.35) || (waited && level >= HIDE_LEVEL)
       game.lastRate = rate
       game.lastCareful = careful
       const next = clamp(level + (climb ? 1 : back ? -1 : 0), 0, LEVELS - 1)
@@ -1162,7 +1193,10 @@ function endRound() {
   // Lines still waiting (a split's, a ten's) give way, so the goal's sentence is heard alone.
   audio.cheer()
   game.playLines = []
-  voice.sayOnce(`${tensWords(game.sim.playGoal)} make ${game.sim.playGoal}!`)
+  // (A hint still being said gives way: the goal's sentence is never preceded by "we need 1 more".)
+  const speakEnd = game.playEndAt === Infinity ? voice.sayNow : voice.sayOnce
+  const split = game.playSplits && !game.splitTold ? 'One ten became ten ones. ' : ''
+  speakEnd(`${split}${tensWords(game.sim.playGoal)} make ${game.sim.playGoal}!`)
   if (isHost()) adaptPlay()
   later(() => {
     game.state = 'results'
@@ -1176,7 +1210,9 @@ function endRound() {
  * Bumper play adapts like Pond helpers, on the raft-or-single choice it teaches. Stepping up (50, then 70,
  * then a number with ones like 47) needs the children to have steered at rafts while a ten still fitted
  * (two or more), and in the last stretch to have chosen single bubbles with a raft right there (three or
- * more, most of their last ones; breaking a raft on purpose counts too) while bumping at most one raft.
+ * more, close to half their last ones; breaking a raft on purpose counts too) while bumping at most one raft,
+ * or, when rounds end on rafts alone (two last ones or fewer), to have steered at three or more rafts and
+ * bumped none, twice running.
  * A random paddle sweeps up singles but seldom steers at one, so it doesn't climb. Three or more rafts
  * bumped in the last stretch, or last ones taken with almost no choosing, steps back. Anything else plays
  * the same tier again. (See Sim.pickups: stats.rafts, stats.lastOnes, stats.wise.)
@@ -1186,10 +1222,15 @@ function adaptPlay() {
   const sum = (k) => kids.reduce((n, d) => n + (d.stats[k] ?? 0), 0)
   const [rafts, lastOnes, wise] = [sum('rafts'), sum('lastOnes'), sum('wise')]
   const bounces = game.playBounced.size
-  const climb = rafts >= 2 && wise >= 3 && wise >= lastOnes * 0.5 && bounces <= 1
   const back = bounces >= 3 || (lastOnes >= 5 && wise <= lastOnes * 0.2)
-  game.lastPlay = { rafts, lastOnes, wise, bounces, splits: game.playSplits, tier: game.playTier, climb, back }
-  newPlayGoal(game.playTier + (climb ? 1 : back ? -1 : 0))
+  // A round that ends on rafts alone leaves no singles to choose: three or more rafts steered at and none
+  // bumped, two rounds running, shows the same care (so a careful child is never held at 70).
+  game.cleanRounds = rafts >= 3 && lastOnes <= 2 && bounces === 0 ? (game.cleanRounds ?? 0) + 1 : 0
+  const climb = (rafts >= 2 && wise >= 3 && wise >= lastOnes * 0.4 && bounces <= 1) || game.cleanRounds >= 2
+  game.lastPlay = { rafts, lastOnes, wise, bounces, splits: game.playSplits, tier: game.playTier, clean: game.cleanRounds, climb, back }
+  const tier = game.playTier
+  newPlayGoal(tier + (climb ? 1 : back ? -1 : 0))
+  if (game.playTier !== tier) game.cleanRounds = 0
 }
 
 function abortToLobby() {
@@ -1333,14 +1374,16 @@ function playEvent(e) {
       const s = Number(e.s) || 3
       game.views.get(e.a)?.bonked(s)
       game.views.get(e.b)?.bonked(s)
-      effects.bonkStars(e.x, e.z, Math.min(2, s / 5))
+      // (Two robots bumping each other get no stars: the children's own bumps are the ones to see.)
+      if (!isBotDuck(e.a) || !isBotDuck(e.b)) effects.bonkStars(e.x, e.z, Math.min(2, s / 5))
       effects.splash(e.x, e.z, Math.min(1.2, s / 8))
       water.ripple(e.x, e.z, Math.min(2, s / 4))
       audio.bonk(s / 6)
       // A bonk is a real bump, so a child's own duck still feels a small nudge on hard ones.
-      // One small "bonk!" at a time, never a stack of them.
+      // One small "bonk!" at a time, never a stack of them. (Pond helpers: the sound is enough; no word
+      // floats over the ducks while the child reads the jar.)
       const now = performance.now()
-      if (s > 4 && now - (game.lastBonkLabel ?? 0) > 1500) {
+      if (!sim.calm && s > 4 && now - (game.lastBonkLabel ?? 0) > 1500) {
         game.lastBonkLabel = now
         effects.label('bonk!', { x: e.x, y: 2.4, z: e.z }, { size: 'small' })
       }
@@ -1355,10 +1398,11 @@ function playEvent(e) {
       water.ripple(ob.x, ob.z, 0.8)
       if (ob.kind === 'mama') {
         audio.quack(0.75)
-        effects.label('quack!', { x: ob.x, y: 5, z: ob.z }, { size: 'small' })
+        if (!sim.calm) effects.label('quack!', { x: ob.x, y: 5, z: ob.z }, { size: 'small' })
       } else if (ob.kind === 'lily' && ob.frog) {
         audio.ribbit()
-        effects.label('ribbit!', { x: ob.x, y: 2.5, z: ob.z }, { size: 'small' })
+        // (In the frog-order puzzle the frog's number is what to read: no word drawn over its sign.)
+        if (!sim.frogs) effects.label('ribbit!', { x: ob.x, y: 2.5, z: ob.z }, { size: 'small' })
       } else audio.boing()
       break
     }
@@ -1428,10 +1472,12 @@ function playEvent(e) {
           game.nearSaid = true
           game.playLines = game.playLines.filter((l) => l.key !== 'near')
           game.playNopeAt = sim.time
-          playSay(() => (sim.left > 0 ? `A raft is ten. We need just ${sim.left} more!` : null), 'nope')
+          // (A ten still owed comes first, so the count never runs backwards: "Four tens and 6. A raft is ten…")
+          playSay(() => (sim.left > 0 && !lastCatchSoon(sim) ? `${tensSoFar(sim, '. ')}A raft is ten. We need just ${sim.left} more!` : null), 'nope')
         } else if (game.playNope === 1 && sim.time - game.playNopeAt > 10) {
           game.playNope++
-          playSay('Dash into a raft to break it into ten ones!', 'nope')
+          // (Never once a raft has been broken: the child is not told to do what they just did.)
+          playSay(() => (sim.left > 0 && !game.playSplits && !lastCatchSoon(sim) ? 'Dash into a raft to break it into ten ones!' : null), 'nope')
         }
         break
       }
@@ -1458,10 +1504,25 @@ function playEvent(e) {
       effects.splash(e.x, e.z, 0.7)
       water.ripple(e.x, e.z, 1.2)
       if (isBotDuck(e.id)) break
-      if (sim.calm) voice.sayOnce('One ten is ten ones!')
-      else {
+      // Pond helpers: said once the bubbles already floating up have landed, so it never runs ahead of a
+      // raft's count. If the split's own bubbles finish the step first, the step's last landing says it
+      // (see countAloud), so the decomposition is always named. On a crossing step the regroup line says it
+      // instead ("40! Ten ones make one ten!"), so breaking a ten and making one are never said together.
+      if (sim.calm) {
+        if (sim.goal.regroup && game.splitStage !== -1) game.splitStage = sim.stage
+        else {
+          game.splitToTell = true
+          whenLanded(() => game.splitToTell && sim.open.includes('any') && tellSplit())
+        }
+      } else {
+        // Bumper play: named next, once a round (a waiting hint to break a raft is then dropped). If the ending
+        // comes first, the ending names it: "One ten became ten ones. 5 tens make 50!"
         game.playSplits++
-        playSay(() => (sim.left > 0 ? 'One ten is ten ones!' : null), 'split')
+        playSay(() => {
+          if (game.splitTold || sim.left <= 0 || lastCatchSoon(sim)) return null
+          game.splitTold = true
+          return 'One ten is ten ones!'
+        }, 'split', { first: true })
       }
       break
     }
@@ -1554,6 +1615,14 @@ const TENS_WORDS = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', '
  * Bumper play counts by tens aloud, never skipping one: the line is read when it is said, so tens caught
  * close together are said together ("Three tens, four tens!") instead of the newer replacing the older.
  */
+/**
+ * A ten to say in Bumper play. Not while the last catch is right there (the ending is about to say the
+ * tens: "7 tens make 70!"); it is asked again (see updateHud), so a ten is only ever put off, never lost.
+ */
+function tensSoon() {
+  const sim = game.sim
+  return sim && sim.left < 10 && lastCatchSoon(sim) ? null : tensLine()
+}
 function tensLine() {
   const from = (game.tensVoiced ?? 0) + 1
   const to = game.tensQueued ?? 0
@@ -1564,8 +1633,17 @@ function tensLine() {
   return `${[words[0], ...words.slice(1).map((w) => w.toLowerCase())].join(', ')}!`
 }
 
+/** Any ten still owed, with the ones so far, ending in `end`: "Four tens and 6. " (or '' when none is owed). */
+function tensSoFar(sim, end) {
+  const owed = tensLine()
+  const ones = sim.gathered % 10
+  return owed ? `${owed.slice(0, -1)}${ones ? ` and ${ones}` : ''}${end}` : ''
+}
+
 /** Race counts as a picture of tens and ones: a little raft for each ten, a dot for each one (no jumping numbers). */
-const tally = (n) => `${'<span class="t-raft"></span>'.repeat(Math.floor(n / 10))}<span class="t-ones">${'<i></i>'.repeat(n % 10)}</span>`
+function tally(n) {
+  return `${'<span class="t-raft"></span>'.repeat(Math.floor(n / 10))}<span class="t-ones">${'<i></i>'.repeat(n % 10)}</span>`
+}
 
 /**
  * Bumper play has no clock: the team gathers exactly its goal together. The pill shows it as rafts of ten
@@ -1587,26 +1665,34 @@ function updateHud() {
     const n = Math.min(goal, sim.gathered)
     if (n !== game.lastTeam) {
       game.lastTeam = n
-      $('timer').innerHTML = teamTally(n, goal)
+      // The number now and the goal beside the rafts, so 46 and 48 can be told apart at a glance.
+      $('timer').innerHTML = `<b class="tt-now">${n}</b>${teamTally(n, goal)}<b class="tt-goal"><small>make</small>${goal}</b>`
       $('timer').setAttribute('aria-label', `Together: ${tensWords(n)} of ${goal}`)
     }
     const tens = Math.floor(n / 10)
+    // Into the last stretch (a raft is too many now): one question, so the child looks before grabbing a
+    // raft. With only one or two left there is nothing to decide, so it isn't asked.
+    const asking = () => !game.nearSaid && sim.left >= 3 && sim.left < 10
     if (game.state === 'play' && tens > game.tensSaid) {
       game.tensSaid = tens
       audio.chord(0.12)
       game.tensAt = sim.time
-      // Each ten while a raft still fits (a newer one replaces one still waiting). In the last stretch the
-      // question below says the number instead: "46! Will a raft still fit?"
-      if (goal - n >= 10) {
-        game.tensQueued = tens
-        if (!game.playLines.some((l) => l.key === 'tens')) playSay(tensLine, 'tens')
-      }
+      // Each ten, in order (a newer one joins one still waiting). In the last stretch the question below
+      // carries it instead: "Four tens and 6! Will a raft still fit?" So counting by tens never skips one.
+      game.tensQueued = tens
+      // (The goal's own ten is said by the ending: "5 tens make 50!")
+      if (sim.left > 0 && !asking() && !game.playLines.some((l) => l.key === 'tens')) playSay(tensSoon, 'tens')
     }
-    // Into the last stretch (a raft is too many now): one question, so the child looks before grabbing a raft.
-    // (After any tens still waiting, so the counting by tens never skips one.)
-    if (game.state === 'play' && !game.nearSaid && sim.left > 0 && sim.left < 10 && sim.time - (game.tensAt ?? -9) > 3) {
+    if (game.state === 'play' && asking() && sim.time - (game.tensAt ?? -9) > 3) {
       game.nearSaid = true
-      playSay(() => (sim.left > 0 && sim.left < 10 ? `${sim.gathered}! Will a raft still fit?` : null), 'near')
+      playSay(() => {
+        // (Read when said: any ten not yet voiced comes first, even if the question no longer fits.)
+        if (sim.left < 3 || sim.left >= 10) return tensLine()
+        return `${tensSoFar(sim, '! ') || `${sim.gathered}! `}Will a raft still fit?`
+      }, 'near')
+    } else if (game.state === 'play' && sim.left > 0 && !asking() && game.tensQueued > game.tensVoiced && !game.playLines.some((l) => ['tens', 'near', 'raft', 'nope'].includes(l.key))) {
+      // (A ten left for the question that is no longer asked: said on its own.)
+      playSay(tensSoon, 'tens')
     }
     playVoice()
   }
@@ -1724,10 +1810,11 @@ function renderJar() {
     : place ? `<b class="jar-num make"><small>make</small>${goalValue(g)}</b>` : `<b class="jar-num">${goalValue(g)}</b>`) + now + ways
   const raft = (full) => `<span class="ten raft${full ? ' full' : ''}">${full ? '<i></i>'.repeat(10) : ''}</span>`
   // Crossing a ten: ten single bubbles fill the frame, then slide onto the shelf as one ten (their own colours).
+  // (No empty place waits on the shelf meanwhile: a raft-shaped gap would invite the raft that is too many.)
   const bundling = lay.bundle && !jar.bundled
-  const bundle = !lay.bundle ? '' : jar.bundled
+  const bundle = lay.bundle && jar.bundled
     ? `<span class="ten full">${Array.from({ length: 10 }, (_, i) => `<i style="--c:${colourOf(filled.get(lay.tens + i))}"></i>`).join('')}</span>`
-    : hide ? '' : '<span class="ten"></span>'
+    : ''
   const tensIn = place ? [...Array(lay.tens).keys()].filter((k) => filled.has(k)).length : 0
   // "One more than": the colour before sits beside the frame as a row of dots, so the two can be compared.
   const before = g.more ? sim.trip[sim.stage - 1] : null
@@ -1938,18 +2025,31 @@ function countAloud() {
     if (lay.bundle && slot < lay.ones && singles === 10) {
       // Regrouping: the tenth single fills the frame, and the frame slides onto the shelf as one ten.
       audio.chord(0.15)
-      voice.sayOnce(`${value}! Ten ones make one ten!`)
+      // A raft the child broke on this step is named here, at the bundling moment, as the same idea backwards
+      // (once a trip; after that the shorter line).
+      const fold = game.splitStage === sim.stage
+      if (fold) game.splitStage = -1
+      voice.sayOnce(fold ? `${value}! A ten became ten ones, and ten ones make one ten again!` : `${value}! Ten ones make one ten!`)
+      game.regroupAt = performance.now()
       const token = jar.token
       later(() => token === jar.token && slideFrame(lay.tens, () => { jar.bundled = true }), 400)
     } else if (game.countOn && sim.stage === 0 && value <= 10) say(String(value))
     // (Counting aloud stays within the first ten: past it the soft notes and the jar's bar carry the count.)
     // Later steps and later trips count with soft notes and the jar's own number; the voice stays quiet.
   }
+  // A raft broken on this step whose bubbles finished it: named now, before what comes next.
+  if (done && game.splitToTell) tellSplit()
   // (A colour's count already ends with its total, "5 green!", and a carried step's was just said: "Now 10 more. Make 36!")
   if (done && sim.stage < sim.trip.length - 1 && g.kind !== 'colour' && !g.carry) {
     audio.chord(0.1)
     say(madeWords(g))
   }
+}
+
+/** Pond helpers: a child broke a raft for its ones (said once a round). */
+function tellSplit() {
+  game.splitToTell = false
+  voice.sayOnce('One ten is ten ones!')
 }
 
 /** The full frame moves onto the shelf as one group of ten, and an empty frame waits for more. */
@@ -2275,7 +2375,17 @@ function tick(now) {
     // Frog order: each frog shows its number, green once it has its place in the line.
     // (Only while playing: on the results the answer's own numbers are the only ones to see.)
     const f = game.state === 'play' ? game.sim.frogs : null
-    game.obstacles.forEach((o, i) => o.sign(f?.n[i] ?? null, !!f && f.order.indexOf(i) < f.next && f.order.includes(i)))
+    // (A frog holding the stuck bubble or raft lifts its sign higher, so what it holds stays in view; one
+    // with a raft floating just behind it, where the camera sees the sign over the raft, moves it aside.)
+    const held = f ? new Set([...game.sim.items.values()].map((it) => it.stuck)) : null
+    const aside = (ob) => {
+      const r = [...game.sim.items.values()].find((it) => it.k === 'ten' && it.stuck == null && Math.abs(it.x - ob.x) < 2.2 && it.z < ob.z - 0.3 && it.z > ob.z - 4)
+      return r ? (r.x > ob.x ? -1 : 1) : 0
+    }
+    game.obstacles.forEach((o, i) => {
+      const high = !!held?.has(i)
+      o.sign(f?.n[i] ?? null, !!f && f.order.indexOf(i) < f.next && f.order.includes(i), high, f && !high ? aside(game.sim.obstacles[i]) : 0)
+    })
     for (const o of game.obstacles) o.update(t, dt)
     updateHud()
     sendNet(now)

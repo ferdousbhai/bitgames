@@ -158,17 +158,17 @@ export class Effects {
     }
   }
 
-  /** Dizzy stars that pop out of a bonk. */
+  /** A few pale dizzy stars from a bonk (bonks are frequent, so never a cloud of them). */
   bonkStars(x, z, strength = 1) {
-    const colors = ['#ffd23f', '#ff9ccb', '#7fd3ff', '#ffffff']
-    const n = Math.round(6 + strength * 5)
+    const colors = ['#fff3c4', '#ffe0ef', '#e2f4ff']
+    const n = strength > 1 ? 4 : 3
     for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2
-      const s = 2 + Math.random() * 3
-      this.stars.spawn(x, 1.4, z, Math.cos(a) * s, 3 + Math.random() * 4, Math.sin(a) * s, {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.8
+      const s = 1.5 + Math.random() * 1.5
+      this.stars.spawn(x, 1.4, z, Math.cos(a) * s, 3 + Math.random() * 2, Math.sin(a) * s, {
         color: colors[i % colors.length],
-        size: 0.5 + Math.random() * 0.4,
-        life: 0.9,
+        size: 0.45 + Math.random() * 0.2,
+        life: 0.8,
         gravity: -9,
       })
     }

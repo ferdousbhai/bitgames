@@ -664,3 +664,88 @@ The cross-cutting infinite-pulse item is closed (hoops, bubbles and lanterns). A
 ### Remaining ideas
 
 - The ring itself (not its numeral) can still sit behind Ember in an upright view. If family play shows children aiming at the numeral rather than the ring, consider a slight x offset for the pair.
+
+## Round 8 of the 2026-10-11 pass: bug-free after the 8.6 / 8.5 reviews (not yet deployed)
+
+Two reviewers scored 8.6 and 8.5. This pass fixes every bug they listed, with no redesign. Scripts and screenshots are in the session scratchpad, `polish3/dragon-glide/`. Every run had 0 console/page errors.
+
+### Bugs and fixes
+
+| Bug | Fix | Where |
+| --- | --- | --- |
+| Portrait: after a gathering nest is solved, the new 3D keepsake hearts peek over the top edge of the tray. | The keepsakes built in `onSolved` are hidden while an upright tray stands, like the old ones. `clearSort` shows them again as the tray goes, so the family's basket is in view as Ember leaves. | `public/js/main.js:419-421, 467-468` |
+| With ⭕ "Count 4 rings" on, a full basket left Ember cruising for about 30 s, because the cloud-home shortcut waited for the mission. | Once the goal is met and the count is still open, `course.ringsAhead` lays the remaining cloud rings about 40 units ahead (unless one is already within 70), clearing that stretch. The 2.5 s breath before the cloud carries Ember home starts once the fourth ring is counted. | `public/js/main.js:1127-1134`, `public/js/course.js:293-311` |
+| Taps on the sky (mouse, touch, Space) still fired in ring worlds, where the 🔥 button is hidden. | `fire()` returns early unless `fireFits(world)`, the same test that shows the button. At a nest a tap still flies on. | `public/js/main.js:333-334, 705` |
+| The last fly-on button (`▶ 🌙`) put a yellow moon on the yellow button. | The next world's emoji sits on a small night-blue chip with a white rim. | `public/js/main.js:921-922`, `public/style.css:484-` |
+| At the start of a new world, the next world's banner showed over the previous world's sky, and Ember left from among the parents. | The new world's name, goal picture and spoken goal wait 1.3 s (`game.greetT`), by which time Ember is above the family and under the new sky. In real-time portrait shots Ember is clear above the parents by 350 ms (`leave-portrait-350.png`), so the camera is unchanged. | `public/js/main.js:283, 999-1000, 1074-1077` |
+| In the "one more / more than" fix step, any shelf tap swapped, so random tapping fixed the basket by trial and error. | The voice now asks "Which shelf needs one fewer? Tap it to swap one!" A tap that would take the basket further from the rule (`off()`) does not swap: the shelf shakes, the soft nope sounds, it counts as a nest slip, and "That shelf needs to keep its …. Count them again!" is said once. | `public/js/nest.js:426-450` |
+| The faded world banner could sit behind the first pair's numeral. | The banner steps aside when a goal item is within 64 units (was 48), so its 0.25 s fade has ended before numerals read. | `public/js/main.js:1211` |
+
+### Evidence
+
+- **Keepsakes** (`fix.mjs portrait 1`): after the solve, `kept.visible` is false and nothing peeks over the tray (`fix-portrait-1-solved.png`). Before the fix, `b0-w1-nest.png` showed four pink 3D hearts above the tray.
+- **Mission** (`tapmission.mjs`): with the basket filled at once in Candy Clouds, the counting mission's rings came straight away, and the cloud carried Ember home about 2.5 s after the fourth ring. In the autopilots with `MISSION=2`, the basket was met at 146 s and the nest reached at 160 s in portrait (190 s and 203 s in landscape), saying "The basket is full" → 2, 3 → "Four cloud rings!".
+- **Quiet taps** (`tapmission.mjs`): in Meadow, a mouse click, a touch tap and Space gave `fired 0`, with the button hidden. In Candy the same three gave `fired 3`.
+- **Fly-on chip:** `p1-w2-nest.png` (portrait) and `l1-w2-nest.png` (landscape) show the moon clearly on its chip.
+- **New-world start:** `p1-w1-starta.png` shows Ember rising over the family with no banner. `p1-w1-startc.png` shows "Sunset Castles" with its goal under the new sky.
+- **Fix step** (`fix.mjs`, portrait and landscape, worlds 1 and 3): the first tap on the wrong shelf did not swap (for example `{"blue":2,"pink":5}` stayed), and `nestSlips` was 2 (the broken rule plus the wrong tap). The right shelf then fixed the basket, and the question and solve followed.
+- **Banner** (`bannerrt.mjs`, real time, landscape): when the first pair was 30 units away, the banner was hidden with opacity 0.
+- **Full autopilots** (`play.mjs`): portrait at 15% wrong with the mission, and landscape at 30% wrong from `{rings 1, gather 2}` with the mission. All four worlds completed, with 40 and 38 lines spoken.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids dragon-glide --run dragon-glide-f1`: BOOT + PLAY ready, 0 errors.
+- `node --check` passes on main.js, course.js and nest.js.
+
+### Remaining ideas (not taken: larger than a bug pass)
+
+- Reviewer 1 suggested retiring the ⭕ mission in gathering worlds, so the start sentence carries one goal.
+- Stop the 75 s "close" help one small move short of Ember.
+- Make tier-0 ten-frame counting stop at the target from a pile with one extra.
+- Thin the gold gem trails just before treasure groups.
+- Add a quiet "Next time: by fives 🐉" line on the end card.
+
+## Round 9 of the 2026-10-11 pass: bug-free after the two 8.6 reviews (not yet deployed)
+
+Both reviewers scored 8.6. This pass fixes every bug they listed and takes the small improvements they both ranked, with no redesign. Scripts and screenshots are in the session scratchpad, `polish3/dragon-glide/r9/`. Every run had 0 console/page errors.
+
+### Bugs and fixes
+
+| Bug | Fix | Where |
+| --- | --- | --- |
+| Back-to-back hold lines: "10 is waiting for you!", then "10 is coming!" 0.3 s later, then "Here it comes, close to you!". | The lines that name what Ember needs next go through `holdSay`. "… is coming!", "Here it comes, close to you!" and the wrong-treasure "We need …" are skipped within 6 s of another such line ("3 stars! Now hearts." followed by "We need hearts!" was the same pattern). | `public/js/main.js:178-188, 812, 821, 852, 880, 1151, 1167` |
+| Portrait: a ring at or just below Ember's height sat behind Ember's body and wings as it came. Help made it worse, because the help ring was put 2.8 below a high Ember, which projects exactly onto Ember from behind. | Upright, the play camera rides 1.2 higher (with its look point), so such rings show above Ember. Help now puts the ring above Ember where there is room, otherwise beside Ember toward the middle, never below. | `public/js/main.js:1405-1411`, `public/js/course.js:121-130, 942-950` |
+| Portrait, leaving the Candy Clouds nest: the garden's giant lollipops filled the bottom corners for about a second. | `World.leaveNest` fades the nest's garden (lollipops, trees) over half a second as Ember flies on. The family stays to wave Ember off. | `public/js/world.js:355-372, 462-466`, `public/js/main.js:1039` |
+| Fly-on chooser: the lit "just right" chip showed 3 6 9, but the trip flew by fives. Auto-select dropped the step. | The lit chip always passes its step. Where two ways share the child's tier, one of them is chosen at random and lit, so the variety stays and what is lit is what is flown. | `public/js/main.js:990-999` |
+| With ⭕ "Count 4 rings" on, "The basket is full. Home to the nest!" was followed by about 13 s of flying and counting rings. | When the mission still counts and there is room before the nest, the line is "The basket is full! Three more cloud rings, then home." The rings come sooner (32 units ahead, 15 apart, was 40 and 17). Close to the nest, it stays "Home to the nest!" and Ember flies home. | `public/js/main.js:163-167, 874-878, 1186`, `public/js/course.js:305-317` |
+| The mission chip turned into a ⭐ tally when complete. | A game-local `renderProgress` (`missionRings`) draws the ring row with "2 / 4" while counting. Once all four rings are lit, the row says it alone, with no star. The shared `adventure.js` is untouched. | `public/js/main.js:146-160` |
+| Landscape nest: the keepsake hearts sat behind and under ▶. | Sideways, the nest camera keeps the keepsake row (`KEPT_FLOOR`) above the top of ▶. The top is measured once ▶ shows; before that, a 124 px reserve keeps the framing steady. On sideways phones, a smaller ▶ sits low on the right, clear of the tray. It used to cover the tray's "5 10 15" chip there. | `public/js/main.js:915-919, 1329-1338, 1388-1395`, `public/style.css:491-494` |
+| One-kind nest: "We asked for pink hearts. Give the others back to the sky!" was followed straight away by "Keep the pink hearts! Give back the others." | Within 4 s of the ask, a tap on a kept treasure gets only the shake and the soft nope. | `public/js/nest.js:283, 302-305, 330` |
+
+### Small improvements (both reviewers ranked them)
+
+- **Help stops one small move short** (`course.js:286-297, 942-950`). After 75 s the helped ring or treasure still follows Ember as it comes, but it stays 2.8 away and holds still for the last 14 units. A fully passive child no longer finishes. In the idle landscape run, the ring passed 2.8 beside Ember 33 times over 200 s with 0 reached, and "Here it comes, close to you!" was said once.
+- **Gems sway** like the treasures and no longer spin (`course.js:705`). In gathering worlds, no gem trail is laid in the 60 units before a treasure group (`course.js:398`).
+- **The counting mission is named once per trip**, in the first gathering world, so later start sentences carry one goal (`main.js:196-203`).
+- **"Next time 🐉 5 4 3" on the end card** (`main.js:354-360`, `style.css:495`). This quiet line shows the way of counting Ember starts with next time, from the adapted level. It is not a score.
+
+### Evidence
+
+- **Hold lines** (`holdedge.mjs`, Meadow and Sunset): a pair missed just before the hold point gave "1 is waiting for you!" at 54.4 s. "1 is coming!" was skipped as the hold began at 55.3 s, and "Here it comes, close to you!" came at 67.0 s.
+- **Ring visibility** (`checks.mjs portrait pairs`, Ember waiting where it last flew and steering only in the last 12 units): rings whose centre was within 90 px of Ember's at 22–25 units out. Before: 20 of 76. After: 3 of 86. In `p9b-w2-fly.png` both numbers sit clear above Ember.
+- **Leaving Candy** (`leave9.mjs`): `lv9-strip.png` has no lollipops (before: `lvA-strip.png`).
+- **Chooser** (`p9.log`): the lit chip was 3 6 9, `picked {level 2, step 3}`, and Sunset said "Count by threes: 3, 6, 9".
+- **Mission** (`full.mjs`): filled mid-world at 28.8 s, followed by "Four more cloud rings, then home.", the counts 1, 2, 3, then "Four cloud rings!" at 37.4 s. The nest came at 50.7 s. Filled 147 units from the nest: "Home to the nest!" and the nest 10 s later.
+- **Chip:** in `p9b-w1-nest.png` and `l9-w3-nest.png`, the lit ring row has no ⭐. While counting it reads "1 / 4".
+- **Keepsakes:** in `l9-w1-nest.png` and `l9b-w1-nest.png` the hearts are above ▶. `lp9b-grid.png` shows sideways phones.
+- **Give-back** (`checks.mjs giveback`): an immediate tap on a kept heart was silent, a tap 5 s later said the line once, and the nest slips were 2.
+- **Full autopilots** (`play9.mjs`), all four worlds with 0 errors:
+  - portrait at 30% wrong with the mission, tier 2: 34 lines;
+  - portrait at 25% wrong with the mission: 34 lines;
+  - landscape at 15% wrong with the mission: 37 lines;
+  - landscape at 10% wrong: 26 lines;
+  - sideways phone at 10% wrong.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids dragon-glide --run dragon-glide-f2`: BOOT + PLAY ready, 0 errors.
+- `node --check` passes on main.js, course.js, nest.js and world.js.
+
+### Remaining ideas
+
+- Tier-0 ten-frame: put one extra in the pile and have the child stop at the target, so one-to-one counting is a choice. Not taken: this changes the puzzle's question.
+- When Ember is steered right onto a ring, it still covers that ring as they meet, as in any view from behind. The numeral is always drawn over Ember.

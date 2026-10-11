@@ -25,7 +25,9 @@ const BASKETS = [
   { id: 'sea', icon: '🌊', places: ['ice', 'reef'], word: 'Sea', say: 'The sea: big and salty.' },
   { id: 'pretend', icon: '🧸', places: [], word: 'Not real', say: 'Not a real animal: toys, rubbish and pretend friends.' },
 ]
-const PLACE_WORDS = { lake: 'the sunny lake', river: 'the sunset river', night: 'the night pond', ice: 'the icy sea', reef: 'the coral reef' }
+const orWords = new Intl.ListFormat('en', { type: 'disjunction' })
+/** A place inside a sentence, by the name on its button, so every screen calls it the same ("the starry night"). */
+const placeWord = (p) => `the ${PLACES[p].name.toLowerCase()}`
 /** Toys, rubbish, treasure and the made-up fish: why each is "not real" (field-guide.js says the same). */
 const PRETEND = {
   bluefish: 'Blue Fish is a pretend friend.',
@@ -158,6 +160,7 @@ export class Book {
     const book = this.getBook()
     const grid = this.el.querySelector('.book-grid')
     grid.textContent = ''
+    const recall = this.getTier() >= 3
     let found = 0
     for (const c of CREATURES) {
       const n = Number(book[c.id]) || 0
@@ -172,7 +175,8 @@ export class Book {
       tile.appendChild(img)
       const label = document.createElement('div')
       label.className = 'tile-name'
-      label.textContent = n ? c.name : Object.keys(c.places).map((p) => PLACES[p].emoji).join('')
+      // (once two-clue riddles come, a mystery tile shows no places: where it lives is remembered, or asked)
+      label.textContent = n ? c.name : recall ? '' : Object.keys(c.places).map((p) => PLACES[p].emoji).join('')
       tile.appendChild(label)
       // A caught tile shows just its picture and name: no "×3" tally to chase
       if (!n) {
@@ -201,7 +205,7 @@ export class Book {
             this.note.textContent += ` ${HIDES[c.id]}`
             return this.voice.sayNow(`Not found yet! ${HIDES[c.id]}`)
           }
-          this.voice.sayNow(where.length === Object.keys(PLACES).length ? 'Not found yet! It could be in any place.' : `Not found yet! Try the ${where.map((p) => PLACES[p].name.toLowerCase()).join(' or the ')}.`)
+          this.voice.sayNow(where.length === Object.keys(PLACES).length ? 'Not found yet! It could be in any place.' : `Not found yet! Try ${orWords.format(where.map(placeWord))}.`)
         }
       })
       grid.appendChild(tile)
@@ -290,6 +294,9 @@ export class Book {
 
   renderSort() {
     this.tray.textContent = ''
+    // From tier 2 the baskets show no place pictures, so sorting is remembering "fresh water or sea", not
+    // matching the ❄️ of the place clue to the ❄️ under a basket (tapping a basket still says what goes in it)
+    this.el.querySelector('.sort-baskets').classList.toggle('recall', this.getTier() >= 2)
     for (const { inside, el } of Object.values(this.baskets)) {
       inside.textContent = ''
       el.classList.remove('hint')
@@ -438,18 +445,19 @@ export class Book {
   }
 
   /**
-   * After a wrong basket. Tier 1 hears the answer (and the basket is ringed). Older players first get
-   * something to think with: where they caught it, or "is it real?"; a second miss sets it aside (drop),
-   * and only a miss after coming back to it gives the answer.
+   * After a wrong basket, everyone first gets something to think with: where they caught it, or "is it
+   * real?" (so tapping baskets in turn is not quicker than thinking). Tier 1 hears the answer on the second
+   * miss (and the basket is ringed); older players have it set aside then (drop), and only a miss after
+   * coming back to it gives the answer.
    */
   clue(c, tries) {
-    if (this.getTier() < 2 || tries >= 2) {
+    if (tries >= 2) {
       this.told.add(c.id)
       return this.why(c)
     }
     if (homeOf(c) === 'pretend') return REAL_Q[c.id]
     const who = MANY[c.id] ?? lower(c.name)
-    return `You catch ${who} at ${listWords.format(Object.keys(c.places).map((p) => PLACE_WORDS[p]))}.`
+    return `You catch ${who} at ${listWords.format(Object.keys(c.places).map(placeWord))}.`
   }
 
   /** Pick the column count that makes the biggest pictures with every sticker on screen. */

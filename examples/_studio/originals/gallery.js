@@ -62,15 +62,17 @@ export function createGallery({ renderer, scene, camera, openButton, saveButton,
     return canvas.toDataURL('image/jpeg', 0.82)
   }
 
-  /** Keeps the scene as it looks now (or just the `crop` part of it), newest last. */
+  /** Keeps the scene as it looks now (or just the `crop` part of it), newest last; returns the picture. */
   function keep(crop) {
-    pictures = [...pictures, snapshot(crop)].slice(-KEEP)
+    const url = snapshot(crop)
+    pictures = [...pictures, url].slice(-KEEP)
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(pictures))
       persistent = true
     } catch {
       persistent = false
     }
+    return url
   }
 
   openButton.onclick = show

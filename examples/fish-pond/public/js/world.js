@@ -586,7 +586,8 @@ export class World {
       this.rig.rotation.set(0, 0, 0)
       this.rig.position.y = RIG.y
     }
-    if (this.lanternMat && P.night) this.lanternMat.emissiveIntensity = 5 + Math.sin(t * 7) * 0.6 + Math.sin(t * 13) * 0.4
+    // A steady lantern that only breathes slowly (a flicker, however mild, tugs at the eye during play)
+    if (this.lanternMat && P.night) this.lanternMat.emissiveIntensity = 5 + Math.sin(t * 0.8) * 0.3
     if (this.boat) this.lantern.position.copy(this.boat.localToWorld(new THREE.Vector3(0, 1.2, -1.0)))
     // Sky friend
     if (this.skyBody) {

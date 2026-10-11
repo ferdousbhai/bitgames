@@ -19,6 +19,7 @@ img { -webkit-user-drag: none; pointer-events: none; }
   position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
   text-align: center; padding: 16px;
 }
+#wake { z-index: 50; background: radial-gradient(circle at 50% 35%, #fff6e0, #8fd3ff 70%); }
 #loading { background: radial-gradient(circle at 50% 35%, #fff6e0, #8fd3ff 70%); color: #3a2a7a; font-size: 22px; font-weight: 800; }
 .spinner { font-size: 72px; animation: hop 2.4s ease-in-out infinite; }
 @keyframes hop { 0%, 100% { transform: translateY(10px) rotate(-8deg); } 50% { transform: translateY(-16px) rotate(8deg); } }

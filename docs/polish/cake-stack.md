@@ -554,3 +554,39 @@ Playwright in Chromium (`--use-angle=gl`) with stubbed speech. Scripts and scree
 ### Remaining ideas
 
 - A tier-3 "spot the mistake" cake. A "copy my cake" prompt in free stacking. A cream swatch in place of 🌼 for vanilla.
+
+## Bug-fix pass (2026-10-11, not yet built or deployed)
+
+Starting point: both reviews scored 8.5. This pass fixes the six bugs they listed and nothing else in the design.
+
+### Bugs and fixes
+
+| Bug | Fix | Where |
+| --- | --- | --- |
+| A wrong layer on the cake replaced the next dot's wanted picture with the wrong flavour, so the order misstated what was wanted. | The dot keeps the wanted picture (and its ring). The wrong flavour shows as a small tilted, dashed badge above that dot until it is tapped off. | `examples/cake-stack/public/js/main.js:1576-1582`, `style.css:578-586` |
+| Counting: the candle came back straight after a miscount, so mashing it recounted the same cake aloud again and again. | After a miscount the candle stays hidden until the cake changes. A landing layer or a layer taken off brings it back. | `main.js:1173-1174` (the candle reappears at `:689` and `:785`) |
+| Counting: a careless count and a careful count got the same reward line. | A cake counted right only after a miscount ends with "Four layers. We got there!". The first-try line ("…make your little cake!") is unchanged. | `main.js:1149-1150` |
+| Recipe-studio share preview: slices on the same 3D plate overlapped, so a plate holding 2 looked like 1. | The slices on each plate fan out side by side, tips at the middle, facing the camera, with a small gap between them. They read as the part of the cake each friend has. | `examples/_studio/originals/recipe-studio.js:189-200` (copied, identical, to `public/js/recipe-studio.js`) |
+| Title `.tag` was pale on a translucent pink pill. | The pill is solid `#b04a7a` with white text (about 5.9:1). | `style.css:32` |
+| Tier-3 cut choice: picking the cut that leaves slices over had no consequence the child could notice. | Picking a cut is answered straight away: "8 slices. Some will be left over, for the baker." or "…None will be left over." | `party-share.js:270-271` |
+| Landscape 1194×834: the share card's plates and slices were tight for small fingers. | Landscape screens at least 700 px tall get plates of 116 px or more, 46 px faces, 36 px slices and a 30 px status, on a card up to 54vw wide. | `style.css:489-496` |
+
+### Evidence
+
+Playwright in Chromium (`--use-angle=gl`) with stubbed speech. The scripts and screenshots are in the scratch folder `polish3/cake-stack/`: `play.mjs`, `studio.mjs` and `title.mjs`. There were 0 console or page errors in every run.
+
+| Run | Result |
+| --- | --- |
+| `mr-2-oops.png` (1194×834), `pr-1-oops.png` (834×1194) | The next dot keeps the wanted 🍓 or 🌼 with its ring, and a tilted 🍫 badge sits above it. |
+| 🧮 random, 2 cakes (`cr.log`) | Every candle press was at a different cake size (7, 6, 1, 7, …). There were no repeated identical counts. |
+| 🐢 careful with one deliberate over-count (`co.log`) | 5 → "Too many!" → two layers taken off → "1, 2, 3. Three layers. We got there!". The second cake behaved the same way at 6 → 4. |
+| Studio `st-s4/s8/s12.png` (834×1194) | Plates holding 2+1, 2/2/2 and 6/6 show separate fanned slices. The voice said "Fair share! 6 each: one half of the cake each!" |
+| `title-834.png`, `title-1194.png` | The tag reads white on solid berry. |
+| Tier 3, careful, leftover cut chosen (`lc3.log`) | "8 slices. Some will be left over, for the baker. Share them fairly!", then "8 slices, 3 friends. 2 each, and 2 for the baker!" |
+| `lc3-2-part.png`, `pc-12-share.png` (1194×834) | Three friends and the baker fit on one row at the larger size. Four friends and the baker wrap the baker onto a second row. |
+
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids cake-stack --run cake-stack-f1`: BOOT + PLAY ready, 0 errors. `node --check` passes on `main.js`, `party-share.js` and both copies of `recipe-studio.js`, and the two copies are identical.
+
+### Remaining ideas
+
+- A tier-3 "spot the mistake" cake. A "copy my cake" prompt in free stacking. Clearer studio glyphs than ⌫ and 🔎⚖️. "So straight!" at most once per visit.

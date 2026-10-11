@@ -272,10 +272,13 @@ export class World {
   }
 
   /**
-   * The flowers the child plants at home, in a row along the front of the burrow's lawn (petal
-   * colours from FLOWERS). Called again with the whole row each time one is planted or taken back.
+   * The flowers the child plants at home, in a row from Pip's side along the front of the burrow
+   * (petal colours from FLOWERS), clear of Pip, the mound and the pantry panel on the left (closer
+   * together on an upright screen, where there is less room beside Pip). Called again with the whole
+   * row each time one is planted or taken back.
    */
-  plantRow(colors) {
+  plantRow(colors, upright = false) {
+    const step = upright ? 0.48 : 0.6
     for (const f of this.planted ?? []) {
       this.scene.remove(f)
       const i = this.items.indexOf(f)
@@ -284,8 +287,8 @@ export class World {
     for (const f of this.homeFlowers ?? []) f.visible = !colors.length
     this.planted = colors.map((color, k) => {
       const f = copy(this.templates.flower, { recolor: { petal: [FLOWERS[color].hex] }, shadow: true })
-      f.position.set(HOME_X - 2.9 + k * 0.78, 0, -0.55)
-      f.scale.setScalar(1.15)
+      f.position.set(HOME_X + 0.8 + k * step, 0, 0.35)
+      f.scale.setScalar(upright ? 1 : 1.15)
       f.rotation.y = rand(-0.4, 0.4)
       f.userData.sway = k
       this.tag(f, 'flower')
@@ -367,6 +370,14 @@ export class World {
         // a soft brown rim and body, not near-black: dark edges read as a beetle against the sky
         const f = copy(this.templates.butterfly, { recolor: { ...b.recolor, ...BUTTERFLY_SOFT } })
         f.scale.setScalar(2.2)
+        // a little of their own colour in the shade, so a wing seen from below (lit by the green
+        // ground light) stays its colour rather than a dark olive silhouette
+        f.traverse((o) => {
+          if (!o.isMesh || o.material.userData.glow) return
+          o.material.emissive.copy(o.material.color)
+          o.material.emissiveIntensity = 0.3
+          o.material.userData.glow = true
+        })
         f.userData = { kind: 'butterfly', phase: rand(0, 6), ox: rand(2, 8), oz: rand(-3, -1.2), oy: rand(1.8, 3.2), x: bunnyX + 25 + i * 6, rise: 0, scare: 0, slot: b.butterflies > 1 ? i / (b.butterflies - 1) : 0.5 }
         f.position.set(f.userData.x, 2, 0)
         f.userData.wings = [f.getObjectByName('butterfly_wing_L'), f.getObjectByName('butterfly_wing_R')]

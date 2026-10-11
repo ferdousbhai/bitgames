@@ -126,6 +126,9 @@ const GROUP_LEVELS = [[3, 3], [3, 3, 3], [3, 3, 4], [3, 3, 3, 3], [3, 3, 4, 3]]
  * that word matches ("cub" is a lion's or a panda's baby), and the baby that wakes up is theirs.
  */
 const CRADLE_LEVEL = 3
+/** Clue words ("Moo!", "Kit!") said across a board: at most this many in this many seconds. */
+const CLUE_BURST = 3
+const CLUE_WINDOW = 5
 /**
  * Cards on each level a mode offers. Sounds stops at 8 pairs: ten identical loudspeakers is too
  * much to hold in mind for a young child. (An old Sounds save marking level 6 done is simply ignored.)
@@ -240,6 +243,7 @@ const game = {
   setSize: {}, // cards in each set: 2 for a pair, 3 or 4 for a group
   slips: 0, // turns missed although a match for the first card had already been seen
   named: new Set(), // words already said on a reveal this round (each name is said once)
+  clueTimes: [], // when clue words were last said (see sayClue): a quick tapper hears at most a few
   goalSaid: null, // the mode whose goal was last spoken, so it is never said twice in a row
   busy: false,
   mismatch: null,
@@ -893,14 +897,32 @@ class Card {
   /**
    * A clue card's word ("Moo!", "Kitten!"), said first: older names waiting are dropped. Never late:
    * it goes stale once the card turns back. Said on the first two reveals of each card in a round;
-   * after that the written tag carries it (a quick tapper is not answered with a stream of words),
-   * and tapping the open card says it again (again = true).
+   * after that the written tag carries it, and tapping the open card says it again (again = true).
+   * Across the board, at most CLUE_BURST clue words in CLUE_WINDOW seconds: random tapping is
+   * answered by the tags (and a sound card's call), not by a stream of words.
    */
   sayClue(again = false) {
     if (!again && this.clues >= 2) return
     const text = this.kind === 'sound' ? WORDS[this.animal].call : nameOf(this.critter)
     if (talk.has(text)) return
-    talk.say(text, { stale: () => this.state !== 'open' && this.state !== 'opening', onStart: () => this.clues++ })
+    game.clueTimes = game.clueTimes.filter((t) => game.time - t < CLUE_WINDOW)
+    if (!again && game.clueTimes.length >= CLUE_BURST) return
+    talk.say(text, {
+      stale: () => this.clueStale(),
+      onStart: () => {
+        this.clues++
+        game.clueTimes.push(game.time)
+      },
+    })
+  }
+
+  /**
+   * A clue is never said late: it goes stale once its card turns back. A sound card's call and word
+   * also outlast a quick match, so the child hears "Moo!" before "The cow moos!" answers it.
+   */
+  clueStale() {
+    if (this.kind === 'sound') return this.state === 'down' || this.state === 'closing'
+    return this.state !== 'open' && this.state !== 'opening'
   }
 
   showTag() {
@@ -924,7 +946,7 @@ class Card {
   /** The sound card's call, with its waves pulsing while it plays. */
   playCall(again = false) {
     talk.hurry() // the sound is the clue: older names (and a goal still being said) give way
-    talk.call(this.animal, { onStart: () => (this.waveUntil = game.time + (VOICE_LENGTH[this.animal] ?? 0.6) + 0.2), stale: () => this.state !== 'open' && this.state !== 'opening' })
+    talk.call(this.animal, { onStart: () => (this.waveUntil = game.time + (VOICE_LENGTH[this.animal] ?? 0.6) + 0.2), stale: () => this.clueStale() })
     this.sayClue(again)
   }
 
@@ -1405,6 +1427,7 @@ function startLevel(level) {
   game.recalled = 0 // cards found again from memory: a seen card turned over as the match
   game.setSlips = {}
   game.named = new Set()
+  game.clueTimes = []
   talk.newRound()
   game.peekUsed = false
   $('peek').disabled = false
@@ -1633,8 +1656,8 @@ function onMismatch(cards, kind = null) {
     if (cradle) {
       const word = WORDS[cradle.animal].baby
       const parents = [...new Set(game.cards.filter((c) => c.kind === 'animal' && WORDS[c.animal].baby === word).map((c) => c.animal))]
-      // Droppable: the next sleeping baby's word (the clue) may cut it short
-      talk.sayOnce(`${an(word)} ${word} is ${orWords.format(parents.map((p) => `${an(p).toLowerCase()} ${p}’s`))} baby.`, { droppable: true })
+      // Not droppable: the one corrective fact on this board is heard whole; the next clue waits
+      talk.sayOnce(`${an(word)} ${word} is ${orWords.format(parents.map((p) => `${an(p).toLowerCase()} ${p}’s`))} baby.`)
     }
   }
   game.mismatch = { cards }

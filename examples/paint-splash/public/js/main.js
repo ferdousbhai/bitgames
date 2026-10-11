@@ -10,8 +10,8 @@ import { Bot } from './bot.js'
 import { Effects } from './effects.js'
 import { Input } from './input.js'
 import { ITEM_KINDS, Items } from './items.js'
-import { Job, RATIO_STEP, SHAPES, WHITE_STEP, chooseJob, fits, reachOf } from './jobs.js'
-import { HALF_D, HALF_W, MIXED, MIXES, POTS, PRIMARIES, PaintMap, RAINBOW, ROLLER_R, SEAT_COLORS, SEAT_PAINT, RATIO_CODES, TINTS, WET_MS, WHITE, colourOf, mixWords } from './paint.js'
+import { Job, RATIO_STEP, SHAPES, WHITE_STEP, WRONG_SHARE, chooseJob, fits, reachOf } from './jobs.js'
+import { HALF_D, HALF_W, MIXED, MIXES, POTS, PRIMARIES, PaintMap, RAINBOW, ROLLER_R, SEAT_COLORS, SEAT_PAINT, RATIO_CODES, TINTS, WET_MS, WHITE, colourOf, mixWords, ratioCode } from './paint.js'
 import { ANIMALS, ANIMAL_IDS, COLLIDE_AHEAD, COLLIDE_R, MAX_SPEED, Painter, newStats } from './painter.js'
 import { clamp, damp, easeInOut, store } from './util.js'
 import { createVoice, listWords } from './speech.js'
@@ -826,6 +826,7 @@ function stopRound() {
   game.history = []
   game.offer = null
   game.pageFull = false
+  game.pages = [] // full pages turned this round (pictures), shown again at the results
   game.glance = null
   game.told = new Set() // recipes and tips already said this round
   game.white = false
@@ -1085,11 +1086,14 @@ function pictureRect() {
   return [cx - w / 2, cy - h / 2, w, h]
 }
 
+/** The round ended on a fresh page with no shape painted on it yet (the full pages are already in My pictures). */
+const blankPage = () => !!game.pages?.length && !game.jobs.some((j) => j.done)
+
 /** Puts this round's finished picture in My pictures, once; the frame button hops to show where it went (no white flash). */
 function keepFinishedPicture(announce) {
   if (game.state !== 'results' || game.keptRound === roundId()) return
   game.keptRound = roundId()
-  gallery.keep(pictureRect())
+  if (!blankPage()) gallery.keep(pictureRect())
   if (!announce) return
   audio.studio('keep')
   const btn = $('results-save')
@@ -1100,6 +1104,8 @@ function keepFinishedPicture(announce) {
 
 /** The results show at most this many shape chips (the last one says how many more). */
 const SHAPE_CHIPS = 8
+/** Full pages turned this round come back at the results as small pictures (the newest few). */
+const PAGE_CHIPS = 2
 
 function renderResults() {
   const final = game.final
@@ -1114,7 +1120,13 @@ function renderResults() {
   // The shapes painted (each with its colours), then the colours found by mixing.
   // A long round shows its first shapes and how many more, so the results read as a picture, not a tally.
   const shown = jobs.length > SHAPE_CHIPS ? jobs.slice(0, SHAPE_CHIPS - 1) : jobs
-  $('found').innerHTML = shown.map(([shape, ...targets], i) => `<div class="recipe shape-chip" style="animation-delay:${0.15 * i}s" title="${jobName(shape, targets)}"><span class="shape">${SHAPES[shape].emoji}</span>${targets.map((m) => dot(colourOf(m).hex)).join('')}</div>`).join('')
+  // Pages turned this round come first, so the shapes painted on them are seen again, not just the last page.
+  // A round that ended on a fresh page with nothing painted on it shows the last full page as the picture.
+  const blank = blankPage()
+  $('results-page').classList.toggle('hidden', !blank)
+  if (blank) $('results-page').src = game.pages.at(-1)
+  const pages = (blank ? game.pages.slice(0, -1) : game.pages ?? []).map((url, i) => `<img class="page-chip" src="${url}" alt="Our page ${i + 1}" style="animation-delay:${0.15 * i}s">`).join('')
+  $('found').innerHTML = pages + shown.map(([shape, ...targets], i) => `<div class="recipe shape-chip" style="animation-delay:${0.15 * i}s" title="${jobName(shape, targets)}"><span class="shape">${SHAPES[shape].emoji}</span>${targets.map((m) => dot(colourOf(m).hex)).join('')}</div>`).join('')
     + (jobs.length > shown.length ? `<div class="recipe shape-chip more" title="${jobs.length - shown.length} more shapes">+${jobs.length - shown.length}</div>` : '') + (made.length
     ? made.map((m, i) => `<div class="recipe" style="animation-delay:${0.2 * i}s" title="${mixWords(m)}">${recipe(m)}</div>`).join('')
     : `<div class="recipe none">${PRIMARIES.map((b) => dot(MIXES[b].hex)).join('')}<span class="hint-mix">➕💧</span></div>`)
@@ -1407,9 +1419,36 @@ function followTarget(pos, look, glance = true) {
   // tall screen shows more of the picture instead of the ground beyond it.
   const h = 15 * k, back = 11.5 * k
   const nearRay = back - h / Math.tan(Math.atan2(h, back) + THREE.MathUtils.degToRad(camera.fov / 2))
+  fz += leanToShapes(tx, fz, h, back)
   const tz = clamp(fz, -HALF_D + 3, Math.max(-HALF_D + 3, Math.min(HALF_D - 4, HALF_D + 1.6 - nearRay)))
   look.set(tx, 0, tz)
   pos.set(tx, h, tz + back)
+}
+
+/**
+ * A finished shape just below the clear view (cut by the pots or the bottom edge) while the child paints
+ * nearby: the follow camera leans down a little (up to 3 m) to show it whole, as long as the shape being
+ * painted stays in view. It fades out as the shape lies further off, so the camera never chases the page.
+ */
+function leanToShapes(tx, fz, h, back) {
+  if (!game.jobs.length) return 0
+  const pitch = Math.atan2(h, back), half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+  // How far down the page (metres from the point the camera looks at) a screen height shows the ground.
+  const groundAt = (y) => {
+    const a = pitch + Math.atan((2 * y / innerHeight - 1) * half)
+    return a > 0.05 ? back - h / Math.tan(a) : -Infinity
+  }
+  const view = clearView()
+  const lowest = groundAt(view.bottom), highest = groundAt(view.top)
+  let lean = 0
+  for (const job of game.jobs) {
+    if (!job.done || Math.abs(job.x - tx) > 8) continue
+    const d = job.z + job.r - (fz + lowest)
+    if (d > 0) lean = Math.max(lean, Math.min(d, 7 - d))
+  }
+  const job = game.job
+  if (lean > 0 && job && !job.done) lean = Math.min(lean, Math.max(0, job.z - job.size - (fz + highest)))
+  return Math.min(lean, 3)
 }
 
 /** Top view that fits the whole picture between the title and the cards. */
@@ -1554,6 +1593,8 @@ function ruleSlip(rule, got) {
   return `That's ${w(got)}.`
 }
 const BROWN = 7
+/** A rule as a short key, to tell rules apart (said-once lines). */
+const ruleKey = (r) => (r.any ? 'any' : `${r.with ?? 0}-${r.without ?? 0}`)
 const partColour = (part) => (part.rule ? ruleWords(part.rule) : colourOf(part.code).word)
 
 /** The request in words: "Paint the fish green!", "Paint the fish a colour with blue in it!", or for two parts "Paint the tree: green leaves, a brown trunk!" */
@@ -1664,6 +1705,19 @@ function nextJob() {
     const spot = placeSpot(spec.shape)
     if (spot) options.push({ spec, spot })
   }
+  // From the brown step on, the card always offers a two-part shape when one still fits (they are bigger, so
+  // on a busy page they fail to fit more often than the one-part shapes, and brown from three paints would quietly vanish).
+  if (tier >= 2 && options.length && !options.some((o) => SHAPES[o.spec.shape].parts.length > 1)) {
+    for (let k = 0; k < 12; k++) {
+      const spec = chooseJob(tier, game.history)
+      if (SHAPES[spec.shape].parts.length < 2 || options.some((o) => o.spec.shape === spec.shape)) continue
+      const spot = placeSpot(spec.shape)
+      if (spot) {
+        options[options.length - 1] = { spec, spot }
+        break
+      }
+    }
+  }
   if (!options.length) {
     // No room left for another shape: the page is full. 🖌️ keeps painting on a fresh page.
     game.pageFull = true
@@ -1705,7 +1759,7 @@ function pickJob(k) {
 
 function chalkJob({ spec, spot }, tier) {
   const job = { ...spec, x: Math.round(spot.x * 100) / 100, z: Math.round(spot.z * 100) / 100, scale: spot.scale, i: game.history.length, show: tier === 0, t0: gameTime(), white: tier >= WHITE_TIER }
-  game.history.push({ shape: spec.shape, targets: spec.targets })
+  game.history.push({ shape: spec.shape, targets: spec.targets, rules: spec.rules })
   send({ t: 'job', r: roundId(), job })
   addJob(job, tier)
 }
@@ -1861,30 +1915,47 @@ function dropJob(job) {
   renderJob()
 }
 
-/** Tells the recipe (and shows it on the card) for one part of the request. */
-function giveRecipe(job, part, lead = '') {
+/** Shows the recipe on the card for one part of the request, and tells it (`say`). */
+function giveRecipe(job, part, lead = '', say = true) {
   job.helped = true
   job.show = true
   game.told.add(part.target)
   renderJob()
-  game.notes.push({ words: `${lead}${recipeWords(part.target)}` })
+  if (say) game.notes.push({ words: `${lead}${recipeWords(part.target)}` })
+}
+
+/**
+ * How a part is painted: the colour (for a rule, the allowed one most of it already is) and its paints
+ * in order (a rule's own paint first). The rescue ring, its words and the still picture all follow it.
+ */
+function planOf(part) {
+  if (part.lean && !part.rule) return { colour: part.code, order: colourOf(part.code).recipe }
+  const colour = part.rule ? part.ok.reduce((a, b) => (part.byMix[b] > part.byMix[a] ? b : a)) : part.target
+  let order = MIXES[colour].recipe
+  if (part.rule?.with) order = [part.rule.with, ...order.filter((b) => b !== part.rule.with)]
+  return { colour, order }
 }
 
 /** The paint a part needs next: the one of its recipe not on it yet (for a rule, its own paint first). */
 function nextPaint(job, part) {
-  const colour = part.rule ? part.ok.reduce((a, b) => (part.byMix[b] > part.byMix[a] ? b : a)) : part.target
-  let order = MIXES[colour].recipe
-  if (part.rule?.with) order = [part.rule.with, ...order.filter((b) => b !== part.rule.with)]
+  let { order } = planOf(part)
+  if (part.lean && !part.rule) order = [part.lean, part.target & ~part.lean]
   const n = part.cells.length || 1
   // A ratio: its paint again once the even mix is on (yellow over the shiny orange, for a yellowish orange).
   if (part.lean && !part.rule && (part.byMix[part.target] / n > 0.3 || part.share > 0.05)) return part.lean
-  if (part.lean && !part.rule) order = [part.lean, ...order.filter((b) => b !== part.lean)]
   const on = (b) => {
     let k = 0
     for (let m = 1; m < 16; m++) if (m & b && Job.fits(part, m)) k += part.byMix[m]
     return k / n > 0.08
   }
   return order.find((b) => !on(b)) ?? order.at(-1)
+}
+
+/** A rescue line is said once a round; the ring and the still picture show it again without words. */
+function sayOnce(words) {
+  if (game.told.has(words)) return
+  game.told.add(words)
+  game.notes.push({ words })
 }
 
 /** A soft, still ring round one pot (0: none): the rescue for a child who is stuck. */
@@ -1901,16 +1972,21 @@ function checkJob(t) {
     // A colour that can't become the wanted one: say what it is and why, and how to fix it (once a round).
     job.slipped = true
     job.slips++
-    const got = MIXES[job.wrongColour(wrong)].word
+    const bad = job.wrongColour(wrong)
+    const got = MIXES[bad].word
+    // Each slip line is said once a round (the same mix on the same colour or rule); a repeat is left to the card and the chalk.
+    const key = `slip:${wrong.rule ? ruleKey(wrong.rule) : wrong.code}:${bad}`
+    const fresh = !game.told.has(key)
+    game.told.add(key)
     if (wrong.rule) {
-      game.notes.push({ words: ruleSlip(wrong.rule, job.wrongColour(wrong)) })
+      if (fresh) game.notes.push({ words: ruleSlip(wrong.rule, bad) })
     } else if (job.tier >= RULE_TIER) {
       // White where it doesn't belong (said why once a round): "That's light green, not green. White makes colours light."
-      const pale = job.wrongColour(wrong) & WHITE && !(wrong.target & WHITE) && !game.told.has('pale')
+      const pale = bad & WHITE && !(wrong.target & WHITE) && !game.told.has('pale')
       if (pale) game.told.add('pale')
-      game.notes.push({ words: `That's ${got}, not ${colourOf(wrong.code).word}.${pale ? ' White makes colours light.' : ''}` })
+      if (fresh) game.notes.push({ words: `That's ${got}, not ${colourOf(wrong.code).word}.${pale ? ' White makes colours light.' : ''}` })
     }
-    else giveRecipe(job, wrong, `That's ${got}. `)
+    else giveRecipe(job, wrong, `That's ${got}. `, fresh)
     if (!game.told.has('fix')) {
       game.told.add('fix')
       game.notes.push({ words: 'Let it dry, then roll over it.' })
@@ -1925,16 +2001,35 @@ function checkJob(t) {
     const have = recipeBits.filter((b) => active.byMix[b] > active.cells.length * 0.2)
     if (!active.rule && still > WET_TIP_MS && have.length === 1 && active.share < 0.05 && recipeBits.length === 2 && !job.told.has('wet')) {
       // One paint of the recipe sits on the shape and nothing is mixing: roll the other over it while it shines.
+      // Each tip is said once a round: a second shape with the same moment waits for the rescue ring instead.
       job.told.add('wet')
-      job.helped = true
       const other = recipeBits.find((b) => !have.includes(b))
-      game.notes.push({ words: `Roll ${MIXES[other].word} over the shiny ${MIXES[have[0]].word}!` })
+      if (!game.told.has(`wet:${other}:${have[0]}`)) {
+        game.told.add(`wet:${other}:${have[0]}`)
+        job.helped = true
+        game.notes.push({ words: `Roll ${MIXES[other].word} over the shiny ${MIXES[have[0]].word}!` })
+      }
+    } else if (active.lean && !active.rule && active.off >= WRONG_SHARE && !job.told.has('lean')) {
+      // A ratio leaning the wrong way (red twice for a yellowish orange): a gentle slip, named once a round.
+      job.told.add('lean')
+      job.told.add('wet')
+      job.slipped = true
+      job.slips++
+      const other = active.target & ~active.lean
+      const off = ratioCode(active.target, other)
+      if (!game.told.has(`lean:${off}`)) {
+        game.told.add(`lean:${off}`)
+        game.notes.push({ words: `That's ${colourOf(off).word}: more ${MIXES[other].word}. ${capital(colourOf(active.code).word)} needs more ${MIXES[active.lean].word}.` })
+      }
     } else if (active.lean && !active.rule && still > RATIO_TIP_MS && active.share < 0.05 && active.byMix[active.target] > active.cells.length * 0.5 && !job.told.has('wet')) {
       // The even mix is on and the child has stopped, but there is not more of the paint it leans to yet:
       // roll that one over the mix while it still shines (soon, before it dries).
       job.told.add('wet')
-      job.helped = true
-      game.notes.push({ words: `${capital(MIXES[active.target].word)}! Now more ${MIXES[active.lean].word}: roll ${MIXES[active.lean].word} over the shiny ${MIXES[active.target].word}.` })
+      if (!game.told.has(`more:${active.code}`)) {
+        game.told.add(`more:${active.code}`)
+        job.helped = true
+        game.notes.push({ words: `${capital(MIXES[active.target].word)}! Now more ${MIXES[active.lean].word}: roll ${MIXES[active.lean].word} over the shiny ${MIXES[active.target].word}.` })
+      }
     } else if (active.rule?.with && still > WET_TIP_MS && active.share < 0.05 && active.byMix[active.rule.with] > active.cells.length * 0.2 && !game.told.has('friend')) {
       // Plain blue on "a mix of blue and one more paint": blue alone isn't a mix (said once a round).
       game.told.add('friend')
@@ -1950,14 +2045,18 @@ function checkJob(t) {
     if (stuck && job.rescue < 1) {
       job.rescue = 1
       job.helped = true
-      game.notes.push({ words: `Try the ${MIXES[nextPaint(job, active)].word} pot.` })
+      // The pot the child already holds: roll it on the shape, rather than "try" it.
+      const next = nextPaint(job, active)
+      const where = job.parts.length > 1 ? active.word : job.def.name
+      sayOnce(next === game.me?.paint ? `Roll your ${MIXES[next].word} over the ${where}.` : `Try the ${MIXES[next].word} pot.`)
     }
     if (job.rescue >= 1) suggestPot(active.share < 0.3 ? nextPaint(job, active) : 0)
     if (job.rescue === 1 && active.share < 0.05 && still > GHOST_MS) {
       job.rescue = 2
-      job.ghost(active, visiblePoint(active))
-      const paints = colourOf(active.rule ? active.ok[0] : active.code).recipe.map((b) => MIXES[b].word)
-      game.notes.push({ words: `Look: ${paints.slice(0, -1).join(', ')}, then ${paints.at(-1)} on top while it shines.` })
+      const plan = planOf(active)
+      job.ghost(active, visiblePoint(active), plan)
+      const paints = plan.order.map((b) => MIXES[b].word)
+      sayOnce(`Look: ${paints.slice(0, -1).join(', ')}, then ${paints.at(-1)} on top while it shines.`)
     }
     if (job.rescue === 2 && active.share > 0.2 && job.ghostGroup) job.ghost(null)
     // Still stuck long after the picture, or a long while on a shape that is barely half done: it is too hard
@@ -2057,7 +2156,12 @@ function finishJob(job) {
   audio.studio('keep')
   // The child's own choice of colour: say back what they chose and how they made it.
   const own = job.parts.find((p) => p.rule?.any)
-  if (own) game.notes.push({ words: `${capital(MIXES[own.target].word)}! ${recipeWords(own.target)}` })
+  if (own) {
+    // The recipe is said once a round; after that just the colour's name.
+    const told = game.told.has(own.target)
+    game.told.add(own.target)
+    game.notes.push({ words: `${capital(MIXES[own.target].word)}!${told ? '' : ' ' + recipeWords(own.target)}` })
+  }
   effects.sparkle(job.x, 0.8, job.z, colourOf(job.parts[0].code).hex, 16, 2)
   renderJob()
 }
@@ -2068,7 +2172,7 @@ function finishJob(job) {
  */
 function freshPage(at) {
   softenPage()
-  keepWholePage()
+  game.pages = [...(game.pages ?? []), keepWholePage()].slice(-PAGE_CHIPS)
   for (const job of game.jobs) job.dispose()
   game.jobs = []
   game.job = null
@@ -2130,10 +2234,11 @@ function keepWholePage() {
   camera.position.set(0, h, h * 0.12)
   camera.lookAt(0, 0, 0)
   camera.updateMatrixWorld()
-  gallery.keep(pictureRect())
+  const url = gallery.keep(pictureRect())
   camera.position.copy(pos)
   camera.lookAt(camLook)
   camera.updateMatrixWorld()
+  return url
 }
 
 function say() {
@@ -2149,7 +2254,7 @@ function updateHud(t) {
   game.lastHud = t
   updateBar()
   if (game.state !== 'play') return
-  $('hint').classList.toggle('hidden', t - game.lastMoveAt < IDLE_HINT_MS)
+  $('hint').classList.toggle('hidden', t - game.lastMoveAt < IDLE_HINT_MS || !!game.offer || asking())
   noticeMixes()
   checkJob(t)
   sayNextMix(t)

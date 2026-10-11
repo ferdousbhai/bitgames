@@ -328,16 +328,24 @@ export class Mist {
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)')
   }
 
-  show() {
+  /** Settle the cloud; `onReady` runs once it hides the pins (a question waits for it, so it is never asked through a thin cloud). */
+  show(onReady) {
     this.want = 1
+    this.onReady = onReady
   }
 
   hide() {
     this.want = 0
+    this.onReady = null
   }
 
   update(dt, t) {
-    this.on += (this.want - this.on) * Math.min(1, dt * (this.want ? 3 : 4))
+    this.on += (this.want - this.on) * Math.min(1, dt * (this.want ? 5 : 4))
+    if (this.onReady && this.on > 0.9) {
+      const ready = this.onReady
+      this.onReady = null
+      ready()
+    }
     const drift = this.reduced.matches ? 0 : 1
     for (const s of this.puffs) {
       s.visible = this.on > 0.02

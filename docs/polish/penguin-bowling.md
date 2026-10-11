@@ -811,3 +811,50 @@ No checklist items were open.
 
 - A tier-3 spare goal ("3 standing: can you get all 3?" or "which group will you go for?" on a split).
 - Rough-plan success rates were not measured separately. They reuse the measured straight spots: the edge gives 1–2 and the middle 8–10.
+
+## 2026-10-11: bug pass (round 9, after two 8.5 reviews)
+
+Every bug from both reviews is fixed. Files are under `examples/penguin-bowling/public/` unless named.
+
+1. **The cloud was thin when the question opened.** The numbers, the question and the count-along now wait until the cloud covers the pins (`mist.show(onReady)`, `js/count.js:332`, `:344`). The cloud also settles faster: 5/s, where it was 3/s. Taps on the lane are ignored while it settles (`c.waiting`, `js/main.js:649`; the guards are in `countPin` and the pointer handler).
+2. **💭 anchored the guess at 5 and competed with the plan card.**
+   - The dialog now opens with nothing chosen: 0 pins tipped, and Keep stays disabled until a pin is picked (`examples/_studio/originals/prediction.js:85`, `:92`, copied to `js/prediction.js`).
+   - Opening 💭 puts the plan card away. It comes back if the dialog closes without a kept guess (`planWaits`, `js/main.js:172`).
+   - Picking a plan rests 💭 until the next slide (`js/main.js:991`). It is dimmed while disabled (`style.css:159`).
+   - So each slide has one decision.
+3. **The swipe hand covered the plan card.** It waits while a plan, "where?" or 💭 card is open, and plays once the card closes (`style.css:156`).
+4. **A wrong pick did not count as a miss.** A right pick reset `game.misses` even after misses on the same question. Now only a first-try answer resets it (`js/main.js:761`).
+5. **A leaning pin was counted as standing.** A pin counted as standing that leant on a fallen pin was drawn nearly lying down. All pins counted as standing now stand up straight before the count (`pins.straighten()`, `js/lane.js:548`, called at `js/main.js:394`). `clearFallen` uses the same method.
+6. **Two sentences for one slide.**
+   - After a plan line ("Just as you planned!", a tip) or a 💭 result line, the cloud line, the question and "Tap the pins still standing." are not spoken. The "?" and the 👆 ask instead (`js/main.js:484`, `:660`).
+   - These are once-a-game lines, so they are still heard on a later slide.
+7. **"Bumpers down?" appeared on the first tier-3 rack**, using plans made at tier 2.
+   - `planHits` and `planNear` now restart at each tier (`setTier`, `js/main.js:532`).
+   - The offer never appears in the last frame (`js/main.js:911`).
+
+Small improvement (review 2, item 5): in the tier-1 "a few / a lot" picture, the knocked pins are the bright ones. They are orange and lie flat, on the card and in the 🎯 pill, so "a few" looks like a few (`style.css:524`, `js/main.js:1033`).
+
+### Evidence
+
+The runs used `scratchpad/polish3/penguin-bowling/play9.mjs`, with speech stubbed and logged with timestamps. Screenshots are in `r9/` and `r9l/`.
+
+| Run | Cloud when the numbers appear | Most-tilted standing pin at count (up.y) | Flagged sentence pairs | Errors |
+| --- | --- | --- | --- | --- |
+| Careful 834×1194, tier 1 | 0.90–0.91 (5 asks) | 1.000 (11 counts) | none | 0 |
+| Careful 1194×834 Night, tier 3 | 0.90–0.91 (10 asks) | 1.000 (14) | none | 0 |
+| Random 834×1194 Fishy, tier 2 | 0.90–0.91 (4) | 1.000 (17) | none | 0 |
+
+- **Misses:** the random tier-2 run now steps down to tier 1 at roll 5 (tiers `2222111…`). Before the fix it took until roll 10.
+- **Pairs left:** the pairs still under 1.5 s apart are an answer and its reply (for example "Yes!" + "8 and 2 make 10.", or a wrong pick + "Count the pins lying down."). One more is the first-time "The pins are hiding in a cloud." + its question.
+- **`pred9.mjs`, portrait and landscape:**
+  - the plan card is open and the hand is hidden;
+  - 💭 opens at 0 with no pins tipped, Keep is disabled, and the plan card is hidden behind it;
+  - Just play brings the plan card back;
+  - picking a plan disables 💭 and the hand plays;
+  - see `r9/pred-open.png`, `r9l/fresh-plan.png` and `r9l/plan-picked.png`.
+- **`bump9.mjs`:** tier 3 reached with tier-2 plan hits gives no offer. With tier-3 hits, the last frame gives no offer and frame 2 gives the offer.
+- **Screenshots:** `r9/lc3-ask-fallen-t3.png` shows the cloud opaque under the 1–10 strip.
+- **Test commands:**
+  - `browser.mjs --ids penguin-bowling --run penguin-bowling-f1`: 0 errors.
+  - The original-quality flow (Play → 💭 → + → Keep → Go → 💭 → Escape) passes. The dialog starts at 0, so + gives 1.
+  - `node --check` passes on `main.js`, `lane.js`, `count.js` and `prediction.js`.

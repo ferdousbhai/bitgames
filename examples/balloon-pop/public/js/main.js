@@ -157,9 +157,9 @@ const TIER_KEY = 'balloon-pop-tier'
 function loadTier() {
   try {
     const saved = JSON.parse(localStorage.getItem(TIER_KEY))
-    if ([1, 2, 3].includes(saved?.tier)) return { tier: saved.tier, climb: Math.max(0, Math.min(7, saved.climb | 0)) }
+    if ([1, 2, 3].includes(saved?.tier)) return { tier: saved.tier, climb: Math.max(0, Math.min(7, saved.climb | 0)), visited: true }
   } catch {}
-  return { tier: 1, climb: 0 }
+  return { tier: 1, climb: 0, visited: false }
 }
 /**
  * Only the Counting sky saves the tier: Three, Hearts and Red adapt within their own short visit, but a run of easy
@@ -204,17 +204,18 @@ function newRequest() {
 }
 
 /**
- * Clean baskets in a row move up one tier (three to reach plain slots from level 3, four to reach ten-frames from level 5,
- * so tier 2 is explored first); two bumpy ones move down one. Ten-frames (with one more, one less and the same) come
- * only to a child who began this visit on plain slots already: a careful young counter has a whole visit of plain
- * slots before difference problems, however clean the first one is.
+ * Four clean baskets in a row move up one tier (from level 3 to plain slots, from level 5 to ten-frames); two bumpy
+ * ones move down one. Each step waits for a visit begun on the tier below: the Counting sky's first visit (or the first
+ * after Start easy) stays on numbered slots all the way, so a careful three-year-old is not met with two-colour
+ * baskets, mixing and which-has-most within half a minute; and ten-frames (one more, one less, the same) come only to
+ * a child who began this visit on plain slots already. A focused sky (Three, Hearts, Red) adapts within its own visit.
  */
 function adapt(clean) {
   if (game.tier === 3 && clean) game.climb = Math.min(7, game.climb + 1)
   game.streak = clean ? game.streak + 1 : 0
   game.rough = clean ? 0 : game.rough + 1
-  const ready = game.tier === 1 ? game.level >= 3 : game.level >= 5 && game.startTier >= 2
-  if (game.tier < 3 && game.streak >= game.tier + 2 && ready) Object.assign(game, { tier: game.tier + 1, streak: 0, rough: 0 })
+  const ready = game.tier === 1 ? game.level >= 3 && (game.visited || !!adventure.option.focus) : game.level >= 5 && game.startTier >= 2
+  if (game.tier < 3 && game.streak >= 4 && ready) Object.assign(game, { tier: game.tier + 1, streak: 0, rough: 0 })
   else if (game.tier > 1 && game.rough >= 2) stepDown()
   saveTier()
 }
@@ -284,7 +285,7 @@ function hintFor(req) {
   if (req.type === 'dots') return 'Count the dots on each balloon, one by one.'
   if (req.type === 'most') return `Count each colour in ${who}'s bunch. Which number is biggest?`
   if (req.type === 'mix') return `${req.recipe} One of each for every ${req.target} balloon.`
-  if (req.type === 'add') return `Count ${req.parts[0]} first, then count on ${req.parts[1]} more.`
+  if (req.type === 'add') return `Start at ${req.parts[0]}, then count on ${req.parts[1]} more.`
   if (req.type === 'pair') return `Count the ${req.colours[0]} ones, then the ${req.colours[1]} ones.`
   return 'One balloon for each slot, then tap Give.'
 }
@@ -295,7 +296,7 @@ function answerFor(req) {
   if (req.type === 'same') return `${req.has} and ${req.total} more make ${req.ref}.`
   if (req.type === 'most') return `${cap(req.colour)} is the most. Give ${req.total} ${req.colour}.`
   if (req.type === 'mix') return `${req.parts[0]} ${req.colours[0]} and ${req.parts[1]} ${req.colours[1]}.`
-  if (req.type === 'add') return `${req.parts[0]} and ${req.parts[1]} more make ${req.total}.`
+  if (req.type === 'add') return `${req.parts[0]} and ${req.parts[1]} more make ${req.parts[0] + req.parts[1]}.`
   if (req.type === 'dots') return `Look for balloons with ${req.dots} dots.`
   return null
 }
@@ -325,13 +326,18 @@ function basketWords(sky) {
     const names = [...new Set(sky.items.map((item) => colourName(item.tint)))]
     return names.map((c) => `${sky.items.filter((item) => colourName(item.tint) === c).length} ${c}`).join(' and ')
   }
-  return sky.req.colours ? basketParts(sky).map((n, g) => `${n} ${sky.req.colours[g]}`).join(' and ') : String(sky.count)
+  if (sky.req.colours) return basketParts(sky).map((n, g) => `${n} ${sky.req.colours[g]}`).join(' and ')
+  // Counting on: the basket is what is added to the friend's own group.
+  return sky.req.type === 'add' && sky.req.has ? `${sky.count} more` : String(sky.count)
 }
 
 /** The outline colour of a waiting shape slot. */
 const SHAPE_TINT = { heart: '#ff6b9d', bunny: '#9b5de5' }
 
-/** A slot for one balloon of the request: its colour or shape, numbered once filled in tier 1. A filled one can be let go. */
+/**
+ * A slot for one balloon of the request: its colour or shape, numbered once filled in tier 1. A filled one can be let go,
+ * except one the friend already held (index null).
+ */
 function skySlot(req, n, item, index = n - 1) {
   const slot = picture(item ? (item.picture ?? req.colour) : (req.colour ?? req.picture), !!item)
   slot.classList.add('sky-slot')
@@ -351,8 +357,11 @@ function skySlot(req, n, item, index = n - 1) {
       num.textContent = req.type === 'dots' ? req.dots : n
       slot.append(num)
     }
-    slot.dataset.i = index
-    if (index === game.sky.items.length - 1) slot.classList.add('new')
+    if (index == null) slot.classList.add('own')
+    else {
+      slot.dataset.i = index
+      if (index === game.sky.items.length - 1) slot.classList.add('new')
+    }
   }
   return slot
 }
@@ -573,17 +582,21 @@ function renderSky() {
     placeSun()
     return
   }
-  // Tiers 1 and 2: a slot for each balloon asked for; an adding request shows its two groups apart.
+  // Tiers 1 and 2: a slot for each balloon asked for; an adding request shows its two groups apart. Counting on, the
+  // first group is the friend's own, already filled, and the basket's balloons number on from it (4, 5 after 3).
+  const has = req.type === 'add' ? (req.has ?? 0) : 0
   let n = 0
   req.parts.forEach((part, g) => {
     if (g) slots.append(Object.assign(document.createElement('span'), { className: 'sky-plus', textContent: '+' }))
     const group = []
-    for (let i = 0; i < part; i++, n++) group.push(skySlot(req, n + 1, items[n]))
-    slots.append(rowsOfFive(group))
+    for (let i = 0; i < part; i++, n++) group.push(n < has ? skySlot(req, n + 1, heldLook(req), null) : skySlot(req, n + 1, items[n - has], n - has))
+    const row = rowsOfFive(group)
+    if (!g && has) row.classList.add('own') // the friend's own group, on the soft ground their ten-frame cells use
+    slots.append(row)
   })
   // Balloons past the number wait outside the slots, until the child lets them go.
   if (count > req.total) {
-    const extra = rowsOfFive(items.slice(req.total).map((item, i) => skySlot(req, req.total + i + 1, item)))
+    const extra = rowsOfFive(items.slice(req.total).map((item, i) => skySlot(req, has + req.total + i + 1, item, req.total + i)))
     extra.classList.add('sky-extra')
     slots.append(extra)
   }
@@ -699,9 +712,11 @@ function countPop(b, chain) {
     // Tier 1 is where counting is the lesson: it hears every number up to the one asked for (at most ten), each once
     // per sky (refilling after letting one go is quiet). The number asked for lands with a stop ("7. That's 7!");
     // past it the count goes quiet, so stopping is heard. A which-has-most basket is not counted aloud: a guess would be.
+    // Counting on (tiers 1–2 adding) starts from the friend's own group: "4, 5. That's 5!".
     sky.said = sky.count
-    if (sky.count === req.total) voice.say(`${sky.count}. That's ${sky.count}!`, { interrupt: false })
-    else voice.count(sky.count, { aloud: 10, interrupt: false })
+    const n = sky.count + (req.type === 'add' ? (req.has ?? 0) : 0)
+    if (sky.count === req.total) voice.say(`${n}. That's ${n}!`, { interrupt: false })
+    else voice.count(n, { aloud: 10, interrupt: false })
   }
   if (sky.count === req.total) sky.full = 0
   // Once the basket is just right, two or three more matching balloons drift up: stopping is the child's choice, not luck.
@@ -737,9 +752,10 @@ function give() {
   const over = basketOver(sky)
   sky.over = !!over
   $('sky').classList.toggle('over', sky.over)
-  // A second hand-over that is not right softens the sky (from tier 2), with its hint instead of a reminder;
-  // a fourth, still not right, brings the answer.
-  if ((sky.slips >= 2 && game.tier > 1 && !sky.eased) || (sky.slips >= 4 && sky.hinted && !sky.answered)) {
+  // A second hand-over that is not right softens the sky (from tier 2), with its hint instead of a reminder; in tier 1
+  // (already as soft as it gets) a third brings the strategy hint; a fourth, still not right, brings the answer.
+  const stuck = game.tier > 1 ? sky.slips >= 2 && !sky.eased : sky.slips >= 3 && !sky.hinted
+  if (stuck || (sky.slips >= 4 && sky.hinted && !sky.answered)) {
     if (over) voice.sayOnce('Tap a balloon in the basket to let it go.')
     return ease()
   }
@@ -763,6 +779,8 @@ function give() {
   } else voice.sayNow(`That's ${words}.`)
 }
 
+/** Balloons let go in one sky before the friend offers the strategy hint (a careful fix of an over-full basket is fewer). */
+const CHURN = 5
 /** The child taps a balloon in the basket: it is let go and floats back up into the sky. */
 function release(i, el) {
   const sky = game.sky
@@ -777,6 +795,9 @@ function release(i, el) {
   const r = (el ?? $('give')).getBoundingClientRect()
   floatAway([item], r.left + r.width / 2, r.bottom + 30)
   renderSky()
+  // Popping in and letting go again and again, never handing over, is being stuck too (it keeps the idle clock at zero):
+  // once the basket is no longer over-full, the friend offers the way to work it out, once.
+  if (sky.fixes >= CHURN && !sky.hinted && !basketOver(sky)) ease()
 }
 
 /** Balloons let go from the basket drift up out of it and away. */
@@ -1339,8 +1360,8 @@ function introduceLevel() {
 // others is the youngest's first look-before-you-tap; the wish waits patiently, with no timer, until it is found.
 
 /** Seconds before the first wish of a visit, and between a wish found and the next one. */
-const WISH_FIRST = 14
-const WISH_AFTER = 22
+const WISH_FIRST = 10
+const WISH_AFTER = 12
 /** Colours a wish can name: plain or smiley balloons (and hearts) of that colour count. */
 const WISH_COLOURS = ['red', 'blue', 'green', 'orange', 'purple']
 
@@ -1467,10 +1488,11 @@ function toTitle(finished = false) {
   game.state = 'title'
   game.party = 0
   // Say what the child did, not how it ranks.
-  // Free popping names the balloon friends met, not a number of pops.
+  // Free popping names the balloon friends met, not a number of pops. A counting sky starts its levels further on
+  // (TIER_START), so it never shows that line: it names only the friends helped, or nothing.
   const met = metPictures()
   const helped = game.wishes ? ` and helped ${game.wishes} friend${game.wishes === 1 ? '' : 's'}` : ''
-  let last = game.popped && !adventure.option.goal ? (met.length > 1 ? `You met ${met.join(' ')}${helped}` : `🎈 Lovely popping${helped}!`) : ''
+  let last = game.popped && !adventure.option.goal && !adventure.option.sky ? (met.length > 1 ? `You met ${met.join(' ')}${helped}` : `🎈 Lovely popping${helped}!`) : ''
   if (game.skies) {
     last = `🎈 You helped ${game.skies} friend${game.skies === 1 ? '' : 's'}, up to ${game.biggest} balloon${game.biggest === 1 ? '' : 's'}!`
     if (!finished) voice.say(`You helped ${game.skies} friend${game.skies === 1 ? '' : 's'}!`)
@@ -1583,9 +1605,23 @@ function repeatGoal(words) {
   sky.repeats += 1
   voice.sayNow(words)
 }
+/**
+ * 🏠 during a counting visit with a picnic under way asks for a second tap (the house waits, ringed, for 3 s), so a
+ * stray tap from a small hand never ends the visit. Escape (a grown-up's key) still goes home at once.
+ */
+let homeArmed = 0
 $('home').addEventListener('click', (e) => {
   e.stopPropagation()
   audio.click()
+  const home = $('home')
+  if (counting() && (game.skies || game.sky?.count) && !home.classList.contains('sure')) {
+    home.classList.add('sure')
+    clearTimeout(homeArmed)
+    homeArmed = setTimeout(() => home.classList.remove('sure'), 3000)
+    return
+  }
+  clearTimeout(homeArmed)
+  home.classList.remove('sure')
   toTitle()
 })
 const soundBtn = $('sound')
@@ -1854,4 +1890,4 @@ renderer.setAnimationLoop(() => {
 
 show('loading')
 load()
-if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game, balloons, camera, newRequest }
+if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game, balloons, camera, newRequest, world }

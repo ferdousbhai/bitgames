@@ -363,3 +363,24 @@ body.looking #tray, body.looking #actions, body.looking #mission, body.looking #
 /* --- Round 5 --- */
 /* The ✔/💡 answer mark sits inside the planet button's corner, not over its border */
 .where-mark { right: 6px; top: 5px; font-size: 18px; line-height: 1; }
+
+/* --- 2026-10-11: the reward race stresses this flight --- */
+/* Last flight's planet stays its own size; this flight's planet is the one that grows, with a soft ring */
+.ft-race .workshop-stop.reached:not(.reached-b) { transform: none; animation: none; opacity: .6; }
+.ft-race .workshop-stop.reached-b { justify-self: center; padding: 0 2px; border-radius: 50%; box-shadow: 0 0 0 3px #ffd23f; }
+
+/* --- 2026-10-11 round 2: Robot's rocket stands tall on his card, its 🔧 tag underneath (never over the boosters) --- */
+.mission-pic .mission-bit.mission-robot { width: auto; height: auto; min-width: 46px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 6px 4px; }
+.mission-pic .mission-robot img { width: auto; height: 56px; }
+.mission-pic .mission-robot .mission-one { position: static; }
+.mission .mission-pic .mission-robot img { height: 64px; }
+.guess .mission-pic .mission-robot { padding: 1px 4px 2px; }
+.guess .mission-pic .mission-robot img { height: 40px; }
+.guess .mission-pic .mission-robot .mission-one { font-size: 10px; padding: 0 4px; }
+@media (min-width: 700px) and (min-height: 760px) { .mission .mission-pic .mission-robot img { height: 80px; } }
+@media (max-height: 500px) { .mission .mission-pic .mission-robot img, .mission-pic .mission-robot img { height: 44px; } .guess .mission-pic .mission-robot img { height: 34px; } }
+
+/* --- 2026-10-11 round 3: Robot's rocket reads at a glance on the result card; its ✔ sits outside the picture --- */
+.reward-mission .mission-pic .mission-robot img { height: 64px; }
+.reward-mission .mission-robot .mission-mark { right: -14px; top: -14px; }
+@media (max-height: 500px) { .reward-mission .mission-pic .mission-robot img { height: 48px; } }

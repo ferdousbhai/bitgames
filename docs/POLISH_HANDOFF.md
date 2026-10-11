@@ -1,10 +1,36 @@
 # BitGames handoff
 
-Updated 2026-10-10. Work on `main`.
+Updated 2026-10-11. Work on `main`.
 
-## Re-audit (2026-10-10)
+## Depth pass (2026-10-11): every original at 8.5+
 
-A fresh play-and-source audit scored the released originals 5.5–8/10. Calm is largely achieved, but the games are now too passive: the game makes the core decision for the child, the voice is heavy (45–66 lines per trip), and there is no harder tier for ages 6–8. The scorecard, bugs (including a Balloon Pop chord exception) and ranked improvements are in [docs/polish/AUDIT_2026-10-10.md](polish/AUDIT_2026-10-10.md). Nothing from it has been implemented yet.
+The 2026-10-10 re-audit ([docs/polish/AUDIT_2026-10-10.md](polish/AUDIT_2026-10-10.md)) scored the originals 5.5–8. The games were calm but passive, over-narrated and had no older tier. Three parallel workflow passes followed, with one worker per game and a fresh, independent reviewer pair each round. They:
+- gave every core action a real decision that depends on the thing being taught
+- thinned the voice (the shared `speech.js` gained `sayOnce`, `newRound` and `count`)
+- added adaptive tiers for ages 6–8
+- removed the leftover score, medal, magnet and pulse hooks
+- closed every audit item, verified by a separate checker
+- fixed every bug the reviewers found
+
+Final independent scores (two reviewers each, the lower counts):
+
+| Game | Score | Game | Score |
+| --- | --- | --- | --- |
+| Bumper Ducks | 8.8 | Crash Racers | 8.6 |
+| Fish Pond | 8.8 | Paint Splash | 8.6 |
+| Rocket Garage | 8.8 | Cake Stack | 8.6 |
+| Bunny Hop | 8.7 | Balloon Pop | 8.5 |
+| Dragon Glide | 8.7 | Penguin Bowling | 8.5 |
+| Star Catcher | 8.7 | Memory Match | 8.5 |
+
+Each game's design, file:line changes, evidence and the reviewers' remaining ideas are in `docs/polish/<game-id>.md`. Verification:
+- 11 studio node tests and the workspace tests pass.
+- All 13 `original-quality.mjs` checks pass. They now follow Balloon Pop's basket and Give flow, Cake Stack's count at the candle, and Dragon Glide's resting mission.
+- Chromium and WebKit `browser.mjs` boot and play all twelve games with 0 errors.
+
+Bumper Ducks no longer ships `adventure.js`, and its lively mode is now untimed Bumper play (category `animals`).
+
+**Not yet published.** Family play is the real test before release. Two-device Delivery Town co-op in Crash Racers now sends a `layout` with `go`; check it on bitgames.store.
 
 ## Current direction (2026-10-09)
 

@@ -18,8 +18,8 @@ import { BOOSTER_WORDS, el, isBuild, keyGuard, placeName } from './workshop.js'
  * the diagnosis: it tells the child whether the boosters or the wobble is the fault.
  * A mission moves the tier up only when it was done AND predicted, so careful play counts and
  * lucky taps do not. On tier 1 a second miss points to the notebook and a third offers a nearer
- * planet (or, when there is none, keeps the card and points at the booster to try); above tier 1,
- * three misses move down a tier. Never a gate.
+ * planet (or, when there is none, keeps the card and points at the booster to try, and the next
+ * time puts the card away for now); above tier 1, three misses move down a tier. Never a gate.
  */
 
 export const TIERS = 4
@@ -111,18 +111,22 @@ function robotRocket(dest, steady, visited, two = false) {
  * that was just missed three times (the easier tier-1 card). When no such planet exists, the card
  * is the same planet again, and the caller keeps it and helps instead of calling it new.
  */
+let lastSteady = null
 export function makeMission(tier, rocket, visited, { near = null } = {}) {
   const boosters = unlocked('booster', visited)
   const places = [...new Set(boosters.map((p) => Math.min(DESTS.length - 1, p.power)))]
   const blank = { two: false, kind: null, base: null, diag: null, diagOk: null, got: 0, flew: false }
   if (tier >= 3 && places.length > 1) {
     const dest = pick(places)
-    // Tier 4 takes turns between its two puzzles: boosters + wobble, or two wobbly parts
-    if (tier >= 4 && wobblySlots(visited).length >= 2 && Math.random() < 0.4) {
-      return { ...blank, tier: 4, dest, steady: true, robot: robotRocket(dest, true, visited, 'wobbly2'), two: true, kind: 'wobbly2' }
+    // Steady and wobbly cards take turns, so both directions of the wobble rule get practice
+    const steady = lastSteady === null ? Math.random() < 0.5 : !lastSteady
+    lastSteady = steady
+    // Tier 4 has two puzzles: boosters + wobble, or (on a steady turn) two wobbly parts
+    if (steady && tier >= 4 && wobblySlots(visited).length >= 2 && Math.random() < 0.5) {
+      return { ...blank, tier: 4, dest, steady, robot: robotRocket(dest, true, visited, 'wobbly2'), two: true, kind: 'wobbly2' }
     }
-    const steady = Math.random() < 0.5
-    const two = tier >= 4
+    // At the top, a one-fault card still comes up now and then, so the cards keep changing shape
+    const two = tier >= 4 && Math.random() < 0.7
     return { ...blank, tier: two ? 4 : 3, dest, steady, robot: robotRocket(dest, steady, visited, two), two }
   }
   // Ask for the other kind of flight than the rocket on the pad, so a part really has to change
@@ -162,7 +166,10 @@ export function checkMission(m, { rocket, dest }) {
   const wobble = m.steady === null || isSteady(rocket) === m.steady
   const changes = m.robot ? changesFrom(m.base ?? m.robot, rocket) : 0
   const fix = !m.robot || changes <= 1
-  return { done: place && wobble && fix, place, wobble, fix, changes }
+  // The turbo, not the boosters, reached the planet: on a two-fault card the place is not fixed yet
+  const carried = place && reach(rocket) !== m.dest
+  // On a two-fault card the turbo cannot stand in for the booster fix: both faults are the lesson
+  return { done: place && wobble && fix && !(m.two && carried), place, wobble, fix, changes, carried }
 }
 
 /**
@@ -178,9 +185,15 @@ export function missionVerdict(m, check, { dest, turbo, turboReady, rocket, next
     const how = turbo ? ' The turbo carried it the last stop!' : m.steady === null ? '' : m.steady ? ' Nice and steady!' : ' Wobbling all the way!'
     return `Mission done! You landed on ${placeName(m.dest)}.${how}`
   }
+  // Helped once and missed again: the card goes away for now, so no advice, just where it went
+  if (next === 'rest') return `${capital(placeName(dest))} again.`
   if (!check.fix) return `You changed ${check.changes} parts. Robot’s puzzle is one change ${m.two ? 'each flight' : 'only'}. Tap his card to get his rocket back.`
   // Two wobbly parts: the first one fixed still leaves a wobble, which is the discovery
   if (m.kind === 'wobbly2' && next === 'step') return 'One wobbly part fixed! It still wobbles a little, so another part wobbles too. Find it!'
+  // Two faults, and the turbo carried it there: the boosters still fall short, so the place is not fixed
+  if (m.two && check.carried) {
+    return `The turbo carried it to ${placeName(m.dest)}, but his boosters still stop at ${placeName(reach(rocket))}. Fix the boosters${check.wobble ? '' : ', then the wobble'}!`
+  }
   // Two faults: say which one is fixed now, then the advice for the other
   const half = m.two && m.kind !== 'wobbly2' && check.place !== check.wobble ? (check.place ? `It lands on ${placeName(m.dest)} now! ` : 'The wobble is right now! ') : ''
   if (!check.place) {
@@ -193,8 +206,9 @@ export function missionVerdict(m, check, { dest, turbo, turboReady, rocket, next
     }
     if (dest < m.dest) {
       // It stopped one short with fifteen stars in hand: the lightning was the missing step
-      if (turboReady && !turbo && dest + 1 === m.dest) return `${half}You had fifteen stars! Tap the lightning next time to go on to ${placeName(m.dest)}.`
-      if (m.robot && dest + 1 === m.dest) return `${half}It stopped at ${placeName(dest)}. Change the boosters, or steer for fifteen stars and take the turbo!`
+      // (Not on a two-fault card: there the turbo never stands in for the booster fix)
+      if (turboReady && !turbo && !m.two && dest + 1 === m.dest) return `${half}You had fifteen stars! Tap the lightning next time to go on to ${placeName(m.dest)}.`
+      if (m.robot && !m.two && dest + 1 === m.dest) return `${half}It stopped at ${placeName(dest)}. Change the boosters, or steer for fifteen stars and take the turbo!`
       return `${half}It stopped at ${placeName(dest)}. ${capital(placeName(m.dest))} is farther. Bigger boosters push farther!${half ? '' : wobbleToo}`
     }
     if (turbo && dest - 1 === m.dest) return `${half}The turbo carried it past ${placeName(m.dest)}! Next time, keep the lightning for later.`
@@ -208,13 +222,29 @@ export function missionVerdict(m, check, { dest, turbo, turboReady, rocket, next
 }
 
 /**
- * The same advice, already heard once this visit, as one short picture-led line: where it landed,
- * and how many booster sizes the card's planet is from there.
+ * A line already heard this visit, as one short picture-led line instead (the ✔ / 💡 card shows
+ * the rest). `n` counts up past forms already heard, so each is said once before the briefest
+ * one. For a miss: where it landed, and how many booster sizes away.
  */
-export function missionShort(m, check, dest) {
-  if (check.place) return check.wobble ? '' : m.steady ? 'Still a wobble. Which part?' : 'Still steady. Which part makes a wobble?'
-  const n = Math.abs(m.dest - dest)
-  return `${capital(placeName(dest))}. ${capital(placeName(m.dest))} is ${n === 1 ? 'one booster size' : `${n} booster sizes`} ${dest < m.dest ? 'farther' : 'nearer'}.`
+export function missionShort(m, check, dest, { next = 'again', n = 1, rocket = null } = {}) {
+  // Each short form once, then just the last, briefest one
+  const turn = (lines, last) => (n <= lines.length ? lines[n - 1] : last)
+  const there = capital(placeName(dest))
+  const how = m.steady === null ? '' : m.steady ? ', nice and steady' : ', all wobbly'
+  if (check.done) {
+    if (m.two) return turn(['Fixed again, one change at a time!', `Both fixed! ${there}${how}.`, 'Two faults, found one by one!', `${there}${how}. Well tested!`], `${there}. Fixed!`)
+    if (m.robot) return check.changes === 0 ? 'The turbo did it again!' : turn(['Fixed with one change!', `${there}${how}. One change did it!`], `${there}. Fixed!`)
+    return turn([`${there}${how}! Mission done.`], 'Done!')
+  }
+  if (next === 'step') {
+    if (m.kind === 'wobbly2') return turn(['One fixed. Find the other wobbly part!', 'One fixed. One still wobbles!'], 'One more!')
+    return check.place ? turn(['One fixed! Now the wobble.'], 'Now the wobble!') : turn(['One fixed! Now the boosters.'], 'Now the boosters!')
+  }
+  if (next === 'hint') return `${there}. Your notebook knows!`
+  if (m.two && check.carried) return `Turbo again. His boosters still stop at ${placeName(rocket ? reach(rocket) : m.dest - 1)}.`
+  if (check.place) return check.wobble ? '' : m.steady ? turn(['Still a wobble. Which part?'], 'Still a wobble.') : turn(['Still steady. Which part makes a wobble?'], 'Still steady.')
+  const steps = Math.abs(m.dest - dest)
+  return turn([`${there}. ${capital(placeName(m.dest))} is ${steps === 1 ? 'one booster size' : `${steps} booster sizes`} ${dest < m.dest ? 'farther' : 'nearer'}.`], `${there} again.`)
 }
 
 /**
@@ -222,9 +252,17 @@ export function missionShort(m, check, dest) {
  * boosters' reach), whether the guess matched, and so what to change (on Robot's rocket, which
  * fault to look for).
  */
-export function diagnosisWords(m, guess, build = m.robot) {
+export function diagnosisWords(m, guess, build = m.robot, short = 0) {
   const lands = reach(build)
   const ok = guess === lands
+  if (short) {
+    // Heard before this visit: just the planet, and what that means for the card (or, heard
+    // that too, only the planet: the trail and the card show the rest)
+    const said = `${ok ? 'Yes! ' : ''}${capital(placeName(lands))}.`
+    if (short > 1 && lands === m.dest) return said
+    if (lands !== m.dest) return `${said} ${m.robot ? 'He' : 'Robot'} wants ${placeName(m.dest)}.`
+    return `${said} ${m.robot ? 'The right planet, so what is wrong?' : 'That is Robot’s planet!'}`
+  }
   if (!m.robot) {
     // The child's own rocket on a tier 1-2 card: where it goes now, and where Robot wants it
     const said = `${ok ? 'Yes! ' : ''}Your rocket lands on ${placeName(lands)}.`
@@ -260,7 +298,7 @@ export function afterFlight(state, done, matched, check = null, rocket = null) {
   if (card?.two && check?.fix && rocket) {
     // Each flight's rocket is the new starting point; one thing fewer wrong is a step, not a miss
     card.base = partsOnly(rocket)
-    const got = Math.max(0, faultsLeft(card, card.robot) - faultsLeft(card, rocket, check.place))
+    const got = Math.max(0, faultsLeft(card, card.robot) - faultsLeft(card, rocket, check.place && !check.carried))
     if (got > card.got) {
       card.got = got
       return 'step'
@@ -280,7 +318,7 @@ export function afterFlight(state, done, matched, check = null, rocket = null) {
     return 'again'
   }
   if (state.misses >= 3 && card && card.tier > 1) {
-    state.tier = Math.max(1, card.tier - 1)
+    state.tier = Math.max(1, Math.min(state.tier, card.tier) - 1)
     state.wins = 0
     state.misses = 0
     state.card = null
@@ -300,7 +338,7 @@ export function missionPicture(m, { rocketThumb = null, marks = null } = {}) {
     return b
   }
   if (m.robot && rocketThumb) {
-    const b = bit('mission-robot', marks?.fix)
+    const b = bit(`mission-robot${m.two ? ' two' : ''}`, marks?.fix)
     const i = el('img')
     i.src = rocketThumb(robotFirst(m)) || ''
     i.alt = ''
@@ -338,6 +376,7 @@ export function createWhere({ rocketThumb, thumbOf, voice, sound = () => {}, onB
   let chosen = null
   let timer = 0
   const asked = { own: 0, robot: 0 }
+  const heard = new Set()
   let card = null
   let build = null
   let question = ''
@@ -346,7 +385,10 @@ export function createWhere({ rocketThumb, thumbOf, voice, sound = () => {}, onB
   function reveal(i) {
     const lands = reach(build)
     // `aside` adds one honest note, e.g. that the turbo (not the boosters) took the last flight farther
-    const words = `${diagnosisWords(card, i, build)}${aside(card, build)}`
+    let words = `${diagnosisWords(card, i, build)}${aside(card, build)}`
+    // The same answer twice in a visit: the short one
+    if (heard.has(words)) words = diagnosisWords(card, i, build, heard.has(diagnosisWords(card, i, build, 1)) ? 2 : 1)
+    heard.add(words)
     ;[...planets.children].forEach((b, k) => {
       if (k > lands) return
       b.style.transitionDelay = `${k * 0.25}s`
@@ -419,12 +461,15 @@ export function createWhere({ rocketThumb, thumbOf, voice, sound = () => {}, onB
       open = true
       dialog.showModal()
       dialog.focus()
-      // The whole question the first two times; after that the pictures ask it themselves
-      const first = asked[m.robot ? 'robot' : 'own']++ < 2
+      // The whole question the first two times, then the short one twice; after that the pictures
+      // ask it themselves (🔊 still says it)
+      const n = asked[m.robot ? 'robot' : 'own']++
+      const first = n < 2
       question = m.robot
         ? (first ? 'Robot’s rocket needs fixing. First: as it is now, where will it land? Tap a planet.' : 'Robot’s rocket, as it is: where will it land?')
         : (first ? 'Robot has a mission! First, your rocket as it is now: where will it land? Tap a planet.' : 'Your rocket, as it is: where will it land?')
-      voice.sayNow(question)
+      if (n < 4) voice.sayNow(question)
+      else voice.hush()
     },
     close() { if (dialog.open) dialog.close() },
   }

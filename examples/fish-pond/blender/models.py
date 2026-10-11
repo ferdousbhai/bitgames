@@ -399,9 +399,22 @@ def fish_body(rt, name, L, H, width, mats, mats_by_ring=None, bias=1.4, round_=0
     return body, prof
 
 
-def fish_face(rt, body, m, L, H, eye_x, eye_z=0.12, eye=0.1, smile=True, smile_w=0.07):
+def fish_face(rt, body, m, L, H, eye_x, eye_z=0.12, eye=0.1, smile=True, smile_w=0.07, gill=None):
+    """`gill`: a material for the curved edge of the gill cover behind the eye, on the real fish whose
+    "breathes under water" glows there (look.js gills)."""
     f = Face(body, m, rt)
     for s in (-1, 1):
+        if gill:
+            # A "(" curve bowed toward the tail, from above the cheek to below it, stuck to the skin
+            gx, h = eye_x - 0.12, H * 0.42
+            pts = []
+            for i in range(9):
+                u = i / 8
+                loc, n = f.hit((gx - 0.045 * math.sin(math.pi * u), s * 3, -0.02 * H / 0.3 + (u - 0.5) * 2 * h), (0, -s, 0))
+                pts.append(loc + n * 0.006)
+            tube(f"{rt.name}_gill{s}", pts, 0.013, gill, rt, sides=6, radii=[0.006 + 0.008 * math.sin(math.pi * i / 8) for i in range(9)])
+            if s < 0:
+                print("FEATURE", rt.name, "gill", tuple(round(v, 3) for v in pts[4]))
         f.eye(f"{rt.name}_eye{s}", (eye_x, s * 3, eye_z * H / 0.45), (0, -s, 0), eye * H / 0.45, squash=0.45)
         if smile:
             f.arc(f"{rt.name}_smile{s}", (L / 2 - 0.07, s * 3, -0.07 * H / 0.45), (0, -s, 0), smile_w, 0.03, 0.016)
@@ -446,7 +459,7 @@ def creature_goldfish(m):
     belly = material("goldfish_belly", "#ffd38a", roughness=0.4)
     L, H = 0.95, 0.4
     body, prof = fish_body(rt, "goldfish", L, H, 0.7, [orange, belly], mats_by_ring=lambda i: 0)
-    fish_face(rt, body, m, L, H, eye_x=0.22)
+    fish_face(rt, body, m, L, H, eye_x=0.22, gill=material("goldfish_gill", "#d9620f", roughness=0.4))
     tail_fin(rt, "goldfish", (-L / 2 + 0.04, 0, 0.02), fin, size=1.25, forked=False)
     dorsal(rt, "goldfish", -0.02, H * 0.85, fin, 1.0)
     side_fins(rt, "goldfish", 0.12, -0.12, 0.2, fin)
@@ -545,7 +558,7 @@ def creature_trout(m):
             loc, n = f.hit((x, s * 3, z), (0, -s, 0))
             sphere(f"trout_spot{s}_{k}", 0.022, loc, spot, rt, scale=(1, 0.4, 1), segs=8, rings=5,
                    rot=n.to_track_quat("-Y", "Z"))
-    fish_face(rt, body, m, L, H, eye_x=0.33, eye_z=0.08)
+    fish_face(rt, body, m, L, H, eye_x=0.33, eye_z=0.08, gill=material("trout_gill", "#4f7a45", roughness=0.4))
     tail_fin(rt, "trout", (-L / 2 + 0.04, 0, 0.0), fin, size=1.05, forked=True)
     dorsal(rt, "trout", 0.0, H * 0.85, fin, 0.9)
     side_fins(rt, "trout", 0.2, -0.1, 0.15, fin)
@@ -745,10 +758,12 @@ def creature_jellyfish(m):
 
 def creature_narwhal(m):
     rt = root("narwhal")
-    grey = material("narwhal_blue", "#8fb3d9", roughness=0.4)
-    belly = material("narwhal_belly", "#f4f8ff", roughness=0.5)
+    # Mottled grey, as real narwhals are (it was pale blue until 2026-10-11, and Bear's "something blue" taught
+    # that narwhals are blue): riddles.js gives it spots and a tusk, never a colour
+    grey = material("narwhal_grey", "#9aa1a8", roughness=0.4)
+    belly = material("narwhal_belly", "#f2f1ee", roughness=0.5)
     # Narwhals are mottled: dark blotches big enough to see on a small swimmer (riddles.js: narwhal has spots)
-    spot = material("narwhal_spot", "#3f5f8f", roughness=0.5)
+    spot = material("narwhal_spot", "#474c53", roughness=0.5)
     tusk = material("narwhal_tusk", "#fff5d6", roughness=0.35)
     L, H = 1.1, 0.34
     body, prof = fish_body(rt, "narwhal", L, H, 0.95, grey, bias=1.1, round_=0.5)
@@ -760,6 +775,10 @@ def creature_narwhal(m):
         loc, n = f.hit((x, s * 3, z), (0, -s, 0))
         sphere(f"narwhal_spot{k}", 0.045, loc, spot, rt, scale=(1, 0.3, 0.8), segs=10, rings=6, rot=n.to_track_quat("-Y", "Z"))
     fish_face(rt, body, m, L, H, eye_x=0.3, eye_z=0.06, eye=0.085)
+    # The blowhole on top of its head, where "breathes air" glows (look.js narwhal blowhole)
+    loc, n = f.hit((0.2, 0, 3), (0, 0, -1))
+    sphere("narwhal_blowhole", 0.05, loc, spot, rt, scale=(0.6, 1.1, 0.3), segs=12, rings=6, rot=n.to_track_quat("Z", "Y"))
+    print("FEATURE narwhal blowhole", tuple(round(v, 3) for v in loc))
     # Spiral tusk
     pts, radii = [], []
     for i in range(16):
@@ -801,7 +820,7 @@ def creature_cod(m):
                 loc, n = f.hit((x, s * 3, z), (0, -s, 0))
                 sphere(f"cod_spot{k}", 0.03, loc, spot, rt, scale=(1, 0.3, 1), segs=10, rings=6, rot=n.to_track_quat("-Y", "Z"))
                 k += 1
-    fish_face(rt, body, m, L, H, eye_x=0.3, eye_z=0.08)
+    fish_face(rt, body, m, L, H, eye_x=0.3, eye_z=0.08, gill=material("cod_gill", "#5e4a30", roughness=0.4))
     # The chin whisker (a barbel): cod feel for food on the sea floor with it
     tube("cod_barbel", [(L / 2 - 0.1, 0, -0.12), (L / 2 - 0.08, 0, -0.18), (L / 2 - 0.1, 0, -0.23)], 0.012, fin, rt, sides=6)
     tail_fin(rt, "cod", (-L / 2 + 0.04, 0, 0.0), fin, size=0.95, forked=False)
@@ -815,7 +834,7 @@ def creature_seal(m):
     """A ringed seal, the small seal of the icy Arctic sea: a plump silver-grey body with dark spots, each in a pale
     ring (the rings give it its name), a round head with big dark eyes and whiskers on its muzzle, front flippers
     with claws it scratches breathing holes in the ice with, and two back flippers held together like a fan. It is
-    grey, never blue, so "something blue" in the Icy Sea is still only the narwhal (and the pretend Blue Fish)."""
+    grey, never blue, like the narwhal, so "something blue" in the Icy Sea is the whale or the pretend Blue Fish."""
     rt = root("seal")
     fur = material("seal_fur", "#9a958f", roughness=0.5)
     belly = material("seal_belly", "#d9d5ce", roughness=0.55)

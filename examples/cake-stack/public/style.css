@@ -29,7 +29,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   padding: calc(18px + env(safe-area-inset-top)) 16px calc(22px + env(safe-area-inset-bottom)); text-align: center; }
 .title-top, .title-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .title-top { animation: float-in .6s cubic-bezier(.2, 1.6, .4, 1); }
-.tag { margin: 0; font-size: clamp(17px, 3.6vw, 24px); font-weight: 900; color: #fff; background: rgba(176, 74, 122, .55); border-radius: 999px; padding: 6px 18px; }
+.tag { margin: 0; font-size: clamp(17px, 3.6vw, 24px); font-weight: 900; color: #fff; background: #b04a7a; border-radius: 999px; padding: 6px 18px; }
 @keyframes float-in { from { transform: translateY(-40px) scale(.8); opacity: 0; } }
 
 .big-go {
@@ -486,6 +486,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .share-wrap { align-items: center; justify-content: flex-end; padding-right: calc(24px + env(safe-area-inset-right)); }
   .share-card { max-width: min(620px, 46vw); }
 }
+/* A roomy landscape tablet gets bigger plates and slices, for small fingers and for counting */
+@media (min-aspect-ratio: 6/5) and (min-height: 700px) {
+  .share-card { max-width: min(680px, 54vw); }
+  .share-plate { min-width: 116px; min-height: 116px; }
+  .share-plate .face { font-size: 46px; }
+  .share-plate .slice { width: 36px; height: 36px; }
+  .share-say { font-size: 30px; }
+}
 @media (max-width: 440px) {
   .share-card { padding: 12px 12px 14px; gap: 8px; }
   .share-plates { gap: 6px; }
@@ -567,8 +575,15 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .pantry .pick { width: 38px; height: 38px; font-size: 20px; border-bottom-width: 4px; }
   .pantry.ask::before { font-size: 20px; }
 }
-/* A wrong layer on the cake shows on its dot, tilted, until the child takes it off */
-.pips.order .pip.want.oops { opacity: 1; filter: none; transform: rotate(-14deg) scale(1.05); border-style: dashed; border-color: #c27a95; background: #fff; }
+/* A wrong layer on the cake shows as a tilted, dashed badge above its dot (which keeps the wanted picture),
+   until the child takes it off */
+.pips.order .pip.want { position: relative; }
+.pips.order .pip.want.oops { opacity: 1; filter: none; }
+.pips.order .pip.want.oops::after {
+  content: attr(data-oops); position: absolute; left: 50%; bottom: calc(100% + 6px); width: 1.5em; height: 1.5em; margin-left: -.75em;
+  display: grid; place-items: center; font-size: .8em; background: #fff; border: 2px dashed #c27a95; border-radius: 50%;
+  transform: rotate(-14deg); box-shadow: 0 2px 0 rgba(176, 74, 122, .2); pointer-events: none;
+}
 /* The plates are not counted on screen until a child has checked twice and still finds it tricky */
 #hud.carding .progress, #hud.carding .pantry { display: none; }
 .share-plate .give { display: flex; flex-direction: column; align-items: center; background: none; padding: 0; position: relative; }

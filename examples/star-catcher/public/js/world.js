@@ -2,6 +2,31 @@ import * as THREE from 'three'
 import { makeGlowTexture } from './effects.js'
 
 const restAt = new THREE.Vector3()
+const PLANET_QUIET = 0.15 // how much of a planet shows while numbers fall in front of it
+
+/** Gives a cloned model its own materials, so it can fade without fading the others. */
+function ownMaterials(obj) {
+  obj.traverse((o) => {
+    if (!o.material) return
+    o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone()
+  })
+}
+
+function setFade(obj, a) {
+  obj.traverse((o) => {
+    if (!o.material) return
+    for (const m of [].concat(o.material)) {
+      m.userData.base ??= { opacity: m.opacity, transparent: m.transparent }
+      m.opacity = m.userData.base.opacity * a
+      m.transparent = m.userData.base.transparent || a < 0.99
+      m.depthWrite = a >= 0.99
+    }
+  })
+}
+
+function disposeMaterials(obj) {
+  obj.traverse((o) => o.material && [].concat(o.material).forEach((m) => m.dispose()))
+}
 
 /** The planets visited, in order. Each one tints the sky. */
 export const STOPS = [
@@ -133,6 +158,7 @@ export class World {
     // The planets on the journey, one approaching at a time
     this.planets = STOPS.map((stop, i) => {
       const p = models[stop.model].clone()
+      ownMaterials(p)
       const holder = new THREE.Group()
       holder.add(p)
       holder.visible = false
@@ -147,6 +173,9 @@ export class World {
     // Little things drifting far behind: a sense of speed and depth
     this.drifters = []
     this.drifterTimer = 2
+    // While a row of numbers falls (quiet), the planets fade back, so the numbers sit on clean sky
+    this.quiet = false
+    this.fade = 1
     this.setStop(0, true)
   }
 
@@ -189,13 +218,17 @@ export class World {
     const choices = STOPS.map((s) => s.model).filter((n) => n !== here)
     const name = choices[(Math.random() * choices.length) | 0]
     const o = this.models[name].clone()
+    ownMaterials(o)
+    setFade(o, this.fade)
     const z = -34 - Math.random() * 16
     const depthScale = (16 - z) / 16
     const size = 1.1 + Math.random() * 0.8
     const reach = (new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3()).x / 2) * size
     // It fades in (grows from nothing) just below the HUD band, never drifting behind the buttons or the panel
     o.scale.setScalar(0.001)
-    o.position.set((Math.random() * 2 - 1) * view.w * depthScale * 0.8, view.hudY * depthScale - reach * 1.2, z)
+    // Toward the sides, never down the middle where the numbers fall
+    const side = Math.random() < 0.5 ? -1 : 1
+    o.position.set(side * (0.55 + Math.random() * 0.3) * view.w * depthScale, view.hudY * depthScale - reach * 1.2, z)
     o.userData = { size, grow: 0, speed: 0.5 + Math.random() * 0.4, spin: (Math.random() - 0.5) * 0.6, limit: -view.h * depthScale - 4 }
     this.scene.add(o)
     this.drifters.push(o)
@@ -206,8 +239,13 @@ export class World {
     this.still = on
     this.title = on && title
     if (!on) return
-    for (const d of this.drifters) this.scene.remove(d)
+    for (const d of this.drifters) this.removeDrifter(d)
     this.drifters = []
+  }
+
+  removeDrifter(d) {
+    this.scene.remove(d)
+    disposeMaterials(d)
   }
 
   /** `cruise` is how fast the rocket is flying; `progress` 0..1 toward the next planet. */
@@ -226,6 +264,14 @@ export class World {
       if (n.position.y < -45) n.position.y += 90
     }
 
+    const goal = this.quiet ? PLANET_QUIET : 1
+    if (this.fade !== goal) {
+      this.fade += (goal - this.fade) * (1 - Math.exp(-dt * 2.5))
+      if (Math.abs(goal - this.fade) < 0.01) this.fade = goal
+      for (const p of this.planets) setFade(p, this.fade)
+      for (const d of this.drifters) setFade(d, this.fade)
+    }
+
     // The next planet glides down into view as stars are collected
     this.shown += (progress - this.shown) * (1 - Math.exp(-dt * 2))
     const z = -26
@@ -241,7 +287,9 @@ export class World {
         p.scale.set(scale * (1 + w), scale * (1 - w), scale)
       } else p.scale.setScalar(scale)
       p.userData.spin.rotation.y = Math.sin(this.time * 0.25 + i) * 0.35
-      const x = p.userData.side * view.w * depth * 0.6
+      // While quiet it also steps out toward its edge of the sky, clear of the falling rows
+      const aside = (1 - this.fade) / (1 - PLANET_QUIET)
+      const x = p.userData.side * view.w * depth * (0.6 + 0.45 * aside)
       // Its top (rings included) stays below the HUD band: planets never pass behind the panel or buttons
       const rest = Math.min(view.h * depth * 0.1, view.hudY * depth - p.userData.reach * scale * 1.05)
       if (p.userData.leaving >= 0) {
@@ -268,7 +316,7 @@ export class World {
 
     // Drifters
     this.drifterTimer -= dt
-    if (this.drifterTimer <= 0 && this.drifters.length < 2 && !this.still) {
+    if (this.drifterTimer <= 0 && this.drifters.length < 2 && !this.still && !this.quiet) {
       this.addDrifter(view)
       this.drifterTimer = 7 + Math.random() * 6
     }
@@ -280,7 +328,7 @@ export class World {
       d.rotation.y += dt * d.userData.spin
       d.rotation.z += dt * d.userData.spin * 0.5
       if (d.position.y < d.userData.limit) {
-        this.scene.remove(d)
+        this.removeDrifter(d)
         this.drifters.splice(i, 1)
       }
     }

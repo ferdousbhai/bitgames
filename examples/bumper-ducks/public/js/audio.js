@@ -97,39 +97,38 @@ export class Audio {
     osc.stop(t + decay + 0.05)
   }
 
-  /** The rubber duck squeak: a squeezed, wobbly whistle up and back down. */
+  /** The rubber duck squeak: a soft whistle up and back down (a triangle wave: round, never buzzy). */
   squeak(pitch = 1, delay = 0) {
     if (!this.ready) return
     const ctx = this.ctx
     const t = ctx.currentTime + delay
     const osc = ctx.createOscillator()
-    osc.type = 'square'
+    osc.type = 'triangle'
     const f = 950 * pitch * (0.92 + Math.random() * 0.16)
     osc.frequency.setValueAtTime(f * 0.8, t)
     osc.frequency.exponentialRampToValueAtTime(f * 1.35, t + 0.07)
     osc.frequency.exponentialRampToValueAtTime(f * 0.9, t + 0.2)
     const bp = ctx.createBiquadFilter()
     bp.type = 'bandpass'
-    bp.frequency.value = f * 1.4
-    bp.Q.value = 3
+    bp.frequency.value = f * 1.2
+    bp.Q.value = 1
     const g = ctx.createGain()
     g.gain.setValueAtTime(0.0001, t)
-    g.gain.exponentialRampToValueAtTime(0.25, t + 0.02)
-    g.gain.setValueAtTime(0.21, t + 0.14)
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.02)
+    g.gain.setValueAtTime(0.13, t + 0.14)
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24)
     osc.connect(bp).connect(g).connect(this.master)
     osc.start(t)
     osc.stop(t + 0.3)
-    this.burst({ freq: f * 2, q: 4, gain: 0.05, decay: 0.15, delay })
+    this.burst({ freq: f * 2, q: 4, gain: 0.03, decay: 0.15, delay })
   }
 
-  /** BONK: a rubbery thump plus a squeak from each duck. */
+  /** BONK: a rubbery thump plus one soft squeak (bonks are frequent: kept low). */
   bonk(strength = 1) {
     const s = Math.min(1.5, strength)
     this.tone({ freq: 160, type: 'sine', gain: 0.35 * s, decay: 0.18, slide: -90 })
     this.tone({ freq: 320, type: 'triangle', gain: 0.15 * s, decay: 0.12, slide: 240 })
-    this.squeak(1, 0.02)
-    this.squeak(1.25, 0.12)
+    this.squeak(1 + Math.random() * 0.25, 0.02)
   }
 
   quack(pitch = 1) {
@@ -138,7 +137,7 @@ export class Audio {
       const ctx = this.ctx
       const t = ctx.currentTime + i * 0.17
       const osc = ctx.createOscillator()
-      osc.type = 'sawtooth'
+      osc.type = 'triangle'
       osc.frequency.setValueAtTime(330 * pitch, t)
       osc.frequency.exponentialRampToValueAtTime(220 * pitch, t + 0.13)
       const f = ctx.createBiquadFilter()
@@ -148,7 +147,7 @@ export class Audio {
       f.Q.value = 2
       const g = ctx.createGain()
       g.gain.setValueAtTime(0.0001, t)
-      g.gain.exponentialRampToValueAtTime(0.4, t + 0.015)
+      g.gain.exponentialRampToValueAtTime(0.3, t + 0.015)
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15)
       osc.connect(f).connect(g).connect(this.master)
       osc.start(t)

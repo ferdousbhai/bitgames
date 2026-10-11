@@ -115,7 +115,8 @@ const shuffle = (list, rand) => {
 /**
  * The request for a level. `recent` (earlier requests, newest last) keeps friends, colours, kinds and counts varied.
  * Returns { type, friend, colour?, colours?, kind?, dots?, ref?, has?, parts: [n] or [a, b], total, say, want, named, accept(balloon) }.
- * `colours` (a two-colour basket) names the colour of each part; `has` is how many the friend already holds ('same').
+ * `colours` (a two-colour basket) names the colour of each part; `has` is how many the friend already holds ('same',
+ * and counting on in a tier 1–2 'add', where `total` is only the basket's part).
  * `say` is spoken once; `want` is the short reminder after a basket handed over too soon.
  * Every request is finished by handing the basket over, so stopping at the number is the child's decision.
  * `away` lists the friends already at the picnic: each request is for a friend who is not there yet, so a visit
@@ -265,10 +266,22 @@ export function makeRequest(level, recent = [], rand = Math.random, tier = 1, cl
     // Two small groups: "3, then 2 more". The first group is the bigger one, so the child counts on from it.
     // Tiers 1 and 2 keep each group to one row of five; tier 3 lets the first group fill most of a ten-frame,
     // and once its counts reach the teens it asks for a full ten and a few more ("10, then 3 more"), on two frames.
-    total = Math.max(total, 3)
+    // Counting on (tiers 1–2) adds at least 2, so there is something to count on.
+    total = Math.max(total, tier < 3 ? 4 : 3)
     if (tier === 3) total = Math.min(total, hi > 10 ? 14 : 10)
-    const a = total > 10 ? 10 : tier === 3 ? between(Math.max(Math.ceil(total / 2), total - 4), total - 1, rand) : between(Math.max(Math.ceil(total / 2), total - 5), Math.min(5, total - 1), rand)
+    const a = total > 10 ? 10 : tier === 3 ? between(Math.max(Math.ceil(total / 2), total - 4), total - 1, rand) : between(Math.max(Math.ceil(total / 2), total - 5), Math.min(5, total - 2), rand)
     const b = total - a
+    if (tier < 3) {
+      // Counting on: the friend already holds the first group (drawn filled on the card) and the child adds the rest,
+      // heard as "4, 5. That's 5!" from where the friend's group ends. The basket wants only the b more.
+      return {
+        type, friend, ...look, has: a, parts: [a, b], total: b,
+        say: `${who} has ${things(a)}. ${who} wants ${b} more.`,
+        want: `${who} has ${a}. ${who} wants ${b} more.`,
+        named: `${a} and ${b} more make ${total}!`,
+        accept,
+      }
+    }
     return {
       type, friend, ...look, parts: [a, b], total,
       say: `${who} wants ${things(a)}, then ${b} more.`,

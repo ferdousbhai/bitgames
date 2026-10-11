@@ -19,7 +19,7 @@ const SPLASH_SPEED = 9.5 // hitting the rim this fast sends you flying (paddling
 export const FLY_TIME = 1.35
 const HIT_MEMORY = 2.5 // seconds a bonk counts toward a splash bonus
 
-export const newStats = () => ({ bubbles: 0, gifts: 0, bonks: 0, splashes: 0, dashes: 0, flights: 0, nopes: 0, chosen: 0, splits: 0, frogs: 0, bumps: 0, rafts: 0, lastOnes: 0, wise: 0 })
+export const newStats = () => ({ bubbles: 0, gifts: 0, bonks: 0, splashes: 0, dashes: 0, flights: 0, nopes: 0, chosen: 0, splits: 0, meant: 0, frogs: 0, bumps: 0, rafts: 0, lastOnes: 0, wise: 0, luck: 0 })
 
 /** What a pickup puts in the jar: its colour, TEN for a raft, or null for stars and gifts. */
 export const tokenOf = (it) => (it.k === 'ten' ? TEN : it.k === 'bubble' ? (Number.isInteger(it.c) ? it.c : -1) : null)
@@ -43,9 +43,9 @@ const AIM_HOLD_PLACE = 0.45
  * that exactly at anything.
  */
 const AIM_TIGHT = 0.2
+/** A crossing step dry this long (s) starts a trickle of single bubbles; the 45 s reminder comes first. */
+export const TRICKLE_AFTER = 48
 const AIM_TIGHT_HOLD = 0.2
-/** Bumper play's last stretch: a raft this close was a real option, so taking a single bubble instead was a choice. */
-const RAFT_REACH = 7.5
 /**
  * A new goal changes what fits: for a moment after it starts, a bubble that no longer fits is not a miss
  * (the child was already steering at it for the old goal, and a child turns no faster than that).
@@ -174,11 +174,12 @@ export class Sim {
 
   /**
    * How many new single bubbles may float by on a crossing step: a scarce few. A team that has had none
-   * for 30 s (after the voice's question and its hint) gets one more every 6 s, so nobody is stuck for long.
+   * for TRICKLE_AFTER seconds (after the voice's question, its hint and its reminder) gets one more every
+   * 6 s, so nobody is stuck for long.
    */
   onesLeft() {
     if (this.scarce == null) return Infinity
-    return this.scarce + Math.floor(Math.max(0, this.dryT - 30) / 6) - this.spared
+    return this.scarce + Math.floor(Math.max(0, this.dryT - TRICKLE_AFTER) / 6) - this.spared
   }
 
   /** Does the jar have a space for this now? A full colour, a raft once the tens are full, or a single bubble before them, does not fit. */
@@ -292,6 +293,8 @@ export class Sim {
     d.h = Math.atan2(dx, dz)
     d.dashCd = DASH_COOLDOWN
     d.dashT = 0.4
+    // What the duck was already steering at when it dashed: dashing into that raft breaks it on purpose.
+    d.dashAim = d.aim && d.aim.t < this.time ? d.aim.id : null
     d.stats.dashes++
     return true
   }
@@ -639,14 +642,15 @@ export class Sim {
           if (this.chose(d, it, true)) {
             d.stats.chosen++
             e.aim = 1
-          }
+          } else if (it.split === d.id) d.stats.luck = (d.stats.luck ?? 0) + 1 // a raft broken by chance: neither careful nor careless
         } else if (it.k === 'bubble') {
           // Bumper play's last stretch (fewer than ten wanted): a single bubble the child steered at while a
-          // raft floated within reach, or one of a raft they meant to break, is the right choice made.
+          // raft floated on the water, or one of a raft they meant to break, is the right choice made.
+          // (Anywhere on the water: a careful child is never judged careless because no raft happened by.)
           if (!d.bot && this.left < 10) {
             d.stats.lastOnes++
-            const raftNear = [...this.items.values()].some((r) => r.k === 'ten' && r.stuck == null && Math.hypot(r.x - d.x, r.z - d.z) < RAFT_REACH)
-            if ((this.chose(d, it) && raftNear) || (it.split === d.id && it.meant)) {
+            const raftOut = [...this.items.values()].some((r) => r.k === 'ten' && r.stuck == null)
+            if ((this.chose(d, it) && raftOut) || (it.split === d.id && it.meant)) {
               d.stats.wise++
               e.wise = 1
             }
@@ -711,17 +715,9 @@ export class Sim {
       x = (x / dist) * lim
       z = (z / dist) * lim
     }
-    for (const o of this.obstacles) {
-      const ox = x - o.x
-      const oz = z - o.z
-      const od = Math.hypot(ox, oz) || 1
-      if (od < o.r + 0.9) {
-        x = o.x + (ox / od) * (o.r + 0.9)
-        z = o.z + (oz / od) * (o.r + 0.9)
-      }
-    }
-    it.x = +x.toFixed(2)
-    it.z = +z.toFixed(2)
+    const clear = this.offObstacles(x, z)
+    it.x = +clear.x.toFixed(2)
+    it.z = +clear.z.toFixed(2)
     // A child's careful choosing is what counts: each bubble that didn't fit counts once per duck.
     it.noped ??= new Set()
     // Every bump into one that doesn't fit, chosen or not (once per bubble): how much a duck wanders into them.
@@ -763,13 +759,35 @@ export class Sim {
     return it.k === 'ten' && !d.bot && d.dashT > 0 && this.goal.kind === 'place' && !this.open.includes('ten') && this.open.includes('any')
   }
 
-  /** A raft breaks into its ten bubbles, in a ring where it was. */
+  /**
+   * A place on the water just clear of any obstacle, so a duck can always reach what floats there
+   * (pushed out the far side of it, or toward the middle when that side is the rim).
+   */
+  offObstacles(x, z) {
+    for (const o of this.obstacles) {
+      let ox = x - o.x
+      let oz = z - o.z
+      let od = Math.hypot(ox, oz) || 1
+      if (od >= o.r + 0.9) continue
+      if (Math.hypot(o.x + (ox / od) * (o.r + 0.9), o.z + (oz / od) * (o.r + 0.9)) > R - 1.6) {
+        ox = -o.x
+        oz = -o.z
+        od = Math.hypot(ox, oz) || 1
+      }
+      x = o.x + (ox / od) * (o.r + 0.9)
+      z = o.z + (oz / od) * (o.r + 0.9)
+    }
+    return { x, z }
+  }
+
+  /** A raft breaks into its ten bubbles, in a ring where it was (none of them under a lily pad or a boat). */
   split(it, d) {
-    // Steering at the raft and dashing into it was a choice; a dash in a random direction that happens to
-    // hit one is not, so its ten bubbles are not careful catches either.
-    const meant = this.chose(d, it)
+    // Steering at the raft and dashing into it was a choice (even a quick one: breaking a ten is the idea
+    // taught); a dash in a random direction that happens to hit one is not, so its ten bubbles are luck.
+    const meant = this.chose(d, it) || d.dashAim === it.id
     this.items.delete(it.id)
     d.stats.splits++
+    if (meant) d.stats.meant = (d.stats.meant ?? 0) + 1
     this.emit({ k: 'split', item: it.id, id: d.id, x: it.x, z: it.z })
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2
@@ -781,7 +799,7 @@ export class Sim {
         z = (z / dist) * (R - 1.2)
       }
       // Breaking the raft was the choice: its bubbles count as chosen for the duck that meant to break it.
-      const b = this.addItem('bubble', { x, z })
+      const b = this.addItem('bubble', this.offObstacles(x, z))
       b.split = d.id
       b.meant = meant
     }
@@ -836,7 +854,7 @@ export class Sim {
     }
     // Gift powers belong to bumper play; Pond helpers keeps the water for the bubbles the jar sorts.
     if (t.gift <= 0 && !this.calm) {
-      t.gift = 9 + Math.random() * 4
+      t.gift = 18 + Math.random() * 8 // now and then: the rafts and bubbles are the game
       if (this.count('gift') < 1) this.addItem('gift')
     }
     const wait = this.frogs ? FROG_FREE : STUCK_FREE

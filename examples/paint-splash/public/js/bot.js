@@ -2,6 +2,15 @@ import { HALF_D, HALF_W } from './paint.js'
 import { COLLIDE_AHEAD, COLLIDE_R } from './painter.js'
 import { clamp } from './util.js'
 
+/** How close (metres) a robot minding the frame comes to a child as it crosses the page. */
+const CHILD_GAP = 4.5
+/** The nearest a straight path from painter p to (x, z) passes to painter o. */
+function pathGap(p, x, z, o) {
+  const dx = x - p.x, dz = z - p.z
+  const k = clamp(((o.x - p.x) * dx + (o.z - p.z) * dz) / (dx * dx + dz * dz || 1), 0, 1)
+  return Math.hypot(p.x + dx * k - o.x, p.z + dz * k - o.z)
+}
+
 /**
  * Friendly computer painters for empty seats. They look for bare ground to
  * paint (never the children's shapes or wet paint near a child), go for pickups now and then, roll
@@ -97,6 +106,8 @@ export class Bot {
       if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 1.5)) continue
       if (shapes.some((s) => s.near(x, z, 2))) continue
       if (children.some((o) => Math.hypot(o.x - x, o.z - z) < 5)) continue
+      // Minding the frame, a robot crosses the page only on a path that keeps well clear of the children.
+      if (this.frame && children.some((o) => pathGap(p, x, z, o) < CHILD_GAP)) continue
       let score = 0
       for (const [ox, oz] of [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) if (paint.mixAt(x + ox, z + oz) === 0) score += 3
       score -= Math.hypot(x - p.x, z - p.z) * 0.25
@@ -106,7 +117,8 @@ export class Bot {
         best = { x, z }
       }
     }
-    this.goal = best ?? { x: 0, z: 0 }
+    // Nowhere clear to go: a robot minding the frame waits where it is rather than cross the page.
+    this.goal = best ?? (this.frame ? { x: p.x, z: p.z } : { x: 0, z: 0 })
   }
 
   /** Bends `want` away from walls, obstacles, the children's shapes and other painters just ahead. */
@@ -123,7 +135,8 @@ export class Bot {
       want.z += (dz / d) * k
     }
     for (const o of obstacles) push(o.x, o.z, o.r, 2.2)
-    for (const other of painters) if (other !== p) push(other.x, other.z, other.bot ? COLLIDE_R : COLLIDE_R + 2, other.bot ? 1.2 : 1.8)
+    // A child gets room (more while minding the frame, so the page round a child stays theirs).
+    for (const other of painters) if (other !== p) push(other.x, other.z, other.bot ? COLLIDE_R : this.frame ? CHILD_GAP : COLLIDE_R + 2, other.bot ? 1.2 : 1.8)
     for (const s of shapes) push(s.x, s.z, s.r, 2.4)
     const margin = this.frame ? 0.9 : 2.2
     if (cx < -HALF_W + margin) want.x += (-HALF_W + margin - cx) * 0.8

@@ -323,3 +323,37 @@ Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-
 - Babies boards 1–3 are still visual size matching (a baby in a basket).
 - The book has no page for babies or looks. It could show the baby's picture once found.
 - Check the device voice saying "Toot toot!" and "Ribbit!" on a real iPad.
+
+## Bug-fix pass after the third review (2026-10-11)
+
+The review scored 8.5 and listed three speech bugs. All three are fixed; there is no design change.
+
+| Bug | Fix | Where |
+| --- | --- | --- |
+| The whose-baby line ("A kit is a fox's baby.") was droppable, so the next sleeping baby's `hurry()` hushed it 0.2–0.3 s in, and `sayOnce` never said it again | The line is no longer droppable; the next clue waits for it. `hurry()` now only cuts a goal still being said (via `cutGoal`) and drops waiting droppable steps, so nothing is cut mid-word | `public/js/main.js:1659`, `public/js/talk.js:84` |
+| Random tapping on sleeping babies made a stream of cut-off words ("Fox! Calf! Kit! Calf! Kit!") | Besides the 2-per-card limit, at most `CLUE_BURST` (3) clue words are said in any `CLUE_WINDOW` (5 s) across the board, counted when actually spoken; after that the tag (and a sound card's call) carries the clue. Re-tapping an open card still says it. Names are no longer hushed mid-word (see above) | `main.js:130`, `main.js:246`, `sayClue` `main.js:904`, reset in `startLevel` `main.js:1430` |
+| On a quick Sounds match the call and its word ("Moo!") went stale on `matched`, so the child heard only "The cow moos!" | A sound card's call and word go stale only when the card turns back down (`clueStale`), so "Moo!" is heard before the match line answers it. A sleeping baby's word keeps the old rule (the match line says the word) | `clueStale` `main.js:923`, `playCall` `main.js:949` |
+
+### Evidence
+
+Scripts, logs and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish3/memory-match/` (`bot.mjs` logs every `speechSynthesis.cancel()` as `<hush>`; `dbg.mjs` also logs queue pushes and stale drops). Every run had 0 console or page errors.
+
+| Board | Turns | Slips | Hushes during play | Notes |
+| --- | --- | --- | --- | --- |
+| Babies 12 sleeping, landscape, careful | 10 | 0 | 0 | "A chick is a penguin's baby." and "A cub is a lion's or a panda's baby." said whole |
+| Babies 16 sleeping, portrait, random | 50 | 37 | 0 | Five whose-baby facts said whole; clue words about 1 s or more apart (it was "Fox! Calf! Kit! Calf! Kit!" in 3 s) |
+| Sounds 4, careful (4 runs portrait, 1 landscape) | 2–3 | 0 | 0 | Every match line came after its clue: "Meow!" then "The cat meows!", "Ribbit!" then "The frog croaks!", "Moo!" then "The cow moos!" |
+| Sounds 12, landscape, random | 30 | 18 | 0 | Win card readable (`landscape-sound-L3-random-3-win.png`) |
+| Twins 12 look-alikes, portrait, careful | 9 | 0 | 0 | Unchanged |
+| Homes 10, landscape, random | 34 | 21 | 0 | Kind-miss lines unchanged |
+
+- The first version of the burst limit counted clues when queued, which on a 4-card Sounds board blocked a clue that went stale ("Yip yip!" missing before "The fox yips!"). It now counts only clues actually said, and the four Sounds runs above are clean.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids memory-match --run memory-match-f1`: BOOT + PLAY ready, 0 errors. `node --check` passes on `main.js` and `talk.js`.
+
+### Still open (blockers from the review, not bugs)
+
+- Sounds has no harder 6–8 tier (a word-only name card, or a voice-only call card from 12 cards).
+- Babies 1–3 and Twins 1–3 are memory and size matching only.
+- Homes: found groups stay scattered; they could gather at a small home sign.
+- Kind-miss lines are long for a 4-year-old ("Yes, penguins are wild! Here they live in the water.").
+- Synthesized animal calls; the book is static; the landscape win card covers much of a 20-card board.

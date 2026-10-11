@@ -584,3 +584,51 @@ Scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-
 - A guest's own child still gets no rescue or adaptation; the host's checks drive the request.
 - The request card can still cover a finished shape near the top edge when the camera follows the child. New requests are kept clear of it (`clearView`), but older inked shapes are not.
 - Ratio colours on the ground are display state. If two guests' strokes over the same cell arrive in different orders, they could disagree on a lean mid-stroke. The host's fill makes finished shapes identical everywhere.
+
+## Round 7: bug pass on the third reviews (2026-10-11)
+
+Both reviews scored 8.5 and 8.6. This pass fixes every bug they list and makes no redesign. Paths are under `examples/paint-splash/public/` unless noted.
+
+### Bugs and fixes
+
+| Bug | Fix (file:line) |
+| --- | --- |
+| Results after a page turn showed a nearly empty fresh page; the full page was only in My pictures | `gallery.keep` returns the picture (`examples/_studio/originals/gallery.js:66-76`, copied to `js/gallery.js`). `freshPage` keeps the last two full pages in `game.pages` (`js/main.js:2175`). The results show them as small page chips before the shape chips (`js/main.js:1123-1128`, `style.css:160-162`, `:317`). When the last page has no finished shape, the last full page is the picture itself (`#results-page`, `index.html:95`, `style.css:235`, `blankPage` `js/main.js:1090`), and the empty page is not auto-kept (`js/main.js:1096`). |
+| Hint and slip sentences repeated within a round ("Orange! Red and yellow make orange." twice; the same `ruleSlip` twice on one shape) | Slip lines are said once a round per rule (or colour) and wrong mix (`slip:` key, `js/main.js:1975-1990`, `ruleKey` `:1597`). At the low tiers a repeat slip still shows the recipe on the card, silently (`giveRecipe(..., say)`). The child's own-colour readback says the recipe once a round, then just "Orange!" (`js/main.js:2158-2164`). The wet tip and the ratio tip are once a round per colour (`wet:`/`more:` keys), and the rescue lines go through `sayOnce` (`js/main.js:1955`). |
+| Rescue said "Try the red pot." to a child already holding red | It says "Roll your red over the sun." (the part's word on a two-part shape) when the next paint is the one held (`js/main.js:2046-2052`). |
+| The same rule was asked twice running ("no blue" on the star, then the heart) | History entries carry `rules` (`chalkJob`). `chooseJob` skips a rule equal to either of the last two ruled requests (`js/jobs.js:186-201`). |
+| Tier 2 offered only one-part shapes on a busy page, so brown from three paints could vanish | From tier 2, if no offered option is two-part, `nextJob` tries up to 12 more requests and swaps in the first two-part shape that fits (`js/main.js:1708-1720`). |
+| A wrong-lean ratio (red, yellow, red for a yellowish orange) was counted as 2/3 progress and never named | `Job.check` counts the cells leaning the wrong way as `part.off`, at 1/3 progress (the other paint evens it out again) (`js/jobs.js:336-351`). Once `off` reaches `WRONG_SHARE`, it is a gentle slip, named once a round: "That's reddish orange: more red. Yellowish orange needs more yellow." (`js/main.js:2012-2024`). |
+| The rescue ring said blue, but the voice and the still picture said "yellow, then blue" on a "with blue" rule | `planOf(part)` gives the colour and its order (the rule's paint first). `nextPaint`, the "Look: …" words and the ghost stripes all use it (`js/main.js:1931-1950`, `:2055-2059`, `js/jobs.js:470-486`). |
+| Landscape: an older inked shape near the bottom was cut by the pots tray and the screen edge | `leanToShapes` leans the follow camera down up to 3 m when a finished shape lies just below the clear view, fading out by 7 m and never pushing the shape being painted under the card (`js/main.js:1422`, `:1427-1452`). |
+| Robots crossing the page came within about 2 m of the child | Minding the frame, a robot picks no goal whose straight path passes within `CHILD_GAP` (4.5 m) of a child. It waits rather than cross, and gives a child wider room when steering (`js/bot.js:5-13`, `:110`, `:139`, `:120`). |
+| The idle drag finger wiggled forever | Three slow strokes, then still (`style.css:206-207`). It is also hidden while the card offers shapes or the finish question shows (`js/main.js:2257`). |
+
+### Evidence
+
+The scripts and screenshots are in `/tmp/claude-1001/-home-x-github-com-ferdousbhai-bitgames/264c5237-472d-4187-be3f-45d364aa4d2a/scratchpad/polish3/paint-splash/`. Speech was stubbed and logged. Every run had 0 console or page errors.
+
+- `pages.mjs` (834×1194 and 1194×834): the page fills, turns, and the round ends on the empty fresh page.
+  - `pg-p-results.png` and `pg-l-results.png` show the full six-shape page as the results picture.
+  - `pg-p2-results.png` has one apple on page two. It shows the apple page with the full page as a chip.
+  - `t2p-5-results.png` is the natural tier 2 → 4 climb: 14 shapes over a page turn, with a page chip.
+- `careful.mjs`:
+  - Tier 2, portrait (`t2p.log`): every tier-2 offer includes a two-part shape ("icecream/carrot/tree", "balloon/tree/carrot", "sun/carrot/mushroom"). Rules up to tier 4 never repeat back to back. 26 lines in 6.2 min (4.2 a minute), and no sentence is repeated.
+  - Tier 4, landscape (`t4l.log`): 12 shapes, 3.9 lines a minute, no repeated sentence.
+  - Tier 6, portrait (`t6p.log`): 8 shapes, ratios "reddish orange" in play, 4.1 lines a minute.
+- `rules.mjs`: `chooseJob` ran 200 rounds × 12 requests at tiers 3 and 4: 2652 ruled requests, 0 back-to-back repeats.
+- `wronglean.mjs`: on a yellowish-orange fish, red, yellow, red gives `off` 1.0, near 0.33, one slip. The voice says once: "That's reddish orange: more red. Yellowish orange needs more yellow."
+- `rescue.mjs` (1194×834):
+  - On "a mix of blue and one more paint", holding blue: the ring is on blue and the voice says "Roll your blue over the star.", then "Look: blue, then yellow on top while it shines." The ghost stripes are blue (#4e8ad5), then yellow.
+  - Holding red on an orange sun: "Roll your red over the sun."
+  - Holding blue on an orange fish: "Try the red pot."
+- `lean.mjs` (1194×834): with the ice cream finished below and the child on a star above it, the cone's bottom moved from y 929 px (under the tray) to 715 px, with the whole cone in view (`lean-l.png`). The star's top stayed in view at 203 px.
+- `bots.mjs`: the closest any robot came to an idle child in 60 s, at four spots. Before: 4.39, 3.57, 5.45 and 4.06 m. After: 5.04, 5.48, 5.29 and 6.71 m.
+- `random.mjs` at tier 3: careless play. No line is repeated, and the step down to 🔄 still works.
+- `EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/browser.mjs --ids paint-splash --run paint-splash-f1`: BOOT + PLAY ready, 0 errors. `node --check` passes on every file in `public/js/` and on `examples/_studio/originals/gallery.js`.
+
+### Remaining ideas
+
+- In portrait, the request card still covers the top edge of the page.
+- Quick mode is still a free paint, and a robot can share the child's paint there.
+- The climb from tier 0 to the ratio step is still about 24 careful shapes.

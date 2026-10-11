@@ -773,3 +773,98 @@ Screenshots checked:
 
 - Keep the door garden between trips.
 - A masher on the top tier is not stepped down on rows, because it misses carrots rather than overfilling. Its pattern tier does drop. Stepping down on two short baskets could be considered.
+
+## 2026-10-11 — bug pass (feedback round 3, both reviews 8.5)
+
+Every bug from both reviews, fixed under `examples/bunny-hop/public/`:
+
+- **Sideways-phone sum showed a crate that was hidden** ("5 + 8 + 3 = ?" with only 5 and 8 on screen). The 🎵 crate now steps aside only when it is not in the sum: `askPantry` marks the asked shelf `with-tune` (`js/main.js:557`), and the rule is `.pantry-shelf.asked:not(.with-tune)` (`style.css:386`).
+- **"Which has more?" kept the 🎵 crate on screen** (tablets and phones). The same rule now applies at every size, so only the two crates being compared show (`style.css:386`).
+- **"Which has more?" could ask 1 against 0.** The little hoppers' question needs two crates that differ and each hold 2 or more (`js/main.js:549`). The adding question needs carrots in both crates (`js/main.js:541`). If no shelf qualifies, Pip goes straight to the total.
+- **"4 of 5." said twice in one trip.** Both row-end lines now go through `voice.sayOnce`, still at most two a trip (`js/main.js:1019,1025`).
+- **"Pip needs 4." then "Pip needs 5. Which patch has 5?"** A basket row followed directly by the fork no longer says its number (the 🧺 shows it). The fork's own question says the number (`js/main.js:793`).
+- **The three-colour garden request had no follow-up.** The first two-colour pattern now hears, once: "Blue, pink, again and again. A pattern! Can you make one with three colours?" (`js/main.js:517`).
+- **Portrait gap question read out of order.** The total now sits above the question panel in the pantry (`js/learning.js:399`). The panel reads: place sums, "= 42 🥕 ❄️30", then "🥕 42 − ❄️ 30 = ?" and its buttons.
+- **Snow glints winked without end, and showed at home.** The glints are now still (no wink, no spin; `js/effects.js:341`). They show only while hopping, not at home or in the garden (`js/main.js:1342`).
+- **Planted garden hidden (behind the landscape panel, and partly behind Pip and the mound).** The row now starts at Pip's right, in front of the burrow (`js/world.js:280`): x `HOME_X+0.8`, z 0.35, step 0.6 sideways and 0.48 upright. Measured flower centres: 1194×834 x 618–976 (panel ends at 472); 834×1194 x 435–753 (on screen).
+- **The winter goal did not need the counting lesson.** The goal now adds the pattern carrots that perfect play is sure to munch (`surePatternCarrots`, `js/main.js:348`; goal `:325`). The count follows the right-answer ladder from the child's tier. On tiers 0–1, at most one pattern a trip has no carrots, and every other pattern has at least 3. A growing pattern may have none. That is 9 extra for a fresh 0/0 child, 0–3 for one on tier 1–2, then rounded down to a five. Perfect play still always meets the goal, so the goal cannot fully separate a greedy child: after two over-fills the child is stepped down to whole rows, and there hopping at every high carrot is the right play. The greedy margin is smaller, and some greedy runs now fall short.
+
+Evidence: Chromium `--use-angle=gl` with speech stubbed and logged. The script is `…/scratchpad/polish3/bunny-hop/play.mjs` (same bots as `play7`), output in `r/`. All 14 runs had 0 console errors.
+
+| Run | Viewport | Tier | Total / goal |
+| --- | --- | --- | --- |
+| careP | 834×1194 | 0/0 | 44/30 |
+| t1P | 834×1194 | 1/1 | 45/35 |
+| wrongP | 834×1194 | 2/2 | 42/30 |
+| gentleP 🐢 | 834×1194 | 0/0 | 44/35 |
+| shortL | 667×375 | 2/2 | 46/35 |
+| topL | 1194×834 | 2/2 | 40/30 |
+| greedyP | 834×1194 | 1/0 | 39/30 |
+| greedy2P | 834×1194 | 1/1 | 38/35 |
+| greedyL | 1194×834 | 2/0 | 36/45, short |
+| randP | 834×1194 | 1/1 | 26/35 |
+| spamL | 1194×834 | 0/0 | 21/40 |
+
+What the runs show:
+
+- **Pantry crates:** The asked-shelf DOM probe shows `with-tune` and the 🎵 crate `display:flex` on every three-number sum (`shortL-home-q0`: "2 + 3 + 3 = ?" with all three crates). The 🎵 crate is `none` on every "Which has more?" (`greedy2P-home-q0`: 2 vs 7, two crates).
+- **Gap question order:** `wrongP-home-counton2` reads top to bottom.
+- **Garden:** `gL-garden`, `gP-garden` and `shortL-garden` show all 8 flowers. `g3P`/`s3L` logged the three-colour nudge.
+- **Voice:** no repeated row-end line in any run. The only repeats are counting 1–2 and the answer words "Yes, a carrot!" and "Listen.".
+
+`browser.mjs --ids bunny-hop --run bunny-hop-f1`: BOOT + PLAY ready, 0 errors. `node --check` passes on every JS file.
+
+Not changed:
+- The 🐢 pace may still climb to the top tiers within a trip (review 1, improvement 7).
+- A first-trip child reaches the growing pattern only on trip two (review 2, improvement 5).
+- The garden is not kept between trips.
+- On 667×375 the found-pattern strips overlap the planted flowers' stems. The flower heads stay visible.
+
+## 2026-10-11 — round 2 bug pass (reviews 8.6 and 8.5)
+
+Every bug from both reviews, fixed under `examples/bunny-hop/public/`:
+
+- **The winter goal could be met without stopping at a full basket.** The goal had 10 to 14 carrots of slack: it was built from the lowest row asks on any tier, a cautious pattern count, and then rounded down to a five. It is now what careful play brings home, less two for a slip:
+  - `course.careful(row, top)` (`js/course.js:325`) shapes each row as careful play will meet it: whole rows until two looking rows step up, then baskets.
+  - Patterns count 3 carrots each except one (`js/main.js:332`). This holds because `shapeRhythm` now allows at most one carrot-free pattern a trip on every tier, growing ones included (`js/course.js:383-386`).
+  - The goal is no longer rounded down to a five.
+  - Every carrot past a full basket now tips **two** out, not one (`keptIn`, `js/main.js:995`; spill at `:980`). The first spill says "Two rolled out."
+- **The 🐢 pace climbed to the top tiers in one trip.** `game.top` (`js/main.js:302`) caps row and pattern at tier 1 on the 🐢 pace, unless the stored tier was already higher. The caps apply to the row climb (`:1032`), the whole-row climb (`:1051`, which also no longer drops a tier-2 child to 1) and the pattern climb (`:936`). At home the 🐢 pace gets no three-number sum (`:531`) and no winter gap question (`:439`).
+- **A careful child on a fresh device never met a growing pattern on the first trip.** The run of right first answers is no longer reset after a step up. Two right answers step up, and each one after that steps up again (`js/main.js:936`). careP now asks at tiers 0, 0→1, 1→2, and the snow pattern is a growing one.
+- **Three sentences in a row at home.** When the winter gap is asked, the total line is gone (the number shows it). The question waits 1.8 s after the shelf answer (`js/main.js:439-445`). careP: "Yes! 5, 7 and 6 make 18." (177.2 s) → "How many carrots to spare?" (179.0 s).
+- **"Pip needs 35 carrots" and "Pip needs 3" sounded alike.** The opening line is now "Pip wants 41 carrots in his pantry for winter." (`js/main.js:347`). The home line follows: "Pip wants 46 for winter." (`js/learning.js:529`).
+- **Found-pattern strips covered the planted flowers on short sideways phones.** They are hidden while the garden is open (`style.css:390-392`). `r2/shortL-garden.png` shows all 8 flowers clear, with the 🌼 strip gone.
+- **"Which has more?" drew the faded carrots that got away, with a "+" between the crates.** The asked crates drop their away carrots and are sized to what came home. The plus is hidden (`js/main.js:568`, `style.css:388`). `r2/randP-home-q0.png` shows 2 against 4, with the longer crate the bigger number.
+- **Butterflies looked like dark olive silhouettes.** Their wings take 0.3 of their own colour as emissive, so the underside lit by the green ground light keeps its colour (`js/world.js:373-380`).
+- **The fork never reached a child who climbed during the trip.** A trip starting on whole rows now keeps a fork for the autumn or the snow (`js/main.js:319`). If the child is still on whole rows when it is cued, it becomes an ordinary row (`:782`). The fresh careP and gentleP runs both met it.
+- **Answer lines repeated** ("Yes, a carrot!" ×3, "Listen." ×4). "Yes, a carrot!" and "A rock." are each said once a trip. After that the rule is said ("Yes! Toadstool, rock, carrot."). On tiers 1–2, "Listen." is said once a trip (`js/main.js:921-944`).
+
+Evidence: Chromium `--use-angle=gl` with speech stubbed and logged. The script is `…/scratchpad/polish3/bunny-hop/play2.mjs` (the same bots as before), run by `runall.sh`, with output in `r2/` and `r3/`. All 16 runs had 0 console errors.
+
+| Run | Viewport | Start tier | Total / goal |
+| --- | --- | --- | --- |
+| careP | 834×1194 | 0/0 | 49/41 |
+| care2P | 834×1194 | 0/0 | 44/39 |
+| careL | 1194×834 | 0/0 | 47/42 |
+| care1L | 1194×834 | 1/1 | 51/46 |
+| shortL | 667×375 | 2/2 | 47/42 |
+| wrongP | 834×1194 | 2/2 | 46/41 |
+| gentleP 🐢 | 834×1194 | 0/0 | 38/36, ended 1/1 |
+| gentle2P 🐢 | 834×1194 | 1/1 | 43/38, ended 1/1 |
+| greedy0L | 1194×834 | 0/0 | 28/38 |
+| greedyP | 834×1194 | 1/1 | 26/42 |
+| greedy1P | 834×1194 | 1/1 | 29/46 |
+| greedy1L | 1194×834 | 1/0 | 29/42 |
+| greedy2L | 1194×834 | 2/2 | 26/40 |
+| greedy2P | 834×1194 | 2/2 | 31/47 |
+| randP | 834×1194 | 0/0 | 20/40 |
+
+- Every careful run met the goal, by 2 to 8 carrots. Every greedy and random run fell short.
+- No line repeats in any `r3` run, apart from counting numbers.
+
+`browser.mjs --ids bunny-hop --run bunny-hop-f2`: BOOT + PLAY ready, 0 errors. `node --check` passes on every JS file.
+
+Not changed:
+- The door garden is still not kept between trips (review 1 #5, review 2 #6).
+- Patterns on tier 2 are still all growing ones.
+- The 🐢 goal margin is small (38/36), as the careful-play estimate is close to exact.

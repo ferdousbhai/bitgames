@@ -122,8 +122,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .stick { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity .15s; }
 .stick.on { opacity: 1; }
 .stick::before { content: ''; position: absolute; left: calc(var(--r, 60px) * -1); top: calc(var(--r, 60px) * -1); width: calc(var(--r, 60px) * 2); height: calc(var(--r, 60px) * 2);
-  border-radius: 50%; background: rgba(255,255,255,0.22); border: 4px solid rgba(255,255,255,0.7); }
-.knob { position: absolute; left: -30px; top: -30px; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff6c2, #ffd23f); box-shadow: 0 4px 10px rgba(0,0,0,.25); }
+  border-radius: 50%; background: rgba(255,255,255,0.08); border: 3px solid rgba(255,255,255,0.55); }
+/* (See-through enough that a frog's number under the finger can still be read.) */
+.knob { position: absolute; left: -30px; top: -30px; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff6c2, #ffd23f); box-shadow: 0 4px 10px rgba(0,0,0,.25); opacity: .75; }
 
 .banner {
   position: absolute; top: 26%; left: 0; right: 0; text-align: center; font-size: clamp(40px, 9vw, 84px); font-weight: 900;
@@ -189,6 +190,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   #results h1 { font-size: 26px; white-space: nowrap; }
   .place .award { white-space: nowrap; }
   #results .big-go { white-space: nowrap; padding: 10px 30px; }
+}
+/* Upright tablets: Bumper play's team pill (up to 7 rafts and both numbers, about 540 px) would run under
+   the corner buttons, so it sits just below them. */
+@media (orientation: portrait) and (max-width: 919px) {
+  body:not(.calm-round) .hud-top { top: calc(66px + env(safe-area-inset-top)); }
 }
 /* Upright phones: smaller counting bubbles, lifted over the store's room code. */
 @media (max-width: 560px) and (orientation: portrait) {
@@ -476,19 +482,33 @@ body.calm-round #timer, body.calm-round #scores { display: none; }
 #timer { display: flex; align-items: center; padding: 6px 12px; }
 #timer .tr { grid-template-columns: repeat(5, 9px); }
 #timer .tr i { width: 9px; height: 9px; }
+/* The number now (white) and the goal (gold, labelled "make", as on the jar) either side of the rafts. */
+#timer .tt-now, #timer .tt-goal { font-weight: 900; font-size: 20px; line-height: 1; }
+#timer .tt-now { color: #fff; min-width: 1.4em; text-align: right; margin-right: 8px; }
+#timer .tt-goal { color: #ffd23f; margin-left: 8px; text-align: center; }
+#timer .tt-goal small { display: block; font-size: 10px; font-weight: 800; color: #fff; }
+/* A phone held upright: smaller dots, so seven rafts and both numbers still fit across. */
+@media (max-width: 430px) {
+  #timer { padding: 4px 8px; max-width: calc(100vw - 16px); box-sizing: border-box; }
+  #timer .tr { grid-template-columns: repeat(5, 5px); gap: 1px; padding: 2px; }
+  #timer .tr i { width: 5px; height: 5px; }
+  #timer .tt-now, #timer .tt-goal { font-size: 16px; }
+  #timer .tt-now { margin-right: 4px; }
+  #timer .tt-goal { margin-left: 4px; }
+}
 body:not(.calm-round) #scores { display: none; }
 .mode .pic .big { font-size: 30px; line-height: 1; }
-.mode .pic .team-tally .tr { border-color: #ff9a2e; }
-.mode .pic .team-tally .tr i { box-shadow: inset 0 0 0 1.5px rgba(36,48,110,.35); }
-.mode .pic .team-tally .tr i.on { background: #fff; }
 .team-sum { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 6px 12px; border-radius: 18px; background: rgba(20,40,110,0.32); font-size: 22px; font-weight: 900; }
 .team-sum .tr { grid-template-columns: repeat(5, 10px); }
 .team-sum .tr i { width: 10px; height: 10px; }
 @media (max-height: 500px) { .team-sum { font-size: 16px; padding: 2px 8px; } .team-sum .tr { grid-template-columns: repeat(5, 6px); } .team-sum .tr i { width: 6px; height: 6px; } }
-.mode .pic .team-tally { gap: 2px; }
-.mode .pic .team-tally .tr { grid-template-columns: repeat(5, 4px); gap: 1px; padding: 2px; border-width: 1.5px; border-radius: 4px; }
-.mode .pic .team-tally .tr i { width: 4px; height: 4px; }
 .mode.lively .pic { flex-wrap: nowrap; }
+/* The menu's bumper-play picture is its goal: a raft for each ten and a dot for each one (47: four rafts, seven dots). */
+.mode .pic .tally { gap: 3px; }
+.mode .pic .tally .t-raft { width: 8px; height: 24px; box-shadow: inset 0 0 0 1.5px #fff, 0 0 0 1px rgba(36,48,110,.25); }
+.mode .pic .tally .t-ones { grid-template-columns: repeat(5, 7px); }
+.mode .pic .tally .t-ones:empty { display: none; }
+.mode .pic .tally .t-ones i { width: 7px; height: 7px; box-shadow: 0 0 0 1px rgba(36,48,110,.35); }
 /* Bumper play: the team's tally is the one count on screen (no per-duck tallies to compare). */
 #scores { display: none; }
 /* Bumper play's results: the child's own catch as rafts and dots, beside their note. */

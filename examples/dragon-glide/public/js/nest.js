@@ -280,6 +280,7 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, onSlip, onGiveBac
     const cells = Array.from({ length: n <= 5 ? 5 : 10 }, () => frame.appendChild(el('i', 'cell')))
     let counted = 0
     let giving = extras.length
+    let askedAt = -Infinity
     const ask = `How many ${TREASURES[kind].many} came home?`
     const startCount = () => {
       tray.append(frame)
@@ -299,7 +300,8 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, onSlip, onGiveBac
           if (k === kind) {
             sound.nope()
             onSlip()
-            sayOnce(`Keep the ${TREASURES[kind].many}! Give back the others.`)
+            // (just after the ask, the shake and the soft note are enough: the same words aren't said twice)
+            if (performance.now() - askedAt > 4000) sayOnce(`Keep the ${TREASURES[kind].many}! Give back the others.`)
             return shake(b)
           }
           giveAway(b, k)
@@ -325,6 +327,7 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, onSlip, onGiveBac
       const words = `We asked for ${TREASURES[kind].many}. Give the others back to the sky!`
       tray.setAttribute('aria-label', words)
       say(words)
+      askedAt = performance.now()
     } else startCount()
     return
   }
@@ -423,11 +426,20 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, onSlip, onGiveBac
   }
   const [a, b] = goal.more ?? []
   const rule = goal.more ? moreWords(goal.more, goal.rule) : ''
-  /** Swaps treasures between the shelves (the family has plenty of both) until the rule holds. */
+  /** How far the basket is from keeping its rule (0 when it holds). */
+  const off = (got) => {
+    const d = (got[a] || 0) - (got[b] || 0)
+    return goal.rule === 'one' ? Math.abs(d - 1) : Math.max(0, 1 - d)
+  }
+  /**
+   * Swaps treasures between the shelves (the family has plenty of both) until the rule holds. The child
+   * decides which shelf gives one away: a swap that would take the basket further from the rule doesn't
+   * happen, and counts as a gentle slip, so reasoning differs from tapping either shelf.
+   */
   function fix() {
     onSlip()
     tray.classList.add('fixing')
-    const words = `Hmm, that's not ${rule}. Tap a shelf to swap one!`
+    const words = `Hmm, that's not ${rule}. Which shelf needs one fewer? Tap it to swap one!`
     tray.setAttribute('aria-label', words)
     say(words)
     for (const [k, shelf] of shelves) {
@@ -437,6 +449,12 @@ export function nestPuzzle(entry, { tray, sound, say, sayOnce, onSlip, onGiveBac
         const from = shelf.querySelector('.slots')
         if (!from.lastElementChild || tray.classList.contains('fixed')) return
         const other = k === a ? b : a
+        if (off({ ...entry.got, [k]: entry.got[k] - 1, [other]: (entry.got[other] || 0) + 1 }) > off(entry.got)) {
+          sound.nope()
+          onSlip()
+          sayOnce(`That shelf needs to keep its ${TREASURES[k].many}. Count them again!`)
+          return shake(shelf)
+        }
         const item = from.lastElementChild
         const slot = el('span', 'item', treasureSVG(other))
         shelves.get(other).querySelector('.slots').append(slot)

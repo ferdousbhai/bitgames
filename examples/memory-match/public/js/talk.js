@@ -78,14 +78,12 @@ export class Talk {
 
   /**
    * A clue is coming (a sound card's call, a sleeping baby's word): drops every droppable step
-   * waiting, and cuts short a droppable one being said (a long goal line), so the clue is next.
+   * waiting, and cuts short a goal still being said, so the clue is next. Words already being said
+   * (a name, a fact) finish: nothing is cut mid-word.
    */
   hurry() {
     this.trim()
-    if (this.current?.droppable) {
-      this.voice.hush()
-      this.wake?.()
-    }
+    this.cutGoal()
   }
 
   get busy() {

@@ -822,3 +822,101 @@ Scripts, logs and screenshots are in `scratchpad/polish/crash-racers/r8/`. Speec
 - **Improvements:**
   - 1, 2, 3, 5, 6 and 7: done.
   - 4: deferred, with the reason above.
+
+## 2026-10-11 — Round 5: one town for friends, a still camera, gates on the map
+
+Review 1 scored 8.3. This pass fixes its six bugs and makes ranked improvements 1, 2, 3, 4, 6 and 7. For the Race and Bumpers blocker, it gives the gates a map step.
+
+### Bugs and fixes
+
+| Bug | Fix | Where |
+| --- | --- | --- |
+| Co-op layout desync (about 1 in 11 starts) | The host's `go` now carries its finished town (`town.layout`: the kinds, distances, sides and streets, the road works, the one-way street and the tray). A friend's device builds that town as it is, so it no longer relies on its own `configureTown` search. If `go` arrives while the friend is still loading, the layout waits on `pendingSetup`. The layout is validated (`validLayout`). Also, `configureTown`'s fallback now keeps `behind`. | `public/js/town.js:251` (`validLayout`), `town.js:346` (`layout` getter), `town.js:355-478` (`configure({ layout })`); `public/js/main.js:1722-1724`, `main.js:1889`, `main.js:1950-1962` (`useHostTown`), `main.js:1098` |
+| Camera inside the scenery after a rescue, with the car out of view | `respawn` sets `game.snapCamera`, so the next frame puts the chase camera straight behind the car. The ghost car no longer blinks at 8 Hz. That blink was why the car was missing from the screenshots, and it was also a flash. | `main.js:2299`, `main.js:2951`, `main.js:2369` (`ghostTick`), `setGhost` |
+| Big yellow "Back on the road!" banner over the gate buttons in Race | `rescued()` shows the small top `note` in Race and Bumpers and the paper card in town. It does not show again within 8 s, so three quick rescues give one word. | `main.js:2303-2311` |
+| Roof parcels hide the house sign and the resident (tiers 2 and 3) | The roof parcels are smaller (0.55), with small low pictures, and sit at the back of the roof. | `town.js:303` (`dressRoof`) |
+| "Tap your parcel to hand it over." cut off by the thanks | The hint waits 1.8 s, and plays only if the child is still at that door and has handed nothing over. | `main.js:594-601` |
+| Selected city card overlaps its neighbour in the portrait menu | The `scale(1.06)` is removed from `.city.selected`. The ring and the border still show the choice. | `public/style.css:43` |
+
+### Improvements
+
+- **Softer engine (2).** The engine is now triangle and sine through a lower lowpass. On calm roads (town and Easy) it is a quiet purr with no gear-change saw. `public/js/audio.js:60-95`, called with `calmRoad()` at `main.js:3189`.
+- **Gates on the map (5, the blocker).** The gates now have a third adaptive step.
+  - The steps run: easy presents → harder presents after 3 right → **map gates** after 6 right. Town tier 3 starts on map gates.
+  - On a map gate the gantry and the gate buttons show 🗺️ in place of the house. Each gate's house is a pin on a larger, squarer minimap, set just outside the road. The child's dot now has a nose.
+  - The child has to find which pin is the next one ahead, then pick that house's present: map reading inside every gate, for 6–8.
+  - Two misses step back to houses on the gantry.
+  - The voice says once: "Whose gate is this? Find it on the map, then choose their present." A clean run ends with "You found every house on the map and matched its present!"
+  - Code: `public/js/gates.js:15-18`, `gates.js:36`, `gates.js:66-69`, `gates.js:95`, `gates.js:132-137`; `main.js:1247`, `main.js:1270-1281`, `main.js:1299-1311`, `main.js:1342`, `main.js:1895`, `main.js:3089-3105` (pins), `main.js:3140` (nose); `style.css:341`; `howToPlay` in `game.json`.
+- **Not done: a real route fork in Race.** It needs new track topology. Map gates give Race and Bumpers map use without one.
+
+### Evidence
+
+Everything is in `scratchpad/polish3/crash-racers/`. Speech was stubbed, and every run had 0 errors.
+
+- **`coop3.mjs`, two devices.**
+  - Montreal tier 2: the natural start gave the same layout on both devices. Then the friend's town was forced to a different seed (`🌸 📚 🧸 🍎`). The host's `go` restored the same houses and tray: `🍎🌙 🧸 🎂🌈 📚 | 🪁📕🍌📖🎈🪀🍐🕯️` on both.
+  - Helsinki tier 3: the same result. A malformed layout was ignored.
+  - `coopdiag.log`: 8 natural Montreal tier 2 starts all matched.
+- **`race.mjs`, Race and Bumpers.**
+  - `mp`: Stunt, tier 3, portrait. 6/6 `HM`. `mp-gate1.png` shows 🗺️ on the gantry and the buttons, with pins on the map. Only two lines were spoken.
+  - `hp`: Helsinki, portrait. `hp-rescue0.png` shows the small top note and the car in view behind the gate buttons. The pins sit beside the road.
+  - `ml`: Ubud tier 1, landscape. 6/6, harder from gate 4, and the camera was snapped after the rescue (`ml-rescue0.png`).
+  - `mb`: Montreal Bumpers, landscape. 4/4 `HM`.
+  - `sp`: Stunt. `sp-gate1.png` shows the square map with the next pin (🧸) ahead of the nose.
+- **`play.mjs`, town drives.**
+  - `d3`: Dino tier 3, landscape. `d3-stop.png` and `d3-glide.png`: the 📚 sign and the 🦉 resident are clear above the small roof parcels. 8/8.
+  - `h1`: Helsinki tier 1, careful, portrait. 4/4. The door hint never cut into a thanks.
+  - `u1`: Ubud tier 1, landscape, a child who waits 2.6 s at each door. The hint plays once, then the thanks follows.
+- **`menu.mjs`.** At 834×1194 the Ubud card no longer overlaps Helsinki. There is no horizontal scroll at any of the three sizes.
+- **Checks.** `node --check` passes on `main.js`, `town.js`, `gates.js` and `audio.js`. `browser.mjs --ids crash-racers --run crash-racers-f1` gives BOOT + PLAY ready with 0 errors.
+
+## 2026-10-11 — Polish round 2 (two reviews at 8.4): three-lane gates, a gate step that carries over, map gates that need the map
+
+Both reviewers scored 8.4. Their shared blocker was that Race and Bumpers stayed a two-way match: a child who only races never reached the map step, and most map gates could be answered without reading the map. This pass fixes every listed bug and makes the gates a deeper, adaptive decision.
+
+### Bugs and fixes
+
+| Bug | Fix | Where |
+| --- | --- | --- |
+| Map step earned on the last gate and never shown; "Race again" reset the gates to the town tier | The gate step (0 easy, 1 harder, 2 map) is saved in `crash-racers-gate-step` whenever it changes, and the next race starts from it (a new child starts from the town tier). The map step now comes after 5 right in a row, not 6. The run of right answers also carries into the next race, so even 1-lap races lead on. | `public/js/main.js:1226-1235` (`GATE_MAP_STEP`, `gateStep`), `main.js:1300-1309`, `main.js:1930-1931` |
+| A race that earned a step on its last gate never said so | The ending adds "Next race, the houses hide on the map!" or "Next race, the gates have three presents!" A race with only some map gates says "…and found the houses on the map too!" instead of claiming every house. A child who mostly misses map gates hears "Next time, find the next pin on the map first: whose gate is it?" | `main.js:1366-1381` (`gateEnding`) |
+| Ranked standings: a yellow bar for the child's car at the top, and 🏁 against 🏎️ | The cars are now one row of small chips in line-up order. The child's own car has a soft white ring, not a yellow bar, and no finish flags are shown (only 👋 for a friend who left). The gate recap still leads. | `main.js:2590-2600`; `public/style.css:493-497` |
+| Translucent race minimap, so scenery shows through | Every race map is an opaque cream card with a shadow, like town. The road is stroked straight onto the map each frame instead of through a cached offscreen canvas. Once, under heavy load, that cached copy came back blank on a phone-landscape run; it was not seen again. | `style.css:491`; `main.js:3101-3120` |
+| Landscape: the Easy gate buttons covered the car's tail and the splash | When held sideways, the gate row sits at the top, under the gantry. | `style.css:486-489` |
+| Road-plan line (tiers 2 and 3) cut off by the thanks, and never repeated | Key lines go through `sayKey`, which says them once and protects them for as long as they take to say. While a key line is playing, feedback (a thanks, a door's question) uses `sayFeedback`, which waits its turn instead of hushing it. | `main.js:209-220`, `main.js:559-560`, `main.js:595`, `main.js:968` |
+| "Is this the house? Tap it to stop." cut off by a thanks | It uses the same `sayKey`. | `main.js:725` |
+| Map gates answerable without the map (only about 33% had a distractor on a pin) | On the map step, a gate's wrong presents are taken from the houses of the other two gates. All three presents then belong to the three pins, and only the child who works out which pin comes next can answer. A gate already dressed is checked again (`freshen`) when another gate takes a new house and when it comes into view. | `public/js/gates.js:67-77`, `gates.js:106-110`, `gates.js:160-163`, `gates.js` `redress`; `main.js:1267` |
+| Rival dots drawn over the house pins | The pins are drawn after the other cars and before the child's own dot (`drawGatePins`). | `main.js:3141`, `main.js:3182` |
+| Found in play: "Race again" did nothing while the robots were still finishing (solo, the first 20 s of the results) | Playing alone, Race again starts the next race at once. The "Everyone else is finishing…" line is hidden whenever the child can restart. | `main.js:1829-1831`, `main.js:2608` |
+
+### Depth (both reviewers' blocker)
+
+- **Three lanes on the harder step.** After 3 right in a row, the gate has three presents: the left, middle and right lanes, using each house's harder present. A random tapper then gets about 33% and stays on the easy step, while a careful child moves on.
+  - On the map step, those three presents are exactly the three pins, so it is sequencing on the map.
+  - Easy mode shows a ▲ middle button, with the house picture above it, as on the gantry.
+  - When steering, the middle third of the road is the middle lane. An Easy-mode child has to tap the middle present, because the steering helper never chooses it by chance.
+  - Code: `gates.js:67-101`; `main.js:1277-1288` (lane), `main.js:1325-1345` (`renderGatePick`), `main.js:2835-2839` (steering helper); `index.html:72`; `style.css:483-485`.
+- The voice line on the map step now says "Find the next pin on the map". `howToPlay` in `game.json` describes the three steps and the carry-over.
+- **Not done:** review 2's improvement 6, an auto-pack scaffold for a random tapper in town. Town already has the help ring and voice hints, and auto-packing would hand over the core decision. It is left for the owner to decide.
+
+### Evidence
+
+Everything is in `scratchpad/polish3/crash-racers/r6/`. Speech was stubbed, and every run had 0 page or console errors.
+
+- **`race.mjs`, the gates.** It plays N races in a row, and the stub logs cancels.
+  - `cp`: Montreal, portrait, careful, 3 races.
+    - Race 1: easy → H from gate 4 → HM at gate 6, with stored step 2.
+    - Races 2 and 3 started `HM3 HM3 HM3` and went 6/6.
+    - All 13 map gates had every present on a pin.
+  - `one1`: Montreal, 1 lap, careful. 3/3 easy, then "You matched every present at the gates! Next race, the gates have three presents!" Race 2 started `H3 H3 H3`.
+  - `lb`: Stunt Bumpers, landscape, step 2. 8/8 map gates had all presents on pins. `lb-r1-gate1.png` shows the gate row at the top, clear of the car, three presents (🕯️ 🪀 🎾) for the pins 🎂 🧸 🐶 on an opaque cream map, with the nose pointing at 🎂.
+  - `lr`: Helsinki, landscape, random, 2 races. Mostly easy at 50%, and the stored step stayed low. `lr-r1-gate2.png` shows the two-lane row at the top.
+  - `fb`: Helsinki Bumpers, landscape, random, from step 2. 0/2 on map gates stepped back to houses on the gantry, then "Next time, find the next pin on the map first…". `fb-r1-results.png` shows the gate chips first, then a calm row of car chips.
+  - `ph2` and `pp`: phone landscape 844×390 and phone portrait 375×667. The three-lane row fits, and `ph-maps.png` shows the map outline and the pins.
+  - `fp`: the final portrait run, 2 races, 0 errors. Race again starts at once (`after tap countdown` while `raceOn` was still true).
+- **`play.mjs`, town.** The stub was changed so speech takes real time (80 ms a letter) and a cut line is logged as `CUT`.
+  - `m3`: Montreal tier 3. "Is this the house?" at 13 s, then the one-way line at 15 s, then the thanks at 21 s.
+  - `u2`: Ubud tier 2. The closed-road line at 16 s, then the thanks at 22 s.
+  - There were no `CUT` lines in either run. Both delivered 8/8.
+- **Checks.** `node --check` passes on `main.js` and `gates.js`. `browser.mjs --ids crash-racers --run crash-racers-f2` gives BOOT + PLAY ready with 0 errors.

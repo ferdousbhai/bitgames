@@ -42,7 +42,25 @@ export function verdict(test) {
   const matched = planet ? test.planet === test.result.b.reach : guessOf(test.guess)?.answer === test.result.answer
   const why = explainFlight(test.before, test.now, test.result)
   const went = planet && !matched ? `It went to ${placeName(test.result.b.reach)}. ` : ''
-  return { matched, why, say: `${matched ? 'You guessed it!' : 'Ooh, a new discovery!'} ${went}${why}` }
+  // A wrong guess on a several-part test found nothing out yet: no "discovery" to promise
+  const many = test.result.changed.length > 1
+  const head = matched ? 'You guessed it!' : many ? 'Hmm, not that!' : 'Ooh, a new discovery!'
+  return { matched, why, say: `${head} ${went}${why}` }
+}
+
+/**
+ * The verdict heard before this visit, as one short line (the race and the ✔ / 💡 card show the
+ * rest): a several-part test only hears the one-at-a-time rule again; a one-part test hears where
+ * it went, or that only the wobble (or nothing) changed.
+ */
+export function verdictShort(test, { matched }) {
+  const { changed, b } = test.result
+  const yes = matched ? 'Yes! ' : ''
+  if (changed.length > 1) return `${yes}Several parts changed again. One at a time tells you which!`
+  const { kind } = ruling(test.result)
+  if (kind === 'distance') return `${yes}${placeName(b.reach)[0].toUpperCase()}${placeName(b.reach).slice(1)}.`
+  if (kind === 'wobble' && test.result.a.wobble !== b.wobble) return `${yes}Just the wobble changed again.`
+  return `${yes}Same distance again.`
 }
 
 /** The guess as a small picture: the farther / same / less far rockets, or the planet picked. */
@@ -199,6 +217,7 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
   let going = null // the guessed test, once the dialog is closing to launch it
   let launchTimer = 0
   let planets = false
+  let echoed = 0
 
   function swapPicture(changed) {
     const swap = dialog.querySelector('.ft-swap')
@@ -226,7 +245,9 @@ export function createPredict({ thumbOf, rocketThumb, voice, sound = () => {}, o
     test.planet = planet
     sound('pick')
     for (const b of guesses.children) b.setAttribute('aria-pressed', String(b.dataset.guess === String(id)))
-    voice.sayNow(`You think ${planet === null ? guessOf(id).say : placeName(planet)}. Let’s find out!`)
+    // The echo in full twice a visit, then just the guess: the pressed picture says the rest
+    const guessed = planet === null ? guessOf(id).say : placeName(planet)
+    voice.sayNow(echoed++ < 2 ? `You think ${guessed}. Let’s find out!` : `${guessed[0].toUpperCase()}${guessed.slice(1)}? Let’s see!`)
     const chosen = test
     launchTimer = setTimeout(() => {
       going = chosen

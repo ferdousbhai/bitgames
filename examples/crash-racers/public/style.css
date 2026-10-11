@@ -40,7 +40,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   box-shadow: 0 7px 0 rgba(0,0,0,0.3); transition: transform .12s; text-shadow: 0 2px 0 rgba(0,0,0,.3);
 }
 .city:hover, .city:focus-visible { transform: translateY(-4px) rotate(-1.5deg); }
-.city.selected { border-color: #ffbe0b; transform: scale(1.06); box-shadow: 0 0 0 6px rgba(255,190,11,0.6), 0 7px 0 rgba(0,0,0,0.3); }
+.city.selected { border-color: #ffbe0b; box-shadow: 0 0 0 6px rgba(255,190,11,0.6), 0 7px 0 rgba(0,0,0,0.3); }
 .city .emoji { font-size: 64px; line-height: 1.1; display: block; }
 .city .name { font-size: 26px; font-weight: 900; display: block; }
 .city .blurb { font-size: 15px; opacity: .95; display: block; }
@@ -337,6 +337,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 }
 /* Tier 1 help after a long way round, and at road works: the turn-round button is lit, steadily (no pulse). */
 #turn-btn.suggest { background: #ffbe0b; box-shadow: 0 0 0 3px #fff; }
+/* The gates' map step (gates.js `mapped`): a bigger minimap, as the houses are found on it. */
+#hud.mapped #minimap { width: min(200px, 40vw, 40vh); height: min(200px, 40vw, 40vh); border-radius: 16%; }
 #hud.town #minimap { width: var(--map); height: var(--map); top: calc(64px + env(safe-area-inset-top)); background: none; border-radius: 8%; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
 /* In town a banner is a paper card low on the road, above the pedals: it never floats in the scene like a second resident or sign. */
 #hud.town .banner { top: auto; bottom: calc(var(--tb) + 28px + env(safe-area-inset-bottom)); left: 50%; right: auto; width: max-content; max-width: calc(100% - 32px); box-sizing: border-box;
@@ -475,3 +477,21 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   #recap-map, .recap-ways { width: min(50vh, 440px); }
   #recap-map { height: min(50vh, 440px); }
 }
+
+/* Polish round 2 (2026-10-11): three-lane gates, a cream map card in every race, quiet car chips on the results. */
+/* Three presents: the house sits above the middle one, as it does on the gantry. */
+.gate-pick.three .gate-house { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: calc(var(--gate) * 0.6); height: calc(var(--gate) * 0.6); font-size: calc(var(--gate) * 0.32); }
+.lane-middle .way { left: 50%; transform: translateX(-50%); }
+/* Held sideways: the presents sit up under the gantry, clear of the car and its splash. */
+@media (orientation: landscape) and (min-aspect-ratio: 5/4) {
+  .gate-pick, .gate-pick.three { top: calc(64px + env(safe-area-inset-top)); bottom: auto; }
+  .gate-pick.three { top: calc(64px + var(--gate) * 0.6 + 8px + env(safe-area-inset-top)); }
+}
+/* The race map is an opaque card, as in town, so the pins and dots read over any scenery. */
+#minimap { background: #f7efdc; border-radius: 16%; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+/* The cars at the end: one row of small chips, in the order they lined up, with no place or colour picked out above the rest. */
+.podium { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.podium .place { padding: 4px 14px 4px 4px; gap: 6px; font-size: 18px; border-radius: 999px; animation: none; }
+.podium .place.me { background: rgba(255,255,255,.18); color: inherit; box-shadow: 0 0 0 3px rgba(255,255,255,.85); }
+.podium .podium-pic { width: 56px; margin: -4px -2px; }
+.podium .place .extra:empty { display: none; }

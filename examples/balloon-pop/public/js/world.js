@@ -73,6 +73,13 @@ export class World {
     this.hab = get('hot_air_balloon')
     if (this.hab) {
       this.hab.scale.setScalar(1.4 * HAB_FAR)
+      // Its size and centre (above its origin), measured on its own, so it can pass the sun without crossing it.
+      this.hab.removeFromParent()
+      this.hab.position.set(0, 0, 0)
+      this.hab.rotation.set(0, 0, 0)
+      box.setFromObject(this.hab)
+      this.habBox = { cy: (box.min.y + box.max.y) / 2, hw: (box.max.x - box.min.x) / 2, hh: (box.max.y - box.min.y) / 2 }
+      this.habDodge = 0
       this.root.add(this.hab)
       this.habX = -20
     }
@@ -208,6 +215,25 @@ export class World {
     return this.hab.getWorldPosition(new THREE.Vector3()).add(tmp.set(0, 1.4 * this.hab.scale.y, 0))
   }
 
+  /**
+   * How far the hot-air balloon (its origin at x, y in the world root) rises or sinks to pass the sun, which sits
+   * just in front of it: in portrait the sun drops below the counting card, into the balloon's lane. It eases in as
+   * the two draw near, so the balloon drifts over or under the sun (whichever is nearer) instead of crossing it.
+   */
+  sunDodge(x, y) {
+    if (!this.sun || !this.habBox) return 0
+    const { cy, hw, hh } = this.habBox
+    const sun = this.sunPivot.position
+    const r = SUN_RADIUS * this.sunScale
+    const dx = Math.abs(x - sun.x) - (hw + r + 0.4)
+    if (dx > 4) return 0
+    const dy = y + WORLD_Y + cy - sun.y
+    const gap = hh + r + 0.4 - Math.abs(dy)
+    if (gap <= 0) return 0
+    const near = dx <= 0 ? 1 : 1 - dx / 4
+    return (dy >= 0 ? 1 : -1) * gap * near * near * (3 - 2 * near)
+  }
+
   update(dt, t) {
     this.sailSpin = Math.max(0, this.sailSpin - dt * 0.35)
     if (this.sails) this.sails.rotation.z -= dt * (0.8 + 9 * this.sailSpin * this.sailSpin)
@@ -217,7 +243,9 @@ export class World {
       // Tapped: a burner-powered bounce up, then a gentle sink back
       this.habHop = Math.max(0, this.habHop - dt * 0.5)
       const lift = Math.sin((1 - this.habHop) * Math.PI) * 3.5 * Math.min(1, this.habHop * 3)
-      this.hab.position.set(this.habX * HAB_FAR, (5 + Math.sin(t * 0.4) * 1.2 + lift) * HAB_FAR - WORLD_Y, HAB_Z)
+      const y = (5 + Math.sin(t * 0.4) * 1.2 + lift) * HAB_FAR - WORLD_Y
+      this.habDodge += (this.sunDodge(this.habX * HAB_FAR, y) - this.habDodge) * (1 - Math.exp(-dt * 2))
+      this.hab.position.set(this.habX * HAB_FAR, y + this.habDodge, HAB_Z)
       this.hab.rotation.y = Math.sin(t * 0.3) * 0.3 + this.habHop * this.habHop * Math.PI * 2
     }
     for (const c of this.clouds) {

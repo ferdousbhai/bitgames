@@ -316,17 +316,20 @@ export class Course {
   }
 
   /**
-   * The fewest carrots Pip could be asked for across the whole trip, whatever tier the child moves to
-   * on the way: each row's order as a whole row or as a basket (which may ask for fewer, to leave room
-   * for spares). Patterns count none, as some patterns are all obstacles. Perfect play always brings
-   * home at least this many, so a winter goal set below it can always be met.
+   * The row carrots careful play brings home this trip, starting on row tier `row`: each row's order
+   * as it will be shaped when cued (a whole row, or a basket that may ask for fewer, to leave room for
+   * spares), following the climb careful play makes on the way (two whole rows of three or more with
+   * carrots in the grass step up to baskets, up to `top`; tiers 1 and 2 ask the same numbers). Perfect
+   * play always brings home at least this many; a basket over-filled on the way loses its spares.
    */
-  surest() {
+  careful(row, top = 2) {
+    let streak = 0
     return this.segments.reduce((sum, seg) => {
       if (seg.kind !== 'row') return sum
-      let n = seg.planned
-      if (seg.room >= 4) while (n > 2 && seg.room - n < spares(n)) n--
-      return sum + Math.min(seg.planned, n)
+      const shape = { planned: seg.planned, room: seg.room }
+      this.shapeRow(shape, row)
+      if (!shape.basket && seg.low.slice(0, shape.count).some(Boolean) && shape.n >= 3 && ++streak >= 2) [row, streak] = [Math.min(top, Math.max(row, 1)), 0]
+      return sum + shape.n
     }, 0)
   }
 
@@ -373,13 +376,14 @@ export class Course {
     }
     const [p1, p2] = this.answers?.slice(-2) ?? []
     const shapes = this.shapes ?? []
-    const keep = (o) =>
-      !(p1 && p1 === p2 && o.answer === p1) &&
-      !shapes.includes(o.shape) &&
-      !(o.unit.every((k) => k !== c) && !o.growing && shapes.some((sh) => !sh.includes('c'))) &&
-      // shaped again (the child's tier changed as it was cued): the first step in view stays as it was
-      !(seg.first && o.groups[0][0] !== seg.first)
-    const pool = [keep, (o) => !(seg.first && o.groups[0][0] !== seg.first), () => true].map((f) => options.filter(f)).find((l) => l.length)
+    // shaped again (the child's tier changed as it was cued): the first step in view stays as it was
+    const steady = (o) => !(seg.first && o.groups[0][0] !== seg.first)
+    // at most one pattern a trip with no carrots in it (AB, ABB, or a growing one of two obstacles),
+    // whatever the tier, so every other pattern has carrots to munch (the winter goal counts on it)
+    const bareBefore = this.segments.some((other) => other !== seg && other.kind === 'rhythm' && other.shape && !other.shape.includes('c'))
+    const bare = (o) => bareBefore && o.unit.every((k) => k !== c)
+    const keep = (o) => !(p1 && p1 === p2 && o.answer === p1) && !shapes.includes(o.shape) && !bare(o) && steady(o)
+    const pool = [keep, (o) => steady(o) && !bare(o), steady, (o) => !bare(o), () => true].map((f) => options.filter(f)).find((l) => l.length)
     let r = Math.random() * pool.reduce((sum, o) => sum + o.w, 0)
     const chosen = pool.find((o) => (r -= o.w) < 0) ?? pool[0]
     const { groups } = chosen

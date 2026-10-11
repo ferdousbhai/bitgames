@@ -120,10 +120,12 @@ const game = {
  *  tens: jumps of ten from any number (7, 17, 27): only the tens digit changes
  *  pattern: the panel shows the last two numbers; the jump is the puzzle (2 or 5 first, then 3,
  *    4 or 2 down, then 5 or 10 down too)
- *  leap: patterns with big jumps (9, 11, 12 and 20 up, 3, 4, 9 and 11 down), where both digits move
+ *  leap: patterns with big jumps (9, 11, 12 and 20 up, 9 and 11 down), where both digits move, so
+ *    every jump is bigger than the pattern level's (its card shows 9 → 20 → ?)
  * Each level's `near` lists its mix-ups worth noticing, in order: the number already lit, the one
  * skipped, counting by ones instead of in steps, or the digits swapped. `rule` is the short words
- * the panel and the choice cards show for it; `ask` is how the home sky asks about it; `tip`
+ * the panel shows for it, and `sample` the little number picture its choice card shows (so a
+ * pre-reader sees which is harder); `ask` is how the home sky asks about it; `tip`
  * marks a `say` line that adds more than the rule's name (said even when the rule was just picked).
  */
 const seq = (from, step) => (n) => Array.from({ length: n }, (_, k) => from + k * step)
@@ -141,30 +143,30 @@ function pickJump(tiers, n) {
 /** A pattern of `n` numbers with jump `j`, all between 1 and 99. */
 const patternOf = (j, n) => seq(j > 0 ? between(1, Math.min(20, 99 - j * (n - 1))) : -j * (n - 1) + between(1, Math.min(30, 99 + j * (n - 1))), j)(n)
 const LEVELS = [
-  { id: 'match', labels: 'all', choices: 2, values: seq(1, 1), near: (v) => [v + 1, v - 1, v + 2], tag: () => 'Match the numbers', rule: 'Match 1, 2, 3', say: 'Catch the star with the same number as the sky. Find number 1!' },
-  { id: 'next', labels: 'ask', choices: 3, values: (n) => seq(between(2, 8), 1)(n), near: (v) => [v - 1, v + 1, v + 2], tag: (v) => `What comes next? ${v[0]}, ?`, rule: 'Count on +1', ask: 'Which one did we count on, one more each time?', say: 'Which number comes next? Catch it!' },
-  { id: 'back', labels: 'ask', choices: 3, values: (n) => seq(between(Math.max(8, n + 1), 15), -1)(n), near: (v) => [v + 1, v - 1, v - 2], tag: (v) => `Count back from ${v[0]}`, rule: 'Count back −1', ask: 'Which one did we count back, like a rocket?', say: 'Now we count back, like a rocket!' },
-  { id: 'twos', labels: 'ask', choices: 3, values: (n) => seq(2 * between(1, 5), 2)(n), near: (v) => [v - 2, v - 1, v + 2, v + 1], tag: (v) => `Count by twos from ${v[0]}`, rule: 'By twos +2', by: 'twos', ask: 'Which one did we count by twos?', say: 'Now we count by twos!' },
-  { id: 'fives', labels: 'ask', choices: 3, values: (n) => seq(5 * between(1, 4), 5)(n), near: (v) => [v - 4, v + 5, v - 5, v + 1, v + 10], tag: (v) => `Count by fives from ${v[0]}`, rule: 'By fives +5', by: 'fives', ask: 'Which one did we count by fives?', say: 'Now we count by fives!' },
+  { id: 'match', labels: 'all', choices: 2, values: seq(1, 1), near: (v) => [v + 1, v - 1, v + 2], tag: () => 'Match the numbers', rule: 'Match 1, 2, 3', sample: '3 = 3', say: 'Catch the star with the same number as the sky. Find number 1!' },
+  { id: 'next', labels: 'ask', choices: 3, values: (n) => seq(between(2, 8), 1)(n), near: (v) => [v - 1, v + 1, v + 2], tag: (v) => `What comes next? ${v[0]}, ?`, rule: 'Count on +1', sample: '4 → 5 → ?', ask: 'Which one did we count on, one more each time?', say: 'Which number comes next? Catch it!' },
+  { id: 'back', labels: 'ask', choices: 3, values: (n) => seq(between(Math.max(8, n + 1), 15), -1)(n), near: (v) => [v + 1, v - 1, v - 2], tag: (v) => `Count back from ${v[0]}`, rule: 'Count back −1', sample: '9 → 8 → ?', ask: 'Which one did we count back, like a rocket?', say: 'Now we count back, like a rocket!' },
+  { id: 'twos', labels: 'ask', choices: 3, values: (n) => seq(2 * between(1, 5), 2)(n), near: (v) => [v - 2, v - 1, v + 2, v + 1], tag: (v) => `Count by twos from ${v[0]}`, rule: 'By twos +2', sample: '2 → 4 → ?', by: 'twos', ask: 'Which one did we count by twos?', say: 'Now we count by twos!' },
+  { id: 'fives', labels: 'ask', choices: 3, values: (n) => seq(5 * between(1, 4), 5)(n), near: (v) => [v - 4, v + 5, v - 5, v + 1, v + 10], tag: (v) => `Count by fives from ${v[0]}`, rule: 'By fives +5', sample: '5 → 10 → ?', by: 'fives', ask: 'Which one did we count by fives?', say: 'Now we count by fives!' },
   {
     id: 'big', labels: 'ask', choices: 3,
     // Never 11, 22, 33… or a ten, so the swapped digits always make a different number (a ten passed on the way, like 20, is mixed up with 10 instead of 2)
     values: (n) => { let a; do a = between(12, 41); while (a % 11 === 0 || a % 10 === 0); return seq(a, 1)(n) },
-    near: (v) => [v % 10 ? swapDigits(v) : v - 10, v + 1, v - 1, v + 10], tag: (v) => `Big numbers from ${v[0]}`, rule: 'Big numbers +1', ask: 'Which one had the big numbers?', tip: true, say: 'Now the big numbers! Look at both digits.',
+    near: (v) => [v % 10 ? swapDigits(v) : v - 10, v + 1, v - 1, v + 10], tag: (v) => `Big numbers from ${v[0]}`, rule: 'Big numbers +1', sample: '23 → 24 → ?', ask: 'Which one had the big numbers?', tip: true, say: 'Now the big numbers! Look at both digits.',
   },
-  { id: 'tens', labels: 'ask', choices: 3, values: (n) => seq(between(1, 9), 10)(n), near: (v) => [v - 9, v + 10, v - 10, v + 1], tag: (v) => `Jump by tens from ${v[0]}`, rule: 'By tens +10', by: 'tens', ask: 'Which one did we count by tens?', tip: true, say: 'Now we jump by tens! Only the first digit changes.' },
+  { id: 'tens', labels: 'ask', choices: 3, values: (n) => seq(between(1, 9), 10)(n), near: (v) => [v - 9, v + 10, v - 10, v + 1], tag: (v) => `Jump by tens from ${v[0]}`, rule: 'By tens +10', sample: '7 → 17 → ?', by: 'tens', ask: 'Which one did we count by tens?', tip: true, say: 'Now we jump by tens! Only the first digit changes.' },
   {
     id: 'pattern', labels: 'ask2', choices: 3,
     // The jumps grow harder in turn, and never repeat twice in a row, so each one is worked out afresh
     values: (n) => patternOf(pickJump([[2, 5], [3, -2, 4], [4, -5, -10, 3]], n), n),
     // The one skipped, the one already lit, a jump of one from the last, one off
-    near: (v) => [v + jump, v - jump, v - jump + 1, v + 1, v - 1], tag: () => 'Find the pattern', rule: 'Find the jump', ask: 'Which one had a number pattern?', tip: true, say: 'Now find the pattern! Look at the last two numbers.',
+    near: (v) => [v + jump, v - jump, v - jump + 1, v + 1, v - 1], tag: () => 'Find the pattern', rule: 'Find the jump', sample: '3 → 6 → ?', ask: 'Which one had a number pattern?', tip: true, say: 'Now find the pattern! Look at the last two numbers.',
   },
   {
     id: 'leap', labels: 'ask2', choices: 3,
-    values: (n) => patternOf(pickJump([[9, 11, -3], [20, -4, -11], [12, -9, 11, -11]], n), n),
+    values: (n) => patternOf(pickJump([[9, 11, -11], [20, -9, 12], [12, -9, 11, -11, 20]], n), n),
     // The one skipped, then the tens or the ones moved by one: the mix-ups of a two-digit jump
-    near: (v) => [v + jump, v - 10, v - 1, v + 1, v + 10, v - jump], tag: () => 'Big jumps', rule: 'Big jumps', ask: 'Which one had the big jumps?', tip: true, say: 'Big jumps now! Look at the tens and the ones.',
+    near: (v) => [v + jump, v - 10, v - 1, v + 1, v + 10, v - jump], tag: () => 'Big jumps', rule: 'Big jumps', sample: '9 → 20 → ?', ask: 'Which one had the big jumps?', tip: true, say: 'Big jumps now! Look at the tens and the ones.',
   },
 ]
 /** The gentle mission keeps to matching numbers, at its slower pace, until its five stars are caught. */
@@ -199,6 +201,7 @@ function renderMissionProgress(el, option, count) {
 const voice = createVoice({ muted: audio.muted, rate: 0.82, pitch: 1 })
 
 let missionTimers = []
+let goalSaidAt = -Infinity // when the picker last said a mission's goal (see start)
 function clearMissionTimers() {
   missionTimers.forEach(clearTimeout)
   missionTimers = []
@@ -209,6 +212,10 @@ const adventure = createAdventure({
   anchor: $('go'),
   hud: $('hud'),
   voice,
+  announce: (text, kind) => {
+    if (kind === 'choice') goalSaidAt = performance.now()
+    voice.say(text, { interrupt: kind === 'choice' })
+  },
   celebrate: (text) => {
     banner('⭐ Mission complete!', text)
     // The finished card stays a moment so the child sees it full, then fades out (CSS opacity;
@@ -328,7 +335,7 @@ function spawn(kind, x, y, vy, extra = {}) {
   obj.scale.setScalar(k.scale)
   obj.visible = true
   scene.add(obj)
-  const it = { obj, kind, k, x, vy, t: Math.random() * 10, sway: kind === 'rock' ? 0 : rand(0.15, 0.45), bounced: false, fading: false, vx: 0, spin: 0, value: null, ...extra }
+  const it = { obj, kind, k, x, vy, big: 1, t: Math.random() * 10, sway: kind === 'rock' ? 0 : rand(0.15, 0.45), bounced: false, fading: false, vx: 0, spin: 0, value: null, ...extra }
   if (kind === 'star') labelStar(it)
   items.push(it)
 }
@@ -379,11 +386,14 @@ function spawnRow() {
   const values = rowValues(need)
   const span = view.xMax - view.xMin
   const lane = span / values.length
-  const vy = -leg(game.stops).speed * view.k * 0.85
+  // Three wrong picks in a row for this star: the row comes slower and the needed star is a little
+  // bigger (steady, never pulsing), so a struggling child is helped to it without being shown a trick
+  const help = game.streak >= 3
+  const vy = -leg(game.stops).speed * view.k * 0.85 * (help ? 0.7 : 1)
   game.row++
   values.forEach((value, i) => {
     const x = view.xMin + lane * (i + 0.5) + rand(-0.15, 0.15) * lane
-    spawn('star', x, view.h + 1.5 + rand(-0.25, 0.25), vy, { value, row: game.row, sway: Math.min(0.2, lane * 0.08) })
+    spawn('star', x, view.h + 1.5 + rand(-0.25, 0.25), vy, { value, row: game.row, sway: Math.min(0.2, lane * 0.08), big: help && value === need ? 1.25 : 1 })
   })
   // If the row drifts past untouched, the next one follows soon: nothing is lost
   game.rowTimer = 0.4
@@ -447,8 +457,8 @@ function catchItem(it) {
 /**
  * The wrong number: the star does not light anything. It floats gently back up and away with the
  * rest of its row, the next star's ring brightens, and the next row waits a calm moment. Once per
- * constellation the voice names the number caught and asks again; after two wrong picks the
- * panel shows the number itself instead of "?".
+ * constellation the voice names the number caught and asks again; after two wrong picks for one
+ * star the panel shows the number itself instead of "?".
  */
 function wrongStar(it, need) {
   it.bounced = true
@@ -462,7 +472,8 @@ function wrongStar(it, need) {
   game.misses++
   game.streak++
   game.idle = 0
-  if (game.misses >= 2) sky.labels = 'all'
+  // Two wrong picks for this very star (not the shape) open its "?": an earlier slip never turns later stars into matching
+  if (game.streak >= 2) sky.labels = 'all'
   renderRule()
   if (game.hints >= 1) return
   game.hints++
@@ -479,7 +490,8 @@ function wrongStar(it, need) {
 /**
  * The rule stays on screen under the panel while a shape is built, with the numbers in their
  * order: "By fives · 15 → ?" or, for a pattern, "15 → 13 → ?" (the jump is the puzzle, so only
- * the order shows). The panel's own labels sit beside the stars; this line says which came first.
+ * the order shows). The first star (two for a pattern) is already lit, so every catch is a step.
+ * The panel's own labels sit beside the stars; this line says which came first.
  */
 function renderRule() {
   const el = $('sky-rule')
@@ -494,8 +506,9 @@ function renderRule() {
   if (L.labels === 'all') el.textContent = `Find ${v[n]}`
   else {
     const known = L.labels === 'ask2' ? 2 : 1
-    const shown = [...v.slice(Math.max(0, n - known), n), n < known || open ? v[n] : '?']
-    const words = L.labels === 'ask2' ? (n === 0 ? `${L.rule} · ` : '') : `${L.rule} · `
+    const shown = [...v.slice(Math.max(0, n - known), n), open ? v[n] : '?']
+    // A pattern's three numbers say enough on their own (the banner named the rule)
+    const words = L.labels === 'ask2' ? '' : `${L.rule} · `
     el.textContent = words + shown.join(' → ')
   }
 }
@@ -673,8 +686,10 @@ function arrive(def) {
   $('sky-name').textContent = def.name
   audio.constellation()
   game.factSaid = false
-  // The numbers are said once, all together, as a little counting rhyme (unless they were just counted aloud)
-  const rhyme = game.counting ? '' : `${game.values.join(', ')}! `
+  // The numbers are said once, all together, as a little counting rhyme (unless they were just
+  // counted aloud). A plain 1, 2, 3… is rhymed only on the trip's first shape: after that it adds nothing.
+  const plain = game.values.every((v, i) => v === i + 1)
+  const rhyme = game.counting || (plain && game.stops > 1) ? '' : `${game.values.join(', ')}! `
   const last = game.stops >= STOPS.length ? ' Time to fly home!' : ''
   voice.say(rhyme + def.fact + last, { onend: () => (game.factSaid = true) })
   // How it was counted, for the home sky's questions ("Which one did we count by fives?")
@@ -728,7 +743,9 @@ function afterArrival() {
     const def = offer[i]
     const L = LEVELS[levels[i]]
     cell.querySelector('span').textContent = def.short
-    cell.querySelector('b').textContent = `${def.stars.length} ⭐ · ${L.rule}`
+    // A little number picture, not words, so a pre-reader sees which way is harder
+    cell.querySelector('b').textContent = `${def.stars.length} ⭐ · ${L.sample}`
+    cell.title = L.rule
     cell.setAttribute('aria-label', `${def.short}. ${def.stars.length} stars, ${L.rule}`)
     cell.onclick = () => chooseNext(def, levels[i])
   })
@@ -822,6 +839,9 @@ function beginConstellation(i) {
   game.counting = L.id === 'match' && i === 0
   sky.begin(i, $('sky-panel'), game.values)
   sky.labels = L.labels
+  // Above matching the shape starts with its first number lit (two for a pattern), so the very
+  // first catch is already one more step of the rule, never a copy of a number on show
+  sky.prelight(L.labels === 'ask2' ? 2 : L.labels === 'ask' ? 1 : 0)
   const changed = levelShown !== LEVELS.indexOf(L)
   levelShown = LEVELS.indexOf(L)
   return changed
@@ -834,7 +854,8 @@ function beginConstellation(i) {
  * home sky revisits the numbers too. A card shows its name once the child finds it. A wrong card
  * says its own name and the wanted one glows softly once, so every tap teaches something.
  */
-const finale = { cells: [], order: [], at: 0, riddles: [] }
+// telling: found-lines still being said; lastCard/lastAt: the found card tapped last, and when
+const finale = { cells: [], order: [], at: 0, riddles: [], glow: 0, telling: 0, lastCard: -1, lastAt: 0 }
 function showFinale() {
   game.state = 'finale'
   clearPlayfield()
@@ -843,6 +864,8 @@ function showFinale() {
   const made = sky.done
   finale.order = made.map((_, i) => i).sort(() => Math.random() - 0.5)
   finale.at = 0
+  finale.telling = 0
+  finale.lastCard = -1
   finale.riddles = made.map(({ def }) => def.riddle)
   finale.order.forEach((i, k) => {
     const id = game.made[i]
@@ -887,17 +910,38 @@ function tapSky(i) {
     finale.at++
     showRiddle()
     const next = finale.order[finale.at]
-    // One line per find: the fact, then the next riddle
-    voice.sayNow(`Yes! ${def.fact} ${next == null ? 'You know your whole night sky.' : finale.riddles[next]}`)
+    const then = next == null ? 'You know your whole night sky.' : finale.riddles[next]
+    // One line per find: the fact, then the next riddle. A quick child who finds the next one while
+    // the last line is still being said hears it finish, then just the name and the next riddle.
+    const busy = finale.telling > 0
+    const told = { onend: () => (finale.telling = Math.max(0, finale.telling - 1)) }
+    finale.telling++
+    if (busy) voice.say(`${def.name}! ${then}`, told)
+    else voice.sayNow(`Yes! ${def.fact} ${then}`, told)
     return
   }
   audio.light(3)
   if (want == null || cell.classList.contains('found')) {
     sky.highlight(i)
-    return voice.sayNow(def.fact)
+    // While a find is still being told (its next riddle too), a found card only glows: it never
+    // cuts that line. The same card tapped again within a moment says nothing new.
+    const now = performance.now()
+    const repeat = finale.lastCard === i && now - finale.lastAt < 2500
+    finale.lastCard = i
+    finale.lastAt = now
+    if ((finale.telling > 0 && voice.speaking) || repeat) return
+    // A found card tells its fact once more, then only its name
+    const again = cell.dataset.told
+    cell.dataset.told = '1'
+    return voice.sayNow(again ? `That's ${def.spoken}.` : def.fact)
   }
+  finale.telling = 0 // the line below cuts in, so no find is still being told
   // The wanted card glows once, softly: the next tap can find it
   sky.highlight(want)
+  const wanted = finale.cells[want]
+  for (const c of finale.cells) c.classList.toggle('wanted', c === wanted)
+  clearTimeout(finale.glow)
+  finale.glow = setTimeout(() => wanted.classList.remove('wanted'), 1600)
   voice.sayNow(`That one is ${def.spoken}. ${finale.riddles[want]}`)
 }
 
@@ -1096,7 +1140,11 @@ function start() {
   beginConstellation(0)
   renderRule()
   banner(`🚀 Blast off!`, level().tag(game.values))
-  voice.sayNow(adventure.option.goal ? `${adventure.option.goal}!` : level().say)
+  // The gentle mission's goal is said once: when the picker has just said it, the start line
+  // waits for it to finish and adds only the first number
+  const goal = adventure.option.goal
+  if (goal && performance.now() - goalSaidAt < 20000) voice.say(`Find number ${game.values[0]}!`)
+  else voice.sayNow(goal ? `${goal}! Find number ${game.values[0]}!` : level().say)
   renderJourney()
 }
 $('go').addEventListener('click', start)
@@ -1209,10 +1257,14 @@ const trail = { vy: -2, spread: 0.4, life: 0.6, size: 0.35, color: new THREE.Col
 function updateRocket(dt) {
   const r = rocket
   const playing = game.state === 'play'
-  // At a planet the cards are the thing to look at: Kitty waits low, clear of them (to the side on wide screens)
+  // At a planet the cards are the thing to look at: Kitty waits low, clear of them (to the side on wide screens),
+  // but high enough that the whole rocket stays on screen
   const waiting = playing && ['join', 'joined', 'arrive', 'choose'].includes(game.phase)
   if (waiting) {
-    r.target.set(camera.aspect > 1.2 ? view.xMax - 0.4 : 0, view.yMin - 0.3 + Math.sin(game.time * 1.3) * 0.15)
+    // (a little higher on short, sideways screens, where the flame would reach the edge, and a
+    // little lower on tall phones, where the nose would meet the join card)
+    const lift = innerHeight < 500 ? 0.75 : camera.aspect < 0.6 ? 0 : 0.3
+    r.target.set(camera.aspect > 1.2 ? view.xMax - 0.4 : 0, view.yMin + lift + Math.sin(game.time * 1.3) * 0.15)
   } else if (playing) {
     const dx = (keys.has('ArrowRight') || keys.has('d') || keys.has('D') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('a') || keys.has('A') ? 1 : 0)
     const dy = (keys.has('ArrowUp') || keys.has('w') || keys.has('W') ? 1 : 0) - (keys.has('ArrowDown') || keys.has('s') || keys.has('S') ? 1 : 0)
@@ -1324,7 +1376,7 @@ function updateItems(dt) {
     }
     const size = grow * (it.fading ? it.fade ?? 1 : 1)
     o.visible = size > 0
-    if (!it.bounced || it.fading) o.scale.setScalar(it.k.scale * size)
+    if (!it.bounced || it.fading) o.scale.setScalar(it.k.scale * it.big * size)
 
     // Catch!
     if (game.state === 'play' && !it.bounced && !it.fading && grow >= 1) {
@@ -1439,6 +1491,9 @@ function frame() {
   updateRocket(dt)
   updateItems(dt)
   updateUfo(dt)
+  // The planets step back while numbers fall, while the dots are joined and while the cards are
+  // read, and come forward at arrival
+  world.quiet = playing && ['build', 'join', 'joined', 'choose'].includes(game.phase)
   world.update(finale ? dt * 0.2 : dt, game.cruise, playing ? legProgress() : 0.15, view)
   particles.update(dt)
   audio.updateEngine(playing, Math.hypot(rocket.vel.x, rocket.vel.y))
@@ -1479,4 +1534,4 @@ load()
     $('go').disabled = false
     $('go').onclick = () => location.reload()
   })
-if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game, sky, items, camera, neededValue, level, LEVELS, finale, tapSky, chooseNext, joinTap, joinAt, pickHidden }
+if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game, sky, items, camera, neededValue, level, LEVELS, finale, tapSky, catchItem, chooseNext, joinTap, joinAt, pickHidden, get rocket() { return rocket }, get world() { return world } }

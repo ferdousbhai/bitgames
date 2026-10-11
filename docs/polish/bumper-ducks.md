@@ -1009,3 +1009,148 @@ Scripts are in the scratchpad under `polish/bumper-ducks/`. `rv8.mjs` also logs 
 - The L5 take-away step is still open.
 - A parent still can't step bumper play tiers by hand.
 - Real two-device multiplayer is still untested outside Node.
+
+## 2026-10-11: bug pass (round 1 of the third review)
+
+Every bug from the two independent reviews (8.5 and 8.6) is fixed. No redesign was made.
+
+### Bugs and fixes
+
+- **Crossing step of exactly 10 or 20 more (41 → 51)** (`config.js:182-187`). About 9% of L4–L5 trips refused the raft that made the target exactly, and the nope line said "A raft would make 51. Too many!" Each crossing now starts from fewer ones than the step before (`over < mid.ones`) and ends on fewer ones than it starts from (`last.ones < over`), so the ones really pass a ten. 60,000 generated L3–L5 trips: 0 crossings that are a whole number of tens, 0 invalid trips, and 55, 284 and 568 distinct trips. With this fix the "would make" number in `nopeWords` is always more than the goal.
+- **Pond stall: a split bubble stranded under a lily pad** (`sim.js:762`, used at `:714` and `:797`). This was found in play while reproducing the reviewer's 250 s stall. Probe h6 showed an L5 stall at 63: a split bubble at (1.3, 5.4) sat inside the lily at (0.6, 5.4), where no duck can reach it. Because it was still on the water, `dryOnes` stayed false, so neither the hints nor the 6 s trickle came. Split rings and bobbed-away bubbles now go through `offObstacles`, which pushes them clear of any obstacle, or toward the middle when the far side is the rim.
+- **Stale hint racing the ending in Bumper play** (`main.js:298`, `:1443`, `:1176`). "We need just N more" is dropped when the last few bubbles are already beside a duck (`lastCatchSoon`). If a hint is still being said at the last catch, the goal line interrupts it, so "5 tens make 50!" is never preceded by "need 1 more".
+- **"One ten is ten ones!" then "40! Ten ones make one ten!"** (`main.js:1477`). On a crossing step the split says nothing, and the regroup line carries the idea alone.
+- **Split line said before the raft's landing count, or after the step's made line** (same line). The line now waits for the jar to land (`whenLanded`), and is said only while ones are still wanted.
+- **Menu picture contradicted its number** (`main.js:677`, `:1584`; `style.css:487-491`). The card now shows the goal itself as a raft bar for each ten and a dot for each one: 50 is five rafts, 70 is seven, and 45 is four rafts and five dots. It fits the card in both orientations. The old 27-of-30 frames picture and its CSS were removed.
+- **Frog signs covered the raft they hold** (`view.js:384-414`, `main.js:2298`). The frog holding the stuck bubble or raft carries a smaller sign higher up (y 4.6 instead of 3.3), so the raft stays in view.
+
+### Small improvements
+
+- **No dashed raft-shaped gap on the shelf while the bundle fills** (`main.js:1745`). The frame below holds the bundle, and the full ten appears on the shelf when it slides up.
+- **One more gentle reminder on a long scarce step** (`main.js:361`). "A ten can become ten ones!" is said at 45 s if the step is still dry.
+
+### Evidence
+
+Scripts are `rv.mjs` (rv8 with a stall probe) and `shots.mjs`, in the scratchpad under `polish3/bumper-ducks/`. Logs and screenshots are in `r1/`, with speech stubbed and logged.
+
+- **Pond helpers, careful, L4–L5** (`h1`–`h11`, `p5a`, `p5b`): 29 rounds in portrait and landscape, bath and pond.
+  - After the lily fix every round finished in 21–57 s of sim time.
+  - Example voice: "Now make 63! | 60! Ten ones make one ten! | Now make 72! | 70! Ten ones make one ten! | 7 tens and 2 ones make 72!"
+  - No split line sits next to the regroup line.
+- **Split style, L3–L4** (`s3L`, `sp4`): "One ten is ten ones!" comes only while ones are wanted, and never before a landing count.
+- **Bumper play** (`lcP`, `lrL`, `lc70`):
+  - Careful and random play at 50 and 70, 0 errors.
+  - In `lcP` r0, a bounce at 48 with singles at hand dropped the hint, and the round ended on "5 tens make 50!" alone.
+- **Screens:**
+  - `menus.png`: the menu at 50, 70, 45 and 33, portrait and landscape.
+  - `frogs-834.png`: the "53" sign sits above the held raft.
+  - `jars.png`: crossing steps at 52 and 63, with no dashed gap on the shelf.
+- **Standard checks:**
+  - `browser.mjs --ids bumper-ducks --run bumper-ducks-f1`: BOOT + PLAY, 0 errors.
+  - `node --check` passes on `main.js`, `sim.js`, `view.js` and `config.js`.
+  - The only console message is the expected solo-multiplayer warning.
+
+### Still open
+
+- Bumper play HUD numerals (goal and "now").
+- Softer bonk and quack synths.
+- Fewer bonk stars.
+- The `adaptPlay` climb rule for careful autopilots.
+- Fresher "Each raft is ten bubbles" across replays.
+- The L5 take-away step.
+- A parent tier stepper.
+
+## 2026-10-11: bug pass (round 2 of the third review)
+
+Every bug from the two independent reviews (8.7 and 8.6) is fixed. No redesign was made.
+
+### Bugs and fixes
+
+- **A quick, deliberate raft split at L3 counted as luck and stepped the child back** (`sim.js:296`, `:785`, `:644`; `main.js:1151`). A dash now records what the duck was already steering at (`dashAim`), and a split is meant when the dash was aimed at that raft, even before the full aim hold. Bubbles of a raft broken by chance are counted as `stats.luck` and left out of `caught` in the careful ratio. Luck neither helps nor holds a child back.
+- **"One ten is ten ones!" was lost when the split's own bubbles finished the step** (`main.js:1492`, `:2004`, `:2013`). On a non-regroup step the split now sets `splitToTell`. The line is said when the bubbles land while ones are still wanted. Otherwise the step's last landing says it, just before the made line or the next goal.
+- **"ribbit!" was drawn over a frog's number sign** (`main.js:1386`). There is no ribbit label in the frog-order puzzle; the sound remains.
+- **The joystick ring covered a frog's sign** (`style.css:124-127`). The ring is now nearly see-through, with a thinner border and a 75% knob, so a number under the finger still reads.
+- **A floating raft sat under a frog's sign at L4** (`main.js:2344`; `view.js:387`, `:422`). A frog with a raft floating just behind it, where the camera puts the sign over the raft, glides its sign to the other side. A held item still lifts the sign. The sign glides rather than jumps.
+- **A stale "Dash into a raft…" hint raced the ending in Bumper play** (`main.js:1459`, also the split line at `:1497`). Both are now functions read when said, and they are dropped when `sim.left` is 0 or the last catch is beside a duck.
+- **Counting by tens skipped a ten when a raft carried the total into the last stretch** (`main.js:1594`, `:1640-1660`). Each ten is queued in order. In the last stretch the question carries it: "Four tens and 7! Will a raft still fit?". If the question is no longer asked, the ten is said on its own. `tensSoon` only puts a ten off while the last catch is right there, never drops it.
+- **The 45 s "A ten can become ten ones!" never came on a long scarce step** (`main.js:352-370`). Dry time now counts from when the step first ran out of ones, so a trickle bubble does not restart it. The reminder is said once per step, and never within 8 s of a regroup line.
+- **"Will a raft still fit?" was asked with 1–2 left** (`main.js:1640`). It is now asked only when `sim.left >= 3`.
+
+### Small improvements
+
+- **Bumper play HUD numbers** (`main.js:1634`, `style.css:480-494`). The HUD shows the number now, in white before the rafts, and "make 50", in gold after them, as the jar does. On phones of 430 px or less the dots shrink, so seven rafts and both numbers fit at 390 px; before, 70 already overflowed.
+- **Fewer, paler bonk stars, none for robot-on-robot bonks** (`effects.js:162`, `main.js:1360`). Each bonk now gives 3–4 pastel stars, down from 6–16 bright ones.
+- **Softer bonk squeak and quack** (`audio.js:106`, `:131`, `:140`). Both use triangle waves at lower gain, with one squeak per bonk instead of two.
+- **"Each raft is ten bubbles" only in the first two Bumper rounds** (`main.js:285`). The count is stored as `raft-play`.
+- **`adaptPlay` climb ratio** (`main.js:1212`). The climb now needs `wise >= lastOnes * 0.4`, down from 0.5.
+- **Last L4–L5 step leaves ones more often** (`config.js:188`). Trips that end on a whole ten fell from 53% to 26–27%. In 60,000 generated trips: 0 invalid, 0 bad crossings, 0 crossings of a whole number of tens.
+
+### Evidence
+
+Scripts are `rv2.mjs`, `split.mjs`, `shots2.mjs` and `trips2.mjs`, in the scratchpad under `polish3/bumper-ducks/`. Logs and screenshots are in `r2/`, with speech stubbed and logged.
+
+- **Split finishing a step** (`split.mjs`, L3 portrait and L4 landscape): "One ten is ten ones! | 1 ten and 2 ones make 12!" and "One ten is ten ones! | 2 tens and 7 ones make 27!".
+- **Pond, careful** (`c3P`): L3 → L4 → L5, with careful 0.91, 0.95 and 0.95.
+- **Pond, split style** (`sp3L`): L3 → L4 → L5, with careful 0.90 and 1.00. A meant split counts as careful (`s0.9` and `s5.9`, followed by chosen catches).
+- **Pond, random** (`x4L`, `x3L`): stayed at L4 or stepped back (careful 0.33 to 0.67).
+- **Scarce, never breaking a raft** (`nb5P`, `nb4L`): "A ten can become ten ones!" now comes on each scarce step, at 87.1 and 152.9 s (nb5P) and 74.5 and 165.8 s (nb4L). Before, there were 91 s of silence.
+- **Bumper play** (`lrA`, `lrB`, `lr70`, `lcP`, `lcL`, `lc47`, 50/64/66/70, portrait and landscape):
+  - No skipped tens. Examples: "Three tens! | Four tens and 3! Will a raft still fit? | 5 tens make 50!" and "Four tens! | Five tens! | 55! Will a raft still fit? | … | Six tens! | 6 tens and 4 ones make 64!".
+  - No "Dash into a raft" before the ending.
+- **Screens:**
+  - `hud-*-t*.png`: HUD numbers at 834, 1194 and 390 px. At 390 px, 70 is 331 px wide with no page scroll.
+  - `frogs-834-2.png`, `frogs-1194-2.png`: the signs 37 and 74 sit beside the rafts behind them.
+  - `lrA-r1-mid.png`: no star cloud.
+- **Standard checks:**
+  - `browser.mjs --ids bumper-ducks --run bumper-ducks-f2`: BOOT + PLAY, 0 errors.
+  - `node --check` passes on `main.js`, `sim.js`, `view.js`, `config.js`, `effects.js` and `audio.js`.
+  - The only console message is the expected solo-multiplayer warning.
+
+### Still open
+
+- The L5 take-away step.
+- A parent tier stepper for Bumper play.
+- Removing the gifts from Bumper play (reviewer 1, idea 8).
+
+## 2026-10-11: bug pass (round 3 of the third review)
+
+Every bug from the two independent reviews (both 8.7) is fixed. No redesign was made.
+
+### Bugs and fixes
+
+- **The Bumper play pill ran under the 🔊 button in portrait for goals of 60 or more** (`style.css:193-198`). On upright screens narrower than 920 px, the team pill (about 540 px wide at 70) now sits just below the corner buttons, as the 420 px rule already did. Pond helpers' jar keeps its place (`body:not(.calm-round)`).
+- **Tier 1 (70) was a plateau for a careful child** (`main.js:1226-1233`). A round of 70 usually ends on rafts alone, which leaves no singles to choose. Steering at three or more rafts with two last ones or fewer and no raft bumped now counts as a clean round. Two clean rounds in a row climb to the tens-and-ones tier (`game.cleanRounds`, reset when the tier changes).
+- **The back rule could judge a careful child careless when no raft happened to float near** (`sim.js:648-655`). A chosen last-stretch single is now wise whenever a raft is anywhere on the water, not only within 7.5 units. `RAFT_REACH` is gone.
+- **"We need just 2 more!" was said just before the ending** (`main.js:301-310`). `lastCatchSoon` is now true whenever one or two are left and a bubble is on the water. With so few left there is nothing to decide, so hints give way.
+- **The stale "Dash into a raft…" hint came after the child had split a raft, and the split went unnamed** (`main.js:1480`, `:1516-1526`, `:1198`). The Dash hint is dropped once any raft has been split. The split line goes to the front of the queue and is said once a round. If the ending comes first, the ending names it: "One ten became ten ones. 5 tens make 50!"
+- **An owed ten was said after the last-stretch line, so the count ran backwards** (`main.js:1476`, `:1637-1642`, `:1691`). The first Bumper nope line now carries any ten not yet voiced: "Six tens and 5. A raft is ten. We need just 5 more!" The lone-ten fallback waits while a nope line is queued. `tensSoFar` is shared with the "Will a raft still fit?" question.
+- **Pond helpers L5: waiting out a dry crossing counted as mastery** (`main.js:1166-1176`, `:361`; `sim.js:22`, `:47`, `:179-183`, `:790`). A trip whose crossing was only waited out has no meant split (`stats.meant`) and a trickle that has started (`tripWaited`). Such a trip does not climb, and at L5 it steps back to L4, where the spaces show. The trickle now starts after 48 s dry, not 30 s, so the 45 s reminder comes first.
+
+### Small improvements
+
+- **The bundling moment names a deliberate split** (`main.js:1510`, `:2028-2032`). If the child broke a raft on a crossing step, the regroup line becomes "40! A ten became ten ones, and ten ones make one ten again!". This happens once a trip; after that it is the short line.
+- **No "bonk!" or "quack!" words over the ducks in Pond helpers** (`main.js:1386`, `:1401`). The sounds remain.
+- **Gifts are rarer in Bumper play** (`sim.js:857`). They now come every 18–26 s, down from every 9–13 s, so the rafts and bubbles stay the game.
+
+### Evidence
+
+Scripts are `rv3.mjs`, `clean.mjs`, `lastsplit.mjs` and `lastnear.mjs`, in the scratchpad under `polish3/bumper-ducks/`. Logs and screenshots are in `r3/`. Speech was stubbed and logged.
+
+- **HUD:** `lc1P-r0-mid.png` (834×1194, make 70) shows the pill under the corner row, with "53" clear of 🔊. `lc2L-r1-mid.png` (1194×834, make 65) is unchanged. `sp4P-r0-stage.png` shows the calm jar still at the top.
+- **Tier 1 plateau** (`clean.mjs`): two clean rounds at 70 (rafts 4, last ones 0, bumps 0) gave clean 1 and then 2. The second climbed to 62.
+- **Split then ending:**
+  - `lrP` r1: split at 48, then "One ten became ten ones. 5 tens make 50!".
+  - `ls1`/`ls2`/`ls3`: "A raft is ten. We need just 8 more!", then "One ten is ten ones!" at the split, then the ending. There was no Dash hint after any split.
+- **Owed ten carried:** in `lc1P` r0, "Five tens! | Six tens and 5. A raft is ten. We need just 5 more! | 7 tens make 70!".
+- **Pond, waited out at L5** (`nb5L`): `waited: true`, giving L5 → L4. The reminder came at 84.6 s, before any trickle.
+- **Pond, split at L4** (`sp4P`): L4 → L5, careful 1.00. "40! A ten became ten ones, and ten ones make one ten again!" was said.
+- **Standard checks:**
+  - `browser.mjs --ids bumper-ducks --run bumper-ducks-f3`: BOOT + PLAY, 0 errors.
+  - `node --check` passes on `main.js` and `sim.js`.
+  - The only console message is the expected solo-multiplayer warning.
+
+### Still open
+
+- The L5 take-away step.
+- A parent tier stepper for Bumper play.
+- L0 counting aloud to ten (reviewer 1, idea 8).

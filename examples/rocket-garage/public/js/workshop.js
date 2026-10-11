@@ -78,7 +78,8 @@ export function explainFlight(before, now, result = compareBuilds(before, now)) 
     return `${now.booster === 'none' ? 'With no boosters there was no extra push' : `${capital(is)} push less than ${was}`}, so it did not go as far.${r.many}`
   }
   if (r.kind === 'wobble') {
-    if (result.a.wobble !== result.b.wobble) return `The ${r.wobbly} changed the wobble, not the distance.${r.many}`
+    // Several parts changed: never name one as the cause, since this test cannot tell which it was
+    if (result.a.wobble !== result.b.wobble) return r.many ? 'Something changed the wobble, not the distance. Change one part at a time to find out which!' : `The ${r.wobbly} changed the wobble, not the distance.`
     return `The ${r.parts} did not change the distance.`
   }
   return `The ${r.parts} ${r.plural ? 'are' : 'is'} just for fun. Same distance!`
@@ -176,7 +177,7 @@ export function flyRace(race, result, { duration = 1700, onDone = () => {} } = {
       const slot = rail.dataset.build
       rail.querySelector('.workshop-ship').classList.remove('flying')
       // The planet each rocket reached pops up above its lane
-      stops[result[slot].reach + 1]?.classList.add('reached')
+      stops[result[slot].reach + 1]?.classList.add('reached', `reached-${slot}`)
       race.querySelector(`.lane-${slot}`).classList.toggle('winner', won(result, slot))
     }
     onDone()

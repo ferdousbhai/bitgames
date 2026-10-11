@@ -61,8 +61,9 @@ export class Audio {
     const ctx = this.ctx
     const osc = ctx.createOscillator()
     const osc2 = ctx.createOscillator()
-    osc.type = 'sawtooth'
-    osc2.type = 'square'
+    // A soft hum (triangle and sine), never a buzz.
+    osc.type = 'triangle'
+    osc2.type = 'sine'
     const filter = ctx.createBiquadFilter()
     filter.type = 'lowpass'
     filter.frequency.value = 600
@@ -76,17 +77,19 @@ export class Audio {
     this.engine = { osc, osc2, filter, gain }
   }
 
-  /** Engine pitch follows speed; throttle opens it up. Starts the engine once audio is unlocked. */
-  updateEngine(speed, throttle) {
+  /**
+   * Engine pitch follows speed; throttle opens it up a little. Starts the engine once audio is unlocked.
+   * On a calm road (Delivery Town, Easy mode) it is a low, quiet purr with no gear changes.
+   */
+  updateEngine(speed, throttle, calm = false) {
     if (!this.ctx) return
     if (!this.engine) this.startEngine()
     const t = this.ctx.currentTime
-    const gearSpeed = speed % 9
-    const rpm = 45 + gearSpeed * 9 + speed * 2.2
-    this.engine.osc.frequency.setTargetAtTime(rpm, t, 0.05)
-    this.engine.osc2.frequency.setTargetAtTime(rpm * 0.5, t, 0.05)
-    this.engine.filter.frequency.setTargetAtTime(400 + throttle * 900 + speed * 20, t, 0.08)
-    this.engine.gain.gain.setTargetAtTime(0.05 + throttle * 0.05, t, 0.1)
+    const rpm = calm ? 55 + speed * 2.4 : 45 + (speed % 9) * 9 + speed * 2.2
+    this.engine.osc.frequency.setTargetAtTime(rpm, t, 0.08)
+    this.engine.osc2.frequency.setTargetAtTime(rpm * 0.5, t, 0.08)
+    this.engine.filter.frequency.setTargetAtTime(calm ? 260 + throttle * 160 + speed * 6 : 380 + throttle * 520 + speed * 14, t, 0.12)
+    this.engine.gain.gain.setTargetAtTime(calm ? 0.035 + throttle * 0.02 : 0.05 + throttle * 0.04, t, 0.15)
   }
 
   /** Off the track (menus, lobby): fade the engine out until the next race. */

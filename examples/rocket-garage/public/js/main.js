@@ -9,7 +9,7 @@ import { Thumbs } from './thumbs.js'
 import { createVoice } from './speech.js'
 import { BOOSTER_WORDS, createWorkshop, flyRace, placeName } from './workshop.js'
 import { TIERS, afterFlight, changesFrom, checkMission, createWhere, makeMission, missionPicture, missionShort, missionVerdict, missionWords, robotBuild, sanitizeMission } from './missions.js'
-import { WOB_MARK, addNote, createNotebook, createPredict, fairTest, flightRace, learnParts, noteFrom, partsOf, sanitizeKnown, sanitizeNotes, testChip, validBuild, verdict } from './fairtest.js'
+import { WOB_MARK, addNote, createNotebook, createPredict, fairTest, flightRace, learnParts, noteFrom, partsOf, sanitizeKnown, sanitizeNotes, testChip, validBuild, verdict, verdictShort } from './fairtest.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -89,6 +89,25 @@ const TAN = Math.tan((camera.fov * Math.PI) / 360)
 
 const pmrem = new THREE.PMREMGenerator(renderer)
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+
+// A lost WebGL context (an iPad short of memory) never leaves a blank garage: three.js takes the
+// context back when the browser allows, and the room light is rebuilt. If it does not come back,
+// a calm button opens the garage again (the save is kept).
+let wakeTimer = 0
+canvas.addEventListener('webglcontextlost', () => {
+  persist()
+  clearTimeout(wakeTimer)
+  wakeTimer = setTimeout(() => show('wake'), 2500)
+})
+canvas.addEventListener('webglcontextrestored', () => {
+  clearTimeout(wakeTimer)
+  show('wake', false)
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+})
+$('wake-go').addEventListener('click', () => {
+  persist()
+  location.reload()
+})
 scene.environmentIntensity = 0.45
 const hemi = new THREE.HemisphereLight('#eaf4ff', '#7a6aa8', 1.5)
 scene.add(hemi)
@@ -257,7 +276,14 @@ async function load() {
   scene.add(shadow)
 
   thumbs = new Thumbs(128)
-  for (const slot of SLOTS) for (const pt of PARTS[slot.id]) makeThumb(slot.id, pt.id)
+  const allThumbs = () => { for (const slot of SLOTS) for (const pt of PARTS[slot.id]) makeThumb(slot.id, pt.id) }
+  allThumbs()
+  // Pictures drawn while the thumbnail context was lost are blank: draw them all again
+  thumbs.canvas.addEventListener('webglcontextrestored', () => {
+    rocketThumbs.clear()
+    allThumbs()
+    renderItems()
+  })
 }
 
 /**
@@ -754,7 +780,7 @@ function sparkleAt(slot) {
   const b = new THREE.Box3().setFromObject(o)
   b.getCenter(v3)
   v3.z += 0.6
-  sparks.burst(v3, ['#fff3a0', '#ffd23f', '#ffffff', '#8ef0c8'], 18, 4.5, 0.55)
+  sparks.burst(v3, ['#fff3a0', '#ffd23f', '#ffffff', '#8ef0c8'], 9, 2.4, 0.55)
   rings.spawn(v3, '#fff3a0', 2.4, 0.4)
 }
 
@@ -778,7 +804,7 @@ function paint(color) {
     o.updateWorldMatrix(true, true)
     new THREE.Box3().setFromObject(o).getCenter(v3)
     v3.z += 0.6
-    sparks.burst(v3, [color, color, '#ffffff'], 22, 4, 0.6)
+    sparks.burst(v3, [color, color, '#ffffff'], 11, 2.4, 0.55)
   }
   for (const p of PARTS[slot]) if (p.id !== 'none') makeThumb(slot, p.id)
   renderTray()
@@ -1030,7 +1056,7 @@ function renderMission() {
   // Robot mentions the first card of a visit once; after that new cards wait quietly to be picked up
   if (!save.mission.on && !missionTold) {
     missionTold = true
-    voice.say('Robot has a mission for you. Tap the card to hear it!')
+    voice.say('Robot has a mission card. Tap it when you are ready!')
   }
   box.classList.toggle('on', save.mission.on)
   const words = missionWords(card)
@@ -1367,7 +1393,7 @@ function liftoff() {
   $('turbo-to').textContent = flight.canTurbo ? DESTS[base + 1].emoji : ''
   $('turbo').setAttribute('aria-label', 'Turbo: catch fifteen stars')
   // The guess (or the mission card and the planet the child picked) rides along in the top bar
-  const chip = flight.test ? testChip(flight.test, rocketThumb) : flight.mission ? missionPicture(flight.mission) : null
+  const chip = flight.test ? testChip(flight.test, rocketThumb) : flight.mission ? missionPicture(flight.mission, { rocketThumb }) : null
   $('guess').replaceChildren(...(chip ? [chip] : []))
   show('guess', !!chip)
   renderStars()
@@ -1554,10 +1580,9 @@ function catchStar(it) {
     $('turbo').disabled = false
     $('turbo').setAttribute('aria-label', `Turbo to ${placeName(flight.target + 1)}`)
     audio.reach()
-    // The first time, Robot says what the lightning does; after that the button speaks for itself
-    // Said only when the lightning could help the plan; on an overshooting mission it lights quietly
-    if (turboRelevant()) {
-      voice.say(turboTold ? 'Fifteen!' : `Fifteen! Tap the lightning to zoom on to ${placeName(flight.target + 1)}, or just land on ${placeName(flight.target)}.`)
+    // Said once a visit, and only when the lightning could help the plan; after that it lights quietly
+    if (turboRelevant() && !turboTold) {
+      voice.say(`Fifteen! Tap the lightning to zoom on to ${placeName(flight.target + 1)}, or just land on ${placeName(flight.target)}.`)
       turboTold = true
     }
   } else if (flight.stars % 5 === 0 && flight.stars < TURBO && fivesAloud()) {
@@ -1576,7 +1601,8 @@ function fivesAloud() {
 }
 /** The flight (by number) whose fives were counted this visit. */
 let fivesOn = -1
-const turboRelevant = () => !flight.mission || flight.mission.dest === flight.base + 1
+// (Not on a two-fault card: there the turbo never counts as the booster fix, so it is never invited)
+const turboRelevant = () => !flight.mission || (!flight.mission.two && flight.mission.dest === flight.base + 1)
 
 let turboTold = false
 
@@ -1984,8 +2010,10 @@ function startParty() {
   flight.flyby = []
   for (const n of party.news) save.fresh.add(`${n.slot}:${n.id}`)
   // A fair test (one part changed) adds a page to the "what I found out" notebook. A mission
-  // flight with one part changed since the last landing is a fair test too, just unasked.
-  const tested = flight.test ?? fairTest(save.last, save.rocket)
+  // flight with one part changed is a fair test too, just unasked: on Robot's rocket it is
+  // measured from his rocket as the card put it on the pad.
+  const m0 = flight.mission
+  const tested = flight.test ?? fairTest(m0?.robot ? partsOf(m0.base ?? m0.robot) : save.last, save.rocket)
   party.found = !!tested && addNote(save.notes, noteFrom(tested))
   // ...and marks that single nose, tank or fins steady ━ or wobbly 〰️ in the tray
   party.learned = tested ? learnParts(save.known, tested) : []
@@ -2011,16 +2039,28 @@ function startParty() {
       // A nearer card only when there is a different planet one booster size away; otherwise the
       // same card stays and the finger shows the booster to try (never "a new card" that is not)
       const card = makeMission(1, save.rocket, save.visited, { near: m.dest })
-      if (card.dest === m.dest) {
+      if (card.dest === m.dest && !m.helped) {
         Object.assign(save.mission, { card: m, on: true, near: null })
+        m.helped = true
         next = 'help'
+      } else if (card.dest === m.dest) {
+        // Helped once already: the card is put away for now, so hint and help never loop
+        Object.assign(save.mission, { card: m, on: false, near: null })
+        next = 'rest'
       } else Object.assign(save.mission, { card, near: null })
     }
     let say = missionVerdict(m, check, { dest: d, turbo: flight.used, turboReady: flight.ready, rocket: save.rocket, next, flown: save.flown, known: Object.keys(save.known).length })
-    // The same advice twice in a visit: the short line instead (the picture card shows the rest)
-    if (!check.done && next !== 'step' && next !== 'hint') {
-      if (toldMiss.has(say)) say = missionShort(m, check, d) || say
-      else toldMiss.add(say)
+    // Any line already heard this visit, even about another planet: a short one instead (the
+    // picture card shows the rest). A card put away keeps its own brief line.
+    const heard = toldMiss.get(lineKey(say)) ?? 0
+    toldMiss.set(lineKey(say), heard + 1)
+    if (heard && next !== 'rest') {
+      // ...skipping any short line already heard, until the briefest one
+      let n = heard
+      let short
+      do short = missionShort(m, check, d, { next, n: n++, rocket: save.rocket })
+      while (short && toldMiss.has(lineKey(short)) && n < 8)
+      if (short) toldMiss.set(lineKey((say = short)), (toldMiss.get(lineKey(short)) ?? 0) + 1)
     }
     party.mission = { m, check, say, matched, next }
   }
@@ -2034,8 +2074,12 @@ function startParty() {
   }, 2200)
 }
 
-/** Mission advice already said this visit (said again, it is the short line). */
-const toldMiss = new Set()
+/** Mission lines already said this visit, and how often (said again, it is a short line). */
+const toldMiss = new Map()
+/** A line with its planets taken out, so the same sentence about another planet counts as heard. */
+const lineKey = (say) => DESTS.reduce((key, d) => key.replaceAll(d.name, '•'), say)
+/** Fair-test verdicts already said this visit (said again: short, then just the mark). */
+const toldTest = new Map()
 
 /** The one soft moment on landing: a few pale sparkles drift up around the pilot and the flag, once. */
 function confetti() {
@@ -2068,7 +2112,7 @@ function showReward() {
   // A missed mission card that is still on: the same rocket would land the same, so 🔧 is the way on
   // (unless it stopped one short and the turbo could carry it, which is a real plan to try again)
   const pm = party.mission
-  const turboFix = pm && pm.check.fix && party.dest + 1 === pm.m.dest && flight.canTurbo
+  const turboFix = pm && !pm.m.two && pm.check.fix && party.dest + 1 === pm.m.dest && flight.canTurbo
   show('again', !(pm && !pm.check.done && save.mission.on && !turboFix))
   show('reward')
   rewardAt = performance.now()
@@ -2105,7 +2149,20 @@ function renderTest() {
       page.textContent = '📓✨'
       row.append(page)
     }
-    voice.say(`${v.say}${party.found ? ' I put it in your notebook!' : ''}`)
+    // Several parts changed: any such verdict counts as heard, since the lesson is the same one
+    const key = test.result.changed.length > 1 ? 'many' : v.say
+    const heard = toldTest.get(key) ?? 0
+    toldTest.set(key, heard + 1)
+    let say = v.say
+    if (heard) {
+      // (a right guess adds "Yes!" to the short line, but it is the same line all the same)
+      const short = verdictShort(test, v)
+      const shortKey = short.replace(/^Yes! /, '')
+      say = toldTest.has(shortKey) ? (v.matched ? 'Yes!' : '') : short
+      toldTest.set(shortKey, (toldTest.get(shortKey) ?? 0) + 1)
+    }
+    say = `${say}${party.found ? ' I put it in your notebook!' : ''}`.trim()
+    if (say) voice.say(say)
   } })
 }
 let rewardAt = 0
@@ -2122,9 +2179,9 @@ function renderMissionResult() {
   why.className = 'ft-why'
   why.setAttribute('role', 'status')
   why.textContent = say
-  const pic = missionPicture(m, { rocketThumb, marks: check })
+  const pic = missionPicture(m, { rocketThumb, marks: { ...check, place: check.place && !(m.two && !check.done && check.carried) } })
   box.append(pic, why)
-  let more = { easier: ' Let’s try a different mission next.', nearer: ' Robot has a new card for you, one booster size away.', help: ' Let’s try it together!', hint: ' Have a look!' }[next] ?? ''
+  let more = { easier: ' Let’s try a different mission next.', nearer: ' Robot has a new card for you, one booster size away.', help: ' Let’s try it together!', hint: ' Have a look!', rest: ' Let’s just fly for fun. Robot’s card will wait.' }[next] ?? ''
   // Reaching the top tier opens the workshop's race challenge: said once, ever
   if (next === 'done' && save.mission.tier >= TIERS && !save.raceTold) {
     save.raceTold = true
@@ -2152,7 +2209,9 @@ function renderRewardStars() {
   el.setAttribute('aria-label', `${flight.stars} stars`)
 }
 
-function animateDancers(dt, dancing) {
+/** The landing song is one phrase (about nine seconds); after it the dancers ease into a still pose. */
+const DANCE_FOR = 9
+function animateDancers(dt, dancing, resting = false) {
   const t = game.time
   if (party.flag) {
     const f = party.flag
@@ -2179,8 +2238,16 @@ function animateDancers(dt, dancing) {
       ar.rotation.z = 2.4 + Math.sin(t * 8) * 0.4
       continue
     }
-    const beat = t * Math.PI * 2.5 + phase
     const spot = p === party.pilot ? party.spot : party.friendSpot
+    const facing = p === party.pilot ? -0.2 : 0.3
+    if (resting) {
+      for (const limb of [al, ar, ll, lr, head]) limb.rotation.z = damp(limb.rotation.z, 0, 4, dt)
+      p.position.y = damp(p.position.y, spot.y + p.userData.feet, 6, dt)
+      const turn = Math.atan2(Math.sin(p.rotation.y - facing), Math.cos(p.rotation.y - facing))
+      p.rotation.y = facing + damp(turn, 0, 4, dt)
+      continue
+    }
+    const beat = t * Math.PI * 2.5 + phase
     const cycle = (t + phase) % 6
     p.position.y = spot.y + p.userData.feet + Math.abs(Math.sin(beat)) * 0.32
     al.rotation.z = -2.2 - Math.sin(beat) * 0.6
@@ -2188,7 +2255,7 @@ function animateDancers(dt, dancing) {
     ll.rotation.z = Math.max(0, Math.sin(beat)) * 0.4
     lr.rotation.z = -Math.max(0, -Math.sin(beat)) * 0.4
     head.rotation.z = Math.sin(beat) * 0.2
-    p.rotation.y = (p === party.pilot ? -0.2 : 0.3) + (cycle > 4.5 ? (cycle - 4.5) / 1.5 * Math.PI * 2 : Math.sin(beat * 0.5) * 0.3)
+    p.rotation.y = facing + (cycle > 4.5 ? (cycle - 4.5) / 1.5 * Math.PI * 2 : Math.sin(beat * 0.5) * 0.3)
   }
   if (party.planet) {
     const s = 1 + (dancing ? Math.sin(t * Math.PI * 5) * 0.012 : 0)
@@ -2198,7 +2265,8 @@ function animateDancers(dt, dancing) {
 
 function updateParty(dt) {
   game.t += dt
-  animateDancers(dt, true)
+  const dancing = game.t < DANCE_FOR
+  animateDancers(dt, dancing, !dancing)
 }
 
 function backToGarage(thenLaunch = false) {
@@ -2400,24 +2468,26 @@ function updateSky(dt) {
   scene.environmentIntensity = lerp(0.45, 0.3, s)
 }
 
+/** 1 while the child is busy, easing to 0 a few seconds after the last touch: the garage settles still. */
+let lively = 1
 function updateGarage(dt) {
   const t = game.time
-  // Robot: a little idle sway, waves now and then
+  lively = damp(lively, idle() < 5 ? 1 : 0, 1.5, dt)
+  // Robot: a little sway while the child works; he waves only when something happens (a card, a launch, a tap)
   robot.wave -= dt
-  if (robot.wave < -6) robot.wave = 2
   const waving = robot.wave > 0
   robot.arm.rotation.z = damp(robot.arm.rotation.z, waving ? 2.5 + Math.sin(t * 10) * 0.45 : 0.1, 8, dt)
   robot.armL.rotation.z = damp(robot.armL.rotation.z, game.state === 'countdown' ? -2.5 + Math.sin(t * 10) * 0.4 : -0.1, 8, dt)
   robot.spin = Math.max(0, robot.spin - dt)
-  robot.obj.rotation.y = robot.turn + (1 - robot.spin) * (robot.spin > 0 ? Math.PI * 2 : 0) + Math.sin(t * 1.2) * 0.08
-  robot.obj.position.y = Math.abs(Math.sin(t * 3)) * 0.04
+  robot.obj.rotation.y = robot.turn + (1 - robot.spin) * (robot.spin > 0 ? Math.PI * 2 : 0) + Math.sin(t * 1.2) * 0.08 * lively
+  robot.obj.position.y = Math.abs(Math.sin(t * 3)) * 0.04 * lively
   updatePadSway(dt)
   renderPadTag()
   // Roof hatch and gantry arm move aside for take-off
   doors.l.position.x = damp(doors.l.position.x, -doors.open * 2.4, 3, dt)
   doors.r.position.x = damp(doors.r.position.x, doors.open * 2.4, 3, dt)
   doors.arm.position.x = damp(doors.arm.position.x, doors.armX + doors.open * 1.2, 3, dt)
-  if (game.state !== 'countdown') padLights.forEach((m, i) => (m.emissiveIntensity = 1 + 0.8 * Math.sin(t * 3 + i * 0.8)))
+  if (game.state !== 'countdown') padLights.forEach((m, i) => (m.emissiveIntensity = 1 + 0.8 * lively * Math.sin(t * 3 + i * 0.8)))
 }
 
 const debug = { paused: false }
@@ -2483,4 +2553,4 @@ load()
   })
 
 // Handy for testing: ?debug exposes the game state in the console
-if (new URLSearchParams(location.search).has('debug')) window.rg = { probe(x, y) { ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.intersectObjects(scene.children, true).slice(0, 5).map((h) => `${h.object.type}:${h.object.name}:${h.object.material?.name}:${h.object.visible}`) }, land(d) { clearFlight(); flight.target = d; flight.stars = 7; setupLanding() }, debug, predictor, notebook, ghost, get pendingTest() { return pendingTest }, step(sec = 1) { for (let i = 0; i < sec * 30; i++) tick(1 / 30) }, keys, game, save, flight, party, choose, launch, surprise, toGarage, backToGarage, useTurbo, missionCard, renderMission, where, items, spawnPattern, get rocket() { return rocket } }
+if (new URLSearchParams(location.search).has('debug')) window.rg = { probe(x, y) { ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.intersectObjects(scene.children, true).slice(0, 5).map((h) => `${h.object.type}:${h.object.name}:${h.object.material?.name}:${h.object.visible}`) }, land(d) { clearFlight(); flight.target = d; flight.stars = 7; setupLanding() }, debug, predictor, notebook, ghost, get pendingTest() { return pendingTest }, step(sec = 1) { for (let i = 0; i < sec * 30; i++) tick(1 / 30) }, keys, game, save, flight, party, choose, launch, surprise, toGarage, backToGarage, useTurbo, missionCard, renderMission, where, items, spawnPattern, padLights, get robot() { return robot }, get rocket() { return rocket } }

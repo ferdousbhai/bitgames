@@ -76,6 +76,8 @@ const game = {
   streak: [], // the clues answered with the first catch, in a row
   said: new Set(), // "why" lines said this trip, so each reason is fresh
   recent: [], // the last few riddles asked, so they vary
+  listTick: '', // "One for Bear's list!", said as the lead of the next riddle
+  asked: [], // every riddle asked this trip (riddles.js makeRiddle: one way to ask for each answer)
   answered: [], // the animals that solved the last few riddles, so the answers vary too
   counted: new Set(), // animals counted this trip: a second count is quiet (numbers by tick, the total said)
   lookAsks: 0, // "Look closer!" is said for the first catch of a trip; after that the glow is enough
@@ -86,6 +88,8 @@ const game = {
   listSaid: false, // "Nothing on Bear's list lives here" is said once a trip
   riddleSaidAt: 0, // a new riddle after the first is shown, and said only after a quiet look (RIDDLE_QUIET)
   riddleTier: 0, // the tier of the last riddle said aloud: a new kind of riddle is always said
+  tierNote: '', // "Now two clues at once!": said with the next riddle, not on top of the catch (setTier)
+  listNote: false, // a new Bear's list with nothing on it here: Bear mentions it at home instead
   casts: 0,
   phaseT: 0,
   misses: 0,
@@ -644,6 +648,10 @@ const CLUE_PARTS = {
   tusk: ['tusk'],
   spikes: ['spikes'],
   air: ['blowhole', 'skin', 'flippers'],
+  // gills (the fish), the shell they are tucked under (crab, crayfish), an octopus's head, a jellyfish's thin skin
+  water: ['gills', 'shell', 'head', 'bell'],
+  // what it has instead of fins (legs, flippers, arms, tentacles), a narwhal's blowhole, a shell
+  notfish: ['back legs', 'flippers', 'blowhole', 'arms', 'tentacles', 'shell'],
   nobones: ['tentacles', 'arms', 'shell'],
   fish: ['fins', 'back fin', 'back fins', 'side fins'],
 }
@@ -673,11 +681,16 @@ const JOKES = new Set(['boot', 'duck', 'chest'])
 
 const SAY = {
   boot: 'Silly! An old boot!',
-  chest: 'Wow! Treasure!',
+  chest: 'A treasure chest!',
   whale: 'A friendly whale!',
-  goldenfish: 'Wow! A golden fish!',
+  goldenfish: 'A golden fish!',
   duck: 'Quack! A rubber duck!',
 }
+/**
+ * A joke caught while Bear's riddle is out is kept, but quietly: it is not an answer, so a cast into open
+ * water gets no bigger welcome than a careful one (no "Wow", the smallest tune, no bubbles).
+ */
+const JOKE_SAY = { boot: 'An old boot! Not an animal.', chest: 'A treasure chest! Not an animal.', duck: 'A rubber duck! Not an animal.' }
 
 function startShow() {
   const { c, pick } = fish.catch
@@ -718,11 +731,12 @@ function startShow() {
   $('card').className = `card-catch show stars${pick.stars}${keep ? '' : ' back'}`
   // One line: its name, whether it answers Bear's riddle, and why (a repeat miss is just the short reason)
   const line = surprise && !right ? null : verdict(r, pick.id, pick.name, game.said)
-  const wow = !keep && SAY[pick.id] ? `${SAY[pick.id]} ` : '' // "Wow! A golden fish! It isn't orange."
+  const wow = !keep && SAY[pick.id] ? `${SAY[pick.id]} ` : '' // "A golden fish! It isn't orange."
   // After four misses on one riddle the ringed animal has come close: further misses are a soft plip and
   // the card's words, with no voice at all. A short reason already said on this riddle (r.mute) rests too.
   const hush = !keep && r && (r.misses >= 4 || r.mute) && !wow
-  if (!hush) voice.sayNow(keep ? line ?? SAY[pick.id] ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${lower(pick.name)}!` : wow + (wow ? (r?.mute ? '' : line.replace(/^An? [^.]*\. /, '')) : line))
+  const quiet = surprise && !right && !!r
+  if (!hush) voice.sayNow(keep ? line ?? (quiet ? JOKE_SAY[pick.id] : SAY[pick.id]) ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${lower(pick.name)}!` : wow + (wow ? (r?.mute ? '' : line.replace(/^An? [^.]*\. /, '')) : line))
   if (r && (right || !surprise)) fish.show.solved = answer(r, right, pick.id)
   if (fish.show.solved && r.list) fish.show.listDone = tickList(r)
   // Look closer: one feature to notice, asked right after the name (it is optional).
@@ -734,8 +748,8 @@ function startShow() {
     if (game.lookAsks++ < 1) voice.say(`Look closer! See its ${look.part}?`)
   }
   if (keep) {
-    audio.fanfare(pick.stars)
-    softMoment()
+    audio.fanfare(quiet ? 1 : pick.stars)
+    if (!quiet) softMoment()
     stageLight.intensity = 6
   } else {
     audio.nibble()
@@ -791,7 +805,7 @@ function updateShow(dt, t) {
   const sway = id === 'octopus' ? 0.2 : 0.35
   g.rotation.set(Math.sin(s.t * 2.2) * 0.12 * move, face + Math.sin(s.t * 1.6) * sway * move, Math.sin(s.t * 3.1) * 0.08 * move)
   g.position.y = Math.sin(s.t * 2.8) * 0.08 * move + (SHOW_DROP[id] ?? 0) * Math.min(1, s.t * 2)
-  if (s.c.parts.tail) s.c.parts.tail.rotation[id === 'whale' || id === 'narwhal' ? 'z' : 'y'] = Math.sin(s.t * 12) * 0.5 * move
+  if (s.c.parts.tail) s.c.parts.tail.rotation[id === 'whale' || id === 'narwhal' ? 'z' : 'y'] = Math.sin(s.t * 6) * 0.5 * move
   // Rays and glow behind
   const a = Math.min(1, s.t * 3)
   // A still, soft glow behind the catch (no spinning rays)
@@ -993,8 +1007,9 @@ function countAt(i) {
   dots[i].classList.add('counted')
   audio.nibble()
   $('card-look').textContent = `🔍 ${s.look.part}: ${c.n}`
-  // Counting is the lesson here, so the first count says every number; a repeat lets the ticks count
-  voice.count(c.n, { aloud: c.quiet ? 0 : 10 })
+  // The first count says the numbers up to five (the shared COUNT_ALOUD); past that the ticks and the numbered
+  // dots carry on, and the total is said ("Eight arms!"). A repeat lets the ticks count.
+  voice.count(c.n, c.quiet ? { aloud: 0 } : undefined)
   if (c.n < c.pts.length) return
   // All counted: say the total, with a fact not yet heard this trip
   game.counted.add(s.pick.id)
@@ -1135,9 +1150,14 @@ function updateToBook(dt) {
       game.list = null
       store.set('fish-pond-list', null)
       renderList()
-    } else if (s.listDone) voice.say("One for Bear's list!")
-    // A riddle answered: Bear asks the next one once the catch is safely in the book
+    } else if (s.listDone) game.listTick = "One for Bear's list!"
+    // A riddle answered: Bear asks the next one once the catch is safely in the book (a list tick leads it,
+    // in one line: "One for Bear's list! Next: an animal that breathes air.")
     if (s.solved) newRiddle()
+    if (game.listTick) {
+      voice.say(game.listTick)
+      game.listTick = ''
+    }
     else if (game.riddle?.misses >= EASIER_AFTER && !game.riddle.easy && !game.riddle.list) easierRiddle()
     // Finding all 15 is the bigger prize: its card goes up last so nothing covers it
     if (s.all) {
@@ -1162,15 +1182,16 @@ function newRiddle(first = false) {
   const seen = [...new Set(visibleKinds())]
   const kinds = seen.length >= 3 ? seen : AMBIENT[game.place]
   // Bear's list comes in every other riddle while something on it swims here, in view
-  // (and not when only the animal that answered last could answer it: the same one twice running is no riddle)
+  // (and not when only the animal that answered last could answer it: the same one twice running is no riddle;
+  // nor straight after a move up a tier, whose line leads the riddle and has no room for "From Bear's list")
   const others = kinds.filter((id) => id !== game.answered[0])
-  const item = game.tier >= 2 && !game.riddle?.list ? game.list?.find((it) => !it.done && answersHere(it, others) && listRiddle(it).key !== game.riddle?.key.replace(/\*2$/, '')) : null
+  const item = game.tier >= 2 && !game.riddle?.list && !game.tierNote ? game.list?.find((it) => !it.done && answersHere(it, others) && listRiddle(it).key !== game.riddle?.key.replace(/\*2$/, '')) : null
   // (an ordinary riddle never asks what an item still on the list asks: that one is the list's)
   const listKeys = (game.list ?? []).filter((it) => !it.done).map((it) => listRiddle(it).key)
   // Past two clues: after three two-clue riddles in a row answered with the first catch, Bear asks for
   // two different animals that fit both clues (tier 4 on the chip). One slow riddle ends the run.
   const deep = game.tier === 3 && game.streak.length >= 3
-  game.riddle = item ? listRiddle(item) : makeRiddle(kinds, game.tier, game.riddle, game.recent, game.answered, { two: deep, avoid: listKeys })
+  game.riddle = item ? listRiddle(item) : makeRiddle(kinds, game.tier, game.riddle, game.recent, game.answered, { two: deep, avoid: listKeys, trip: game.asked })
   const r = game.riddle
   const pair = () => new Set(seen.filter((id) => fits(r, id))).size >= 2
   if (item) r.item = game.list.indexOf(item)
@@ -1181,11 +1202,12 @@ function newRiddle(first = false) {
   if (!game.riddle) return
   // The last five riddles are left out while there are others (a one-answer riddle twice in six was samey)
   game.recent = [game.riddle.key, ...game.recent].slice(0, 5)
+  game.asked.push(game.riddle.key.replace(/\*2$/, ''))
   // The first riddle of a trip, one from Bear's list and a new kind of riddle are read out. Otherwise the
   // chip shows the new picture, and Bear reads it only after a quiet look with no cast (or on a chip tap).
   // Two clues are read out too (once per riddle in a trip, by sayRiddle): the chip's slashed pictures
   // ("fish + no yellow") are hard to decode for a six-year-old who casts quickly.
-  if (first || game.riddle.list || game.riddle.tier !== game.riddleTier || game.riddle.clues.length > 1) sayRiddle(first)
+  if (first || game.tierNote || game.riddle.list || game.riddle.tier !== game.riddleTier || game.riddle.clues.length > 1) sayRiddle(first)
   else game.riddleSaidAt = clock
 }
 
@@ -1225,11 +1247,25 @@ function sayRiddle(first = false) {
   game.riddleTier = r.tier
   game.riddleSaidAt = 0
   const who = r.list ? "From Bear's list" : first ? "Bear's riddle" : 'Next riddle'
+  // A move up a tier leads the riddle in one line: "Now two clues at once! Find an animal that..."
+  const note = game.tierNote
+  game.tierNote = ''
+  // and so does a tick on Bear's list ("One for Bear's list! Next: ...")
+  const done = game.listTick
+  game.listTick = ''
+  if (note) {
+    game.said.add(note)
+    voice.say(`${done ? `${done} ` : ''}${note} Find ${r.ask}.`)
+    return
+  }
   const line = first ? `${who}: find ${r.ask}. Cast near ${r.need > 1 ? 'them' : 'it'}!` : `${who}: ${r.ask}.`
   // A riddle that comes round again in a trip is shown on the chip, not read again (a tap on it reads it)
-  if (game.said.has(line)) return
+  if (game.said.has(line)) {
+    if (done) voice.say(done)
+    return
+  }
   game.said.add(line)
-  voice.say(line)
+  voice.say(done && !first && !r.list ? `${done} Next: ${r.ask}.` : `${done ? `${done} ` : ''}${line}`)
 }
 
 /** An item on Bear's list was found: tick it (saved). Returns 'all' when the list is finished. */
@@ -1344,11 +1380,12 @@ function setTier(n) {
   // Remember the highest tier, but let it drift down after a slow riddle (a younger sibling may be playing)
   game.best = up ? Math.max(game.best, n) : Math.max(n, game.best - 1)
   store.set('fish-pond-best', game.best)
-  // Moving up is worth a word; moving back down happens quietly
-  if (up && n === 2) voice.sayOnce('Bear has trickier riddles now!')
-  if (up && n === 3) voice.sayOnce('Now Bear gives two clues at once!')
-  // and a list of animals to find, some of them in other waters
-  if (up && n === 3 && ensureList() && !game.list.some((it) => answersHere(it, AMBIENT[game.place]))) voice.sayOnce("Bear has a list, too. It's at home!")
+  // Moving up is worth a word, said with the next riddle (not stacked on the catch's own line, which this
+  // follows), once a trip; moving back down happens quietly
+  game.tierNote = up && n <= 3 ? ['', '', 'Trickier riddles now!', 'Now two clues at once!'][n] : ''
+  if (game.said.has(game.tierNote)) game.tierNote = ''
+  // and a list of animals to find, some of them in other waters (one with nothing here is told of at home)
+  if (up && n === 3 && ensureList() && !game.list.some((it) => answersHere(it, AMBIENT[game.place]))) game.listNote = true
 }
 
 riddleBtn.addEventListener('click', (e) => {
@@ -1682,6 +1719,9 @@ function toTitle() {
   ensureList()
   renderList()
   show('title')
+  // A list made on the water with nothing on it there: Bear points to it here, where it sits
+  if (game.listNote && game.list) voice.say("Bear has a list for you! Tap it to hear it.")
+  game.listNote = false
 }
 
 function start(place) {
@@ -1704,6 +1744,7 @@ function start(place) {
   game.lookAsks = 0
   game.said.clear()
   game.recent = []
+  game.asked = []
   game.answered = []
   game.counted.clear()
   // Each trip starts a tier below the best reached, and climbs back after two quick answers
@@ -1711,6 +1752,7 @@ function start(place) {
   game.streak = []
   game.riddle = null
   game.riddleTier = 0
+  game.tierNote = ''
   newRiddle(true)
   // Bear's list is planned on the title: fishing where none of it lives gets one quiet word
   if (game.list && !game.list.some((it) => !it.done && answersHere(it, AMBIENT[place]))) voice.say("Nothing on Bear's list lives here.")

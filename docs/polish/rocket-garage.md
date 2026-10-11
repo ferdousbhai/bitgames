@@ -518,3 +518,162 @@ Source: the coordinator's open audit item (Robot's square-wave beeps) and the la
 - A non-lookup reasoning step for tier 4, such as a "which part did it?" card, or turbo plus booster planning.
 - A picture-first notebook page for pre-readers, and the workshop behind one "race Robot" entry.
 - One unlock per landing, tied to the planet reached, in place of a planet's whole set.
+
+# Polish round 1 (bug pass): honest turbo advice on two-fault cards (2026-10-11)
+
+Source: the two latest independent reviews (8.6 and 8.6). This pass fixes every bug they list. It makes no redesigns. All paths are under `examples/rocket-garage/public/`.
+
+## Bugs and fixes
+
+- **The tier-4 turbo route gave misleading advice.** On a two-fault card, when the turbo, not the boosters, reached the planet, Robot said "It lands on the Ring Planet now! Next, the wobble…". He then said the same on the next flight, and the place fault counted as fixed.
+  - `js/missions.js:166`: `checkMission` now reports `carried`, which means the place was reached past the boosters' reach.
+  - `:187`: the verdict now says "The turbo carried it to the Ring Planet, but his boosters still stop at Mars. Fix the boosters, then the wobble!"
+  - `:221`: the repeat line is "Turbo again. His boosters still stop at Mars."
+  - `:270`: `afterFlight` no longer counts a carried landing as a fixed fault, so it is not a "step".
+  - `:178`: a two-fault card that is done with the wobble fixed and the turbo says so honestly.
+  - `js/main.js:2124`: the reward card marks the planet 💡, not ✔, when the turbo carried it on an unfinished two-fault card.
+- **"Tap the card to hear it" was inaccurate.** The tap starts the camera look and the "where will it land?" question, not a reading. `js/main.js:1033` now says "Robot has a mission card. Tap it when you are ready!"
+- **"Fifteen!" was spoken on every flight where the turbo became ready.** `js/main.js:1558`: the offer is said once a visit. After that, the ⚡ lights with its soft chime and no voice.
+- **The "🔧1 ➜ 🔧1" chip spilled under the planet tile.** `js/missions.js:310` tags Robot's two-fault tile `two`. In `fairtest.css:368-369`, that tile becomes 8:5 wide with the chip centred, so the chip fits inside it.
+- **The reward race stressed the old landing.** Last flight's planet also grew, and a full-disc 🔴 looked bigger than this flight's 🪐.
+  - `js/workshop.js:179`: each reached stop is tagged with its lane (`reached-a` or `reached-b`).
+  - `fairtest.css:371-372`: on the reward race, only this flight's planet grows, with a soft yellow ring. Last flight's planet stays its own size at 0.6 opacity.
+  - The ship's centre measures exactly on the planet's centre (384 = 384 px in portrait, 944 = 944 px in landscape). The workshop dialog's race is unchanged.
+
+## Evidence (scratchpad `polish3/rocket-garage/`, `play.mjs`)
+
+- **Setup:** Chromium `--use-angle=gl`, speech stubbed and logged, at 834×1194 and 1194×834, with 0 console or page errors.
+- **Two-fault card with short boosters, flown twice with 0 changes and the turbo taken:**
+  - Portrait: Mars to the Ring Planet. Landscape: Comet to the Alien Planet.
+  - The two lines are the turbo sentence and then "Turbo again…".
+  - `got` stays 0 and `misses` goes 1 then 2. The marks are ✔ 💡 💡.
+- **"Fifteen" over two turbo-ready flights:** spoken once.
+- **Chip:** it spans 33–119 px inside its tile (23–129 px). The next tile starts at 135 px. Screenshots: `p-02-garage-card.png`, `p-03-tier4-reward-0.png` and `l-03…`.
+- **Reward race:** `p-01-reward-race.png` and `l-01-reward-race.png`.
+- **Checks:**
+  - `browser.mjs --ids rocket-garage --run rocket-garage-f1`: BOOT and PLAY, 0 errors.
+  - `node --check` passes on `main.js`, `missions.js` and `workshop.js`.
+  - `curriculum.test.mjs`: the rocket comparison test passes.
+
+## Still open (review ideas, not bugs)
+
+- Robot's rocket thumbnail on the card is still small.
+- Ideas from the reviews: a "steady or wobbly?" prediction for tests that change only the nose, tank or fins; a non-lookup step for tier 4; idle Robot and pad lights that settle; a pilot that stops dancing after the song; and a ⚡ notebook page.
+
+# Polish round 2 (bug pass): no repeated lines, honest two-fault wins, Robot's boosters visible (2026-10-11)
+
+Source: the two latest independent reviews (8.6 and 8.6). This pass fixes every bug they list and takes a few small, safe improvements. It makes no redesigns. All paths are under `examples/rocket-garage/public/`.
+
+## Bugs and fixes
+
+- **Mission lines repeated word for word.** Examples: "Both fixed, one change at a time!…" (5–6 times), the "It lands on X now! Next, the wobble…" step line, the wobbly2 step line, and the tier-1 hint line. The cause was that the repeat rule skipped done, step and hint verdicts.
+  - `js/main.js:2027`: every mission line already heard this visit becomes a short form. Short forms already heard are skipped until the briefest one.
+  - `js/missions.js:228` (`missionShort`) now has short forms for done (tier 4, tier 3 and tier 1–2), step and hint, plus a brief fallback for misses ("The Moon again.", "Still a wobble.").
+- **The struggling tier-1 loop.** With no nearer planet, the card looped through again, hint and help forever.
+  - `js/main.js:2015`: a card is helped once. The next third miss puts it away (`next = 'rest'`), with "The Moon again. Let's just fly for fun. Robot's card will wait." (`js/missions.js:189`, `js/main.js:2139`).
+- **The turbo could stand in for the booster fix on a two-fault card.** Fixing only the wobble and taking the turbo gave "Both done!" and counted as a predicted win.
+  - `js/missions.js:172`: `done` now needs `!(m.two && carried)`.
+  - The verdict says "…his boosters still stop at the Comet. Fix the boosters!" and drops "then the wobble" when the wobble is already right. The old "Both done… turbo" line is gone.
+- **The 🔧1 ➜ 🔧1 chip covered Robot's boosters, and his thumbnail was tiny.**
+  - `fairtest.css:372-381`: Robot's tile is now a column, with the rocket image above and the tag below in flow, never over it.
+  - The image is 64 px on the garage card (80 px on tablets), 56 px on the reward card and 40 px in the flight chip.
+  - The old 8:5 overlay rules (`:368-369`) are removed.
+- **The in-flight chip had no Robot rocket.** `js/main.js:1370` passes `rocketThumb`.
+- **A multi-part test named every changed wobble-slot part as the cause, then contradicted itself.** `js/workshop.js:82` now says: "Something changed the wobble, not the distance. Change one part at a time to find out which!" It names no part.
+
+## Small improvements
+
+- **The notebook grows during missions** (`js/main.js:1988`). A mission flight on Robot's rocket is measured from his rocket as the card put it on the pad, so a one-change fix is a fair test. In the careful run the notebook holds booster, tank, fins and nose by about flight 6, and the tray holds 10 marks. It previously had 2 pages after 22 flights.
+- **"As it is" answers and questions** (`js/missions.js:251-262`, `:378`, `:470`). A heard answer becomes "Yes! The Moon. The right planet, so what is wrong?", then just "Yes! The Moon.". The question is spoken in full twice, short twice, then left to the pictures (🔊 still says it).
+- **Card shapes** (`js/missions.js:127-129`):
+  - Steady and wobbly cards take turns.
+  - At tier 4, about 1 card in 6 is a one-fault tier-3 card.
+  - "Easier" steps down from the lower of the state's tier and the card's tier (`:320`).
+- **A calm garage** (`js/main.js:2427-2445`):
+  - Robot no longer waves every 8 s. He waves only when something happens.
+  - His sway and bob, and the pad lights' breathing, ease to still 5 s after the last touch.
+- **The pilot rests after the song** (`js/main.js:2168`, `:2223`). The pilot and friend dance for the one-phrase song (9 s), then ease into a still pose.
+- **Smaller sparkle bursts** (`js/main.js:757`, `:781`). The part and paint bursts are halved: 9 and 11 particles at power 2.4, down from 18 and 22.
+- **Debug only:** `window.rg` exposes `robot` and `padLights` for the idle checks.
+
+## Evidence (scratchpad `polish3/rocket-garage/r2/`)
+
+- **Setup:** Chromium `--use-angle=gl`, speech stubbed and logged, at 834×1194 and 1194×834. 0 console or page errors in every run.
+- **`t4.mjs` (careful tier-4 play; 24 flights in portrait, 16 in landscape):**
+  - No mission line longer than 3 words repeats.
+  - The only repeats are the intended "first two times" question lines.
+  - Cards: wobbly2, both and tier-3, with steady and wobbly alternating.
+  - Notebook: `booster, tank, fins, nose`.
+  - Idle 8 s: Robot's y is 1e-5, and all pad lights are 1.0.
+  - The flight chip has Robot's image.
+  - Screenshots: `p-01-garage-card.png` and `l-01…` (tag under the rocket, boosters visible), `p-02-flight-chip.png` and `p-03-reward.png`.
+- **`misc.mjs`:**
+  - The multi-part test says the new "Something changed the wobble…" line.
+  - The pilot's pose is identical 700 ms apart after the song, with arms at 0.
+  - The struggle sequence is again, hint, help, again, hint, then rest, with the card put away.
+  - Turbo with only the wobble fixed: `done:false`, marks ✔ 💡 ✔, wins 0, and "Fix the boosters!". Screenshots: `mp-turbo-reward.png` and `ml-…`.
+- **Checks:**
+  - `browser.mjs --ids rocket-garage --run rocket-garage-f2`: BOOT and PLAY, 0 errors.
+  - `node --check` passes on `main.js`, `missions.js` and `workshop.js`.
+  - `curriculum.test.mjs`: the rocket comparison test passes.
+
+## Still open (review ideas, not bugs)
+
+- A "steady or wobbly?" (━ / 〰️) prediction for one-part nose, tank or fins tests.
+- A "which part did it?" two-flight card for 6–8.
+
+# 2026-10-11 round 3: bug-free pass
+
+Source: two independent reviews (8.8 and 8.7). This pass fixes every listed bug and adds a few small, safe changes. There are no redesigns. All paths are under `examples/rocket-garage/public/`.
+
+## Bugs and fixes
+
+- **Fair-test verdicts repeated word for word.** A careless child heard "Ooh, a new discovery! Something changed the wobble…" in full on 3 of 13 flights.
+  - `js/main.js:2150-2163`: each visit now tracks which verdicts were heard (`toldTest`). All several-part verdicts count as one line.
+  - The second time a verdict comes up, it is short (`verdictShort`, `js/fairtest.js:56`), for example "Several parts changed again. One at a time tells you which!", "Mars." or "Just the wobble changed again.".
+  - After that, a right guess hears only "Yes!", and a wrong one hears nothing; the race and the ✔ / 💡 still show the answer.
+- **A wrong guess on a several-part test was called "a new discovery".** It now says "Hmm, not that!" (`js/fairtest.js:47`).
+- **wobbly2 cards were always steady**, so most tier-4 cards practised only "remove the wobble". `js/missions.js:121-127`: steady and wobbly now take turns first. A wobbly2 card (two wobbly parts, which needs steady) can only appear on a steady turn, in half of them.
+- **The turbo was invited on a two-fault card that does not count it.** At 15 stars the voice said "Fifteen! Tap the lightning…", then "the turbo carried it… but his boosters still stop".
+  - `js/main.js:1605`: `turboRelevant()` is false on `m.two` cards, so there is no invitation, no counting the fives aloud and no star tally.
+  - The two miss lines that suggested the turbo (`js/missions.js:210-211`) and the "again" button's turbo exception (`js/main.js:2115`) now skip `m.two` cards.
+- **Robot's rocket was small on the reward card, with the ✔ over it.** `fairtest.css:383-386`: it is now 64 px tall (48 px on short landscape screens), and its ✔ sits outside the picture's corner.
+- **A lost WebGL context left the garage blank.**
+  - `js/main.js:93-110`: when the context comes back, the room environment is rebuilt. If it does not come back within 2.5 s, a calm 😴 🚀 ▶ screen appears (`index.html:76`, `style.css:22`). The game saves first, so tapping it reopens the garage with progress kept.
+  - `js/main.js:282`: when the thumbnail context comes back, the part and rocket pictures are drawn again.
+- **"Turbo again" named the planet as `m.dest - 1`.** It now uses `reach(rocket)` (`js/missions.js:244`).
+
+## Small improvements
+
+- **Mission lines treat the same sentence about another planet as heard** (`js/main.js:2080` `lineKey`). An example is "It lands on X now! Next, the wobble…". A card that is put away keeps its own brief line.
+- **The prediction echo** is said in full twice per visit, then becomes "Farther? Let's see!" (`js/fairtest.js:250`).
+
+## Evidence (scratchpad `polish3/rocket-garage/r3/`)
+
+- **Setup:** Chromium `--use-angle=gl`, speech stubbed and logged, at 834×1194 and 1194×834. There were 0 console or page errors.
+  - The host was under heavy load, with other workers' browsers. Some runs ended with "Target crashed" or `ERR_INSUFFICIENT_RESOURCES` before boot, so they were retried. This came from the environment, and runs that finished had no errors.
+- **`t4.mjs`, careful tier-4 play (20 flights in portrait, 16 in landscape):**
+  - The card sequence is S, W, S, W… (portrait: bothS 3W wobbly2S 3W wobbly2S bothW bothS bothW 3S bothW wobbly2S bothW).
+  - Only the intended "first two times" question lines repeat.
+  - Screenshots `p-03-reward.png` and `l-03-reward.png` show Robot's rocket larger, with the ✔ clear of it.
+- **`misc.mjs` (portrait):**
+  - Random visit of 14 flights:
+    - The first several-part miss gave the full sentence with "Hmm, not that!".
+    - The next gave "Several parts changed again. One at a time tells you which!".
+    - After that there was only "Yes!" or silence.
+    - The echo moved to "Farther? Let's see!" from the third guess.
+  - Two-fault card one short, turbo taken twice:
+    - No "Fifteen!" line, and no star tally.
+    - "Again" was hidden.
+    - The lines were "…his boosters still stop at the Ring Planet" and "Turbo again. His boosters still stop at the Ring Planet.".
+  - Context loss (`WEBGL_lose_context`):
+    - Lost then restored: the wake screen stays hidden, and the garage draws again (`mp-restored.png`).
+    - Lost for good: the wake screen appears (`mp-wake.png`). Tapping it reloads with `visited` kept.
+- **Checks:**
+  - `browser.mjs --ids rocket-garage --run rocket-garage-f3`: BOOT and PLAY, 0 errors.
+  - `node --check` passes on `main.js`, `missions.js` and `fairtest.js`.
+  - `curriculum.test.mjs`: the rocket comparison test passes.
+
+## Still open (review ideas, not bugs)
+
+- Same as above: a ━ / 〰️ prediction for one-part wobble-slot tests, and a "which part did it?" card for 6–8.

@@ -536,11 +536,18 @@ export class Pins {
       this.lane.world.removeBody(p.body)
       out.push(p.mesh.position.clone())
     }
-    // The pins counted as standing stay standing: each settles upright where it is and sleeps until the
-    // next slide wakes it. (A pin leaning on a fallen one would otherwise tip over once that one puffed
-    // away, after the child had counted it, and the count, the bond and the rack map would disagree.)
+    this.straighten()
+    return out
+  }
+
+  /**
+   * The pins counted as standing stand up straight: each settles upright where it is and sleeps until the
+   * next slide wakes it. Done as a slide ends, before the count, so a pin leaning on a fallen one looks
+   * as standing as it is counted (and doesn't tip over once that one puffs away).
+   */
+  straighten() {
     for (const p of this.list) {
-      if (p.removed) continue
+      if (p.removed || this.isDown(p)) continue
       const b = p.body
       // Keep its turn about the upright axis; drop only the lean.
       const q = b.quaternion
@@ -550,7 +557,6 @@ export class Pins {
       b.angularVelocity.setZero()
       b.sleep()
     }
-    return out
   }
 
   /** Strike party: every pin pops back up and dances on its spot. */
