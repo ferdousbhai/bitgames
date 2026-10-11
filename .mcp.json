@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "bitgames": {
+      "type": "http",
+      "url": "https://bitgames.store/mcp",
+      "headers": {
+        "Authorization": "Bearer ${BITGAMES_CREATOR_KEY}"
+      }
+    }
+  }
+}

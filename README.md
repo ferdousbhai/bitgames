@@ -69,6 +69,8 @@ The MCP handles the store-specific capabilities. Local coding agents handle code
 
 On `/make`, use a current key or recovery code to rotate credentials while preserving ownership. Rotation immediately replaces both credentials. Revocation stops MCP access while leaving games playable; the saved recovery code can restore access. Old creator keys can rotate to obtain a recovery code. If both credentials are lost, there is no account-based recovery.
 
+For Claude Code in this repository, set `BITGAMES_CREATOR_KEY` in the environment where Claude Code starts. The checked-in `.mcp.json` connects the `bitgames` server with that key; approve it once when Claude Code asks.
+
 For Codex, set `BITGAMES_CREATOR_KEY` in the environment where Codex starts, then run:
 
 ```sh
