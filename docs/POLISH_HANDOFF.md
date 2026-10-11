@@ -1,6 +1,10 @@
 # BitGames handoff
 
-Updated 2026-10-09. Work on `main`.
+Updated 2026-10-10. Work on `main`.
+
+## Re-audit (2026-10-10)
+
+A fresh play-and-source audit scored the released originals 5.5–8/10. Calm is largely achieved, but the games are now too passive: the game makes the core decision for the child, the voice is heavy (45–66 lines per trip), and there is no harder tier for ages 6–8. The scorecard, bugs (including a Balloon Pop chord exception) and ranked improvements are in [docs/polish/AUDIT_2026-10-10.md](polish/AUDIT_2026-10-10.md). Nothing from it has been implemented yet.
 
 ## Current direction (2026-10-09)
 

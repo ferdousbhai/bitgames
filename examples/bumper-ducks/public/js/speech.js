@@ -5,10 +5,15 @@
 /** "red, yellow and blue": one list style for everything the games say. */
 export const listWords = new Intl.ListFormat('en-GB', { type: 'conjunction' })
 
+/** Counting aloud stops here; past it a soft tick and the picture carry the count. */
+export const COUNT_ALOUD = 5
+
 export function createVoice({ muted = false, rate = 0.85, pitch = 1.05 } = {}) {
   const canSpeak = 'speechSynthesis' in window
   let pending = 0
   let gen = 0
+  // Sentences already said this round: sayOnce() skips them so the voice never nags
+  const said = new Set()
 
   function hush() {
     gen++
@@ -52,6 +57,27 @@ export function createVoice({ muted = false, rate = 0.85, pitch = 1.05 } = {}) {
     /** Tap feedback: says this now, dropping anything still waiting. */
     sayNow: (text, options) => say(text, { ...options, interrupt: true }),
     hush,
+    /** Says this only once per round (see newRound): goals, hints and number bonds never repeat. */
+    sayOnce(text, options) {
+      if (said.has(text)) {
+        options?.onend?.()
+        return false
+      }
+      said.add(text)
+      say(text, options)
+      return true
+    },
+    /** Starts a fresh round: sayOnce() may say everything again. */
+    newRound() { said.clear() },
+    /**
+     * Counts one more thing: says the number aloud up to `aloud` (5 by default), then stays quiet,
+     * so the picture and a soft tick do the counting. Returns true when the number was spoken.
+     */
+    count(n, { aloud = COUNT_ALOUD, interrupt = true } = {}) {
+      if (n > aloud) return false
+      say(String(n), { interrupt })
+      return true
+    },
     /** The game's sound switch: muting also stops words already playing. */
     setMuted(on) {
       muted = on
