@@ -859,7 +859,8 @@ function buildMontreal(env) {
       solid(track, front, 2.2, 3.6, 2.2, yaw)
     }
   })
-  track.lineSides({ offset: track.width / 2 + 1.4, spacing: () => 20 + r() * 12, depth: 0.5 }, ({ center }) => tree(track, center, 'maple', r))
+  // The maples stand back from the kerb (they were 1.4 m out, where cars running wide round a bend hit their trunks).
+  track.lineSides({ offset: track.width / 2 + 2.4, spacing: () => 20 + r() * 12, depth: 0.5 }, ({ center }) => tree(track, center, 'maple', r))
   // Orange cones: Montreal's most famous wildlife. Knock them all over.
   for (let d = 40; d < track.length; d += 55 + r() * 40) {
     const s = track.sampleAt(d)

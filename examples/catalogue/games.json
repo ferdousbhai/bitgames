@@ -9,7 +9,7 @@
     "category": "pop",
     "together": false,
     "featured": true,
-    "url": "https://35cbf36a-bitgames-balloon-pop.ferdousbd.workers.dev/",
+    "url": "https://1a0b44d7-bitgames-balloon-pop.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
@@ -26,7 +26,7 @@
     "category": "animals",
     "together": true,
     "featured": false,
-    "url": "https://99cd94b6-bitgames-bumper-ducks.ferdousbd.workers.dev/",
+    "url": "https://0980c081-bitgames-bumper-ducks.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
@@ -43,7 +43,7 @@
     "category": "jump",
     "together": false,
     "featured": false,
-    "url": "https://e1372290-bitgames-bunny-hop.ferdousbd.workers.dev/",
+    "url": "https://edcd751e-bitgames-bunny-hop.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
@@ -60,7 +60,7 @@
     "category": "puzzle",
     "together": false,
     "featured": false,
-    "url": "https://3df54830-bitgames-cake-stack.ferdousbd.workers.dev/",
+    "url": "https://d194b94a-bitgames-cake-stack.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
@@ -70,8 +70,8 @@
   {
     "id": "crash-racers",
     "title": "Crash Racers",
-    "tagline": "Race up to 4 cars through Ubud, Helsinki and Montreal. Crashes welcome!",
-    "howToPlay": "📦 Deliver: tap a picture parcel (a bone, bananas…), think who would like it, find their house on the big map, and tap the house as you drive up to stop there. Some houses are down side streets: the map shows which street (🌈 or 🌙) to turn into. ↩️ turns you round for the shorter way. Careful drives bring harder towns (or pick 📦📦 🚧 / ⛔ in the menu): two parcels for each house, a closed road or a one-way street, so the order of the stops needs a plan. Friends share one tray of parcels. Stuck for a long while? A gold ring shows the way. 🏁 Race and 🎪 Bumpers have present gates: tap (or steer with ◀ ▶) to the present the house would like; a gate you leave alone counts for nothing. Three right in a row bring three lanes of harder presents; two more and the gate shows 🗺️, so you find whose gate is next from the pins on the map (every present belongs to a pin). The step you reach carries into the next race. The results show what each missed house wanted. In Easy mode bumps are soft and the other cars keep their distance. 🔊 turns the sound off.",
+    "tagline": "Race the robot cars through Ubud, Helsinki and Montreal. The right present gives you a boost!",
+    "howToPlay": "🏁 Race: beat the three robot cars to the finish. The pill at the top shows your place (like 2nd of 4) and the cars in order. At each present gate, tap (or steer with ◀ ▶) to the present the house would like: the right present gives you a burst of speed to pass, a wrong one simply gives none, so thinking at the gates is how you win. Three right in a row bring three lanes of harder presents; two more and the gate shows 🗺️, so you find whose gate is next from the pins on the map. The step you reach carries into the next race. At the finish, the podium shows everyone's place, and the results show what each missed house wanted. In 🧸 Easy mode the car drives itself, bumps are soft and the robots race at your speed; turn Easy off for faster robots, 🔥 turbo and coloured lanes on the road. 🎪 Bumpers: gentle bumper cars with the same present gates, park when you like. 🔊 turns the sound off.",
     "emoji": "🏎️",
     "color": "#ff595e",
     "category": "race",
@@ -82,7 +82,7 @@
       5,
       8
     ],
-    "learning": "Map reading, matching things by kind, and planning a route"
+    "learning": "Matching things by kind (who would like which present) and reading a map"
   },
   {
     "id": "dragon-glide",
@@ -94,7 +94,7 @@
     "category": "jump",
     "together": false,
     "featured": false,
-    "url": "https://1b544cad-bitgames-dragon-glide.ferdousbd.workers.dev/",
+    "url": "https://a8c45180-bitgames-dragon-glide.ferdousbd.workers.dev/",
     "ages": [
       4,
       8
@@ -111,7 +111,7 @@
     "category": "animals",
     "together": false,
     "featured": false,
-    "url": "https://56d84b6e-bitgames-fish-pond.ferdousbd.workers.dev/",
+    "url": "https://a242ad8c-bitgames-fish-pond.ferdousbd.workers.dev/",
     "ages": [
       2,
       8
@@ -128,7 +128,7 @@
     "category": "puzzle",
     "together": false,
     "featured": false,
-    "url": "https://88bbb76f-bitgames-memory-match.ferdousbd.workers.dev/",
+    "url": "https://daad1bae-bitgames-memory-match.ferdousbd.workers.dev/",
     "ages": [
       2,
       8
@@ -145,7 +145,7 @@
     "category": "pop",
     "together": true,
     "featured": false,
-    "url": "https://e5b36335-bitgames-paint-splash.ferdousbd.workers.dev/",
+    "url": "https://ae3cc8e4-bitgames-paint-splash.ferdousbd.workers.dev/",
     "ages": [
       2,
       8
@@ -162,7 +162,7 @@
     "category": "pop",
     "together": false,
     "featured": false,
-    "url": "https://8722787f-bitgames-penguin-bowling.ferdousbd.workers.dev/",
+    "url": "https://b9d371ec-bitgames-penguin-bowling.ferdousbd.workers.dev/",
     "ages": [
       4,
       8
@@ -179,7 +179,7 @@
     "category": "space",
     "together": false,
     "featured": false,
-    "url": "https://ebd769fc-bitgames-rocket-garage.ferdousbd.workers.dev/",
+    "url": "https://45949e12-bitgames-rocket-garage.ferdousbd.workers.dev/",
     "ages": [
       4,
       8
@@ -196,7 +196,7 @@
     "category": "space",
     "together": false,
     "featured": false,
-    "url": "https://43603cee-bitgames-star-catcher.ferdousbd.workers.dev/",
+    "url": "https://4e6383f0-bitgames-star-catcher.ferdousbd.workers.dev/",
     "ages": [
       3,
       8

@@ -1,5 +1,8 @@
 import { clamp, damp, wrap } from './util.js'
 
+/** Easy mode: metres ahead of the last child before a bot starts to ease off. */
+const EASY_EASE = 80
+
 /**
  * Computer drivers. Racing, they chase a point a little way down the road,
  * slow for bends and line up for ramps. Smashing, they hunt the nearest car.
@@ -22,10 +25,10 @@ export class Bot {
    * @param proj where the car is on the road (from the race's progress tracking)
    * @param prey in Smash mode, the car to chase (or null to race)
    * @param lead metres this bot is ahead of the last human (negative: behind).
-   *   Bots ease off when well ahead and push when far behind, so a young
-   *   child in Easy mode still races in the pack.
-   * @param child in Easy mode, the child's car: the bot keeps out of the
-   *   camera's view of it (see politeness).
+   *   Bots ease off when well ahead and push when far behind, so a race stays
+   *   a race: a slip costs a child a place or two, never the whole race.
+   * @param child in Easy mode, the child's car: a bot passes a child who has
+   *   stopped slowly, along the far edge (see politeness).
    */
   update(dt, proj, prey = null, lead = 0, others = [], child = null) {
     const car = this.car
@@ -33,21 +36,43 @@ export class Bot {
     if (prey) {
       target = { x: prey.body.position.x, z: prey.body.position.z }
     } else {
-      // Line up with a ramp coming up (jumping is the fun part), otherwise keep to our lane.
-      ramp = this.track.ramps.find((r) => wrap(r.dist - proj.dist, this.track.length) < 60)
+      // Line up with a ramp coming up (jumping is the fun part), otherwise keep to our lane. A ramp counts until the
+      // bot is past its far end: a bot beside it must not turn back across it into its side.
+      const L = this.track.length
+      ramp = this.track.ramps.find((r) => wrap(r.dist + r.half + 4 - proj.dist, L) < 64 + r.half)
+      const toRamp = ramp ? wrap(ramp.dist + ramp.half + 4 - proj.dist, L) - ramp.half - 4 : 0
+      // Too close to line up any more and not on its line: drive on past it, along the side it is already on.
+      const room = this.track.width / 2 - 1.6
+      // A small kicker (not a jump) is driven round, on the side with more road: taken at racing speed it threw the
+      // bot against the wall beyond it.
+      const kicker = ramp && ramp.half < 8
+      const beside = !kicker && ramp && toRamp < ramp.half + 8 && Math.abs(proj.lateral - ramp.lateral) > ramp.width / 2 - 0.4 && car.grounded
+      if (beside) ramp = null
+      let passLane = beside ? clamp(proj.lateral, -room, room) : 0
+      if (kicker) {
+        const wide = this.track.width / 2 - 1.2
+        const left = ramp.lateral - ramp.width / 2 - 1.5, right = ramp.lateral + ramp.width / 2 + 1.5
+        passLane = Math.abs(clamp(left, -wide, wide) - left) <= Math.abs(clamp(right, -wide, wide) - right) ? clamp(left, -wide, wide) : clamp(right, -wide, wide)
+        ramp = null
+      }
       // Each bot keeps its own line across the ramp, so they jump side by side instead of piling up.
       const polite = child && child !== car ? this.politeness(dt, proj, child) : null
-      const lane = polite?.lane != null
-        ? polite.lane
-        : ramp
-          ? ramp.lateral + clamp(this.lane, -(ramp.width / 2 - 1.2), ramp.width / 2 - 1.2)
-          : this.lane + this.dodge(dt, proj, others)
+      const lane = beside || kicker
+        ? passLane
+        : polite?.lane != null
+          ? polite.lane
+          : ramp
+            ? ramp.lateral + clamp(this.lane, -(ramp.width / 2 - 1.2), ramp.width / 2 - 1.2)
+            : this.lane + this.dodge(dt, proj, others)
       this.polite = polite
-      // Waiting politely behind a child who has stopped is not being stuck (see recover in main.js).
-      car.waiting = polite?.cap != null && polite.cap < 2
-      look = ramp ? 6 + car.speed * 0.4 : this.track.lookAhead(car.speed)
+      // Racing bots look fairly close in (as the child's steering helper does), so bends are followed, not cut against the kerb.
+      look = ramp || kicker ? 6 + car.speed * 0.4 : 8 + car.speed * 0.6
       const s = this.track.sampleAt(proj.dist + look)
       target = { x: s.p.x + s.side.x * lane, z: s.p.z + s.side.z * lane }
+      // Lining up for a ramp or round a kicker, the sideways gap itself also pulls the wheel: aiming down a bend alone
+      // left bots drifting wide, onto the ramp's edge.
+      // Elsewhere a gentler pull keeps the bot on its line round a bend instead of drifting wide into the kerb.
+      this.across = ramp || kicker ? clamp((lane - proj.lateral) * 0.3, -0.4, 0.4) : clamp((lane - proj.lateral) * 0.15, -0.25, 0.25)
     }
     const angle = car.angleTo(target.x, target.z)
     if (this.unstick(dt, angle)) return
@@ -59,22 +84,41 @@ export class Bot {
       return
     }
     const bend = this.track.bendAhead(proj.dist, look)
-    // Lined up for a ramp, go for it: ramps sit on straight road, and a slow take-off falls short.
-    let safe = ramp && Math.abs(angle) < 0.25 ? 40 : clamp(30 * this.skill - bend * 60, 9, 32)
-    // Rubber band: well ahead, cruise slower (never on a ramp: falling short isn't fun to watch).
-    if (!ramp && lead > 20) safe *= clamp(1 - (lead - 20) / 160, 0.55, 1)
-    else if (lead < -40) {
-      safe = Math.max(safe, 31)
-      // Far behind on a straight: turbo bursts to catch up (more often the further behind).
-      if (!this.calm && bend < 0.05 && Math.abs(angle) < 0.15 && !car.turboActive && Math.random() < clamp((-lead - 40) / 4000, 0, 0.04)) car.boost({ free: true, seconds: 1.2 })
+    let safe
+    if (this.pace) {
+      // Easy mode: a real race at the child's own calm cruise. Each bot has its own pace (a touch either side of the
+      // child's), slows for bends the way the child's car does, and never takes a ramp faster than its pace.
+      safe = clamp(this.pace - bend * 35, 9, this.pace)
+      // Lined up for a ramp: the same run-up speed as the child's car (see JUMP_SPEED in main.js), so it clears the gap.
+      if (ramp && ramp.half >= 8 && Math.abs(angle) < 0.25) safe = Math.max(safe, this.jumpSpeed ?? 24)
+      // A gentle rubber band that keeps a race a race without undoing the gates:
+      // - well ahead of the child (80 m or more, after a crash or a long stop) a bot eases off a little, so a slip
+      //   never loses the whole race, but a child who ignores the gates still trails;
+      // - 15–60 m behind the child a bot pushes about 3% harder, so a lead is challenged and has to be kept by
+      //   earning more gifts at the next gates (but a lead earned at the gates is not simply reeled back in);
+      // - far behind, up to 12% quicker, so the pack stays together. Never a burst you can see.
+      if (lead > EASY_EASE && !ramp) safe *= clamp(1 - (lead - EASY_EASE) / 600, 0.92, 1)
+      else if (lead < -15 && lead >= -60) safe *= 1.03
+      else if (lead < -60) safe *= clamp(1.03 + (-lead - 60) / 1000, 1, 1.12)
+    } else {
+      // Lined up for a jump, go for it (a slow take-off falls short), but not flat out: at 40 m/s a bot overshot the
+      // landing into the next bend. A small kicker is taken at the usual speed.
+      safe = clamp(30 * this.skill - bend * 60, 9, 32)
+      if (ramp && ramp.half >= 8 && Math.abs(angle) < 0.25) safe = Math.max(safe, 28)
+      // Rubber band: well ahead, cruise slower (never on a ramp: falling short isn't fun to watch).
+      if (!ramp && lead > 20) safe *= clamp(1 - (lead - 20) / 160, 0.55, 1)
+      else if (lead < -40) {
+        safe = Math.max(safe, 31)
+        // Far behind on a straight: turbo bursts to catch up (more often the further behind).
+        if (!this.calm && bend < 0.05 && Math.abs(angle) < 0.15 && !car.turboActive && Math.random() < clamp((-lead - 40) / 4000, 0, 0.04)) car.boost({ free: true, seconds: 1.2 })
+      }
     }
-    // Easy mode: never closing in on the child from behind (where the camera is), and drawing away from just in front of them.
+    // Easy mode: passing a child who has stopped, slowly.
     if (this.polite?.cap != null) safe = Math.min(safe, this.polite.cap)
-    if (this.polite?.floor != null) safe = Math.max(safe, this.polite.floor)
     car.controls = {
-      steer: clamp(angle * 2.2, -1, 1),
+      steer: clamp(angle * 2.2 + (this.across ?? 0), -1, 1),
       throttle: car.speed < safe ? 1 : 0.2,
-      brake: car.speed > safe + 6 ? 0.6 : 0,
+      brake: car.speed > safe + (this.pace ? 3 : 6) ? 0.6 : 0,
     }
   }
 
@@ -91,52 +135,48 @@ export class Bot {
       const dx = other.body.position.x - me.x, dz = other.body.position.z - me.z
       const along = dx * s.t.x + dz * s.t.z
       const side = dx * s.side.x + dz * s.side.z
-      if (along < -2 || along > 12 || Math.abs(side) > 3.2) continue
-      // Move to whichever side of the other car has more road.
-      const away = Math.abs(side) > 0.4 ? -Math.sign(side) : proj.lateral > 0 ? -1 : 1
-      want = away * 3.4
+      if (along < -3 || along > 24 || Math.abs(side) > 3.6) continue
+      // Pass on whichever side of the other car has more road, about 2.9 m out from it.
+      const theirs = proj.lateral + side
+      const away = Math.abs(side) > 0.4 ? -Math.sign(side) : theirs > 0 ? -1 : 1
+      want = theirs + away * 2.9 - this.lane
       break
     }
-    const room = this.track.width / 2 - 1.4
+    // Room to pass on a narrow road (a car in the middle leaves just enough either side), but off the kerb itself.
+    const room = this.track.width / 2 - 1.3
     want = clamp(this.lane + want, -room, room) - this.lane
     this.offset = damp(this.offset, want, 2.5, dt)
     return this.offset
   }
 
   /**
-   * Easy mode's manners round the child's car. The camera sits a few metres
-   * behind and above it, so a bot close behind the child fills half the screen:
-   * a bot within 24 m behind (or alongside) holds back below the child's speed,
-   * and a bot just in front speeds up a little to make room. Only a child who has
-   * stopped for a good while (reading the gate, stuck on a kerb) is passed: slowly,
-   * along the far edge of the road.
+   * Easy mode's manners round the child's car. The bots race the child for real
+   * (they pass, and are passed); dodge() steers them round a car alongside. Only
+   * a child who has stopped (reading a gate, stuck on a kerb) is passed slowly
+   * along the far edge of the road, so a stopped car is never shunted.
    */
   politeness(dt, proj, child) {
+    if (child.speed > 4) return null
     const s = this.track.sampleAt(proj.dist)
     const me = this.car.body.position
     const dx = child.body.position.x - me.x, dz = child.body.position.z - me.z
     const along = dx * s.t.x + dz * s.t.z // > 0: the child is ahead of this bot
     const side = dx * s.side.x + dz * s.side.z
-    this.waited = child.speed > 4 ? 0 : (this.waited ?? 0) + dt
-    if (Math.abs(side) > 6) return null
-    if (along > -1 && along < 24) {
-      if (this.waited < 6) return { cap: Math.max(0, child.speed - 3) }
-      const edge = this.track.width / 2 - 1.4
-      return { cap: 9, lane: (proj.lateral + side >= 0 ? -1 : 1) * edge }
-    }
-    if (along <= -1 && along > -14) return { floor: child.speed + 4 }
-    return null
+    if (Math.abs(side) > 6 || along <= -1 || along >= 24) return null
+    const edge = this.track.width / 2 - 1.4
+    return { cap: 9, lane: (proj.lateral + side >= 0 ? -1 : 1) * edge }
   }
 
   /** Backs out for a moment after being stuck; returns true while reversing. */
   unstick(dt, angle) {
     if (this.reverse > 0) {
       this.reverse -= dt
-      this.car.controls = { steer: -Math.sign(angle), throttle: 0, brake: 1 }
+      // A firm reverse (as Easy mode backs the child's car out), swinging the nose towards the road.
+      this.car.controls = { steer: -Math.sign(angle), throttle: 0, brake: 2.5 }
       return true
     }
-    this.stuck = this.car.speed < 1.5 && !this.car.waiting ? this.stuck + dt : 0
-    if (this.stuck > 1.6) {
+    this.stuck = this.car.speed < 1.5 ? this.stuck + dt : 0
+    if (this.stuck > 1) {
       this.stuck = 0
       this.reverse = 1.2
     }

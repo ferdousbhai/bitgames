@@ -30,20 +30,15 @@ async function assertTouchableInViewport(selector) {
   }
 }
 
-// Games whose menu opens on a mode without missions pick the mission mode first.
-const missionMode = {
-  'crash-racers': () => tap('[data-mode="race"]'),
-}
 const menuReady = () => window.__adventure && document.getElementById('adventure-choice')
 const choiceReady = () => document.getElementById('adventure-choice')?.getBoundingClientRect().width > 0
 async function openMissions(id) {
   await open(id, menuReady)
-  await missionMode[id]?.()
   await page.waitForFunction(choiceReady, null, { timeout: 40000 })
 }
 
 await runChecks(session, async (pass) => {
-  for (const id of ['bunny-hop', 'cake-stack', 'crash-racers', 'dragon-glide', 'fish-pond', 'star-catcher']) {
+  for (const id of ['bunny-hop', 'cake-stack', 'dragon-glide', 'fish-pond', 'star-catcher']) {
     await openMissions(id)
     await page.evaluate(() => localStorage.removeItem(`${location.pathname.split('/')[1]}:adventure`))
     // Advance to the first mission through the real native control.
@@ -70,29 +65,6 @@ await runChecks(session, async (pass) => {
     assert.ok((await goal.textContent()).includes('0 /') || (await goal.locator('.adventure-step').count() > 0 && await goal.locator('.adventure-got').count() === 0))
     pass(`${id}: native mission choice persists and starts at zero.`)
   }
-
-  // Moving the car onto each delivery marker, out of order first.
-  await openMissions('crash-racers')
-  await tap('#go')
-  await page.waitForFunction(() => window.__adventure.game.raceOn)
-  async function visit(index) {
-    await page.evaluate((i) => {
-      const { game, delivery } = window.__adventure
-      const { body } = game.player
-      body.position.x = delivery.points[i].x
-      body.position.z = delivery.points[i].z
-      body.velocity.set(0, 0, 0)
-    }, index)
-    await page.waitForTimeout(200)
-  }
-  await visit(2)
-  assert.equal(await page.evaluate(() => window.__adventure.delivery.next), 0)
-  for (let i = 0; i < 4; i++) {
-    await visit(i)
-    await page.waitForFunction((n) => window.__adventure.delivery.next === n, i + 1)
-  }
-  assert.equal((await mission()).complete, true)
-  pass('Moving the car to actual marker positions verifies the four ordered deliveries.')
 
   await open('balloon-pop', () => window.__adventure?.game.state === 'title')
   while ((await mission()).label !== 'Three for friends') await tap('#adventure-choice')

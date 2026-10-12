@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
-import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, canvasTexture, clamp, noise3, rng } from './util.js'
+import { GROUP_BOT, GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, canvasTexture, clamp, noise3, rng } from './util.js'
 
 /**
  * Realistic-ish soft-body damage without a soft-body solver:
@@ -492,7 +492,7 @@ export class Debris {
       linearDamping: 0.05,
       angularDamping: 0.15,
       collisionFilterGroup: GROUP_DEBRIS,
-      collisionFilterMask: GROUP_STATIC | GROUP_CAR | GROUP_DEBRIS | GROUP_PROP,
+      collisionFilterMask: GROUP_STATIC | GROUP_CAR | GROUP_DEBRIS | GROUP_PROP | GROUP_BOT,
     })
     if (wheel) {
       const shape = new CANNON.Cylinder(wheel, wheel, 0.26, 12)

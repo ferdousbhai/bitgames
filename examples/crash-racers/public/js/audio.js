@@ -79,7 +79,7 @@ export class Audio {
 
   /**
    * Engine pitch follows speed; throttle opens it up a little. Starts the engine once audio is unlocked.
-   * On a calm road (Delivery Town, Easy mode) it is a low, quiet purr with no gear changes.
+   * On a calm road (Easy mode) it is a low, quiet purr with no gear changes.
    */
   updateEngine(speed, throttle, calm = false) {
     if (!this.ctx) return
@@ -198,7 +198,7 @@ export class Audio {
     ;[392, 494, 587, 784].forEach((f, i) => this.tone({ freq: f, type: 'triangle', gain: 0.07, decay: 0.2, delay: i * 0.07 }))
   }
 
-  /** Delivery Town: a soft rubbery boing for a friendly bump (no crunch). */
+  /** Easy mode: a soft rubbery boing for a friendly bump (no crunch). */
   bump(strength = 1) {
     const now = performance.now()
     if (now - this.lastCrash < 250) return
@@ -206,7 +206,7 @@ export class Audio {
     this.tone({ freq: 220, type: 'sine', gain: 0.09 * strength, decay: 0.32, slide: 140 })
   }
 
-  /** Delivery Town: a doorbell, ding-dong, when a parcel is handed over. */
+  /** A doorbell, ding-dong: the right present at a gate. */
   doorbell() {
     this.tone({ freq: 659, type: 'sine', gain: 0.08, decay: 0.7 })
     this.tone({ freq: 523, type: 'sine', gain: 0.08, decay: 0.9, delay: 0.42 })

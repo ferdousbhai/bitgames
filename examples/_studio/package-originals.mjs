@@ -15,7 +15,6 @@ const helpers={
   'balloon-pop':adventure,
   'bunny-hop':adventure,
   'cake-stack':[...adventure,...studioDialog,'js/recipe-studio.js'],
-  'crash-racers':[...adventure,'js/delivery.js'],
   'dragon-glide':adventure,
   'fish-pond':adventure,
   'star-catcher':adventure,

@@ -920,3 +920,358 @@ Everything is in `scratchpad/polish3/crash-racers/r6/`. Speech was stubbed, and 
   - `u2`: Ubud tier 2. The closed-road line at 16 s, then the thanks at 22 s.
   - There were no `CUT` lines in either run. Both delivered 8/8.
 - **Checks.** `node --check` passes on `main.js` and `gates.js`. `browser.mjs --ids crash-racers --run crash-racers-f2` gives BOOT + PLAY ready with 0 errors.
+
+## 2026-10-12 — Real race first
+
+### The owner's direction
+
+The owner's son did not enjoy the game. To him it "seemed like a solo driving game instead of competition with the AI driven cars". The calm passes had taken the contest out:
+
+- the menu opened on 📦 Deliver (no bots);
+- Race showed no place while driving and no winner or finishing order at the end, only gate chips;
+- in Easy mode the bots kept "a polite distance" and in practice never passed the child.
+
+The owner chose **"Real race first"**:
+
+1. Race is the default mode and the first button. Deliver and Bumpers stay.
+2. The robot cars really race. The child's place shows during the race. The finish has a winner and a podium in finishing order, with one gentle celebration.
+3. A careful 4–7 year old can win some races and lose others closely. Easy bots race without hanging back, with a gentle rubber band. Normal-mode bots are faster.
+4. Learning helps you win. The right present at a gate gives a short, visible speed boost. A wrong present gives no boost and no penalty.
+5. Turbo and bumping stay as they were (bumps soft in Easy). The multiplayer protocol is unchanged.
+
+### Changes
+
+| What | Where |
+| --- | --- |
+| **Race is the default.** `game.mode` starts as `'race'`. 🏁 Race is the first mode button and is selected on load. The code never stored a mode choice, so none is remembered. | `public/js/main.js:158`, `public/index.html:33` |
+| **Place pill.** "2nd of 4" sits beside the lap pill, with every car's portrait in race order and the child's own car ringed. It is hidden in Deliver and Bumpers. A new order shows only after it has held for 0.9 s (`PLACE_SETTLE`), so cars side by side never make it flicker. There is no animation. | `index.html:65`; `main.js:3177-3214` (`renderPlace`); `style.css:498-506` |
+| **Finish and podium.** The banner names the place ("🏁 🏆 1st", "🏁 2nd"). The results title is "🏆 You won!" or "🏁 You came 2nd!". The podium is a column in finishing order: 🥇🥈🥉/4th, car portrait, emoji and name, then 🏆, 🏁 or 🏎️ (still racing). The winner's row is larger with a soft gold wash, and the child's row has a white ring. Rows arrive once (0.25 s apart, not on re-render, none under reduced motion). The gate recap still leads above it, and Bumpers keeps the line-up chips. Recovered from the pre-calm podium (`git show 7447313:…/main.js`, `renderResults`/`standings`, ~1226-1300), without times, awards or confetti spam. | `main.js:44-45` (`ORDINAL`, `MEDAL`), `main.js:2546`, `main.js:2610-2650`; `style.css:507-520` |
+| **One celebration.** A soft chord (the existing `cheer`) when the child crosses the line, and once on the results a dozen slow paper petals (5–7 s, gold for a win). There are none under reduced motion. The voice says one line: "You won the race!", "Second place! So close." or "You came third. Well raced!". A child who missed most gates hears "…Right presents at the gates give you a speed boost!". The existing gate line follows. | `main.js:2667` (`celebrate`); `style.css:521-523` |
+| **Easy bots really race.** Each bot gets a calm pace (`EASY_BOT_PACE` 20.8 / 20.2 / 19.6 m/s, assigned per race from the seed). The child cruises at 19 m/s and holding 🚀 is capped at 20. Bots slow for bends (`pace − bend·60`). The old manners (hold below the child's speed within 24 m, speed up just in front, wait 6 s behind a stopped child) are gone. Only a child who has **stopped** is passed slowly (9 m/s) along the far edge, and `dodge()` steers round cars alongside. The veil (bots thinning near the camera) stays. Normal-mode bots keep the old faster skill speeds and rubber band. | `main.js:41`, `main.js:2033`; `bot.js:75-90` (pace), `bot.js:138` (`politeness`) |
+| **Gentle rubber band (Easy).** Small gaps are left to the driving and the gates. A bot more than 30 m ahead of the last child eases off by up to 12%. A bot more than 40 m behind is at most 5% quicker, so a lead earned at the gates is kept. | `bot.js:4`, `bot.js:83-86` |
+| **The right present is a speed gift.** For 4 s (`GIFT_SECONDS`) the car may go up to 7 m/s over its usual top speed, gathering pace at 5 m/s². This is about 1 s gained per right gate. The gift is scaled down into bends (`giftExtra`), so it never throws the car off the road. A soft trail of puffs in the house's colour follows the car, with a whoosh and "👋 🎁 💨" on the banner. Afterwards the speed eases back (no braking). Racing only, not Bumpers. **A wrong present no longer slows the car:** the puddle slowdown and splash are gone, and only the 🤔 banner and the house's question remain. The gate voice line now ends "…for a speed boost." | `main.js:1226-1236`, `main.js:1282`, `main.js:1320-1340`, `main.js:2762-2835` (`govern`, `giftExtra`, `giftPush`, gradual `holdEasyCap`), `main.js:2915`, `main.js:2969`; `gates.js:10-14` (doc) |
+| **Easy steering only takes the tapped lane over the last 50 m before a gate** (`GATE_LANE_AHEAD`). In sims, holding the lane all the way from 120 m out cost a careful child 10–20 s in Ubud: it hugged the kerb into bends. The tap is still the answer wherever the car ends up. | `main.js:2975`, `steeringHelper` |
+| **Jumps are cleared in Easy.** At the calm cruise (16–19 m/s at take-off) the child's car and the bots dropped into the jump gaps and sat stuck among the props for 1–6 s, sometimes several times a race. Lined up with a ramp, the run-up and flight now go at `JUMP_SPEED` 24 m/s (`runUp`), for the child and for the bots. | `main.js:39`, `main.js:2776`; `bot.js:80` |
+| **Bots stall less.** In Easy they look closer ahead (8 + 0.6·v, like the child's helper) instead of cutting corners into the kerb. They keep 2 m from the edge and drive past a ramp they missed instead of turning into its side. They back out firmly after 1 s stuck, and are put back on the road after 3 s stuck or 5 s without headway (was 3.5 s and 8 s). The `car.waiting` exemption is removed. | `bot.js:40-60`, `bot.js:126`, `bot.js:150-160`; `main.js:2376`, `main.js:2397` |
+| **Text.** `howToPlay` describes the race first, then Deliver and Bumpers. The tagline is "Race the robot cars… The right present gives you a boost!". | `game.json` |
+
+**Multiplayer.** There are no new message types and no new `setup` fields. The place pill and podium use the existing `standings()`, which runs on progress for every car (remote ones included) and on the finish times from `done` messages. Bots are driven by the host as before; their Easy pace follows the host's Easy switch. This could not be tested across two devices locally, because rooms need the store's iframe bridge.
+
+### Evidence
+
+Scripts and screenshots are in `scratchpad/cr-race/` (`sim.mjs`, `solo2.mjs`, `play.mjs`, `playphone.mjs`, `shots/`). Speech was stubbed and logged, and every run had 0 page or console errors.
+
+- **Sims, Easy, 2 laps, five cities × 3 races** (`sim.mjs`, final tuning). The sim child is a flawless auto-cruiser, better than a real child.
+  - Careful (every gate right): places `1 1 1 1 2 1 4 1 4 3 3 4 2 1 1`. That is 8 wins of 15, average 2.0.
+  - No answers: `1 2 2 1 2 3 4 1 1 2 4 4 2 2 1`. That is 5 wins of 15, average 2.13.
+  - Most losses were by 0.3–2 s. Stunt Park is the hardest city: a careful child came 3rd–4th there.
+  - Before the pass (HEAD), the Easy child won every race by 10–20 s while the bots trailed 100–300 m behind.
+  - Two dead ends along the way:
+    - A gift with no regard for bends (27 m/s into corners) made careful children *lose*.
+    - Lane-holding from 120 m out cost 10–20 s.
+- **Solo time with the bots parked** (`solo2.mjs`), careful against the same taps with the gift removed: Dino 114.9 / 125.1 s, Helsinki 101.3 / 104.8 s, Montreal 87.4 / 90.5 s, Stunt 110.9 / 125.4 s, Ubud 98.4 / 106.5 s (measured before the jump run-up). The gift is worth 3–14 s a race.
+- **Real-time play** (`play.mjs`, real taps on the gate buttons):
+
+  | Run | Gates | Result | Notes |
+  | --- | --- | --- | --- |
+  | Ubud, portrait 834×1194, careful, 2 laps | 6/6 | 🏆 1st by 10 s | |
+  | Dino, portrait, careful, race 1 | ✓✓✓ | 2nd by 0.5 s | 1st→2nd at 6 s |
+  | Dino, portrait, careful, race 2 | ✓✓✓ | 🏆 1st | 2nd→1st at 16 s |
+  | Helsinki, landscape 1194×834, careless, race 1 | ✗✗✗ | 3rd by 0.9 s | places 1→2→3→2→3 |
+  | Helsinki, landscape, careless, race 2 | ✗✗✓ | 3rd by 1.8 s | |
+  | Montreal, phone 375×667, careful | | 🏆 1st | |
+  | Stunt Park, phone landscape 844×390, careless | | 2nd | |
+
+  - Earlier careful runs, before the final tuning, came 2nd (by 0.4 s), 3rd and 2nd.
+  - Screenshots:
+    - `cp-menu.png`: Race first and selected.
+    - `cp-r1-gift.png`: the pill "1st of 4" with four portraits, the pink trail and "🐰 👋 🌷 💨".
+    - `cl-r1-gate.png`: the landscape pill beside the three-lane row.
+    - `cd-r2-results.png`: "🏆 You won!", gold petals, podium.
+    - `cl-r2-podium.png`: "You came 3rd!", gate recap above, podium.
+    - `ph-r1-gate.png`, `pl-r1-podium.png`: phone sizes fit.
+- **Tests.**
+  - `browser.mjs --ids crash-racers --run cr-race`: BOOT + PLAY ready, 0 errors.
+  - `original-quality.mjs`: every check passes, including the crash-racers mission choice (it still taps `[data-mode="race"]`, now already selected) and the four ordered delivery markers.
+
+### Left open
+
+- `public/bitgames.json` (the file checksums) is regenerated by the coordinator's build.
+- Two-device standings are untested live (see Multiplayer).
+- Normal-mode (Easy off) balance was not re-tuned. Bots keep their old speeds there, and the child has turbo and full gas.
+
+## 2026-10-12 — Deliver removed, and the review's race fixes
+
+### The owner's direction
+
+The owner removed 📦 Deliver (Delivery Town) completely: it was a solo drive, and he found it pointless. Crash Racers is now 🏁 Race (the default) and 🎪 Bumpers. The present gates are the game's learning. This replaces the "Deliver and Bumpers stay" part of the section above, and the Phase 2 and town rounds earlier in this file are history.
+
+An independent review of the first race pass scored it 7.5. Its findings were:
+
+- Easy races broke up: bots stalled 3–16 s at ramps and ended 100–380 m behind.
+- The child got caught in ramp pile-ups.
+- The boost only closed gaps and never passed a car.
+- Careful and careless play won equally often (2 of 4 each).
+- In Bumpers the voice promised a speed boost.
+- The rescue note covered the lap pill.
+- With Easy off, bots stalled for 20–34 s.
+
+### Removing Delivery Town
+
+| What | Where |
+| --- | --- |
+| The menu has only 🏁 Race and 🎪 Bumpers. Gone: the 📦 button, the town tiers, the parcel tray, the stop button, ↩️ Turn round and the route recap. | `public/index.html:33-34` |
+| `town.js` (837 lines) is deleted. The gate houses (`KINDS`, `pictureTexture`) moved to `houses.js` without the town thank-you lines. Nothing else used `town.js`. | `public/js/houses.js`, `gates.js:2` |
+| `main.js` loses every town path, about 1,000 lines. Gone: the Delivery Town block, its share-a-tray messages (`pack`, `given`, the `go` layout), the town branches in setup, the HUD, the controls, the results and the minimap, the U-turn, and `travelDir` (racing always goes forwards). What stays: `stored`/`store` for the gate step, `loopMod`, and `calmRoad = input.easyGas`. The debug hook is now `window.__race`. | `main.js:238-256`, `main.js:2404` |
+| `track.js` loses the town's side streets: `SPUR`, `Track.plan`, the plan, carve and build functions, and the `planned` boost-pad escape (about 230 lines). | `track.js` |
+| Town CSS removed (about 190 lines). No Blender asset was town-only, because the town was all runtime geometry. | `style.css` |
+| **Gate steps start sensibly without the town tier.** A new child starts on the easy step (two presents). Three right in a row bring three lanes, and two more bring the map step, as before. The step is still kept per device. | `main.js:278` |
+| **The Race delivery mission stays** ("Follow the delivery map 1 → 2 → 3 → 4", `delivery.js`). It is a Race map-reading mission, independent of Delivery Town. `original-quality.mjs` and `package-originals.mjs` need no change. | — |
+| `game.json`: the tagline, `howToPlay` and `learning` now describe Race (place pill, gates and boost, podium, the mission chip, Easy) and Bumpers only. | `game.json` |
+
+### Review fixes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| Ramp pile-ups (Easy and Easy off) | Racing, every car passes through the others within 40 m of a ramp or jump, using the existing respawn ghost; it ends once the car is clear. | `main.js:1348` (`rampGhost`), called from `tick` |
+| Bots stalled | Bots are put back on the road after 2 s stuck or 3.5 s without headway. In Easy the child is put back after 3 s or 6 s. All racing bots look closer in (8 + 0.6·v), so they follow bends instead of cutting into the kerb; this fixed Easy off too. Easy bots corner like the child (`pace − bend·42`). | `main.js:1309-1310`; `bot.js:60`, `bot.js:78` |
+| The child clipped jump and kicker edges | `rampLane`: within 90 m of a ramp the Easy helper lines up near the jump's middle (±0.6 m), with a sideways pull. A small kicker with room beside it is passed beside it. This comes before the gate lean. | `main.js:1874`, `steeringHelper` `main.js:1919` |
+| The gate lane put the car on the kerb | The tapped gate is now a gentle lean (≤1.2 m) over the last 35 m, with the normal look-ahead. The tap is the answer wherever the car is. | `main.js:1914-1935` |
+| The boost and jumps | A jump run-up is always 24 m/s, never boosted. The gift pushes only up to the road's usual speed (slower into bends) plus the gift. | `main.js:1674`, `main.js:1707` (`giftTop`), `giftPush` |
+| Keep the pack | A bot more than 40 m behind the last child gains up to 12% (by 135 m back). | `bot.js:86` |
+| Let the boost overtake | During a gift, a car within 12 m ahead in the same line is passed: the helper aims 2.5 m to its open side (`passLane`). The gift is now +8 m/s for 4.5 s. | `main.js:1895`, `main.js:265-266` |
+| Bumpers voice | "…for a speed boost" is said only in Race. | `main.js:315` |
+| Rescue note over the lap pill | "🔄 Back on the road!" now uses the banner slot. The small mystery-box note sits below the pills when upright and right of centre when sideways. | `main.js:1298`; `style.css:374-376` |
+| No icon for a car that didn't finish | Every unfinished car shows 🏎️. | `main.js:1544` |
+
+### Evidence
+
+Scripts and screenshots are in `scratchpad/cr-race/`. Speech was stubbed, and every run had 0 page or console errors.
+
+- **Sims, Easy, 2 laps, five cities × 3** (`sim.mjs`). The child is a flawless auto-cruiser. "Careless" picks the right present 40% of the time.
+
+  | Play | Places | Wins of 15 | Average place |
+  | --- | --- | --- | --- |
+  | Careful | 1 1 1 1 2 3 1 1 1 2 1 1 1 4 1 | 11 | 1.47 |
+  | Careless | 1 2 1 3 2 2 4 2 1 1 2 1 3 2 4 | 5 | 2.07 |
+
+  - At least 3 of the 4 cars were within 190 m (about 10 s) of each other in 99–100% of samples.
+  - Bots spent 1–13 s a race under 2 m/s, against 15–30 s before.
+  - The child's place changed 0–9 times a race.
+  - In every loss, the car ahead won by 0.2–8 s.
+- **Easy off** (the child's car on the bot autopilot, 2 races per city):
+  - Before the fixes, bots stalled 15–46 s, and 1–3 bots did not finish in Helsinki, Montreal, Ubud and Dino.
+  - After the fixes, every bot finished in every city. Stalls were 1–16 s, and the pack was 97–100% in all but one Ubud race (53%).
+- **Real-time play, 2 laps**, tapping the gate buttons:
+  - Careful, portrait 834×1194:
+    - Dino: 🏆, by 5 s.
+    - Stunt: 🏆.
+    - Ubud: 🏆.
+    - Helsinki: 2nd by 0.6 s.
+    - Montreal (landscape): 2nd by 0.3 s.
+  - Careless, landscape 1194×834:
+    - Dino: 3rd.
+    - Helsinki: 2nd by 1.1 s.
+    - Ubud: 2nd by 0.6 s.
+    - Stunt: 🏆.
+  - 1-lap races, which have only 3 gates, are closer to a coin toss.
+- **Screenshots:**
+  - `rc-dino-menu.png`: only Race and Bumpers.
+  - `rl-ubud-r1-podium.png`: the landscape podium.
+  - `rc-helsinki-r1-gift.png`: the pill reading "3rd of 4" and the gift trail.
+  - `bp-race-note.png`, `bl-race-note.png`: the note clear of the pills.
+- **Bumpers** (`bump.mjs`): the gate line was "A gate! Who lives there? Tap the present they would like." with no boost, and the place pill was hidden.
+- **Tests:**
+  - `browser.mjs --ids crash-racers --run cr-race2`: BOOT + PLAY ready, 0 errors.
+  - `original-quality.mjs`: every check passes, including the crash-racers mission and the four ordered deliveries.
+
+### Left open
+
+- A gate's present sprite can briefly fill the camera as the car drives under it (`rc-helsinki-r1-gift.png`). This is from before this pass.
+- Two-device play is untested, because rooms need the store bridge. Removing the town took away only the town's own messages.
+- `public/bitgames.json` is stale.
+
+## 2026-10-12 — Second review (7.5): sprites, a race the gates decide, no solo mission
+
+A second independent review (15 races) scored 7.5. The race works: there are overtakes, the place pill is clear, the podiums are right and Bumpers has not regressed. The review asked for these fixes.
+
+### Changes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| Present and house sprites filled up to a third of the screen at a gantry | Every gate sprite fades from 16 m to 8 m from the camera and is gone closer in. | `public/js/gates.js:35`, `gates.js:154` (`update`); called each frame at `main.js:2270` |
+| Easy off: the choice was hard to read at 30 m/s | A coloured strip, 30 m long, runs on the road into each lane (blue / yellow / pink). The lane's present is painted at the start of its strip. Only shown with Easy off. | `gates.js:25`, `gates.js:164` (`setStrips`), dressed in `dressPresents`; `main.js:878` |
+| Ignoring the gates did as well as matching them (the rubber band pulled a trailing child back up) | A bot ahead now eases off only once it is 80 m clear, by up to 8% (it was 30 m and 12%). A child who skips the gates trails. Close races are decided by the gifts. | `bot.js:4`, `bot.js:96-102` |
+| A careful race was decided at the first gate | Bots are a little faster: `EASY_BOT_PACE` is 21.5 / 20.9 / 20.3 m/s, against the child's 19 cruise and 20 holding 🚀. A bot 25–60 m behind pushes 5% harder. Closer than that, its own pace does the chasing, so a lead must be kept with gifts at later gates. | `main.js:35`; `bot.js:101` |
+| **Root cause of most of the randomness:** cars "ghosted" through each other (ramp zones, rescues) still stood on each other, because cannon's wheel rays hit every body. The child flew off a bot's roof and stalled for 4–8 s, which decided many races. | Wheel rays are now cast as a car: a ghost's wheels ignore other cars, and nobody's wheels land on a ghost. | `car.js:339` (`ghostWheels`) |
+| Cars pinned together (a bot shoving the child into a wall) | A bot pressed against another car for 0.7 s passes through it until clear. | `main.js:1310` (`unpin`) |
+| Kickers (small ramps) threw cars into walls | Neither the child nor the bots take a small kicker at jump speed. Bots now drive round kickers on the side with more road, with a sideways pull, as the child does. Easy-off bots take real jumps at 28 m/s (was 40, which overshot the landing). | `main.js:1666`; `bot.js:48-56`, `bot.js:74`, `bot.js:107` |
+| Bots couldn't pass a slower car on narrow roads (Ubud), so a child who skipped the gates "won" by blocking | Bots may move out to 1.3 m from the kerb to pass (was 2 m). | `bot.js:145` |
+| Delivery mission (owner: no solo-style goals) | Removed completely: the "🏎️ Free driving / 🎁 Follow the delivery map" chip, the HUD stop chip, the numbered map stops, the voice lines, the imports, `adventure.css` and the `.delivery-steps`/`#adventure-goal` CSS. `public/js/adventure.js`, `public/js/delivery.js` and `public/adventure.css` are deleted. The page references none of them, and `game.json` no longer mentions the mission. | `main.js`, `index.html`, `style.css`, `ipad.css` |
+
+### Measured
+
+The scripts are in `scratchpad/cr-race/` (`sim.mjs`, `agg.py`, `play.mjs`, `playnormal.mjs`).
+
+- **Easy sims, 2 laps, five cities × 4 per policy** (final code). The child is a flawless auto-cruiser.
+
+  | Policy | Wins | Average place | Median loss |
+  | --- | --- | --- | --- |
+  | Careful | 11/20 (55%) | 1.8 | 1.5 s (6 of 9 losses within 3 s) |
+  | Careless (40% right) | 4/20 (20%) | 2.1 | 2.5 s (11 of 16 within 3 s) |
+  | Tapping nothing | 3/20 (15%) | 2.3 | 4.2 s |
+
+  - At least 3 of 4 cars were within about 10 s (190 m) in 100% of samples.
+  - The child's place changed about 4 times a race.
+  - Bot time under 2 m/s averaged under 3 s a race, at most 7 s.
+- **Easy off** (the child is the bot autopilot), 15 sims:
+  - Every bot finished.
+  - Montreal stalls were at most 7 s per bot, against about 25 s in the review.
+  - Ubud is the worst city, still up to 20 s for one bot in one race (many short rescues on its narrow terraced road).
+  - Pack: 97%.
+- **Real-time play, 2 laps, tapping the gate buttons:**
+
+  | Run | Results |
+  | --- | --- |
+  | Careful, portrait 834×1194 | Ubud 🏆; Stunt 🏆; Dino 2nd by 0.5 s; Montreal 4th by 3.4 s; Helsinki 3rd by 3.9 s |
+  | Tapping nothing, landscape 1194×834 | Dino 2nd (4.2 s); Montreal 2nd (2.9 s); Stunt 3rd (1.0 s); Ubud 3rd (5.5 s) |
+  | Careless, landscape | Dino 3rd |
+  | Easy off, autopilot | Montreal landscape 4th; Ubud portrait 🏆 |
+
+  Every run had 0 console errors.
+- **Screenshots:**
+  - `fc-r1-gift.png`: the gift moment with no sprite over the HUD.
+  - `np-under0.png`: Easy-off lane strips under the gantry.
+  - `np-strip0.png`, `nl-strip0.png`: the approach.
+- **Tests:**
+  - `browser.mjs --ids crash-racers --run cr-race3`: BOOT + PLAY ready, 0 errors.
+  - `original-quality.mjs`: the crash-racers mission checks now time out, as expected, because the mission is gone; the coordinator updates the test. With the crash-racers parts removed (a scratch copy), every other check passes.
+
+### Left open
+
+- Ubud with Easy off still has more short bot rescues than other cities.
+- Two-device play is untested (store bridge).
+- `public/bitgames.json` still lists the deleted files and needs the build.
+
+## 2026-10-12 — Third review (7.3): measured in real time, and the child starts at the back
+
+The third review played 31 real-time races at 60 fps. In Easy, ignoring the gates won 4 of 5 races, careful play 3 of 5 and careless play 2 of 5: the sims had been flattering. The main reason was that the child started on pole (entry 0 → grid slot 0) and was 1st within 2 s. Every number below is from **real-time** Playwright races (Chromium `--use-angle=gl`, 2 laps, two browsers at once, 60 fps measured in every race), not sims.
+
+### Changes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| The child started on pole | The robots line up in front and children start at the back. Every race begins in 3rd or 4th, so a win needs overtakes. | `public/js/main.js:893` |
+| Easy bots slowed more for bends than the child | They use the child's bend factor (`pace − bend·35`). `EASY_BOT_PACE` is 21.0 / 20.4 / 19.8 m/s. | `bot.js:91`; `main.js:35` |
+| The gift wasn't decisive | `GIFT_SECONDS` 5, `GIFT_EXTRA` 9, `GIFT_PUSH` 8 (was 4.5 / 8 / 5). It is still limited in bends, and never on a jump run-up. | `main.js:223-225` |
+| The lean into the tapped lane ran into cars already in that lane | `passLane` now always looks for a car up to 20 m ahead in the child's line (26 m during a gift) and aims 2.5 m to its open side. Passing comes before the gate lean, so a right answer never costs the place, and the child can overtake from the back. | `main.js:1877`, `steeringHelper` |
+| Bots formed a train and rarely passed | A bot 8–60 m behind the child pushes 5% harder. Bots look 20 m ahead (was 12) for a car to pass, and aim 2.6 m beside that car instead of a fixed shift from their own lane. | `bot.js:101`, `bot.js:138-142` |
+| Repeat crash spots (Montreal ~156–200 m, Ubud's kerbs) | Every racing bot gets a gentle sideways pull back to its line, so it no longer drifts wide in bends. Montreal's sidewalk maples stand 2.4 m back from the kerb (was 1.4 m, where wide cars hit the trunks). Stall episodes in the same sample runs fell from 49 to 20. | `bot.js:75`; `cities.js:863` |
+| Ghost rings over the top HUD as the car passes under | Gate sprites fade from 22 m to 12 m from the camera (was 16 to 8). | `gates.js:35-36` |
+| Landscape Easy showed the house twice (buttons over the gantry, plus the 3D sprite) | While the buttons sit over the gantry, that gate's 3D house is hidden. | `main.js:2279`, `gates.js:158` |
+| The map step came within one Easy race | In Easy it can only be reached by a race that began on the harder step, so it is earned across two races. | `main.js:306`, `startStep` at `main.js:881` |
+
+### Real-time results (2 laps; the child always started at the back)
+
+| Policy | Races | Wins | Results |
+| --- | --- | --- | --- |
+| Careful (all gates right), portrait | 5 | 4 | Dino 🏆 +6.1 s; Helsinki 🏆 +4.2 s; Montreal 🏆 +3.5 s; Stunt 🏆 +1.6 s; Ubud 2nd −0.3 s |
+| Careful, landscape | 5 | 2 | Montreal 🏆 +5.9 s; Ubud 🏆 +2.5 s; Dino 2nd −0.4 s; Helsinki 2nd −0.3 s; Stunt 2nd −0.4 s |
+| Careless (a coin toss at each gate), portrait | 5 | 0 | 3rd −2.2 s; 2nd −1.0 s; 3rd −5.0 s; 4th −3.5 s; 3rd −1.1 s |
+| Ignoring the gates, landscape | 5 | 0 | 3rd −4.4 s; 2nd −2.4 s; 4th −4.4 s; 4th −7.1 s; 2nd −2.6 s |
+
+- **Careful play wins 6 of 10 (60%).** All four careful losses were 2nd by 0.3–0.4 s.
+- **Ignoring the gates wins 0 of 5**, careless play 0 of 5.
+- **Closeness:** 11 of the 20 races finished within 3 s of the winner (the child's gap to the winner, or a careful win's margin). All four careful losses were within 0.4 s.
+- **No wire-to-wire wins.** Every win came from behind: the place pill shows the child passing cars at 12–75 s.
+- **Tuning runs** (not counted above):
+  - With gift +10, careful won 8 of 10, but by 2–6 s, careless won 1 of 5 and ignoring won 0 of 5.
+  - With gift +8 and bot paces 0.5 m/s faster, careful won only 1 of 5.
+- **Easy off** (bot autopilot driving the child's car, real time): Montreal 4th, Ubud 3rd, Helsinki 3rd, 0 errors. In sims (2 per city), every bot finished; per-race bot stalls were at most 6 s in Montreal and Ubud and at most 12 s in Stunt Park, against the review's 20–40 s.
+- **Screenshots** (`scratchpad/cr-race/shots/`):
+  - `L-montreal-r1-gate.png`: landscape Easy with no 3D house behind the buttons.
+  - `L-helsinki-r1-gift.png`: a gift moment with no ring over the HUD.
+- **Tests:**
+  - `browser.mjs --ids crash-racers --run cr-race4`: BOOT + PLAY ready, 0 errors.
+  - `original-quality.mjs` without its crash-racers mission parts: all 11 other checks pass.
+
+### Left open
+
+- Careful losses are photo finishes (0.3 s). That is by design, but a careful child still loses about 4 races in 10.
+- Easy off was measured with the bot autopilot, not a child's own steering.
+- Two-device play is untested (store bridge).
+
+## 2026-10-12 — Fourth review (7.0): 🚀 is no shortcut, a clean start, a hint for skipped gates
+
+The fourth review played 23 real-time races. The race feel was good: the start from the back, live place changes and correct podiums. Five issues remained.
+
+### Changes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| Holding 🚀 the whole race beat the lesson (a flat 20 m/s cap, with no slowing for bends) | One bend-aware Easy speed, `easyTop` = `clamp(19 − bend·35, 10, 19)`, now applies to the cruise, to holding 🚀 and to the gift's push. Only the presents' gifts go faster. The bot-pace comment is corrected, and `EASY_BOT_PACE` is retuned to 20.6 / 20.0 / 19.4 m/s, since bots no longer lose time crashing at the start. | `public/js/main.js:1665-1670`, `govern`, `cruise`, `giftTop`; `main.js:35`, `main.js:954-957` |
+| Pile-ups at the first bend | In Easy, the robots pass through each other (and everyone) for the first 14 s after GO (`START_GHOST`; the wheels follow the ghost too). Bots look 24 m ahead for a car to pass and pass 2.9 m beside it. Mystery-box rows now sit on the straightest road between the gates (0.38 / 0.61 / 0.84 of the loop, never before 240 m), not on the first bend. | `main.js:1337`, `rampGhost`; `bot.js:138-142`; `pickups.js:98-102` |
+| No hint for a child who ignores the gates | A gate driven under with no choice counts as skipped (`run.skipped`). When right answers are fewer than half of all gates (including skipped ones), the place line adds "Right presents at the gates give you a speed boost!". Heard in real play: "You came fourth. Right presents at the gates give you a speed boost!" | `main.js:299`, `main.js:1583-1584`, `newGateRun` |
+| Easy off counted drift as answers | Without a tap, the car's lane is an answer only when it is on that present's coloured strip. With two lanes that means beyond 0.14 × the road width from the middle; with three, the middle third's strip or beyond 0.19 × the width. Between strips is no answer. Easy keeps its rule that the child must have steered. | `main.js:293-301` |
+| The map pin under the player marker | A gate pin within 28 px of the child's marker is moved out beside it. | `main.js:2245-2256` (`drawGatePins`) |
+
+The gift is now +10 m/s (`GIFT_EXTRA`, `main.js:224`) for 5 s, pushed at 8 m/s².
+
+### Real-time results
+
+Real-time Playwright races, 2 laps, 60 fps measured in every race, with the child starting at the back.
+
+| Style (Easy) | Races | Wins | Results | Target |
+| --- | --- | --- | --- | --- |
+| Careful | 5 | **3** | Helsinki 🏆 +2.8 s; Stunt 🏆 +2.3 s; Ubud 🏆 +3.9 s; Montreal 2nd −0.3 s; Dino 2nd −0.5 s | ≥ 3 ✓ |
+| Careless (a coin toss at each gate) | 5 | **1** | Stunt 🏆 +1.4 s (3 right); Dino 3rd −4.2 s; Helsinki 4th −5.8 s; Montreal 2nd −3.0 s; Ubud 4th −3.6 s | ≤ 1 ✓ |
+| Ignoring the gates | 5 | **0** | Helsinki 4th −5.4 s; Montreal 4th −6.3 s; Ubud 4th −6.2 s; Stunt 3rd −4.9 s; Dino 3rd −6.8 s | ≤ 1 ✓ |
+| Ignoring the gates, holding 🚀 | 5 | **0** | Dino 3rd −7.4 s; Helsinki 4th −4.4 s; Montreal 2nd −7.2 s; Stunt 3rd −7.2 s; Ubud 4th −6.8 s | ≤ 1 ✓ |
+| Careful, holding 🚀 | 3 | **2** | Helsinki 🏆 +2.9 s; Ubud 🏆 +1.8 s; Montreal 3rd −1.5 s | still wins ✓ |
+
+- **Closeness:** both careful losses were 0.3–0.5 s, and careful wins were by 1.8–3.9 s. Children who ignore the gates trail by 4–7 s.
+- **Tuning runs** (not counted): with bot paces 21.0 / 20.4 / 19.8, careful won 2 of 5 at gift +9 and 2 of 5 at +10, and ignoring with 🚀 won 0 of 5.
+- **Bot stalls over 2 s at the first bend** (lap 1, about 150–180 m; about 512 m in Stunt):
+  - Easy, 23 races: two, both in Helsinki (2.5 s each, ended by the rescue).
+  - Easy off, 3 races: none.
+  - All other stalls were single 2–3 s rescues elsewhere.
+- **Easy off** (the bot autopilot drives the child's car, real time):
+  - Montreal: 3rd.
+  - Helsinki: 4th.
+  - Ubud: 4th.
+  - Stalls were 2.2–2.5 s each.
+  - In sims, a drifting car now has 2–3 of 6 gates counted, against 4–6 before.
+- **Tests:** `browser.mjs --ids crash-racers --run cr-race5` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 page or console errors.
+
+## 2026-10-12 — Fifth review (7.5): every race finishes, and the gates decide more of them
+
+The fifth review played 33 real-time races and found the race feel good: overtakes, a tight pack, a correct podium and holding 🚀 no shortcut. It also found one severe bug, a race that never ended if a child held ◀ or ▶, plus five smaller issues.
+
+### Changes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| **SEVERE: holding ◀ or ▶ circled the car for ever, so no podium** | Three fixes: **(a)** In Easy the helper takes the wheel when the car has turned more than about 70° from the road ahead, or is at the edge and still steering off it. **(b)** Headway is net progress over the no-headway window: a car making under 1.5 m/s along the road over the whole window is put back on the road (circling used to reset the old "4 m" check). **(c)** Once every robot is home, the race ends 30 s later wherever everyone is. The podium comes, the title gives the child's place ("🏁 You came 4th!") and the voice says it. | (a) `steeringHelper`, `main.js:1979-1986`; (b) `recover`, `main.js:1300-1320`, `HEADWAY_SPEED` `main.js:1280`; (c) `onCarFinished`, `main.js:1508-1514`, `BOTS_HOME_SECONDS` `main.js:26`, `main.js:1568`, `celebrate` |
+| Mashing 🔄 stopped the car dead | In Easy racing, 🔄 does nothing while the car is on the road, upright and moving above 4 m/s. It still rescues a stuck, overturned or off-road car. | `ACTIONS.reset`, `main.js:1412-1417` |
+| The learning didn't decide enough races (bots reeled the child back) | `GIFT_SECONDS` is 6 (was 5). A bot 15–60 m behind the child now pushes 3% harder (was 5% from 8 m). Far behind, up to 12% as before. | `main.js:225`; `bot.js:96-102` |
+| The start ghost let robots drive through the child | Robots at the Easy start are in their own collision group (`GROUP_BOT`). They pass through each other only, and still meet the child's car and steer round it. Wheel rays follow the same filter. A robot still overlapping another when the 14 s end becomes an ordinary ghost until clear. In real play, the closest robot to the child in the first 12 s was 10.9 m (Stunt) and 12.5 m (Helsinki). | `util.js:85`; `startGhost` `main.js:1356`; `car.js:343-346`; masks in `damage.js`, `track.js` |
+| 🤖 tags covered the gate presents | A robot's tag is hidden for the last 25 m before a gate (and 4 m after). | `fadeTags`, `main.js:1015-1018` |
+| Solo: "New city" came only after the robots finished | Playing alone, 🗺️ New city shows at once, like Race again. | `main.js:560`, `main.js:1602` |
+| The pill read "3rd of 4" at GO | Children start on a row of their own behind the robots, so it reads "4th of 4". | `main.js:900-905` |
+
+### Real-time results
+
+Real-time Playwright races, 2 laps, 60 fps in every race. Every race reached the podium.
+
+| Style (Easy) | Races | Wins | Results |
+| --- | --- | --- | --- |
+| Careful | 10 | **7 (70%)** | Portrait: Helsinki 🏆 +3.3 s, Stunt 🏆 +6.2 s, Ubud 🏆 +2.1 s, Dino 2nd −0.3 s, Montreal 2nd −0.2 s. Landscape: Helsinki 🏆 +3.5 s, Montreal 🏆 +6.6 s, Stunt 🏆 +3.2 s, Ubud 🏆 +2.3 s, Dino 2nd −0.3 s |
+| Careless (a coin toss at each gate) | 5 | **1 (20%)** | Ubud 🏆 +2.5 s (4 right); Dino 2nd −1.6 s; Helsinki 2nd −3.9 s; Montreal 3rd −4.5 s; Stunt 2nd −3.0 s |
+| Ignoring the gates | 5 | **0** (average place 3.2) | Dino 4th −6.3 s; Helsinki 3rd −7.1 s; Montreal 4th −6.2 s; Stunt 2nd −6.0 s; Ubud 3rd −6.8 s |
+| Holding ◀ the whole race (Ubud) | 1 | 0 | The robots finished by 99.3 s; 30 s later the race ended and the podium showed "🏁 You came 4th!" |
+| Holding ▶ the whole race (Helsinki) | 1 | 0 | Finished 4th at 94.7 s, 4.2 s behind the winner |
+| Mashing 🔄 every 1.2 s, careful (Montreal) | 1 | 0 | 2nd, 0.3 s behind, finished at 74.9 s (the review saw 164–177 s) |
+| Mashing 🔄, ignoring the gates (Stunt) | 1 | 0 | 4th at 104.8 s, 6 s behind |
+
+- All three careful losses were photo finishes (0.2–0.3 s).
+- **Tests:** `browser.mjs --ids crash-racers --run cr-race6` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 page or console errors.

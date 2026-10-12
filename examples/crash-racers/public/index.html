@@ -13,7 +13,6 @@
 </script>
 <link rel="stylesheet" href="./style.css" />
 <link rel="stylesheet" href="./ipad.css" />
-<link rel="stylesheet" href="./adventure.css" />
 </head>
 <body>
 <canvas id="view"></canvas>
@@ -30,14 +29,8 @@
   <div class="logo small"><span>C</span><span>R</span><span>A</span><span>S</span><span>H</span> <span>R</span><span>A</span><span>C</span><span>E</span><span>R</span><span>S</span></div>
   <div id="players" class="players"></div>
   <div class="modes">
-    <button data-mode="town" class="mode on" aria-label="Delivery Town: drive slowly and deliver picture parcels"><span>📦</span>Deliver</button>
-    <button data-mode="race" class="mode"><span>🏁</span>Race</button>
+    <button data-mode="race" class="mode on" aria-label="Race the robot cars: the right present at a gate gives you a speed boost"><span>🏁</span>Race</button>
     <button data-mode="smash" class="mode" aria-label="Bumper cars: gentle bumping, park when you like"><span>🎪</span>Bumpers</button>
-    <div id="town-tiers" class="town-tiers" role="group" aria-label="How hard a town">
-      <button type="button" data-tier="1" aria-label="An easy town: one parcel for each house"><span>📦</span></button>
-      <button type="button" data-tier="2" aria-label="A harder town: two parcels for each house, and road works"><span>📦📦</span><small>🚧</small></button>
-      <button type="button" data-tier="3" aria-label="The hardest town: two parcels for each house, and a one-way street"><span>📦📦</span><small>⛔</small></button>
-    </div>
   </div>
   <h2>Pick your car 🚗</h2>
   <div id="cars" class="car-row"></div>
@@ -62,10 +55,9 @@
 
 <div id="hud" class="hidden">
   <div class="hud-top">
+    <div id="place" class="pill place-pill hidden" role="status"><b class="rank">1st</b><span class="of"></span><span class="order" aria-hidden="true"></span></div>
     <div id="lap" class="pill">Lap 1/2</div>
   </div>
-  <div id="parcels" class="parcels hidden" role="group" aria-label="Parcels in the van"></div>
-  <button id="stop-here" type="button" class="stop-here hidden" aria-label="Stop here"><span class="picture"></span><span class="hand" aria-hidden="true">✋</span></button>
   <div id="gate-pick" class="gate-pick hidden" role="group" aria-label="Which lane at the gate">
     <button type="button" class="lane-pick lane-left"><span class="picture"></span><span class="way" aria-hidden="true">◀</span></button>
     <span class="gate-house" aria-hidden="true"></span>
@@ -79,7 +71,6 @@
     <button data-touch="turbo" title="Turbo (Shift)" id="turbo-btn">🔥</button>
     <button data-touch="fix" title="Fix my car (F)" id="fix-btn">🔧</button>
     <button data-touch="reset" title="Back on the road (R)" id="reset-btn">🔄</button>
-    <button data-touch="turn" title="Turn round (U)" id="turn-btn" aria-label="Turn round">↩️</button>
     <button data-touch="park" title="Park and finish" id="park-btn" aria-label="Park and finish">🅿️</button>
     <button data-touch="horn" title="Horn (H)">📯</button>
     <button data-touch="camera" title="Camera (C)">🎥</button>
@@ -104,16 +95,6 @@
   <h1 id="results-title">🏁 Finish!</h1>
   <div id="gate-recap" class="gate-recap hidden" role="img"></div>
   <div id="podium" class="podium"></div>
-  <div id="recap" class="recap hidden">
-    <div class="recap-left">
-      <canvas id="recap-map" width="560" height="560" aria-label="Your delivery route"></canvas>
-      <div id="recap-ways" class="recap-ways hidden" role="img">
-        <span class="way mine"><b aria-hidden="true">🚚</b><span class="bar"><i></i></span></span>
-        <span class="way short"><b aria-hidden="true">⭐</b><span class="bar"><i></i></span></span>
-      </div>
-    </div>
-    <div id="recap-stops" class="recap-stops"></div>
-  </div>
   <div class="row">
     <button id="again" class="big-go">🔁 Race again</button>
     <button id="change-city" class="big-go alt">🗺️ New city</button>

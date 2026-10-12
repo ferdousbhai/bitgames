@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { KINDS, pictureTexture } from './town.js'
+import { KINDS, pictureTexture } from './houses.js'
 import { rng } from './util.js'
 
 /**
@@ -8,9 +8,9 @@ import { rng } from './util.js'
  * a present (🦴 over one, 📖 over the other; three lanes and three presents on
  * the harder step). The child steers (or, in Easy
  * mode, taps the present) to drive under the one that house would like. It is
- * the Delivery Town lesson inside the race: no colliders, nothing to win; the
- * right lane rolls on smoothly with a doorbell and a wave, and the other lane
- * has a soft puddle that slows the car for a moment. After the car passes, the
+ * the game's matching lesson inside the race: no colliders. The right lane gives
+ * a doorbell, a wave and (racing) a short gift of speed; the other lane simply
+ * gives no gift, and the house asks its question. After the car passes, the
  * gate quietly takes a new house and two new presents for the next time round.
  *
  * The top step (`mapped`) moves the house off the gantry and onto the map: the
@@ -20,6 +20,20 @@ import { rng } from './util.js'
 const postGeometry = new THREE.BoxGeometry(0.35, 6.4, 0.35)
 const barGeometry = new THREE.BoxGeometry(1, 0.45, 0.45)
 const gantryMaterial = new THREE.MeshStandardMaterial({ color: '#f4f1ea', roughness: 0.6 })
+
+/** Easy off: a soft coloured strip on the road leading to each present, with the present painted at its start. */
+const STRIP_COLOURS = { [-1]: '#6ec6ff', 0: '#ffd35a', 1: '#ff9fbf' }
+const STRIP_LENGTH = 30
+const stripGeometry = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2)
+function flat(material) {
+  const m = new THREE.Mesh(stripGeometry, material)
+  m.renderOrder = 1
+  return m
+}
+const roadMaterial = (opts) => new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false, ...opts })
+/** Sprites fade out from this far from the camera to NEAR, so a present never fills the screen as the car goes under it. */
+const FADE_FAR = 22
+const FADE_NEAR = 12
 
 function sprite(map, size) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, fog: false, toneMapped: false }))
@@ -35,6 +49,7 @@ export function createGates(scene) {
   let r = Math.random
   let hard = false
   let mapped = false
+  let strips = false
   let recent = [] // the houses the last few gates had, so the same pair does not come straight back
   let recentWrong = [] // the houses whose presents were the wrong ones lately, so each gate brings a new distractor
 
@@ -93,12 +108,22 @@ export function createGates(scene) {
     const size = Math.min(3.4, gap * 1.15)
     for (const side of [-1, 0, 1]) {
       const s = g.presents[side]
+      const strip = g.strips[side], paint = g.paints[side]
       s.visible = sides.includes(side)
+      strip.visible = paint.visible = strips && s.visible
       if (!s.visible) continue
       s.position.copy(g.at).addScaledVector(g.across, side * gap).setY(4.6)
       s.scale.set(size, size, 1)
       s.material.map = pictureTexture(g.lanes[side].emoji, '#ffffff')
       s.material.needsUpdate = true
+      // The lane's strip runs up to the gate, and its present is painted on the road where the strip starts.
+      const lane = g.at.clone().addScaledVector(g.across, side * gap)
+      strip.position.copy(lane).addScaledVector(g.along, -STRIP_LENGTH / 2 - 1).setY(0.05)
+      strip.scale.set(gap * 0.85, 1, STRIP_LENGTH)
+      paint.position.copy(lane).addScaledVector(g.along, -STRIP_LENGTH + 2).setY(0.06)
+      paint.scale.set(Math.min(2.6, gap * 0.9), 1, Math.min(2.6, gap * 0.9))
+      paint.material.map = pictureTexture(g.lanes[side].emoji, STRIP_COLOURS[side])
+      paint.material.needsUpdate = true
     }
   }
 
@@ -115,7 +140,7 @@ export function createGates(scene) {
   }
 
   function clear() {
-    for (const g of gates) g.root.traverse((o) => o.isSprite && o.material.dispose())
+    for (const g of gates) g.root.traverse((o) => (o.isSprite || o.geometry === stripGeometry) && o.material.dispose())
     for (const child of [...group.children]) group.remove(child)
     gates = []
   }
@@ -124,6 +149,23 @@ export function createGates(scene) {
     get gates() { return gates },
     show(value) { group.visible = value },
     clear,
+
+    /** Each frame: the gate's pictures fade away close to the camera (they never fill the screen at the gantry). */
+    update(camera, shownElsewhere = null) {
+      for (const g of gates) {
+        for (const s of [g.house, g.presents[-1], g.presents[0], g.presents[1]]) {
+          // The gate whose house is already on the Easy buttons over the gantry (held sideways) shows its house once.
+          const o = g === shownElsewhere && s === g.house ? 0 : Math.min(1, Math.max(0, (s.position.distanceTo(camera.position) - FADE_NEAR) / (FADE_FAR - FADE_NEAR)))
+          s.material.opacity = o
+          s.material.visible = o > 0.02
+        }
+      }
+    },
+    /** Easy off: coloured lane strips with the presents painted on the road, so the choice reads at racing speed. */
+    setStrips(value) {
+      strips = value
+      for (const g of gates) for (const side of [-1, 0, 1]) g.strips[side].visible = g.paints[side].visible = strips && g.presents[side].visible
+    },
 
     /** Three gates spread round the loop, clear of ramps and jumps. Deterministic in `seed`. */
     configure(track, seed, { harder = false, onMap = false } = {}) {
@@ -155,8 +197,16 @@ export function createGates(scene) {
         house.position.copy(f.p).setY(8.6)
         const presents = { [-1]: sprite(null, 3.4), 0: sprite(null, 3.4), 1: sprite(null, 3.4) }
         root.add(bar, house, presents[-1], presents[0], presents[1])
+        const yaw = Math.atan2(f.t.x, f.t.z)
+        const strips = {}, paints = {}
+        for (const side of [-1, 0, 1]) {
+          strips[side] = flat(roadMaterial({ color: STRIP_COLOURS[side], opacity: 0.6 }))
+          paints[side] = flat(roadMaterial({ opacity: 0.95 }))
+          strips[side].rotation.y = paints[side].rotation.y = yaw
+          root.add(strips[side], paints[side])
+        }
         group.add(root)
-        gates.push({ dist, root, house, presents, at: f.p.clone(), across: f.side.clone(), width: track.width, kindIndex: -1 })
+        gates.push({ dist, root, house, presents, strips, paints, at: f.p.clone(), across: f.side.clone(), along: f.t.clone(), width: track.width, kindIndex: -1 })
       }
       // Every gate has its house before any presents are chosen, so map gates can borrow the other gates' houses.
       for (const g of gates) pickHouse(g)

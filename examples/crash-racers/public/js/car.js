@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { Damage, separable } from './damage.js'
-import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, clamp, damp, ensureIndexed, harmless, solidColor } from './util.js'
+import { GROUP_BOT, GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, clamp, damp, ensureIndexed, harmless, solidColor } from './util.js'
 
 // Scratch objects for snapshot playback, which runs every physics step.
 const _pos = new THREE.Vector3(), _pos2 = new THREE.Vector3()
@@ -330,6 +330,29 @@ class Face {
   }
 }
 
+/**
+ * The wheels' suspension rays follow the car's ghost (see setGhost in main.js): a car passing through others never
+ * stands on them, and nobody stands on a ghost. cannon's vehicle casts its rays against every body; here they are
+ * cast as a car, so the same collision filters as the bodies apply.
+ */
+const wheelRay = { skipBackfaces: true, collisionFilterGroup: GROUP_CAR, collisionFilterMask: -1 }
+function ghostWheels(vehicle, car) {
+  const castRay = vehicle.castRay
+  vehicle.castRay = function (wheel) {
+    const world = this.world
+    const rayTest = world.rayTest
+    // A ghost's wheels ignore every car; a robot at the Easy start ignores only the other robots.
+    wheelRay.collisionFilterGroup = car.body.collisionFilterGroup
+    wheelRay.collisionFilterMask = car.ghost > 0 ? ~(GROUP_CAR | GROUP_BOT) : car.body.collisionFilterGroup === GROUP_BOT ? ~GROUP_BOT : -1
+    world.rayTest = (from, to, result) => world.raycastClosest(from, to, wheelRay, result)
+    try {
+      return castRay.call(this, wheel)
+    } finally {
+      world.rayTest = rayTest
+    }
+  }
+}
+
 export class Car {
   /**
    * @param opts.model key of CAR_MODELS
@@ -373,7 +396,7 @@ export class Car {
       angularDamping: 0.35,
       linearDamping: 0.02,
       collisionFilterGroup: GROUP_CAR,
-      collisionFilterMask: GROUP_STATIC | GROUP_CAR | GROUP_DEBRIS | GROUP_PROP,
+      collisionFilterMask: GROUP_STATIC | GROUP_CAR | GROUP_DEBRIS | GROUP_PROP | GROUP_BOT,
       type: remote ? CANNON.Body.KINEMATIC : CANNON.Body.DYNAMIC,
     })
     this.body.addShape(
@@ -403,6 +426,7 @@ export class Car {
     if (!remote) {
       // The right axis (x) and up axis (y) put cannon's forward at -Z, the car's nose.
       this.vehicle = new CANNON.RaycastVehicle({ chassisBody: this.body, indexRightAxis: 0, indexUpAxis: 1, indexForwardAxis: 2 })
+      ghostWheels(this.vehicle, this)
       for (const w of this.wheels) {
         this.vehicle.addWheel({
           radius: w.radius,
@@ -584,7 +608,7 @@ export class Car {
     const fromBelow = dir.y > 0.7
     const effective = (otherCar ? speed * 0.85 : speed) * (fromBelow ? 0.4 : 1)
     if (this.gentle) {
-      // Delivery Town: a friendly bump is a soft, funny wobble. No dents, nothing falls off.
+      // Easy mode: a friendly bump is a soft, funny wobble. No dents, nothing falls off.
       const k = Math.min(1, effective / 10)
       this.body.angularVelocity.y += (Math.random() - 0.5) * 1.6 * k
       this.body.angularVelocity.z += (Math.random() - 0.5) * 0.8 * k

@@ -1,8 +1,8 @@
 {
   "id": "crash-racers",
   "title": "Crash Racers",
-  "tagline": "Race up to 4 cars through Ubud, Helsinki and Montreal. Crashes welcome!",
-  "howToPlay": "📦 Deliver: tap a picture parcel (a bone, bananas…), think who would like it, find their house on the big map, and tap the house as you drive up to stop there. Some houses are down side streets: the map shows which street (🌈 or 🌙) to turn into. ↩️ turns you round for the shorter way. Careful drives bring harder towns (or pick 📦📦 🚧 / ⛔ in the menu): two parcels for each house, a closed road or a one-way street, so the order of the stops needs a plan. Friends share one tray of parcels. Stuck for a long while? A gold ring shows the way. 🏁 Race and 🎪 Bumpers have present gates: tap (or steer with ◀ ▶) to the present the house would like; a gate you leave alone counts for nothing. Three right in a row bring three lanes of harder presents; two more and the gate shows 🗺️, so you find whose gate is next from the pins on the map (every present belongs to a pin). The step you reach carries into the next race. The results show what each missed house wanted. In Easy mode bumps are soft and the other cars keep their distance. 🔊 turns the sound off.",
+  "tagline": "Race the robot cars through Ubud, Helsinki and Montreal. The right present gives you a boost!",
+  "howToPlay": "🏁 Race: beat the three robot cars to the finish. The pill at the top shows your place (like 2nd of 4) and the cars in order. At each present gate, tap (or steer with ◀ ▶) to the present the house would like: the right present gives you a burst of speed to pass, a wrong one simply gives none, so thinking at the gates is how you win. Three right in a row bring three lanes of harder presents; two more and the gate shows 🗺️, so you find whose gate is next from the pins on the map. The step you reach carries into the next race. At the finish, the podium shows everyone's place, and the results show what each missed house wanted. In 🧸 Easy mode the car drives itself, bumps are soft and the robots race at your speed; turn Easy off for faster robots, 🔥 turbo and coloured lanes on the road. 🎪 Bumpers: gentle bumper cars with the same present gates, park when you like. 🔊 turns the sound off.",
   "emoji": "🏎️",
   "color": "#ff595e",
   "category": "race",
@@ -13,5 +13,5 @@
     5,
     8
   ],
-  "learning": "Map reading, matching things by kind, and planning a route"
+  "learning": "Matching things by kind (who would like which present) and reading a map"
 }

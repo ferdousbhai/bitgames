@@ -81,8 +81,10 @@ export const GROUP_STATIC = 1
 export const GROUP_CAR = 2
 export const GROUP_DEBRIS = 4
 export const GROUP_PROP = 8
+/** A robot car at the start of an Easy race: it passes through the other robots, but never through a child's car. */
+export const GROUP_BOT = 16
 /** What static scenery collides with. */
-export const STATIC_MASK = GROUP_CAR | GROUP_DEBRIS | GROUP_PROP
+export const STATIC_MASK = GROUP_CAR | GROUP_DEBRIS | GROUP_PROP | GROUP_BOT
 
 /** Debris and props get knocked about but never damage a car. */
 export const harmless = (body) => (body.collisionFilterGroup & (GROUP_DEBRIS | GROUP_PROP)) !== 0

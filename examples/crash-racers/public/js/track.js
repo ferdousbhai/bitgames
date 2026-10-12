@@ -1,14 +1,7 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, STATIC_MASK, ensureIndexed, rng, wrap } from './util.js'
-
-/**
- * A Delivery Town side street, in metres: its turning place's centre is
- * `centre` beyond the kerb with radius `pad`, the house's door is `door`
- * beyond that centre, and the lane is `lane` wide.
- */
-export const SPUR = { centre: 26, pad: 6.5, door: 4.4, lane: 7 }
+import { GROUP_BOT, GROUP_CAR, GROUP_DEBRIS, GROUP_PROP, GROUP_STATIC, STATIC_MASK, ensureIndexed, rng, wrap } from './util.js'
 
 let boostMat
 /**
@@ -81,16 +74,9 @@ export class Track {
     this.cell = 16
     this.grid = new Map()
     for (const s of this.samples) this.gridAdd(s.p)
-    /** Delivery Town's side streets (see planSpurs); none unless the town asked for them before the city was built. */
-    this.spurs = []
-    this.planned = !!Track.plan
-    if (Track.plan) this.planSpurs(Track.plan)
   }
 
-  /** Set by Delivery Town just before a city is built: `{ seed, count }` side streets to make room for. */
-  static plan = null
-
-  /** Adds a road point to the spatial hash (the loop's samples, and side streets' points). */
+  /** Adds a road point to the spatial hash (the loop's samples). */
   gridAdd(p) {
     const key = this.key(p.x, p.z)
     if (!this.grid.has(key)) this.grid.set(key, [])
@@ -205,7 +191,7 @@ export class Track {
     geo.computeVertexNormals()
     const mesh = new THREE.Mesh(geo, material)
     mesh.receiveShadow = true
-    // Road, verges and side streets: flat, never in a side street's way (see carveSpurs).
+    // Road and verges: flat ground.
     mesh.userData.surface = true
     this.group.add(mesh)
     return mesh
@@ -284,11 +270,10 @@ export class Track {
    * long either way) doesn't overlap a ramp, so a respawned car isn't put
    * inside one and flipped.
    */
-  clearOfRamps(dist, margin = 3, dir = 1) {
+  clearOfRamps(dist, margin = 3) {
     for (const ramp of this.ramps) {
       const offset = this.offset(dist, ramp.dist)
-      // dir -1: driving the loop backwards (Delivery Town), so clear of the ramp means before it.
-      if (Math.abs(offset) < ramp.half + margin) return wrap(ramp.dist + dir * (ramp.half + margin), this.length)
+      if (Math.abs(offset) < ramp.half + margin) return wrap(ramp.dist + ramp.half + margin, this.length)
     }
     return wrap(dist, this.length)
   }
@@ -326,8 +311,8 @@ export class Track {
     for (let d = dist - 90; d <= dist + 90; d += 5) {
       const fromStart = Math.min(wrap(d, this.length), this.length - wrap(d, this.length))
       if (fromStart < 70 + half) continue
-      // Leave room after any ramp or jump already here, and round a side street's junction.
-      if (this.nearRamp(d, half + 20) || this.nearSpur(d, half + 16)) continue
+      // Leave room after any ramp or jump already here.
+      if (this.nearRamp(d, half + 20)) continue
       const bend = this.bendAt(d, 30 + half)
       if (bend < bestBend) {
         bestBend = bend
@@ -440,8 +425,6 @@ export class Track {
   addBoostPad(dist, { lateral = 0, length = 5, width = 3 } = {}) {
     dist = wrap(dist, this.length)
     if (this.nearRamp(dist, length)) {
-      // Delivery Town moved a jump round a side street's junction; it has no boost pads to fire anyway.
-      if (this.planned) return
       throw new Error(`A boost pad at ${Math.round(dist)} m would be under a ramp or jump.`)
     }
     const s = this.sampleAt(dist)
@@ -471,7 +454,7 @@ export class Track {
 
   /** Knock-over props (cones, crates, snowballs). */
   addProp(mesh, shape, position, mass) {
-    const body = new CANNON.Body({ mass, collisionFilterGroup: GROUP_PROP, collisionFilterMask: GROUP_STATIC | GROUP_CAR | GROUP_PROP | GROUP_DEBRIS, linearDamping: 0.1, angularDamping: 0.2, allowSleep: true, sleepSpeedLimit: 0.2 })
+    const body = new CANNON.Body({ mass, collisionFilterGroup: GROUP_PROP, collisionFilterMask: GROUP_STATIC | GROUP_CAR | GROUP_PROP | GROUP_DEBRIS | GROUP_BOT, linearDamping: 0.1, angularDamping: 0.2, allowSleep: true, sleepSpeedLimit: 0.2 })
     body.addShape(shape)
     body.position.set(position.x, position.y, position.z)
     body.sleep()
@@ -497,222 +480,8 @@ export class Track {
     }
   }
 
-  // --- Side streets (Delivery Town) ------------------------------------------
-
-  /**
-   * Plans Delivery Town's side streets before any scenery goes up: short dead
-   * ends off the loop, each with a round turning place at its end where a house
-   * can stand. Their points join the spatial hash, so the city's buildings,
-   * terraces and trees keep clear of them exactly as they keep clear of the
-   * road. Junctions go on straight road, away from the start and from each
-   * other, on a side with open ground (no other stretch of road nearby).
-   * Deterministic in `seed`, so friends in the same town get the same streets.
-   */
-  planSpurs({ seed, count = 2 }) {
-    const r = rng((seed ^ 0x5b0e) >>> 0)
-    const L = this.length
-    const candidates = []
-    for (let d = 0; d < L; d += 6) {
-      if (Math.min(d, L - d) < 55 || this.bendAt(d, 16) > 0.025) continue
-      for (const sign of [-1, 1]) if (this.spurClear(d, sign)) candidates.push({ d, sign })
-    }
-    // A fair shuffle: which junctions this drive gets is the seed's.
-    for (let i = candidates.length - 1; i > 0; i--) {
-      const j = Math.floor(r() * (i + 1))
-      ;[candidates[i], candidates[j]] = [candidates[j], candidates[i]]
-    }
-    // A spare or two: a street that turns out to run into the sea or a river is dropped once the city is built (carveSpurs).
-    this.wantSpurs = count
-    for (const c of candidates) {
-      if (this.spurs.length >= count + 3) break
-      if (this.spurs.some((o) => Math.abs(this.offset(o.dist, c.d)) < L / 5)) continue
-      this.spurs.push(this.makeSpur(c.d, c.sign))
-    }
-    for (const spur of this.spurs) for (const p of spur.points) this.gridAdd(p)
-  }
-
-  /** Is there open ground for a side street at `dist` on side `sign`: no other stretch of road near its lane or its turning place? */
-  spurClear(dist, sign) {
-    const f = this.frameAt(dist)
-    const W = this.width
-    const tests = []
-    for (let l = W / 2 + 1; l <= W / 2 + SPUR.centre + SPUR.pad + 2; l += 2) tests.push([l, 0])
-    for (const along of [-1, 1]) tests.push([W / 2 + SPUR.centre, along * (SPUR.pad + 1.5)])
-    for (const [l, along] of tests) {
-      const x = f.p.x + f.side.x * sign * l + f.t.x * along, z = f.p.z + f.side.z * sign * l + f.t.z * along
-      for (const s of this.samples) {
-        const near = Math.abs(this.offset(s.dist, dist)) <= 25
-        // Beside its own junction the street simply leaves the road; anywhere else the road must stay well away.
-        const need = near ? Math.min(l - 1.5, W / 2 + 6) : W / 2 + 8
-        if ((s.p.x - x) ** 2 + (s.p.z - z) ** 2 < need * need) return false
-      }
-    }
-    return true
-  }
-
-  makeSpur(dist, sign) {
-    const f = this.frameAt(dist)
-    const W = this.width
-    const u = f.side.clone().multiplyScalar(sign)
-    const at = (l, along = 0) => f.p.clone().addScaledVector(u, l).addScaledVector(f.t, along)
-    const centre = at(W / 2 + SPUR.centre)
-    const points = []
-    for (let l = W / 2; l <= W / 2 + SPUR.centre; l += 2) points.push(at(l))
-    for (let k = 0; k < 12; k++) {
-      const a = (k / 12) * Math.PI * 2
-      points.push(centre.clone().addScaledVector(u, Math.cos(a) * SPUR.pad).addScaledVector(f.t, Math.sin(a) * SPUR.pad))
-    }
-    return { dist: wrap(dist, this.length), sign, origin: f.p.clone(), t: f.t.clone(), u, mouth: at(W / 2), centre, door: at(W / 2 + SPUR.centre + SPUR.door), points }
-  }
-
-  /** True if `dist` is within `pad` metres of a side street's junction. */
-  nearSpur(dist, pad) {
-    return this.spurs.some((s) => Math.abs(this.offset(dist, s.dist)) < pad + SPUR.lane / 2)
-  }
-
-  /**
-   * Once the city is built: clears whatever still stands in a side street's
-   * way (a shrine, a crate, a lamp: things placed without asking the road),
-   * drops a street that would run into something big (the sea, a river, a
-   * jump's landing), and lays the street and its turning place in the city's
-   * own road surface.
-   */
-  carveSpurs() {
-    const W = this.width
-    const box = new THREE.Box3()
-    const point = new THREE.Vector3()
-    const tri = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]
-    const edge = (x, z, a, b) => (x - b.x) * (a.z - b.z) - (a.x - b.x) * (z - b.z)
-    const inTriangle = (x, z, a, b, c) => {
-      const d1 = edge(x, z, a, b), d2 = edge(x, z, b, c), d3 = edge(x, z, c, a)
-      return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0))
-    }
-    const extent = (b) => Math.max(b.max.x - b.min.x, b.max.z - b.min.z)
-    const kept = []
-    for (const spur of this.spurs) {
-      // Enough streets already: this spare stays open ground.
-      const spare = kept.length >= this.wantSpurs
-      const zone = [] // [x, z, radius]: the lane, the turning place and the house's sign behind it
-      for (let l = W / 2 + 1; l <= W / 2 + SPUR.centre - 4; l += 2) {
-        const p = spur.origin.clone().addScaledVector(spur.u, l)
-        zone.push([p.x, p.z, SPUR.lane / 2 + 0.8])
-      }
-      zone.push([spur.centre.x, spur.centre.z, SPUR.pad + 1])
-      const back = spur.origin.clone().addScaledVector(spur.u, W / 2 + SPUR.centre + SPUR.pad + 1.5)
-      zone.push([back.x, back.z, 2.5])
-      const inZone = (x, z) => zone.some(([cx, cz, rad]) => (x - cx) ** 2 + (z - cz) ** 2 < rad * rad)
-      const touches = (b) => zone.some(([cx, cz, rad]) => Math.max(b.min.x - cx, 0, cx - b.max.x) ** 2 + Math.max(b.min.z - cz, 0, cz - b.max.z) ** 2 < rad * rad)
-      // Something big in the way: any of its corners inside the street (a mountain, a row of flags), or a flat sheet over it (water).
-      const big = (b, geometry, matrix) => {
-        const positions = geometry.attributes.position
-        for (let i = 0; i < positions.count; i++) {
-          point.fromBufferAttribute(positions, i)
-          if (matrix) point.applyMatrix4(matrix)
-          if (inZone(point.x, point.z)) return true
-        }
-        if (b.max.y - b.min.y > 1.5) return false
-        const index = geometry.index
-        const n = index ? index.count : positions.count
-        for (let i = 0; i + 2 < n; i += 3) {
-          tri.forEach((v, k) => {
-            v.fromBufferAttribute(positions, index ? index.getX(i + k) : i + k)
-            if (matrix) v.applyMatrix4(matrix)
-          })
-          if (zone.some(([x, z]) => inTriangle(x, z, ...tri))) return true
-        }
-        return false
-      }
-      let ok = !spare && !this.ramps.some((rp) => Math.abs(this.offset(spur.dist, rp.dist)) < rp.half + 16)
-      const children = [], pieces = []
-      for (const child of this.group.children) {
-        if (!ok) break
-        if (child.userData.surface || child.isInstancedMesh) continue
-        box.setFromObject(child)
-        if (box.isEmpty() || !touches(box) || extent(box) > 1000) continue
-        if (extent(box) <= 40) children.push(child)
-        else child.traverse((o) => { if (o.isMesh && big(box, o.geometry, o.matrixWorld)) ok = false })
-      }
-      for (const bucket of this.mergeBuckets.values()) {
-        if (!ok) break
-        for (const g of bucket.geometries) {
-          if (!g.boundingBox) g.computeBoundingBox()
-          if (!touches(g.boundingBox)) continue
-          if (extent(g.boundingBox) <= 40) pieces.push([bucket, g])
-          else if (big(g.boundingBox, g)) ok = false
-        }
-      }
-      if (!ok) {
-        for (const p of spur.points) {
-          const list = this.grid.get(this.key(p.x, p.z))
-          list?.splice(list.indexOf(p), 1)
-        }
-        continue
-      }
-      for (const child of children) child.removeFromParent()
-      for (const [bucket, g] of pieces) {
-        g.dispose()
-        bucket.geometries.splice(bucket.geometries.indexOf(g), 1)
-      }
-      for (let i = this.props.length - 1; i >= 0; i--) {
-        const { mesh, body } = this.props[i]
-        if (!inZone(body.position.x, body.position.z)) continue
-        this.world.removeBody(body)
-        mesh.removeFromParent()
-        this.props.splice(i, 1)
-      }
-      for (const body of this.bodies) {
-        const gone = body.shapes.filter((shape, k) => inZone(body.position.x + body.shapeOffsets[k].x, body.position.z + body.shapeOffsets[k].z))
-        for (const shape of gone) body.removeShape(shape)
-      }
-      kept.push(spur)
-    }
-    this.spurs = kept
-    if (this.roadMaterial) for (const spur of kept) this.buildSpur(spur)
-  }
-
-  /** A side street in the road's own surface: a lane off the kerb (lifted over any pavement) and a round turning place. */
-  buildSpur(spur) {
-    const W = this.width
-    const half = SPUR.lane / 2
-    const from = W / 2 - 0.4, to = W / 2 + SPUR.centre - SPUR.pad + 1
-    const positions = [], uvs = [], index = []
-    // Over the pavement at the kerb, then down to the ground.
-    const lift = (l) => (l < W / 2 + 4.6 ? 0.13 : l > W / 2 + 6.6 ? 0.04 : 0.13 - ((l - W / 2 - 4.6) / 2) * 0.09)
-    let rows = 0
-    for (let l = from; l <= to + 0.01; l += 1, rows++) {
-      const c = spur.origin.clone().addScaledVector(spur.u, l)
-      for (const side of [-1, 1]) {
-        const p = c.clone().addScaledVector(spur.t, side * half)
-        positions.push(p.x, lift(l), p.z)
-      }
-      const v = (l - from) / (W * 1.2)
-      uvs.push(0, v, 1, v)
-    }
-    for (let i = 0; i < rows - 1; i++) {
-      const a = i * 2
-      index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
-    }
-    // Face up whichever way round the street leaves the road.
-    const ax = positions[3] - positions[0], az = positions[5] - positions[2]
-    const bx = positions[6] - positions[0], bz = positions[8] - positions[2]
-    if (az * bx - ax * bz < 0) for (let i = 0; i < index.length; i += 3) [index[i + 1], index[i + 2]] = [index[i + 2], index[i + 1]]
-    this.ribbon(positions, uvs, index, this.roadMaterial)
-    const pad = new THREE.CircleGeometry(SPUR.pad, 36)
-    pad.rotateX(-Math.PI / 2)
-    const pos = pad.attributes.position, uv = pad.attributes.uv
-    // A plain strip of the road texture (between the edge and the centre lines), in metres like the road.
-    for (let i = 0; i < pos.count; i++) uv.setXY(i, 0.14 + (0.14 * (pos.getX(i) + SPUR.pad)) / (2 * SPUR.pad), pos.getZ(i) / (W * 1.2))
-    pad.translate(spur.centre.x, 0.045, spur.centre.z)
-    const mesh = new THREE.Mesh(pad, this.roadMaterial)
-    mesh.receiveShadow = true
-    mesh.userData.surface = true
-    this.group.add(mesh)
-  }
-
   finish() {
-    if (this.spurs.length) this.carveSpurs()
     for (const { material, castShadow, geometries } of this.mergeBuckets.values()) {
-      // A side street may have cleared a whole bucket away.
       if (!geometries.length) continue
       const merged = mergeGeometries(geometries, false)
       if (!merged) continue

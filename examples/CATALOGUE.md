@@ -8,7 +8,7 @@ The twelve original games, preserved after the generated batch was retired. Qual
 | [🦆 Bumper Ducks](./bumper-ducks/public/index.html) | 3–8 | Counting to ten in rows of five, sorting by colour, one more than, number bonds, place value (tens and ones, adding tens, crossing a ten and regrouping), ordering numbers, cooperation and spatial awareness |
 | [🐰 Bunny Hop](./bunny-hop/public/index.html) | 3–8 | Counting, comparing, adding and finding the difference, reading and making patterns, and timing |
 | [🎂 Cake Stack](./cake-stack/public/index.html) | 3–8 | Sequencing, patterns, counting and comparing, and equal sharing |
-| [🏎️ Crash Racers](./crash-racers/public/index.html) | 5–8 | Map reading, matching things by kind, and planning a route |
+| [🏎️ Crash Racers](./crash-racers/public/index.html) | 5–8 | Matching things by kind (who would like which present) and reading a map |
 | [🐉 Dragon Glide](./dragon-glide/public/index.html) | 4–8 | Number order, counting on and back (into the teens), skip counting, counting to 10 with a ten-frame, sorting by colour and shape, adding two small groups, comparing "how many more", and steering |
 | [🎣 Fish Pond](./fish-pond/public/index.html) | 2–8 | Observation, animal habitats (fresh water and sea), real or pretend, and counting |
 | [🧩 Memory Match](./memory-match/public/index.html) | 2–8 | Visual and auditory memory, looking closely, animal names and the sounds they make, baby animal words (and which parent each belongs to), and sorting animals by where they live (including that some fit more than one home) |

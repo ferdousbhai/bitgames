@@ -28,9 +28,17 @@ Each game's design, file:line changes, evidence and the reviewers' remaining ide
 - All 13 `original-quality.mjs` checks pass. They now follow Balloon Pop's basket and Give flow, Cake Stack's count at the candle, and Dragon Glide's resting mission.
 - Chromium and WebKit `browser.mjs` boot and play all twelve games with 0 errors.
 
+**Crash Racers, owner direction (2026-10-12).** The owner's son found it "a solo driving game instead of competition with the AI cars". Race is now the default:
+- the bots race to win
+- the child's place shows during the race
+- a winner and a podium end each race
+- a right present at a gate gives a speed boost, so thinking helps you win
+
+📦 Deliver (Delivery Town) was removed as "pointless" (`town.js` deleted; gate houses moved to `houses.js`). 🎪 Bumpers stays. Never reintroduce a solo, bot-free driving mode.
+
 Bumper Ducks no longer ships `adventure.js`, and its lively mode is now untimed Bumper play (category `animals`).
 
-**Not yet published.** Family play is the real test before release. Two-device Delivery Town co-op in Crash Racers now sends a `layout` with `go`; check it on bitgames.store.
+**Release:** eleven originals were deployed on 2026-10-12 (commit dd70d35). Crash Racers follows after its race review, then `seed:remote` lists all twelve. Family play is the real test. Two-device Race in Crash Racers still needs checking on bitgames.store.
 
 ## Current direction (2026-10-09)
 
