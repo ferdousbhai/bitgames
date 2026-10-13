@@ -34,7 +34,7 @@ const EASY_RACE_TOP = 20
 /** Easy racing: lined up for a jump, the car (and each bot) takes the run-up at this speed, so it clears the gap instead of dropping in. */
 const JUMP_SPEED = 24
 /** Easy racing: the bots' calm paces (m/s on the straight), either side of the child's 19 m/s cruise. */
-const EASY_BOT_PACE = [20.6, 20.0, 19.4]
+const EASY_BOT_PACE = [20.2, 19.6, 19.0]
 const FIX_COOLDOWN = 8
 const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']
 const ORDINAL_WORD = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth']
@@ -223,7 +223,7 @@ const gates = createGates(scene)
  * A wrong present simply gives no gift.
  */
 const GIFT_SECONDS = 5.5
-const GIFT_EXTRA = 9
+const GIFT_EXTRA = 10
 const GIFT_PUSH = 8
 /**
  * The gates follow the child: three right in a row bring the harder step (three lanes, each house's harder present);
@@ -968,7 +968,7 @@ function makeCar(entry, i, local) {
     // Easy mode: the bots never fire a turbo (no flames or sparks in front of the child).
     if (bot) bot.calm = input.easyGas
     // Easy racing: each bot races at its own calm pace, all a little quicker than the child's cruise (19 m/s, the same
-    // holding 🚀), the quickest by 1.6 m/s (which bot is which changes every race). Only the presents' gifts let the
+    // holding 🚀), the quickest by 1.2 m/s (which bot is which changes every race). Only the presents' gifts let the
     // child pull ahead, so a careful child can win and a close loss is always possible.
     if (bot && input.easyGas && game.mode === 'race') bot.pace = EASY_BOT_PACE[(i + (game.setup?.seed ?? 0)) % EASY_BOT_PACE.length]
     if (bot) bot.jumpSpeed = JUMP_SPEED
@@ -1023,6 +1023,10 @@ function nameTag(text, colour) {
 function fadeTags() {
   for (const car of game.cars.values()) {
     if (!car.tag) continue
+    // A see-through robot (passing through others at a jump or after a rescue) that is overlapping the child's car is
+    // not drawn at all until it has moved out, so it never hides the child's own car.
+    const overlapping = (car.ghost > 0 || car.body.collisionFilterGroup === GROUP_BOT) && game.player && car.body.position.distanceTo(game.player.body.position) < 3.5
+    car.root.visible = !overlapping
     const d = camera.position.distanceTo(car.root.position)
     let o = clamp((d - 4) / 6, 0, 1)
     // A robot's tag would sit over the presents of a gate it is driving up to: hidden from 25 m before a gate to 12 m
@@ -1771,8 +1775,9 @@ function govern(car, controls) {
   // A jump's run-up is always taken at the same speed (a gift on top would overshoot the landing).
   const top = input.easyGas ? (runUp(car) ? JUMP_SPEED : easyTop(car) + extra) : Infinity
   if (car.speed <= top) return controls
-  // As a gift fades the car coasts back down to its usual speed: no brakes.
-  if (car.giftUntil + 2 > game.raceTime) return { ...controls, throttle: 0, brake: 0 }
+  // As a gift fades the car coasts back down to its usual speed, but only when a little over it: much faster than the
+  // road ahead allows (a bend coming) it brakes, so a gift never carries the car into a wall.
+  if (car.giftUntil + 2 > game.raceTime && input.easyGas && car.speed <= easyTop(car) + giftExtra(car) + 3) return { ...controls, throttle: 0, brake: 0 }
   return { ...controls, throttle: 0, brake: car.speed > top + 2 ? 0.6 : 0 }
 }
 
@@ -1855,9 +1860,12 @@ function holdEasyCap(car, dt) {
   // A present's gift lifts the cap while it lasts; afterwards the speed eases back down, never snaps.
   const v = car.body.velocity
   const flat = Math.hypot(v.x, v.z)
-  const cap = (runUp(car) ? JUMP_SPEED : EASY_RACE_TOP + giftExtra(car)) + 1
+  // During a gift, the bend-aware top (the road ahead's speed plus the gift), so the gift never overruns a bend;
+  // otherwise the calm cruise's flat 20 m/s (the cruise and 🚀 already slow for bends themselves).
+  const cap = (runUp(car) ? JUMP_SPEED : car.giftUntil > game.raceTime ? giftTop(car) : EASY_RACE_TOP) + 1
   if (flat <= cap) return
-  const to = Math.max(cap, flat - 6 * dt)
+  // Well over it (a bend arriving at the end of a gift) the speed comes down faster.
+  const to = Math.max(cap, flat - (6 + 2 * (flat - cap)) * dt)
   v.x *= to / flat
   v.z *= to / flat
 }
@@ -2065,13 +2073,13 @@ function steeringHelper(car, controls) {
   // Passing, the same: a firmer grip, so the car really pulls out beside the one ahead.
   const across = ramp != null ? clamp((ramp - proj.lateral) * 0.3, -0.4, 0.4) : pass != null ? clamp((pass - proj.lateral) * 0.35, -0.5, 0.5) : 0
   // A held ◀ or ▶ is the child's own steering, and the helper only leans on it, unless the car has turned well away
-  // from the road (more than about 70°) or is at the edge and still steering off it. Then the helper takes the wheel,
+  // from the road (more than about 50°: room to change lanes, not to zigzag across the road) or is at the edge and still steering off it. Then the helper takes the wheel,
   // so a young child holding one button never circles for ever and the race always reaches its finish.
   const aim = car.angleTo(laneAim.x, laneAim.z)
   // Near the edge (1.2 m from it) a steer held towards the kerb is set aside, so the car keeps moving instead of
   // bumping the kerb every few seconds.
   const edge = game.track.width / 2 - 1.2
-  const offRoad = Math.abs(aim) > 1.22 || (Math.abs(proj.lateral) > edge && Math.sign(controls.steer) === Math.sign(proj.lateral) && controls.steer !== 0)
+  const offRoad = Math.abs(aim) > 0.9 || (Math.abs(proj.lateral) > edge && Math.sign(controls.steer) === Math.sign(proj.lateral) && controls.steer !== 0)
   if (offRoad) return { ...controls, steer: clamp(aim * 2.5, -1, 1) }
   const firm = ramp != null || pass != null
   const help = clamp(aim * (firm ? 2.2 : 1.6) + across, firm ? -1 : -0.8, firm ? 1 : 0.8) * (1 - Math.abs(controls.steer) * 0.7)
@@ -2196,7 +2204,8 @@ function updateCamera(dt) {
     game.snapCamera = false
     camPos.lerp(want.applyQuaternion(headingQ).add(pos), snap ? 1 : smoothing(mode.stiffness, dt))
     want.copy(mode.look)
-    if (tall) want.z *= 1.6
+    // An upright screen looks further down the road and lower, so the road (not the sky) fills it.
+    if (tall) want.set(want.x, -1.6, want.z * 1.6)
     camLook.lerp(want.applyQuaternion(headingQ).add(pos), snap ? 1 : smoothing(12, dt))
   }
   camera.position.copy(camPos)

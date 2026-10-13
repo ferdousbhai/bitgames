@@ -39,14 +39,17 @@ export class Bot {
       // Line up with a ramp coming up (jumping is the fun part), otherwise keep to our lane. A ramp counts until the
       // bot is past its far end: a bot beside it must not turn back across it into its side.
       const L = this.track.length
-      ramp = this.track.ramps.find((r) => wrap(r.dist + r.half + 4 - proj.dist, L) < 64 + r.half)
+      ramp = this.track.ramps.find((r) => wrap(r.dist + r.half + 4 - proj.dist, L) < 90 + r.half)
       const toRamp = ramp ? wrap(ramp.dist + ramp.half + 4 - proj.dist, L) - ramp.half - 4 : 0
       // Too close to line up any more and not on its line: drive on past it, along the side it is already on.
       const room = this.track.width / 2 - 1.6
       // A small kicker (not a jump) is driven round, on the side with more road: taken at racing speed it threw the
       // bot against the wall beyond it.
       const kicker = ramp && ramp.half < 8
-      const beside = !kicker && ramp && toRamp < ramp.half + 8 && Math.abs(proj.lateral - ramp.lateral) > ramp.width / 2 - 0.4 && car.grounded
+      // Passing beside it only where there is room beside it: otherwise the bot keeps lining up (a car squeezed between
+      // a wide jump and the kerb falls off its edge).
+      const roomBeside = Math.abs(ramp ? ramp.lateral + Math.sign(proj.lateral - ramp.lateral) * (ramp.width / 2 + 1.3) : 0) <= this.track.width / 2 - 1
+      const beside = !kicker && ramp && roomBeside && toRamp < ramp.half + 8 && Math.abs(proj.lateral - ramp.lateral) > ramp.width / 2 - 0.4 && car.grounded
       if (beside) ramp = null
       let passLane = beside ? clamp(proj.lateral, -room, room) : 0
       if (kicker) {
@@ -57,12 +60,14 @@ export class Bot {
       }
       // Each bot keeps its own line across the ramp, so they jump side by side instead of piling up.
       const polite = child && child !== car ? this.politeness(dt, proj, child) : null
+      // Lined up for a jump, the jump's line comes before keeping clear of the child (the far side of the road there
+      // is the jump's edge, where a bot falls off).
       const lane = beside || kicker
         ? passLane
-        : polite?.lane != null
-          ? polite.lane
-          : ramp
-            ? ramp.lateral + clamp(this.lane, -(ramp.width / 2 - 1.2), ramp.width / 2 - 1.2)
+        : ramp
+          ? ramp.lateral + clamp(this.lane, -Math.min(1, ramp.width / 2 - 1.6), Math.min(1, ramp.width / 2 - 1.6))
+          : polite?.lane != null
+            ? polite.lane
             : this.lane + this.dodge(dt, proj, others)
       this.polite = polite
       // Racing bots look fairly close in (as the child's steering helper does), so bends are followed, not cut against the kerb.
@@ -94,21 +99,22 @@ export class Bot {
       // A rubber band that keeps a race a race without undoing the gates:
       // - more than 15 m ahead of the last child a bot eases off, down to 85% by 90 m, so a child at the back (one who
       //   ignores the gates, or steers wildly) races among cars, scrapping with the slowest robot, and still loses;
-      // - 5–25 m behind a leading child a bot pushes 7% harder, and 10% once the lead is over 25 m (up to 12% far
+      // - 5–15 m behind a leading child a bot pushes 7% harder, and 10% once the lead is over 15 m (up to 12% far
       //   back), so a leader usually has someone close and a lead has to be re-earned at each gate.
       // Never a burst you can see.
-      if (lead > EASY_EASE && !ramp) safe *= clamp(1 - (lead - EASY_EASE) / 500, 0.85, 1)
-      else if (lead < -5 && lead >= -25) safe *= 1.07
-      else if (lead < -25) safe *= clamp(1.1 + (-lead - 90) / 1000, 1.1, 1.12)
+      // Beyond 120 m ahead (a child far back after wild steering or mashing 🔄) the ease goes on down to 75%.
+      if (lead > EASY_EASE && !ramp) safe *= lead > 120 ? clamp(0.85 - (lead - 120) / 600, 0.75, 0.85) : clamp(1 - (lead - EASY_EASE) / 500, 0.85, 1)
+      else if (lead < -5 && lead >= -15) safe *= 1.07
+      else if (lead < -15) safe *= clamp(1.1 + (-lead - 15) / 1000, 1.1, 1.12)
     } else {
-      // Lined up for a jump, go for it (a slow take-off falls short), but not flat out: at 40 m/s a bot overshot the
+      // Lined up for a jump, go for it (a slow take-off falls short), but not flat out: at 40 (and 28) m/s a bot overshot the
       // landing into the next bend. A small kicker is taken at the usual speed.
       safe = clamp(30 * this.skill - bend * 60, 9, 32)
-      if (ramp && ramp.half >= 8 && Math.abs(angle) < 0.25) safe = Math.max(safe, 28)
+      if (ramp && ramp.half >= 8 && Math.abs(angle) < 0.25) safe = Math.max(safe, 25)
       // Rubber band, softer than it was (it slowed robots to 55% and gave them turbo bursts, so the gates hardly
-      // mattered): well ahead, cruise down to 80% (never on a ramp: falling short isn't fun to watch); far behind, a
+      // mattered): well ahead, cruise down to 88% (lower handed wins to a child who matched no presents) (never on a ramp: falling short isn't fun to watch); far behind, a
       // little quicker. No turbo bursts.
-      if (!ramp && lead > 20) safe *= clamp(1 - (lead - 20) / 300, 0.8, 1)
+      if (!ramp && lead > 20) safe *= clamp(1 - (lead - 20) / 300, 0.88, 1)
       else if (lead < -40) safe *= clamp(1 + (-lead - 40) / 600, 1, 1.1)
     }
     // Easy mode: passing a child who has stopped, slowly; or not riding just behind the child, where the camera is.

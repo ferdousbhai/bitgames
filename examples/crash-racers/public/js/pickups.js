@@ -94,12 +94,12 @@ export class Pickups {
         place(this.stars, j.takeoff + 1 + t * span, j.lateral, j.lip + 1.0 + Math.sin(t * Math.PI) * (1.6 + j.height * 0.6), { air: true })
       }
     }
-    // Rows of mystery boxes across the road at three spots, on the straightest road near each, and never on the first
+    // Rows of mystery boxes across the road at two spots, on the straightest road near each, and never on the first
     // stretch after the start, where the whole field arrives bunched together.
-    for (let n = 0; n < 3; n++) {
-      // Between the present gates (at 0.27, 0.53 and 0.8 of the loop), so a box row never sits at a gate, and clear of
+    for (let n = 0; n < 2; n++) {
+      // Between the present gates (at 0.3, 0.6 and 0.88 of the loop), so a box row never sits at a gate, and clear of
       // the start straight (where straightNear will not go).
-      let d = Math.max(240, track.straightNear(track.length * (0.38 + n * 0.23) + r() * 20, 6))
+      let d = Math.max(240, track.straightNear(track.length * (0.45 + n * 0.29) + r() * 15, 6))
       for (let tries = 0; tries < 12 && (track.nearRamp(d, 15) || track.boostPadAt({ dist: d, lateral: 0 })); tries++) d += 15
       if (track.nearRamp(d, 15)) continue
       for (const lane of [-1, 0, 1]) place(this.boxes, d, lane * Math.min(3.2, half - 1.6), 1.15, { prize: BOX_PRIZES[Math.floor(r() * BOX_PRIZES.length)] })

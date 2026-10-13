@@ -1377,3 +1377,51 @@ Real-time Playwright races, 2 laps, 60 fps. **Gap** is the child's distance to t
 - **Robots near the camera:** the longest single spell within 5 m was 5.0 s (one Montreal race); in the other 24 races it was at most 4.5 s.
 - **Careless wins:** both came with 4–5 of 6 presents right, so the gates still decided them.
 - **Tests:** `browser.mjs --ids crash-racers --run cr-race9` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 errors.
+
+## 2026-10-13 — Ninth review (8.0): gifts that don't crash, company for the leader
+
+The ninth review played 42 real-time races. Careful play won 11 of 14, always-wrong and gate-ignoring play won 0 of 9, and the podium and the place pill were right every time. Remaining issues:
+
+- A gift carried the car into a wall.
+- Wild steering and button-mashing left the child alone at the back.
+- Leaders were alone in Ubud and Dino.
+- Portrait views were 40% sky.
+- Easy off handed a win to a child with no right presents.
+- A see-through robot hid the child at a Stunt jump.
+- A tree hid a gate.
+
+### Changes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| A gift carried the car into a building | `govern` coasts down from a gift only when within 3 m/s of the road's speed plus the gift; faster than that it brakes. `holdEasyCap` uses the bend-aware `giftTop` while a gift lasts (the flat 20 m/s otherwise). It trims faster the further over it is (6 + 2 × the excess m/s²). | `main.js:1780`, `main.js:1865-1868` |
+| A lonely back after wild steering or mashing | More than 120 m ahead of the last child, robots ease off down to 75% (85% nearer). | `bot.js:106` |
+| Leaders alone in Ubud and Dino | The 10–12% chase starts 15 m behind a leading child (was 25 m); 7% from 5 m. To keep careful play winning about 80% with this chase, `EASY_BOT_PACE` is 20.2 / 19.6 / 19.0 m/s (was 20.6 / 20.0 / 19.4; the robots also stall less at jumps now, see below). `GIFT_EXTRA` is 10. | `bot.js:107-108`; `main.js:37`, `main.js:226` |
+| The last gate came too early for a gift to count | The gates sit at 0.3 / 0.6 / 0.88 of the loop (were 0.27 / 0.53 / 0.8), each moved within 40 m to where the 50 m before it are straightest. Mystery boxes are now two rows between the gates. | `gates.js:182-193`; `pickups.js:98-102` |
+| Portrait: 40% sky | On a tall screen the camera looks lower (look target y −1.6) and further down the road. | `main.js:2208` |
+| Easy off: ignoring the gates won Dino | The far-ahead ease-off floor is 88% (was 80%). Easy-off robots take jumps at 25 m/s (was 28, which flew them off the landing bend). All robots line up for a jump from 90 m out, put the jump's line ahead of keeping clear of the child, and pass beside a jump only where there is room. Dino's river-jump stalls dropped from 4–6 per race to 0–2. | `bot.js:117`, `bot.js:113`, `bot.js:42`, `bot.js:51-67` |
+| A see-through robot hid the child's car at a Stunt jump | A ghost robot (or one in the robots-only group) within 3.5 m of the child's car is not drawn until it has moved out. | `fadeTags`, `main.js:1025-1029` |
+| A foreground tree hid a gate (Easy off, Montreal) | The gates now sit on straight approaches, see above. | `gates.js:182-193` |
+| Wild steering | In Easy, the helper takes the wheel once the car turns more than about 50° from the road (was 70°). | `main.js:2082` |
+
+### Real-time results
+
+Real-time Playwright races, 2 laps, 60 fps, 0 errors. **Gap** is the child's distance to the nearest car still racing, measured after 15 s.
+
+| Style | Races | Wins | Margins | Gap when leading (mean) | Gap when last (mean) | Child stalls over 1.5 s |
+| --- | --- | --- | --- | --- | --- | --- |
+| Careful (Easy) | 10 | **8 (80%)** | Wins by 0.1–2.9 s; Montreal 4th −2.8 s; Ubud 2nd −3.3 s | 8–32 m | 3–92 m | 3 races, 1.5–2.3 s each |
+| Careless (Easy) | 5 | **2** | Dino 🏆 +3.7 s (5 of 6 right); Stunt 🏆 +0.5 s (3 of 6 right); otherwise 2nd–4th, 0.5–3.1 s behind | 9–21 m | 3–36 m | none |
+| Ignoring the gates (Easy) | 5 | **0** | 3rd–4th, 3.1–7.4 s behind | — | 3–63 m | one 3.4 s |
+| Wild steering (Easy) | 2 | 0 | Helsinki 3rd −9.0 s. Ubud: not finished; the race ended 30 s after the robots, with the podium | — | 23 m; Ubud 223 m | many in Ubud |
+| Mashing 🔄 (Easy) | 2 | 0 | Dino 4th −8.3 s; Montreal 4th −6.4 s | — | 37–65 m | none |
+| Easy off, careful (autopilot driving) | 2 | 0 | Montreal 4th −3.0 s; Dino 2nd −0.2 s | — | — | — |
+| Easy off, autopilot answering by lane | 2 | 1 | Montreal 🏆 +0.6 s (3 of 6 right); Dino, 0 right, 4th −10.4 s | — | — | — |
+
+- **Robots near the camera:** the longest single spell within 5 m was at most 5.6 s (one Stunt race).
+
+### Left open
+
+- **Wild steering in Ubud** still falls far behind and doesn't finish before the race ends (with the podium). Ubud's road is narrow and lined with terrace walls.
+- **The gap at the back:** a child who ignores the gates sometimes sits 30–63 m behind on average. That is better than before, but not yet the 15–25 m asked for.
+- **Easy off measurement:** "careful" in Easy off was measured with the bot autopilot driving. It drives at its own target speed, so the gift barely shows there; it says little about a real child.

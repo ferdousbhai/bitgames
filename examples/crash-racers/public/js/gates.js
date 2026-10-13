@@ -178,8 +178,20 @@ export function createGates(scene) {
       hard = harder || onMap
       mapped = onMap
       const L = track.length
-      for (const at of [0.27, 0.53, 0.8]) {
-        const dist = track.clearOfRamps(L * at, 16)
+      // The last gate sits late in the lap, so a right present there still counts on the run to the line.
+      for (const at of [0.3, 0.6, 0.88]) {
+        // Within 40 m of its spot, the gate goes where the 50 m before it are straightest: on a straight approach no
+        // roadside tree stands between the camera and the gate.
+        let spot = L * at, straightest = Infinity
+        for (let d = L * at - 40; d <= L * at + 40; d += 5) {
+          if (track.nearRamp(d, 16)) continue
+          const bend = track.bendAt(d - 25, 25)
+          if (bend < straightest) {
+            straightest = bend
+            spot = d
+          }
+        }
+        const dist = track.clearOfRamps(spot, 16)
         const f = track.frameAt(dist)
         const half = track.width / 2 + 0.6
         const root = new THREE.Group()
