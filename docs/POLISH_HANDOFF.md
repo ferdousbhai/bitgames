@@ -5,16 +5,20 @@ Updated 2026-10-13. Work on `main`.
 ## Start here (handoff, 2026-10-13)
 
 ### State
-- **Eleven originals are deployed but not yet listed in the store.** They were deployed on 2026-10-12 with `node examples/publish.mjs …` (commit dd70d35), and every version URL returned 200. The store still lists the 2026-10-09 versions, because `pnpm --dir apps/store seed:remote` has not run. Seeding reads every `game.json`, Crash Racers' included.
-- **Crash Racers is not deployed.** Its `game.json` still holds the 2026-10-09 URL, which serves the old Deliver-first version, but the text in that file describes the new race. Deploy it before seeding, or the store shows new instructions over the old game.
-- **Commits:** the latest is dedf0ab. Node tests (11), all 11 `original-quality.mjs` checks, and the Crash Racers `browser.mjs` smoke test pass.
+- **All twelve originals are live (2026-10-13).**
+  - Eleven were deployed on 2026-10-12 (dd70d35). Crash Racers, with its race redesign, was deployed on 2026-10-13.
+  - `pnpm --dir apps/store seed:remote` listed all twelve, and every version URL returned 200.
+  - The store database shows the new Crash Racers tagline ("Race the robot cars…").
+- **Owner's call:** ship Crash Racers at its current review level (last scored 8.0, latest fixes unreviewed) and continue in a future session.
 - **Uncommitted changes from another session:** `AGENTS.md`, `CLAUDE.md`, `apps/store/**` (llms.txt, WebMCP, agent tools). Leave them to that session.
 
 ### Next steps
-1. **Decide whether to ship Crash Racers as it is.** Owner input is needed: ship now, or keep iterating to 8.5. Then run `node examples/publish.mjs crash-racers`.
-2. **List everything** with `pnpm --dir apps/store seed:remote`. Check that every URL returns 200, then commit `game.json`.
-3. **Family play.** Above all, the owner's son should play Crash Racers. Check two-device Race on bitgames.store.
-4. **Optional:** each game's last reviewers left minor ideas in `docs/polish/<game-id>.md`.
+1. **Family play.** Above all, watch whether the owner's son now enjoys Crash Racers as a race. Check two-device Race on bitgames.store.
+2. **Crash Racers toward 8.5:**
+   - Run a fresh independent real-time review of dedf0ab's fixes.
+   - The open issues are listed below.
+   - Republish with `node examples/publish.mjs crash-racers`, then run `seed:remote`.
+3. **Optional:** each game's last reviewers left minor ideas in `docs/polish/<game-id>.md`.
 
 ### Crash Racers: owner direction and where it stands
 The owner's son found the old game "a solo driving game instead of competition with the AI cars", so the owner chose "Real race first".
