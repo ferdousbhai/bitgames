@@ -1,4 +1,5 @@
 import { HeadContent, Link, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
+import { AgentTools } from '#/components/AgentTools'
 import { Header } from '#/components/Header'
 import { SITE_NAME, SITE_TITLE, absoluteUrl, shareMeta } from '#/lib/share'
 import appCss from '../styles.css?url'
@@ -41,7 +42,13 @@ export const Route = createRootRoute({
     }
   },
   shellComponent: RootDocument,
-  component: () => <Outlet />,
+  // AgentTools registers the WebMCP tools browser agents use while the store is open.
+  component: () => (
+    <>
+      <Outlet />
+      <AgentTools />
+    </>
+  ),
   notFoundComponent: NotFound,
   errorComponent: Oops,
 })

@@ -9,7 +9,7 @@ import { PlayScreen } from '#/components/PlayScreen'
 import { GameShelf, Loading } from '#/components/GameShelf'
 import { playLink } from '#/components/GameTile'
 import { findCategory } from '#/lib/categories'
-import { countPlay, gamesCollection, likeGame } from '#/lib/collections'
+import { countPlay, gamesCollection, hasLiked, likeGame } from '#/lib/collections'
 import { shareMeta } from '#/lib/share'
 import type { Game } from '#/lib/types'
 import { toy } from '#/lib/ui'
@@ -172,18 +172,11 @@ function PlayCover({ game }: { game: Game }) {
   )
 }
 
-function readLiked(id: string): boolean {
-  try {
-    return localStorage.getItem(`liked:${id}`) === '1'
-  } catch {
-    return false
-  }
-}
-
 function LikeButton({ game }: { game: Game }) {
   const [liked, setLiked] = useState(false)
   const [popping, setPopping] = useState(false)
-  useEffect(() => setLiked(readLiked(game.id)), [game.id])
+  // Re-read when the count changes, so a like from elsewhere (e.g. the like_game agent tool) shows here too.
+  useEffect(() => setLiked(hasLiked(game.id)), [game.id, game.likes])
 
   return (
     <button
@@ -193,9 +186,6 @@ function LikeButton({ game }: { game: Game }) {
         likeGame(game.id)
         setLiked(true)
         setPopping(true)
-        try {
-          localStorage.setItem(`liked:${game.id}`, '1')
-        } catch {}
       }}
       className="toy flex items-center gap-2 rounded-full px-5 py-3 text-lg font-semibold text-white disabled:cursor-default"
       style={toy(liked ? 'var(--color-berry)' : 'var(--color-grape)')}

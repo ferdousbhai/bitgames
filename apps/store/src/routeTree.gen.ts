@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as HiddenRouteImport } from './routes/hidden'
+import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as MakeRouteImport } from './routes/make'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as SearchRouteImport } from './routes/search'
@@ -39,6 +41,16 @@ const FavoritesRoute = FavoritesRouteImport.update({
 const HiddenRoute = HiddenRouteImport.update({
   id: '/hidden',
   path: '/hidden',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
+  id: '/llms-full.txt',
+  path: '/llms-full.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MakeRoute = MakeRouteImport.update({
@@ -82,6 +94,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/favorites': typeof FavoritesRoute
   '/hidden': typeof HiddenRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/make': typeof MakeRoute
   '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
@@ -95,6 +109,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/favorites': typeof FavoritesRoute
   '/hidden': typeof HiddenRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/make': typeof MakeRoute
   '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
@@ -109,6 +125,8 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/favorites': typeof FavoritesRoute
   '/hidden': typeof HiddenRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/make': typeof MakeRoute
   '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
@@ -124,6 +142,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/favorites'
     | '/hidden'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/make'
     | '/mcp'
     | '/search'
@@ -137,6 +157,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/favorites'
     | '/hidden'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/make'
     | '/mcp'
     | '/search'
@@ -150,6 +172,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/favorites'
     | '/hidden'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/make'
     | '/mcp'
     | '/search'
@@ -164,6 +188,8 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   FavoritesRoute: typeof FavoritesRoute
   HiddenRoute: typeof HiddenRoute
+  LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   MakeRoute: typeof MakeRoute
   McpRoute: typeof McpRoute
   SearchRoute: typeof SearchRoute
@@ -201,6 +227,20 @@ declare module '@tanstack/react-router' {
       path: '/hidden'
       fullPath: '/hidden'
       preLoaderRoute: typeof HiddenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms-full.txt': {
+      id: '/llms-full.txt'
+      path: '/llms-full.txt'
+      fullPath: '/llms-full.txt'
+      preLoaderRoute: typeof LlmsFullDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/make': {
@@ -260,6 +300,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   FavoritesRoute: FavoritesRoute,
   HiddenRoute: HiddenRoute,
+  LlmsFullDottxtRoute: LlmsFullDottxtRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   MakeRoute: MakeRoute,
   McpRoute: McpRoute,
   SearchRoute: SearchRoute,

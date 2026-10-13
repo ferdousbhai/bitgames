@@ -39,10 +39,22 @@ export const gamesCollection = createCollection(
   }),
 )
 
+/** Whether this browser already loved the game (one like per game per browser). */
+export function hasLiked(id: string): boolean {
+  try {
+    return localStorage.getItem(`liked:${id}`) === '1'
+  } catch {
+    return false
+  }
+}
+
 export function likeGame(id: string) {
   gamesCollection.update(id, (draft) => {
     draft.likes += 1
   })
+  try {
+    localStorage.setItem(`liked:${id}`, '1')
+  } catch {}
 }
 
 export function countPlay(id: string) {

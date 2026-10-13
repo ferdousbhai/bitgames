@@ -27,6 +27,8 @@ export function updateGamePreference(id: string, action: 'favorite' | 'hide' | '
   try { localStorage.setItem(PREFERENCES_KEY, JSON.stringify(snapshot)) } catch { /* Still works for this session. */ }
   emit()
 }
+/** The current choices outside React (e.g. for agent tools). */
+export const currentGamePreferences = getSnapshot
 export function useGamePreferences() {
   return useSyncExternalStore(subscribe, getSnapshot, () => emptyPreferences)
 }

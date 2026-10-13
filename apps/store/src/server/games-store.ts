@@ -4,6 +4,7 @@ import { MAX_GAMES_PER_CREATOR } from './limits'
 import { CreatorError, UnreachableError } from './errors'
 import { checkVersion } from './versions'
 import { findVersion, versionBase, type StoredVersion } from './game-assets'
+import type { Game } from '#/lib/types'
 
 export { CreatorError } from './errors'
 export { checkVersion } from './versions'
@@ -183,4 +184,52 @@ export async function recheckLive() {
 }
 export async function describeOwned(game: OwnedGameRow, origin: string) {
   return { gameId: game.id, info: gameInfo(game), listed: Boolean(game.live), status: game.status, revision: game.revision, playUrl: previewUrl(origin, game.preview_token), storeUrl: game.live ? `${origin}/game/${game.id}` : null, reviewNote: game.review_note, playVersion: game.play_version, reviewVersion: game.review_version, liveVersion: game.live_version, playbackBase: game.play_version ? versionBase(game.play_version) : null }
+}
+
+export interface ListedGameRow {
+  id: string
+  title: string
+  tagline: string
+  how_to_play: string
+  emoji: string
+  color: string
+  category: string
+  together: number
+  entry: string
+  featured: number
+  plays: number
+  likes: number
+  created_at: number
+  cover: string | null
+  live_version: string
+}
+
+function toGame(row: ListedGameRow): Game {
+  return {
+    id: row.id,
+    title: row.title,
+    tagline: row.tagline,
+    howToPlay: row.how_to_play,
+    emoji: row.emoji,
+    color: row.color,
+    category: row.category,
+    together: row.together === 1,
+    entry: row.entry,
+    featured: row.featured === 1,
+    plays: row.plays,
+    likes: row.likes,
+    createdAt: row.created_at,
+    url: versionBase(row.live_version),
+    cover: row.cover ? versionBase(row.live_version) + row.cover : null,
+  }
+}
+
+/** Every game listed in the store, newest first. Also feeds /llms.txt. */
+export async function listedGames(): Promise<Game[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT id, title, tagline, how_to_play, emoji, color, category, together, entry,
+            featured, plays, likes, created_at, cover, live_version
+       FROM games WHERE live = 1 AND live_version IS NOT NULL ORDER BY created_at DESC LIMIT 500`,
+  ).all<ListedGameRow>()
+  return results.map(toGame)
 }
