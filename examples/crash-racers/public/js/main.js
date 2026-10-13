@@ -223,7 +223,7 @@ const gates = createGates(scene)
  * A wrong present simply gives no gift.
  */
 const GIFT_SECONDS = 5.5
-const GIFT_EXTRA = 10
+const GIFT_EXTRA = 9
 const GIFT_PUSH = 8
 /**
  * The gates follow the child: three right in a row bring the harder step (three lanes, each house's harder present);
@@ -238,6 +238,8 @@ const GATE_KEY = 'crash-racers-gate-step'
 const gateStep = () => clamp(Math.round(Number(stored(GATE_KEY, '0'))) || 0, 0, 2)
 /** A race's gates. A run of right answers carries on from the last race, so a short race still leads to the next step. */
 const newGateRun = (streak = 0) => ({ ahead: null, last: new Map(), passed: [], skipped: 0, asked: 0, streak, misses: 0, steeredAt: -Infinity, steeredSide: 0 })
+/** Easy mode: a ◀ or ▶ held longer than this (s) when the car reaches the gate is not counted as an answer. */
+const HELD_TOO_LONG = 3
 /** Easy mode: how recently (s) the child's own ◀ or ▶ must have pointed the car into a lane for an untapped gate to count as their answer. */
 const STEERED_SECONDS = 4
 /** The present the child tapped for gate `g` (-1 left, 0 middle, 1 right, null none). It lives on the gate, so a rescue or a gate going out of sight never loses it. */
@@ -296,7 +298,8 @@ function passGate(g, car, proj) {
   // Two lanes, straight down the middle, under the house, with nothing tapped: no present chosen, so nothing happens (and nothing is counted).
   // In Easy mode the steering helper drifts a metre or so either way by itself, so an untapped gate is the child's answer only
   // when their own ◀ or ▶ took the car into that lane just before it: a child who only holds 🚀 is never marked right or wrong by chance.
-  const steered = run.steeredSide === side && game.raceTime - run.steeredAt < STEERED_SECONDS
+  // A steer held for more than 3 s (a child holding one button all race) is not a choice of present.
+  const steered = run.steeredSide === side && game.raceTime - run.steeredAt < STEERED_SECONDS && run.steeredAt - (run.holdStart ?? run.steeredAt) < HELD_TOO_LONG
   // Easy off: the car's lane is an answer only when it is on that present's coloured strip; the bits of road between
   // the strips (and the middle, with two presents) are no answer, so drifting down the road is never marked by chance.
   const w = game.track.width, off = Math.abs(proj.lateral)
@@ -1348,10 +1351,7 @@ function recover(car, dt) {
   }
 }
 
-/**
- * Racing: round a ramp or jump (40 m either side) every car passes through the others, so a pack lined up for the same
- * jump never piles up on it. The same ghost a rescued car gets; it ends once the car is clear of the others.
- */
+/** Racing: metres either side of a ramp or jump where the robots pass through each other (see startGhost). */
 const RAMP_GHOST_PAD = 40
 /**
  * Racing: a bot that has been pressed against another car for a while (alongside, pinning it to a wall, or locked
@@ -1382,8 +1382,11 @@ function unpin(car, dt) {
  * car, and steer round it), so the bunched start never ends in a pile-up at the first bend.
  */
 const START_GHOST = 14
-function startGhost(car) {
-  const on = input.easyGas && car.isBot && game.mode === 'race' && game.raceOn && game.raceTime < START_GHOST
+function startGhost(car, proj) {
+  // Robots pass through each other (only each other: never through the child's car) after GO in Easy, and round every
+  // ramp and jump, so a pack lined up for the same jump never piles up on it, and no robot sits over the child.
+  const atRamp = !!proj && game.track.nearRamp(proj.dist, RAMP_GHOST_PAD)
+  const on = car.isBot && game.mode === 'race' && game.raceOn && ((input.easyGas && game.raceTime < START_GHOST) || atRamp)
   const body = car.body
   if (on && body.collisionFilterGroup !== GROUP_BOT) {
     body.collisionFilterGroup = GROUP_BOT
@@ -1392,12 +1395,22 @@ function startGhost(car) {
     body.collisionFilterGroup = GROUP_CAR
     if (!(car.ghost > 0)) body.collisionFilterMask |= GROUP_BOT
     // Still overlapping another robot: an ordinary ghost until they are apart.
-    if ([...game.cars.values()].some((o) => o !== car && o.body.position.distanceTo(body.position) < 3.2)) setGhost(car, true)
+    if ([...game.cars.values()].some((o) => o !== car && o.isBot && o.body.position.distanceTo(body.position) < 3.2)) setGhost(car, true)
   }
 }
+/**
+ * Round a jump the robots pass through each other only (above). A small kicker is different: the cars drive round it,
+ * all on the same strip of road beside it (Ubud's is on a narrow road), so there every car passes through the others,
+ * the child included, from 25 m before it to 15 m after.
+ */
 function rampGhost(car, proj) {
-  startGhost(car)
-  if (game.mode !== 'race' || !game.raceOn || !proj || !game.track.nearRamp(proj.dist, RAMP_GHOST_PAD)) return
+  startGhost(car, proj)
+  if (game.mode !== 'race' || !game.raceOn || !proj) return
+  const atKicker = game.track.ramps.some((r) => r.half < 8 && loopMod(proj.dist - (r.dist - r.half - 25)) < r.half * 2 + 40)
+  // At a jump, a robot that comes within 6 m of the child passes through it too, rather than knocking it off the
+  // take-off (it then moves out of the child's line, see Bot.politeness).
+  const nearChild = car.isBot && game.player && car.body.position.distanceTo(game.player.body.position) < 6 && game.track.nearRamp(proj.dist, RAMP_GHOST_PAD)
+  if (!atKicker && !nearChild) return
   if (car.ghost > 0) car.ghost = Math.max(car.ghost, 0.5)
   else {
     setGhost(car, true)
@@ -1672,7 +1685,8 @@ function celebrate(place) {
     petal.style.setProperty('--spin', `${(Math.random() - 0.5) * 540}deg`)
     party.append(petal)
   }
-  $('results').append(party)
+  // On the page, not in the results screen: as its last child it bottom-aligned the results for as long as it lasted.
+  document.body.append(party)
   setTimeout(() => party.remove(), 9500)
 }
 
@@ -1724,10 +1738,17 @@ const humanController = {
     if (!input.easyGas) return (car.controls = govern(car, controls))
     // The child's own steering, remembered for the gates: in Easy mode only a lane they chose counts as an answer.
     if (game.gateRun && Math.abs(controls.steer) > 0.3) {
+      // A fresh press (or a change of side) starts a new hold; a button held for long is no answer (see passGate).
+      if (game.gateRun.steeredSide !== Math.sign(controls.steer) || game.raceTime - game.gateRun.steeredAt > 0.2) game.gateRun.holdStart = game.raceTime
       game.gateRun.steeredAt = game.raceTime
       game.gateRun.steeredSide = Math.sign(controls.steer)
     }
-    const gentle = { ...controls, steer: rampSteer(car, controls.steer, dt) * fastSteer(car) }
+    // A ◀ or ▶ held for a long time (a young child holding one button) fades to a light touch after 3 s, so the car
+    // keeps racing round the road instead of bumping the kerb; a fresh press steers fully again.
+    const run = game.gateRun
+    const held = run && Math.abs(controls.steer) > 0.3 ? game.raceTime - (run.holdStart ?? game.raceTime) : 0
+    const fade = held > HELD_TOO_LONG ? 0.25 : 1
+    const gentle = { ...controls, steer: rampSteer(car, controls.steer, dt) * fastSteer(car) * fade }
     car.controls = govern(car, backOut(car, steeringHelper(car, controls.cruise ? cruise(car, gentle) : gentle), dt))
   },
 }
@@ -1974,7 +1995,8 @@ function rampLane(car, proj) {
   const edge = game.track.width / 2 - 1.3
   for (const r of game.track.ramps) {
     const to = loopMod(r.dist - r.half - proj.dist)
-    if (to > 90 && loopMod(proj.dist - (r.dist - r.half)) > r.half * 2) continue
+    // A kicker is passed beside until 12 m past its end, so the car is clear of it before it steers back in.
+    if (to > 90 && loopMod(proj.dist - (r.dist - r.half)) > r.half * 2 + (r.half < 8 ? 12 : 0)) continue
     const off = proj.lateral - r.lateral
     if (Math.abs(off) > r.width / 2 + 1.6) continue
     // A small kicker with room beside it: pass it on the side the car is on. A jump (or no room): line up on it.
@@ -2046,7 +2068,9 @@ function steeringHelper(car, controls) {
   // from the road (more than about 70°) or is at the edge and still steering off it. Then the helper takes the wheel,
   // so a young child holding one button never circles for ever and the race always reaches its finish.
   const aim = car.angleTo(laneAim.x, laneAim.z)
-  const edge = game.track.width / 2 - 0.6
+  // Near the edge (1.2 m from it) a steer held towards the kerb is set aside, so the car keeps moving instead of
+  // bumping the kerb every few seconds.
+  const edge = game.track.width / 2 - 1.2
   const offRoad = Math.abs(aim) > 1.22 || (Math.abs(proj.lateral) > edge && Math.sign(controls.steer) === Math.sign(proj.lateral) && controls.steer !== 0)
   if (offRoad) return { ...controls, steer: clamp(aim * 2.5, -1, 1) }
   const firm = ramp != null || pass != null

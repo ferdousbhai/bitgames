@@ -1342,3 +1342,38 @@ Real-time Playwright races, 2 laps, 60 fps. **Gap** is the child's average dista
 - **"You passed …!"** was heard once or twice a race.
 - **Robots near the camera:** the longest single spell within 5 m of the camera was at most 5.7 s (one Stunt race) and at most 3.9 s in the other 24.
 - **Tests:** `browser.mjs --ids crash-racers --run cr-race8` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 errors.
+
+## 2026-10-13 — Eighth review (8.0): nobody races alone
+
+The eighth review played 36 real-time races. Careful play won 11 of 12 with close margins, and there were no endless races, no pushing and 0 errors. Both ends of the field were still lonely:
+
+- **At the back:** a child who ignored the gates, held 🚀 or steered wildly finished 4th from start to finish in 7 of 7 races, with the nearest car 35–67 m away on average.
+- **At the front:** a careful leader's nearest car averaged 22–59 m away.
+
+### Changes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| The back of the field was lonely | Robots more than 15 m ahead of the last child ease off (was 40 m), reaching the 85% floor by 90 m. | `public/js/bot.js:4`, `bot.js:100` |
+| Leads went unchallenged | Robots 5–25 m behind a leading child push 7% harder; once the lead is over 25 m, 10% (up to 12% far back). `GIFT_EXTRA` is 9 (was 10): at 10 careful won 9 of 10 but led by up to 122 m; at 7 it won 6 of 10. | `bot.js:101-102`; `main.js:226` |
+| The results jumped (the petal layer became the screen's last child) | The petals go on `document.body`, not the results screen. | `main.js:1689` |
+| Holding one steering button | **A held steer fades:** after 3 s it is a quarter-strength touch, so the car keeps racing; a fresh press steers fully. **The edge rule:** a steer towards the kerb is set aside 1.2 m from the edge (was 0.6). **No chance answers:** a steer held for more than 3 s when the car reaches a gate is not an answer, so the gate is skipped. Holding ◀ or ▶ now finishes 2.9–8.1 s behind the winner (was 15–36 s), and all 6 gates count as skipped. | `main.js:1746-1751`, `main.js:2071-2073`, `HELD_TOO_LONG` `main.js:242`, `passGate` steered check, `holdStart` in `humanController` |
+| Robots crossing in front of the camera, and a ghost over the child at a jump | **Urgent rule:** a robot over the child's car (within 5 m along and 2.5 m across) or within 8 m of the camera decides at once to pass or drop back, and either way moves to the far side of the road. **Jumps:** robots now pass through each other only (the robots-only group), never through the child. A robot that comes within 6 m of the child at a jump becomes a full ghost so it can't knock the child off the take-off, then moves out of the line. **Small kickers:** every car, the child included, is a ghost from 25 m before to 15 m after. There the cars all drive round it on the same narrow strip, and in Ubud this was where the child kept stalling. | `Bot.politeness` `bot.js:176-192`; `startGhost`/`rampGhost` `main.js:1385-1420` |
+| Easy off: ignoring the gates lost by only 0.4–0.8 s | The far-ahead slow-down floor is 80% (was 55%), and far-behind robots are at most 10% quicker. The turbo bursts are gone. | `bot.js:109-112` |
+| Repeat child stalls in Ubud | Ubud's roadside palms stand 2.6 m from the kerb (was 1.6 m), and the child passes a kicker on its side until 12 m past its end. | `cities.js:648`; `rampLane` |
+
+### Real-time results
+
+Real-time Playwright races, 2 laps, 60 fps. **Gap** is the child's distance to the nearest car still racing (mean / max), measured after 15 s.
+
+| Style (Easy) | Races | Wins | Margins | Gap when leading | Gap when last |
+| --- | --- | --- | --- | --- | --- |
+| Careful | 10 | **8 (80%)** | Wins by 0.3–3.6 s; losses Helsinki 2nd −0.5 s and Montreal 4th −8.3 s (a stall) | mean 1–33 m (eight of nine ≤ 24 m); max 4–82 m | mean 12–74 m |
+| Careless | 5 | **2** | Helsinki 🏆 +0.2 s (5 of 6 right); Montreal 🏆 +2.2 s (4 of 6 right); Dino 4th −2.4 s; Stunt 3rd −1.9 s; Ubud 2nd −2.6 s | mean 10–22 m | mean 16–38 m |
+| Ignoring the gates | 5 | **0** | Dino 3rd −3.7 s; Helsinki 4th −6.2 s; Montreal 4th −13.1 s; Stunt 4th −3.6 s; Ubud 4th −2.6 s | — | mean 4–44 m, max 6–76 m; places swapped 3rd/4th up to 9 times a race |
+| Holding ◀ / ▶ | 4 | 0 | Montreal 2nd −2.9 s; Dino 2nd −3.3 s; Helsinki 4th −3.0 s; Ubud 4th −8.1 s | — | — |
+| Easy off (autopilot) | 3 | 1 | Stunt 🏆 +1.0 s; Montreal 2nd −2.6 s; Helsinki 4th −18 s | — | — |
+
+- **Robots near the camera:** the longest single spell within 5 m was 5.0 s (one Montreal race); in the other 24 races it was at most 4.5 s.
+- **Careless wins:** both came with 4–5 of 6 presents right, so the gates still decided them.
+- **Tests:** `browser.mjs --ids crash-racers --run cr-race9` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 errors.

@@ -643,8 +643,9 @@ function buildUbud(env) {
     if (r() < 0.35) tree(track, center.clone().addScaledVector(sample.side, sign * 14), r() < 0.6 ? 'palm' : 'jungle', r)
   })
 
-  // Palms right at the roadside, and banana plants between them
-  track.lineSides({ offset: track.width / 2 + 1.6, spacing: () => 16 + r() * 18, depth: 0.6 }, ({ center, dist, sign }) => {
+  // Palms at the roadside (2.6 m out from the kerb: at 1.6 m cars running wide round a bend hit their trunks), and
+  // banana plants between them
+  track.lineSides({ offset: track.width / 2 + 2.6, spacing: () => 16 + r() * 18, depth: 0.6 }, ({ center, dist, sign }) => {
     const yaw = r() * 6, scale = 0.9 + r() * 0.3
     place(track, 'palm', center, yaw, scale)
     trunkCollider(track, center)

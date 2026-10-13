@@ -1,7 +1,7 @@
 import { clamp, damp, wrap } from './util.js'
 
 /** Easy mode: metres ahead of the last child before a bot starts to ease off (so a child at the back still races among cars). */
-const EASY_EASE = 40
+const EASY_EASE = 15
 
 /**
  * Computer drivers. Racing, they chase a point a little way down the road,
@@ -92,26 +92,24 @@ export class Bot {
       // Lined up for a ramp: the same run-up speed as the child's car (see JUMP_SPEED in main.js), so it clears the gap.
       if (ramp && ramp.half >= 8 && Math.abs(angle) < 0.25) safe = Math.max(safe, this.jumpSpeed ?? 24)
       // A rubber band that keeps a race a race without undoing the gates:
-      // - more than 40 m ahead of the last child a bot eases off, down to 85% by 140 m, so a child at the back (one who
-      //   ignores the gates, or steers wildly) still races among cars, and still loses;
-      // - 10–90 m behind a leading child a bot pushes 7% harder, so a lead is something to defend and has to be
-      //   re-earned at each gate (a careful child's race ends in more photo finishes);
-      // - further back, up to 12% quicker. Never a burst you can see.
-      if (lead > EASY_EASE && !ramp) safe *= clamp(1 - (lead - EASY_EASE) / 670, 0.85, 1)
-      else if (lead < -10 && lead >= -90) safe *= 1.07
-      else if (lead < -90) safe *= clamp(1.07 + (-lead - 90) / 1000, 1, 1.12)
+      // - more than 15 m ahead of the last child a bot eases off, down to 85% by 90 m, so a child at the back (one who
+      //   ignores the gates, or steers wildly) races among cars, scrapping with the slowest robot, and still loses;
+      // - 5–25 m behind a leading child a bot pushes 7% harder, and 10% once the lead is over 25 m (up to 12% far
+      //   back), so a leader usually has someone close and a lead has to be re-earned at each gate.
+      // Never a burst you can see.
+      if (lead > EASY_EASE && !ramp) safe *= clamp(1 - (lead - EASY_EASE) / 500, 0.85, 1)
+      else if (lead < -5 && lead >= -25) safe *= 1.07
+      else if (lead < -25) safe *= clamp(1.1 + (-lead - 90) / 1000, 1.1, 1.12)
     } else {
       // Lined up for a jump, go for it (a slow take-off falls short), but not flat out: at 40 m/s a bot overshot the
       // landing into the next bend. A small kicker is taken at the usual speed.
       safe = clamp(30 * this.skill - bend * 60, 9, 32)
       if (ramp && ramp.half >= 8 && Math.abs(angle) < 0.25) safe = Math.max(safe, 28)
-      // Rubber band: well ahead, cruise slower (never on a ramp: falling short isn't fun to watch).
-      if (!ramp && lead > 20) safe *= clamp(1 - (lead - 20) / 160, 0.55, 1)
-      else if (lead < -40) {
-        safe = Math.max(safe, 31)
-        // Far behind on a straight: turbo bursts to catch up (more often the further behind).
-        if (!this.calm && bend < 0.05 && Math.abs(angle) < 0.15 && !car.turboActive && Math.random() < clamp((-lead - 40) / 4000, 0, 0.04)) car.boost({ free: true, seconds: 1.2 })
-      }
+      // Rubber band, softer than it was (it slowed robots to 55% and gave them turbo bursts, so the gates hardly
+      // mattered): well ahead, cruise down to 80% (never on a ramp: falling short isn't fun to watch); far behind, a
+      // little quicker. No turbo bursts.
+      if (!ramp && lead > 20) safe *= clamp(1 - (lead - 20) / 300, 0.8, 1)
+      else if (lead < -40) safe *= clamp(1 + (-lead - 40) / 600, 1, 1.1)
     }
     // Easy mode: passing a child who has stopped, slowly; or not riding just behind the child, where the camera is.
     if (this.polite?.cap != null) safe = Math.min(safe, this.polite.cap)
@@ -181,13 +179,16 @@ export class Bot {
     // not). Measured from the child and from the camera itself. After a moment it either goes past wide (if it is the
     // quicker) or drops back.
     const behindChild = (along > 2 && along < 11 && Math.abs(side) < 4) || (this.camDist ?? 99) < 6
-    this.nearCamera = behindChild ? (this.nearCamera ?? 0) + dt : 0
-    // Once decided, it sticks: going past until it is ahead of the child, or dropping back until 15 m behind.
-    if (this.making === 'pass' && (along < -2 || Math.abs(side) > 6)) this.making = null
-    if (this.making === 'drop' && (along > 15 || along < 0)) this.making = null
-    if (!this.making && this.nearCamera > 0.6) this.making = (this.pace ?? this.car.speed) > child.speed + 0.5 && along > 0 ? 'pass' : 'drop'
+    // Right over the child's car (a ghost at a jump, or just respawned), or within 8 m of the camera: decided at once.
+    const urgent = (Math.abs(along) < 5 && Math.abs(side) < 2.5) || (this.camDist ?? 99) < 8
+    this.nearCamera = behindChild || urgent ? (this.nearCamera ?? 0) + dt : 0
+    // Once decided, it sticks: going past until it is ahead of the child, or dropping back until 15 m behind. Either
+    // way it moves to the far side of the road, out of the line between the camera and the child.
+    if (this.making === 'pass' && (along < -4 || Math.abs(side) > 6)) this.making = null
+    if (this.making === 'drop' && (along > 15 || along < -4)) this.making = null
+    if (!this.making && (this.nearCamera > 0.6 || urgent)) this.making = (this.pace ?? this.car.speed) > child.speed + 0.5 && along > 0 ? 'pass' : 'drop'
     if (this.making === 'pass') return { lane: farSide, floor: child.speed + 3 }
-    if (this.making === 'drop') return { cap: Math.max(6, child.speed - 3) }
+    if (this.making === 'drop') return { lane: farSide, cap: Math.max(6, child.speed - 4) }
     return null
   }
 
