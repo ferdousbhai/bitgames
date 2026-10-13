@@ -222,7 +222,7 @@ const gates = createGates(scene)
  * speed, gathering pace at GIFT_PUSH m/s² (about 20 m gained a gate: enough to pass a car close ahead, not to run away).
  * A wrong present simply gives no gift.
  */
-const GIFT_SECONDS = 6
+const GIFT_SECONDS = 5.5
 const GIFT_EXTRA = 10
 const GIFT_PUSH = 8
 /**
@@ -269,6 +269,11 @@ function watchGates() {
   run.ahead = showing
   if (showing) gates.freshen(showing)
   renderGatePick()
+  // A gate driven through with no choice: at the next gate, one short reminder (twice a race at most).
+  if (showing && run.skipped > (run.reminded ?? 0) && (run.reminded ?? 0) < 2) {
+    run.reminded = run.skipped
+    voice.say(input.easyGas ? 'Tap a present for a speed boost!' : 'Drive under a present for a speed boost!')
+  }
   if (showing?.mapped) voice.sayOnce('Whose gate is this? Find the next pin on the map, then choose their present.')
   else if (showing) {
     // The speed boost is a racing thing: Bumpers has no finish line to hurry to.
@@ -329,6 +334,7 @@ function passGate(g, car, proj) {
     if (race) {
       audio.whoosh()
       car.giftUntil = game.raceTime + GIFT_SECONDS
+      car.giftHeld = 0
       car.giftColour = g.kind.colour
     }
     banner(`${g.kind.resident} 👋 ${gift.emoji}${race ? ' 💨' : ''}`, 1400)
@@ -1013,9 +1019,10 @@ function fadeTags() {
     if (!car.tag) continue
     const d = camera.position.distanceTo(car.root.position)
     let o = clamp((d - 4) / 6, 0, 1)
-    // A robot's tag would sit over the presents of a gate it is driving up to: hidden for the last 25 m before a gate.
+    // A robot's tag would sit over the presents of a gate it is driving up to: hidden from 25 m before a gate to 12 m
+    // past it (while the robot can still be seen under the gantry).
     const proj = game.progress.get(car.id)?.proj
-    if (proj && gates.gates.some((g) => loopMod(g.dist - proj.dist) < 25 || loopMod(proj.dist - g.dist) < 4)) o = 0
+    if (proj && gates.gates.some((g) => loopMod(g.dist - proj.dist) < 25 || loopMod(proj.dist - g.dist) < 12)) o = 0
     car.tag.material.opacity = o
     car.tag.visible = o > 0.02 && car.root.visible
   }
@@ -1088,7 +1095,8 @@ function stunts(car, proj) {
   }
   car.boostPad = pad ?? null
   // At the top of a jump (still going fast: a car that just rolled onto its roof isn't flying).
-  if (car.isPlayer && car.airTime > 0.55 && !car.slowmoJump && car.body.velocity.y > -2 && car.speed > 6) {
+  // Not in a race: the swinging replay camera mid-race lost the chase view (and the car filled the screen).
+  if (car.isPlayer && game.mode !== 'race' && car.airTime > 0.55 && !car.slowmoJump && car.body.velocity.y > -2 && car.speed > 6) {
     car.slowmoJump = true
     slowmo(900)
   }
@@ -1276,6 +1284,8 @@ function rescued() {
   rescuedAt = game.raceTime
 }
 const RESCUE_QUIET = 8
+/** Bumpers: 🅿️ works only after this many seconds of play. */
+const PARK_AFTER = 15
 /** Average speed along the road (m/s) below which a car over its whole no-headway window counts as getting nowhere. */
 const HEADWAY_SPEED = 1.5
 
@@ -1337,9 +1347,15 @@ const RAMP_GHOST_PAD = 40
 const PINNED_SECONDS = 0.7
 function unpin(car, dt) {
   if (game.mode !== 'race' || !game.raceOn || !car.isBot || car.ghost > 0) return (car.pressed = 0)
+  // Side by side (centres within 3.2 m), or nose to tail: a car up to 5 m behind or ahead in the same line is pressing.
   let touching = false
+  const proj = game.progress.get(car.id)?.proj
+  const s = proj && game.track.sampleAt(proj.dist)
   for (const other of game.cars.values()) {
-    if (other !== car && other.body.position.distanceTo(car.body.position) < 3.2) touching = true
+    if (other === car) continue
+    const dx = other.body.position.x - car.body.position.x, dz = other.body.position.z - car.body.position.z
+    const along = s ? dx * s.t.x + dz * s.t.z : 0, side = s ? dx * s.side.x + dz * s.side.z : 99
+    if (Math.hypot(dx, dz) < 3.2 || (Math.abs(along) < 5 && Math.abs(side) < 2)) touching = true
   }
   car.pressed = touching ? (car.pressed ?? 0) + dt : 0
   if (car.pressed > PINNED_SECONDS) {
@@ -1425,8 +1441,9 @@ const ACTIONS = {
   camera: () => (game.cameraMode = (game.cameraMode + 1) % 3),
   turbo,
   // Smash: no clock. Whoever runs the game parks everyone when they are ready.
+  // Not in the first 15 s: one stray tap on 🅿️ used to end the session at once.
   park: () => {
-    if (game.mode === 'smash' && (isHost() || game.room.solo)) endSmash()
+    if (game.mode === 'smash' && (isHost() || game.room.solo) && game.raceTime > PARK_AFTER) endSmash()
   },
 }
 const KEYS = { r: 'reset', f: 'fix', h: 'horn', c: 'camera', shift: 'turbo' }
@@ -1622,7 +1639,11 @@ function celebrate(place) {
     const passed = game.gateRun?.passed ?? []
     const gatesSeen = passed.length + (game.gateRun?.skipped ?? 0)
     const missedMost = gatesSeen > 0 && passed.filter((p) => p.right).length < gatesSeen / 2
-    voice.say(won ? 'You won the race!' : place === 1 ? 'Second place! So close.' : `You came ${ORDINAL_WORD[place]}.${missedMost ? ' Right presents at the gates give you a speed boost!' : ' Well raced!'}`)
+    // "So close" only when it was: within 1.5 s of the winner.
+    const mine = game.finishTimes.get(game.room.selfId), best = Math.min(...game.finishTimes.values())
+    const close = mine != null && mine - best < 1.5
+    const hint = missedMost ? ' Right presents at the gates give you a speed boost!' : ''
+    voice.say(won ? 'You won the race!' : place === 1 ? (close ? 'Second place! So close.' : 'Second place!') + hint : `You came ${ORDINAL_WORD[place]}.${hint || ' Well raced!'}`)
   }
   if (reducedMotion.matches) return
   const party = document.createElement('div')
@@ -1742,6 +1763,8 @@ function runUp(car) {
  */
 function giftExtra(car) {
   if (!(car.giftUntil > game.raceTime)) return 0
+  // Stuck right behind a car (see passLane), the gift waits until the car is out beside it.
+  if (car.blocked && car.isPlayer) return 0.01
   const proj = game.progress.get(car.id)?.proj
   if (!proj) return 0
   const bend = game.track.bendAhead(proj.dist, game.track.lookAhead(car.speed))
@@ -1755,6 +1778,14 @@ const giftDust = new THREE.Vector3()
 const giftDrift = new THREE.Vector3()
 function giftPush(car, dt) {
   if (!(car.giftUntil > game.raceTime) || !car.grounded || runUp(car)) return
+  // Waiting behind a car: the gift's clock waits too (up to 2 s), and there is no push into its tail.
+  if (car.blocked) {
+    if ((car.giftHeld ?? 0) < 2) {
+      car.giftHeld = (car.giftHeld ?? 0) + dt
+      car.giftUntil += dt
+    }
+    return
+  }
   const v = car.body.velocity
   const flat = Math.hypot(v.x, v.z)
   const top = giftTop(car)
@@ -1777,6 +1808,15 @@ function giftPush(car, dt) {
  * a jump or a push can carry the car past the cap where the brakes cannot
  * reach; past the cap the speed is trimmed back after each physics step.
  */
+function capSpeed(car, cap, dt) {
+  const v = car.body.velocity
+  const flat = Math.hypot(v.x, v.z)
+  if (flat <= cap) return
+  const to = Math.max(cap, flat - 10 * dt)
+  v.x *= to / flat
+  v.z *= to / flat
+}
+
 function holdEasyCap(car, dt) {
   // A present's gift lifts the cap while it lasts; afterwards the speed eases back down, never snaps.
   const v = car.body.velocity
@@ -1904,6 +1944,8 @@ function step(dt) {
   for (const car of game.cars.values()) if (!car.remote) car.afterStep(dt)
   // After the physics (the wheels would otherwise push the speed straight back): the Easy cap holds on the ground and in the air.
   if (game.player && game.raceOn) giftPush(game.player, dt)
+  // A robot is never carried faster than its own pace by a push from behind (see Bot.update's speedCap).
+  if (game.raceOn) for (const car of game.cars.values()) if (car.isBot && !car.remote && car.speedCap && car.grounded && !car.turboActive) capSpeed(car, car.speedCap, dt)
   if (game.player && input.easyGas && game.raceOn) holdEasyCap(game.player, dt)
 }
 
@@ -1938,19 +1980,25 @@ function passLane(car, proj) {
   const s = game.track.sampleAt(proj.dist)
   const me = car.body.position
   const room = game.track.width / 2 - 1.3
-  const reach = giftExtra(car) > 0 ? 26 : 20
+  const boosted = giftExtra(car) > 0
+  const reach = boosted ? 30 : 20
+  // Boosted, the pass is wider (3.2 m beside the car, against 2.5 m), so the gift goes past it instead of into its tail.
+  const gap = boosted ? 3.2 : 2.5
   let best = null, nearest = Infinity
+  car.blocked = false
   for (const other of game.cars.values()) {
     if (other === car) continue
     const dx = other.body.position.x - me.x, dz = other.body.position.z - me.z
     const along = dx * s.t.x + dz * s.t.z
     const side = dx * s.side.x + dz * s.side.z
-    if (along < -1 || along > reach || Math.abs(side) > 2.5 || along > nearest) continue
+    if (along < -1 || along > reach || Math.abs(side) > gap || along > nearest) continue
     nearest = along
     const theirs = proj.lateral + side
-    // The side of that car with more road; the lane is 2.5 m from it, kept on the road.
+    // The side of that car with more road; the lane is `gap` from it, kept on the road.
     const way = theirs > 0 ? -1 : 1
-    best = clamp(theirs + way * 2.5, -room, room)
+    best = clamp(theirs + way * gap, -room, room)
+    // Right behind it and not yet beside it: the gift waits (see giftPush), so the child never shoves a car along.
+    car.blocked = along < 7 && Math.abs(side) < 2.1
   }
   return best
 }
@@ -1971,11 +2019,13 @@ function steeringHelper(car, controls) {
   const target = game.track.sampleAt(proj.dist + 8 + car.speed * 0.6)
   // A ramp coming up comes first, then a car to pass, then the gate's lean.
   const ramp = rampLane(car, proj)
-  const lane = ramp ?? passLane(car, proj) ?? (gate ? gate.tapped * Math.min(1.2, game.track.width * 0.16) : 0)
+  const pass = ramp == null ? passLane(car, proj) : null
+  const lane = ramp ?? pass ?? (gate ? gate.tapped * Math.min(1.2, game.track.width * 0.16) : 0)
   laneAim.copy(target.p).addScaledVector(target.side, lane)
   // Lining up for a ramp, the sideways gap itself also pulls the wheel (aiming at a point down a bend alone leaves the
   // car drifting wide of the line, onto the jump's edge).
-  const across = ramp != null ? clamp((ramp - proj.lateral) * 0.3, -0.4, 0.4) : 0
+  // Passing, the same: a firmer grip, so the car really pulls out beside the one ahead.
+  const across = ramp != null ? clamp((ramp - proj.lateral) * 0.3, -0.4, 0.4) : pass != null ? clamp((pass - proj.lateral) * 0.35, -0.5, 0.5) : 0
   // A held ◀ or ▶ is the child's own steering, and the helper only leans on it, unless the car has turned well away
   // from the road (more than about 70°) or is at the edge and still steering off it. Then the helper takes the wheel,
   // so a young child holding one button never circles for ever and the race always reaches its finish.
@@ -1983,7 +2033,8 @@ function steeringHelper(car, controls) {
   const edge = game.track.width / 2 - 0.6
   const offRoad = Math.abs(aim) > 1.22 || (Math.abs(proj.lateral) > edge && Math.sign(controls.steer) === Math.sign(proj.lateral) && controls.steer !== 0)
   if (offRoad) return { ...controls, steer: clamp(aim * 2.5, -1, 1) }
-  const help = clamp(aim * (ramp != null ? 2.2 : 1.6) + across, -0.8, 0.8) * (1 - Math.abs(controls.steer) * 0.7)
+  const firm = ramp != null || pass != null
+  const help = clamp(aim * (firm ? 2.2 : 1.6) + across, firm ? -1 : -0.8, firm ? 1 : 0.8) * (1 - Math.abs(controls.steer) * 0.7)
   return { ...controls, steer: clamp(controls.steer + help, -1, 1) }
 }
 

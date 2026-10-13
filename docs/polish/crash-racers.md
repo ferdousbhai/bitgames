@@ -1275,3 +1275,37 @@ Real-time Playwright races, 2 laps, 60 fps in every race. Every race reached the
 
 - All three careful losses were photo finishes (0.2–0.3 s).
 - **Tests:** `browser.mjs --ids crash-racers --run cr-race6` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 page or console errors.
+
+## 2026-10-13 — Sixth review (7.8): pass, don't push
+
+The sixth review played 29 real-time Easy races. There were no endless races, no overlaps at the start, no console errors, and the podium was right every time. But careful play won only 6 of 13: five losses were 2nd by 0.2–0.3 s. The probes showed the cause: a boosted child closed to about 4 m behind the leader, slightly off its line, and *pushed* it along at 26–31 m/s (its pace is 20.6) for 6–12 s instead of passing.
+
+### Changes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| A boosted child pushed the leader instead of passing it | **passLane:** boosted, it looks 30 m ahead and passes 3.2 m beside (2.5 m otherwise). While right behind a car (within 7 m and not yet out beside it), the child is `blocked`: the gift waits (its clock pauses up to 2 s, no push). **The helper's grip while passing:** gain 2.2 plus a sideways pull, and a cap of 1.0 (was 0.8). **unpin:** a car within 5 m nose to tail in the same line now counts as pressing, as well as side by side. **dodge:** a robot moves 2.9 m aside for a quicker car close behind it. **Robots never gain speed from a push:** each robot's speed is trimmed back to its target + 1.5 m/s after the physics step (on the ground, not during turbo). | `main.js:1980-2003`, `main.js:2030-2040` (`steeringHelper`), `main.js:1762-1768` (`giftExtra`), `giftPush`; `main.js:1350-1360` (`unpin`); `bot.js:141-147`; `bot.js:121`, `capSpeed` `main.js:1811`, `main.js:1948` |
+| The jump replay camera swung to a side view mid-race | The slow-motion replay is off in races; the chase camera stays. | `main.js:1099` |
+| A child who ignores the gates gets one prompt and sits 4th | After a gate driven through with no choice, the next gate says "Tap a present for a speed boost!" (at most twice a race). The "Right presents at the gates give you a speed boost!" hint now also follows 2nd place. | `main.js:272-276`; `celebrate` `main.js:1640-1648` |
+| A robot rode 3.8 m from the camera for about 4 s | A robot that has spent 0.8 s just behind the moving child (2–11 m, where the camera rides) decides, and sticks to it: it passes wide (floor at the child's speed + 3) until it is ahead, or drops back (cap at the child's speed − 3) until 15 m behind. | `Bot.politeness`, `bot.js:176-192` |
+| 🤖 tags came back 4 m past a gate | Hidden from 25 m before to 12 m past. | `main.js:1025` |
+| Bumpers: one mashed 🅿️ ended at 3.4 s | 🅿️ works only after 15 s (`PARK_AFTER`). Tested: five taps at 3–4 s are ignored, and one tap at 16 s parks. | `main.js:1288`, `ACTIONS.park` |
+| "Second place! So close." with a large gap | "So close" only when within 1.5 s of the winner; otherwise "Second place!". | `main.js:1642-1646` |
+
+`GIFT_SECONDS` is 5.5 (was 6). Once the gift passed instead of pushing, 6 s won by 4–8 s (8 of 10), and 5 s won 6 of 10.
+
+### Real-time results (2 laps, 60 fps)
+
+| Style (Easy) | Races | Wins | Results |
+| --- | --- | --- | --- |
+| Careful | 10 | **7 (70%)** | Portrait: Dino 🏆 +3.4 s, Montreal 🏆 +0.7 s, Stunt 🏆 +3.1 s, Ubud 🏆 +3.1 s, Helsinki 3rd −1.9 s. Landscape: Dino 🏆 +6.3 s, Montreal 🏆 +3.9 s, Ubud 🏆 +3.5 s, Helsinki 3rd −3.0 s, Stunt 2nd −0.4 s |
+| Careless | 5 | **0** | Dino 2nd −6.0 s; Helsinki 4th −6.4 s; Montreal 2nd −4.1 s; Stunt 3rd −5.1 s; Ubud 4th −6.8 s |
+| Ignoring the gates | 5 | **0** (average 3.6th) | Dino 4th; Helsinki 3rd; Montreal 3rd; Stunt 4th; Ubud 4th. Each heard "Tap a present for a speed boost!" twice, then the place with the hint. |
+
+- **Pushing is gone:** in the careful races, the child spent 0–7.8 s a race "blocked" behind a car (waiting to get out beside it), and no leader was pushed along.
+- **Robots near the camera:**
+  - Total time a robot spent within 5 m of the camera fell from up to 24.5 s a race (before the robot change) to 0–14 s.
+  - In six follow-up races in Stunt and Dino, the longest single spell was at most 2.8 s.
+  - One earlier careless Stunt race logged a 14.9 s spell, which I could not reproduce.
+- **Jump cities:** Dino and Stunt in every batch. No replay swing; the chase camera stayed.
+- **Tests:** `browser.mjs --ids crash-racers --run cr-race7` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 errors.

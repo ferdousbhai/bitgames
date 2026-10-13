@@ -113,8 +113,12 @@ export class Bot {
         if (!this.calm && bend < 0.05 && Math.abs(angle) < 0.15 && !car.turboActive && Math.random() < clamp((-lead - 40) / 4000, 0, 0.04)) car.boost({ free: true, seconds: 1.2 })
       }
     }
-    // Easy mode: passing a child who has stopped, slowly.
+    // Easy mode: passing a child who has stopped, slowly; or not riding just behind the child, where the camera is.
     if (this.polite?.cap != null) safe = Math.min(safe, this.polite.cap)
+    if (this.polite?.floor != null) safe = Math.max(safe, this.polite.floor)
+    // A robot never gains speed from being pushed (a boosted child behind it): past its own speed it is trimmed back
+    // after the physics step (see main.js).
+    car.speedCap = safe + 1.5
     car.controls = {
       steer: clamp(angle * 2.2 + (this.across ?? 0), -1, 1),
       throttle: car.speed < safe ? 1 : 0.2,
@@ -135,6 +139,12 @@ export class Bot {
       const dx = other.body.position.x - me.x, dz = other.body.position.z - me.z
       const along = dx * s.t.x + dz * s.t.z
       const side = dx * s.side.x + dz * s.side.z
+      // A quicker car close behind (a boosted child): move aside and let it by.
+      if (along < -1 && along > -7 && Math.abs(side) < 2.5 && other.speed > this.car.speed + 1) {
+        const theirs = proj.lateral + side
+        want = theirs + (theirs > 0 ? -1 : 1) * 2.9 - this.lane
+        break
+      }
       if (along < -3 || along > 24 || Math.abs(side) > 3.6) continue
       // Pass on whichever side of the other car has more road, about 2.9 m out from it.
       const theirs = proj.lateral + side
@@ -156,15 +166,28 @@ export class Bot {
    * along the far edge of the road, so a stopped car is never shunted.
    */
   politeness(dt, proj, child) {
-    if (child.speed > 4) return null
     const s = this.track.sampleAt(proj.dist)
     const me = this.car.body.position
     const dx = child.body.position.x - me.x, dz = child.body.position.z - me.z
     const along = dx * s.t.x + dz * s.t.z // > 0: the child is ahead of this bot
     const side = dx * s.side.x + dz * s.side.z
-    if (Math.abs(side) > 6 || along <= -1 || along >= 24) return null
     const edge = this.track.width / 2 - 1.4
-    return { cap: 9, lane: (proj.lateral + side >= 0 ? -1 : 1) * edge }
+    const farSide = (proj.lateral + side >= 0 ? -1 : 1) * edge
+    if (child.speed <= 4) {
+      if (Math.abs(side) > 6 || along <= -1 || along >= 24) return null
+      return { cap: 9, lane: farSide }
+    }
+    // Just behind the moving child is where the camera rides: a bot does not sit there. After a second it either goes
+    // past wide (if it is the quicker) or drops back a little.
+    const behindChild = along > 2 && along < 11 && Math.abs(side) < 4
+    this.nearCamera = behindChild ? (this.nearCamera ?? 0) + dt : 0
+    // Once decided, it sticks: going past until it is ahead of the child, or dropping back until 15 m behind.
+    if (this.making === 'pass' && (along < -2 || Math.abs(side) > 6)) this.making = null
+    if (this.making === 'drop' && (along > 15 || along < 0)) this.making = null
+    if (!this.making && this.nearCamera > 0.8) this.making = (this.pace ?? 0) > child.speed + 0.5 ? 'pass' : 'drop'
+    if (this.making === 'pass') return { lane: farSide, floor: child.speed + 3 }
+    if (this.making === 'drop') return { cap: Math.max(6, child.speed - 3) }
+    return null
   }
 
   /** Backs out for a moment after being stuck; returns true while reversing. */
