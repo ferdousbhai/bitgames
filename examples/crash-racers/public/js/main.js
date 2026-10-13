@@ -861,6 +861,7 @@ function startRace(setup) {
   game.finaleAt = 0
   game.confetti = false
   game.podiumShown = false
+  game.passedLap = -1
   shown.delete('place')
   game.waveNamed = false
   $('lap').classList.toggle('hidden', game.mode === 'smash')
@@ -1008,7 +1009,9 @@ function nameTag(text, colour) {
     g.textBaseline = 'middle'
     g.fillText(text, 128, 68)
   })
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false, toneMapped: false, fog: false }))
+  // Depth-tested: the child's own car (and a gate's presents) in front of a robot hide its tag, instead of the tag
+  // sitting on top of them.
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true, transparent: true, sizeAttenuation: false, toneMapped: false, fog: false }))
   sprite.scale.set(0.14, 0.07, 1)
   sprite.renderOrder = 10
   return sprite
@@ -1023,6 +1026,11 @@ function fadeTags() {
     // past it (while the robot can still be seen under the gantry).
     const proj = game.progress.get(car.id)?.proj
     if (proj && gates.gates.some((g) => loopMod(g.dist - proj.dist) < 25 || loopMod(proj.dist - g.dist) < 12)) o = 0
+    // While the child is choosing a present (a gate on the buttons, up to 120 m away), no robot tags at all.
+    if (game.gateRun?.ahead && game.mode === 'race') o = 0
+    // A robot just ahead in the child's own line: its tag would sit on the child's car.
+    const me = game.player && game.progress.get(game.player.id)?.proj
+    if (proj && me && loopMod(proj.dist - me.dist) < 15 && Math.abs(proj.lateral - me.lateral) < 3) o = 0
     car.tag.material.opacity = o
     car.tag.visible = o > 0.02 && car.root.visible
   }
@@ -1264,7 +1272,12 @@ const projOf = (car) => game.progress.get(car.id)?.proj ?? game.track.project(ca
 /** Back on the road `ahead` metres on (place() clears the car's recovery timers), passing through cars for a moment. */
 function respawn(car, ahead = 0) {
   const proj = projOf(car)
-  const s = game.track.sampleAt(game.track.clearOfRamps(proj.dist + ahead, 3))
+  let to = proj.dist + ahead
+  // A robot put back on the road never lands right by this device's child (in the camera's view, or overlapping as a
+  // ghost just in front): it comes back a little behind the camera instead.
+  const me = car.isBot && game.player && game.progress.get(game.player.id)?.proj
+  if (me && (loopMod(to - me.dist) < 12 || loopMod(me.dist - to) < 14)) to = me.dist - 24
+  const s = game.track.sampleAt(game.track.clearOfRamps(to, 3))
   car.place(s.p, game.track.headingAt(s))
   car.backOut = car.wedged = car.backOuts = 0
   // A car that lost a wheel can't get going again: it comes back with its wheels on.
@@ -1901,7 +1914,10 @@ function botController(bot) {
       const proj = projOf(car)
       // Easy-mode bumper cars: the bots potter round the road at a gentle pace instead of hunting the nearest car.
       // Easy mode: every bot also keeps out of the camera's view of this device's child (see Bot.politeness).
-      const child = input.easyGas && game.raceOn ? game.player : null
+      // Racing (Easy or not), every bot also keeps out of the camera's view of this device's child (see Bot.politeness).
+      const child = (game.mode === 'race' || input.easyGas) && game.raceOn ? game.player : null
+      bot.camDist = camera.position.distanceTo(car.root.position)
+      bot.easy = input.easyGas
       if (game.mode === 'smash' && input.easyGas) bot.update(dt, proj, null, 100, game.cars.values(), child)
       else if (game.mode === 'smash') bot.update(dt, proj, Bot.nearest(car, game.cars.values()))
       else bot.update(dt, proj, null, leadOverLastHuman(car), game.cars.values(), child)
@@ -2059,7 +2075,7 @@ function tick(dt, realDt) {
     unpin(car, dt)
     if (game.raceOn && proj) pickups.collect(car, proj, game.raceTime, PICKUP_HANDLERS)
   }
-  pickups.update(dt, game.room.selfId, game.raceTime)
+  pickups.update(dt, game.room.selfId, game.raceTime, camera)
   debris.update(dt)
   game.track.update(dt)
   if (game.raceOn && game.player && !game.progress.get(game.player.id)?.finished) watchGates()
@@ -2224,8 +2240,19 @@ function renderPlace(now = performance.now()) {
   // A new order shows once it has held for a moment, so cars side by side never make the pill flicker.
   if (key !== placePending.key) placePending = { key, since: now }
   if (shown.get('place') === key || (shown.has('place') && now - placePending.since < PLACE_SETTLE)) return
+  // A car the child has just passed (it was right ahead, now it is behind): said softly, by name, once a lap at most.
+  const before = shown.get('place')?.split(',')
   shown.set('place', key)
   const i = rows.findIndex((r) => r.id === self)
+  if (before && game.state === 'race') {
+    const was = before.indexOf(self)
+    const passed = was > i ? rows[i + 1] : null
+    const lap = game.progress.get(self)?.lap ?? 0
+    if (passed && before[was - 1] === passed.id && game.passedLap !== lap) {
+      game.passedLap = lap
+      voice.say(`You passed ${CAR_MODELS[validModel(passed.model) ? passed.model : CAR_IDS[0]].name}!`)
+    }
+  }
   el.querySelector('.rank').textContent = ORDINAL[i]
   el.querySelector('.of').textContent = ` of ${rows.length}`
   el.querySelector('.order').innerHTML = rows.map((r) => `<span class="${r.id === self ? 'me' : ''}" style="--ring:${game.cars.get(r.id)?.colour ?? '#fff'}">${carPic(validModel(r.model) ? r.model : CAR_IDS[0], 'pic order-pic')}</span>`).join('')

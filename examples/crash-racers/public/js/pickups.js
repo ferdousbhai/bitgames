@@ -182,7 +182,7 @@ export class Pickups {
   }
 
   /** Spins and bobs everything; hides what the viewer (`viewerId`) has collected. */
-  update(dt, viewerId, now) {
+  update(dt, viewerId, now, camera = null) {
     if (!this.starMesh) return
     this.time += dt
     const seen = this.cars.get(viewerId)
@@ -204,7 +204,9 @@ export class Pickups {
       // A slow, gentle turn: something to notice on the road, not a flashing prize.
       d.position.set(it.x, it.y + Math.sin(this.time * 1.2 + i) * 0.08, it.z)
       d.rotation.set(0.35, this.time * 0.5 + i, 0.2)
-      d.scale.setScalar(back)
+      // Right up against the camera a box shrinks away instead of filling the screen.
+      const near = camera ? clamp((Math.hypot(it.x - camera.position.x, it.z - camera.position.z) - 3) / 4, 0, 1) : 1
+      d.scale.setScalar(back * near)
       d.updateMatrix()
       this.boxMesh.setMatrixAt(i, d.matrix)
     }

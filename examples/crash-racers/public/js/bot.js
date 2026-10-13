@@ -1,7 +1,7 @@
 import { clamp, damp, wrap } from './util.js'
 
-/** Easy mode: metres ahead of the last child before a bot starts to ease off. */
-const EASY_EASE = 80
+/** Easy mode: metres ahead of the last child before a bot starts to ease off (so a child at the back still races among cars). */
+const EASY_EASE = 40
 
 /**
  * Computer drivers. Racing, they chase a point a little way down the road,
@@ -91,15 +91,15 @@ export class Bot {
       safe = clamp(this.pace - bend * 35, 9, this.pace)
       // Lined up for a ramp: the same run-up speed as the child's car (see JUMP_SPEED in main.js), so it clears the gap.
       if (ramp && ramp.half >= 8 && Math.abs(angle) < 0.25) safe = Math.max(safe, this.jumpSpeed ?? 24)
-      // A gentle rubber band that keeps a race a race without undoing the gates:
-      // - well ahead of the child (80 m or more, after a crash or a long stop) a bot eases off a little, so a slip
-      //   never loses the whole race, but a child who ignores the gates still trails;
-      // - 15–60 m behind the child a bot pushes about 3% harder, so a lead is challenged and has to be kept by
-      //   earning more gifts at the next gates (but a lead earned at the gates is not simply reeled back in);
-      // - far behind, up to 12% quicker, so the pack stays together. Never a burst you can see.
-      if (lead > EASY_EASE && !ramp) safe *= clamp(1 - (lead - EASY_EASE) / 600, 0.92, 1)
-      else if (lead < -15 && lead >= -60) safe *= 1.03
-      else if (lead < -60) safe *= clamp(1.03 + (-lead - 60) / 1000, 1, 1.12)
+      // A rubber band that keeps a race a race without undoing the gates:
+      // - more than 40 m ahead of the last child a bot eases off, down to 85% by 140 m, so a child at the back (one who
+      //   ignores the gates, or steers wildly) still races among cars, and still loses;
+      // - 10–90 m behind a leading child a bot pushes 7% harder, so a lead is something to defend and has to be
+      //   re-earned at each gate (a careful child's race ends in more photo finishes);
+      // - further back, up to 12% quicker. Never a burst you can see.
+      if (lead > EASY_EASE && !ramp) safe *= clamp(1 - (lead - EASY_EASE) / 670, 0.85, 1)
+      else if (lead < -10 && lead >= -90) safe *= 1.07
+      else if (lead < -90) safe *= clamp(1.07 + (-lead - 90) / 1000, 1, 1.12)
     } else {
       // Lined up for a jump, go for it (a slow take-off falls short), but not flat out: at 40 m/s a bot overshot the
       // landing into the next bend. A small kicker is taken at the usual speed.
@@ -173,18 +173,19 @@ export class Bot {
     const side = dx * s.side.x + dz * s.side.z
     const edge = this.track.width / 2 - 1.4
     const farSide = (proj.lateral + side >= 0 ? -1 : 1) * edge
-    if (child.speed <= 4) {
+    if (child.speed <= 4 && this.easy) {
       if (Math.abs(side) > 6 || along <= -1 || along >= 24) return null
       return { cap: 9, lane: farSide }
     }
-    // Just behind the moving child is where the camera rides: a bot does not sit there. After a second it either goes
-    // past wide (if it is the quicker) or drops back a little.
-    const behindChild = along > 2 && along < 11 && Math.abs(side) < 4
+    // Just behind the moving child is where the camera rides: a bot does not sit there (in Easy or not, a ghost or
+    // not). Measured from the child and from the camera itself. After a moment it either goes past wide (if it is the
+    // quicker) or drops back.
+    const behindChild = (along > 2 && along < 11 && Math.abs(side) < 4) || (this.camDist ?? 99) < 6
     this.nearCamera = behindChild ? (this.nearCamera ?? 0) + dt : 0
     // Once decided, it sticks: going past until it is ahead of the child, or dropping back until 15 m behind.
     if (this.making === 'pass' && (along < -2 || Math.abs(side) > 6)) this.making = null
     if (this.making === 'drop' && (along > 15 || along < 0)) this.making = null
-    if (!this.making && this.nearCamera > 0.8) this.making = (this.pace ?? 0) > child.speed + 0.5 ? 'pass' : 'drop'
+    if (!this.making && this.nearCamera > 0.6) this.making = (this.pace ?? this.car.speed) > child.speed + 0.5 && along > 0 ? 'pass' : 'drop'
     if (this.making === 'pass') return { lane: farSide, floor: child.speed + 3 }
     if (this.making === 'drop') return { cap: Math.max(6, child.speed - 3) }
     return null

@@ -1309,3 +1309,36 @@ The sixth review played 29 real-time Easy races. There were no endless races, no
   - One earlier careless Stunt race logged a 14.9 s spell, which I could not reproduce.
 - **Jump cities:** Dino and Stunt in every batch. No replay swing; the chase camera stayed.
 - **Tests:** `browser.mjs --ids crash-racers --run cr-race7` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 errors.
+
+## 2026-10-13 — Seventh review (8.3): a lead to defend, a pack to race in
+
+The seventh review played 32 real-time races. Every race ended, passing worked, pushing was gone, there were 0 errors, and the podium was right every time. But careful play won 15 of 15 in Easy:
+
+- **Too predictable at the front:** a careful child led alone by mid-lap 1, with the nearest car 28–53 m away.
+- **Lonely at the back:** gate-ignorers and wild steerers finished 6–26 s behind, with the nearest car 76–196 m away.
+
+### Changes
+
+| Finding | Fix | Where |
+| --- | --- | --- |
+| A lead was never challenged | Robots 10–90 m behind a leading child push 7% harder (was 3% from 15–60 m); further back, up to 12%. The lead must be re-earned at each gate. | `public/js/bot.js:96-102` |
+| A child at the back raced alone | A robot more than 40 m ahead of the last child eases off (was 80 m), down to 85% by 140 m (was 92%). | `bot.js:4`, `bot.js:100` |
+| 🤖 tags sat on the child's car and on the gate presents | Tags are depth-tested, so the child's own car and the presents in front hide them. All tags are hidden while the child's gate buttons show (a gate up to 120 m ahead). A robot's tag is also hidden when the robot is within 15 m ahead in the child's line. | `main.js:1014`, `fadeTags` `main.js:1027-1034` |
+| Robots near the camera (also as ghosts, after a respawn, and with Easy off) | `Bot.politeness` now runs for every racing robot, Easy or not, and also triggers on the robot's own distance to the camera (under 6 m). A robot put back on the road never lands within 12 m ahead or 14 m behind the child; it comes back 24 m behind, out of view. | `bot.js:176-192`, `main.js:1917-1920`; `respawn` `main.js:1276-1279` |
+| Mystery boxes filled the screen near the camera (Stunt) | A box shrinks away within 3–7 m of the camera. | `pickups.js:206-210`, `main.js:2078` |
+| Overtakes didn't land for a 5-year-old | A soft "You passed Rocket!" (the car's name), at most once a lap, when the child passes the car that was just ahead. | `renderPlace`, `main.js:2241-2254` |
+
+### Real-time results
+
+Real-time Playwright races, 2 laps, 60 fps. **Gap** is the child's average distance to the nearest car still racing, measured after 15 s, split by whether the child was leading, last, or in the middle.
+
+| Style (Easy) | Races | Wins | Margins | Gap when leading | Gap when last |
+| --- | --- | --- | --- | --- | --- |
+| Careful | 15 | **12 (80%)** | Wins by 0.3–6.3 s, three of them within 1 s; all three losses 2nd, by 0.3–1.6 s | 10–28 m (4 races measured) | 11–22 m, briefly at the start |
+| Careless | 5 | **0** | 3rd −2.1 s; 4th −4.0 s; 2nd −3.3 s; 4th −5.2 s; 4th −7.2 s | — | 9–45 m |
+| Ignoring the gates | 5 | **0** | 4th −5.7 s; 4th −4.3 s; 4th −8.2 s; 3rd −4.2 s; 4th −6.2 s | — | 9–46 m |
+
+- **Closer races:** the review measured 28–53 m to the nearest car for a leading careful child, and 76–196 m for a child at the back.
+- **"You passed …!"** was heard once or twice a race.
+- **Robots near the camera:** the longest single spell within 5 m of the camera was at most 5.7 s (one Stunt race) and at most 3.9 s in the other 24.
+- **Tests:** `browser.mjs --ids crash-racers --run cr-race8` gives BOOT + PLAY ready with 0 errors. Every real-time run had 0 errors.
