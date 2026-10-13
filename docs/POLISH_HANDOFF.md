@@ -12,6 +12,12 @@ Updated 2026-10-13. Work on `main`.
 - **Owner's call:** ship Crash Racers at its current review level (last scored 8.0, latest fixes unreviewed) and continue in a future session.
 - **Uncommitted changes from another session:** `AGENTS.md`, `CLAUDE.md`, `apps/store/**` (llms.txt, WebMCP, agent tools). Leave them to that session.
 
+### Store review (paused 2026-10-13)
+- **Splat Tanks** (`tank-clash`, from the separate splat-tanks repo) is waiting in the review queue: submission `f17e8e7f-53c5-41ed-b999-bd52fa20b04c`, revision `ce5eee58-71fa-4c95-829e-9a0fd2911acf`. Its listed version is `813afc2f-…`.
+- The review was stopped by the owner before any decision, so nothing has been approved or rejected yet.
+- Re-inspect before deciding, because the revision may change. Follow the `review-games` skill.
+- **Admin key:** the store's admin key was rotated on 2026-10-13 and lives only in the owner's GNOME keyring. Run the CLI as `BITGAMES_ADMIN_KEY="$(secret-tool lookup service bitgames key admin)" node apps/store/scripts/review.mjs …`.
+
 ### Next steps
 1. **Family play.** Above all, watch whether the owner's son now enjoys Crash Racers as a race. Check two-device Race on bitgames.store.
 2. **Crash Racers toward 8.5:**
