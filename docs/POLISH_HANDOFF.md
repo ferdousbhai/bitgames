@@ -1,6 +1,64 @@
 # BitGames handoff
 
-Updated 2026-10-11. Work on `main`.
+Updated 2026-10-13. Work on `main`.
+
+## Start here (handoff, 2026-10-13)
+
+### State
+- **Eleven originals are deployed but not yet listed in the store.** They were deployed on 2026-10-12 with `node examples/publish.mjs …` (commit dd70d35), and every version URL returned 200. The store still lists the 2026-10-09 versions, because `pnpm --dir apps/store seed:remote` has not run. Seeding reads every `game.json`, Crash Racers' included.
+- **Crash Racers is not deployed.** Its `game.json` still holds the 2026-10-09 URL, which serves the old Deliver-first version, but the text in that file describes the new race. Deploy it before seeding, or the store shows new instructions over the old game.
+- **Commits:** the latest is dedf0ab. Node tests (11), all 11 `original-quality.mjs` checks, and the Crash Racers `browser.mjs` smoke test pass.
+- **Uncommitted changes from another session:** `AGENTS.md`, `CLAUDE.md`, `apps/store/**` (llms.txt, WebMCP, agent tools). Leave them to that session.
+
+### Next steps
+1. **Decide whether to ship Crash Racers as it is.** Owner input is needed: ship now, or keep iterating to 8.5. Then run `node examples/publish.mjs crash-racers`.
+2. **List everything** with `pnpm --dir apps/store seed:remote`. Check that every URL returns 200, then commit `game.json`.
+3. **Family play.** Above all, the owner's son should play Crash Racers. Check two-device Race on bitgames.store.
+4. **Optional:** each game's last reviewers left minor ideas in `docs/polish/<game-id>.md`.
+
+### Crash Racers: owner direction and where it stands
+The owner's son found the old game "a solo driving game instead of competition with the AI cars", so the owner chose "Real race first".
+- **The race:**
+  - Race is the default mode.
+  - The child starts at the back and the robots race to win.
+  - A place pill ("2nd of 4") shows during the race, and a podium shows the finishing order.
+  - A right present at a gate is the only speed edge; 🚀 is bend-capped and gives no advantage.
+  - Gate tiers adapt: two presents, then three lanes, then the map step, which Easy only reaches across two races.
+- **Removed:**
+  - 📦 Deliver (Delivery Town), which the owner called "pointless". `town.js` was deleted, and the gate houses now live in `houses.js`.
+  - The Race "delivery map" mission, along with `delivery.js` and adventure in Crash Racers. Never reintroduce solo or bot-free driving modes.
+- **Kept:** 🎪 Bumpers.
+
+Nine independent real-time reviews of 20–42 races each scored it 7.5 → 7.3 → 7.0 → 7.5 → 7.8 → 8.3 → 8.0 → 8.0, with the ninth round's fixes not yet re-reviewed. Each round fixed what the reviewer found:
+- ramp pile-ups
+- the child starting on pole
+- 🚀 used as a shortcut
+- endless races when a steer button is held
+- a boosted car pushing the leader instead of passing
+- a jump replay camera
+- tags and sprites covering the view
+- lonely leads
+- gifts carrying the car into walls
+
+Latest worker measurements (real-time, Easy, 60 fps):
+- Careful play wins 8 of 10 races, often by under 1 s.
+- Ignoring the gates wins 0 of 5.
+- Careless play wins 2 of 5.
+
+Still open:
+- Gate-ignorers and wild steerers can trail 30–60 m or more behind the pack. One wild-steering Ubud race did not finish; the 30-second end rule closed it.
+- Easy off was only measured with a bot autopilot.
+
+Every review is in `docs/polish/crash-racers.md`.
+
+### How the depth pass worked (reuse it)
+- **Rounds:** each game had one worker that owned only its files. After every round, a fresh independent reviewer played in real-time Playwright at 60 fps (Chromium `--use-angle=gl`) with speech stubbed, scored 1–10, and listed ranked fixes with file:line.
+- **Passing:** two reviewers had to score 8.5 or more, and the lower score counts.
+- **Coordinator only:** shared files (`examples/_studio/**`, `speech.js`, packaging, tests), the build, commits and publishing.
+- **Lessons:**
+  - Sims overstated balance until runs were measured in real time.
+  - Real-kid inputs (holding one button, mashing, 🔄 spam) found the worst bugs.
+  - Keep scratch output in the session scratchpad; it filled the 32 GB `/tmp` once.
 
 ## Depth pass (2026-10-11): every original at 8.5+
 
@@ -16,29 +74,14 @@ Final independent scores (two reviewers each, the lower counts):
 
 | Game | Score | Game | Score |
 | --- | --- | --- | --- |
-| Bumper Ducks | 8.8 | Crash Racers | 8.6 |
-| Fish Pond | 8.8 | Paint Splash | 8.6 |
-| Rocket Garage | 8.8 | Cake Stack | 8.6 |
-| Bunny Hop | 8.7 | Balloon Pop | 8.5 |
-| Dragon Glide | 8.7 | Penguin Bowling | 8.5 |
-| Star Catcher | 8.7 | Memory Match | 8.5 |
+| Bumper Ducks | 8.8 | Fish Pond | 8.8 |
+| Rocket Garage | 8.8 | Bunny Hop | 8.7 |
+| Dragon Glide | 8.7 | Star Catcher | 8.7 |
+| Paint Splash | 8.6 | Cake Stack | 8.6 |
+| Balloon Pop | 8.5 | Penguin Bowling | 8.5 |
+| Memory Match | 8.5 | Crash Racers | 8.6 before the owner's race redesign (see above) |
 
-Each game's design, file:line changes, evidence and the reviewers' remaining ideas are in `docs/polish/<game-id>.md`. Verification:
-- 11 studio node tests and the workspace tests pass.
-- All 13 `original-quality.mjs` checks pass. They now follow Balloon Pop's basket and Give flow, Cake Stack's count at the candle, and Dragon Glide's resting mission.
-- Chromium and WebKit `browser.mjs` boot and play all twelve games with 0 errors.
-
-**Crash Racers, owner direction (2026-10-12).** The owner's son found it "a solo driving game instead of competition with the AI cars". Race is now the default:
-- the bots race to win
-- the child's place shows during the race
-- a winner and a podium end each race
-- a right present at a gate gives a speed boost, so thinking helps you win
-
-📦 Deliver (Delivery Town) was removed as "pointless" (`town.js` deleted; gate houses moved to `houses.js`). 🎪 Bumpers stays. Never reintroduce a solo, bot-free driving mode.
-
-Bumper Ducks no longer ships `adventure.js`, and its lively mode is now untimed Bumper play (category `animals`).
-
-**Release:** eleven originals were deployed on 2026-10-12 (commit dd70d35). Crash Racers follows after its race review, then `seed:remote` lists all twelve. Family play is the real test. Two-device Race in Crash Racers still needs checking on bitgames.store.
+Each game's design, file:line changes, evidence and the reviewers' remaining ideas are in `docs/polish/<game-id>.md`. Bumper Ducks no longer ships `adventure.js`, and its lively mode is untimed Bumper play (category `animals`).
 
 ## Current direction (2026-10-09)
 
