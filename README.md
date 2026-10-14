@@ -88,7 +88,7 @@ See [Codex MCP documentation](https://developers.openai.com/codex/mcp). Reconnec
 
 ## Migrating existing games
 
-Run `pnpm --dir apps/store db:migrate` before deploying this update. It applies to the remote database. Migration 0009 adds version records and recovery hashes. The migration script backfills existing live, waiting and shared versions through the same validator, preserving reviewed manifest hashes. It is resumable and refuses changed deployments. SQL migrations alone do not perform the network backfill: use the repository migration script. Missing version records fail closed instead of falling back to direct upstream playback.
+Run `pnpm --dir apps/store db:migrate:remote` before deploying this update. Migration 0009 adds version records and recovery hashes. The migration script backfills existing live, waiting and shared versions through the same validator, preserving reviewed manifest hashes. It is resumable and refuses changed deployments. SQL migrations alone do not perform the network backfill: use the repository migration script. Missing version records fail closed instead of falling back to direct upstream playback.
 
 ## Reviewing games
 

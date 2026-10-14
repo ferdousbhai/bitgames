@@ -38,7 +38,7 @@ pnpm typecheck                 # all packages
 pnpm test                      # examples:check + every package's tests
 pnpm --dir apps/store build    # also regenerates routeTree.gen.ts
 pnpm --dir apps/store dev      # http://localhost:3030 (then seed for local data)
-pnpm --dir apps/store db:migrate   # remote D1
+pnpm --dir apps/store db:migrate:remote   # remote D1
 ```
 
 ## Agent surfaces
