@@ -132,3 +132,20 @@ it('history pagination reaches old versions even if a new shipment arrives betwe
     await assert.rejects(s.api.versionHistory(s.creatorId, otherGame.id, page.nextHistoryCursor!), /belong/)
   } finally { s.close() }
 })
+
+it('the private link plays and is listed for its creator before, during and after a rejected review', async () => {
+  const s = await testStore()
+  try {
+    const [unshipped] = await s.api.creatorGames(s.credentials.recoveryCode)
+    assert.deepEqual([unshipped?.playable, unshipped?.linkPath], [false, `/try/${s.game.previewToken}`])
+    const shipped = await s.api.shipVersion(s.creatorId, s.game.id, { url: urls[0] })
+    assert.equal((await s.api.findPreviewGame(s.game.previewToken))?.url, s.api.versionBase(shipped.versionId!))
+    const waiting = (await s.api.findForReview(s.game.id))!
+    await s.api.decide(s.game.id, 'reject', 'Not yet', waiting.revision, shipped.versionId)
+    const rejected = await s.api.findPreviewGame(s.game.previewToken)
+    assert.deepEqual([rejected?.status, rejected?.live, rejected?.url, rejected?.tagline], ['rejected', 0, s.api.versionBase(shipped.versionId!), 'Tap the happy toy!'])
+    const [listed] = await s.api.creatorGames(s.credentials.key)
+    assert.deepEqual([listed?.playable, listed?.listed, listed?.status, listed?.reviewNote], [true, false, 'rejected', 'Not yet'])
+    await assert.rejects(s.api.creatorGames('bg_' + 'x'.repeat(43)), /no longer valid/)
+  } finally { s.close() }
+})

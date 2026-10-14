@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { env } from 'cloudflare:workers'
 import { z } from 'zod'
-import { createCreator, manageCredentials } from './creators'
+import { createCreator, creatorGames, manageCredentials } from './creators'
 import { allowedByIp } from './rate-limit'
 
 const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
@@ -40,4 +40,13 @@ export const manageCreatorKey = createServerFn({ method: 'POST' })
     const ip = getRequestHeader('cf-connecting-ip') ?? 'unknown'
     if (!(await allowedByIp(env.KEY_LIMITER, ip))) throw new Error('Too many attempts. Wait a minute.')
     return manageCredentials(data.credential, data.action)
+  })
+
+/** A creator's games and their private links, from their creator key or recovery code. Read-only. */
+export const listCreatorGames = createServerFn({ method: 'POST' })
+  .validator(z.object({ credential: z.string().min(1).max(100) }))
+  .handler(async ({ data }) => {
+    const ip = getRequestHeader('cf-connecting-ip') ?? 'unknown'
+    if (!(await allowedByIp(env.KEY_LIMITER, ip))) throw new Error('Too many attempts. Wait a minute.')
+    return creatorGames(data.credential)
   })

@@ -2,7 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { useEffect, useState } from 'react'
 import { Turnstile } from '#/components/Turnstile'
-import { createCreatorKey, manageCreatorKey } from '#/server/keys'
+import { createCreatorKey, listCreatorGames, manageCreatorKey } from '#/server/keys'
 import { toy } from '#/lib/ui'
 
 export const Route = createFileRoute('/make')({
@@ -144,6 +144,7 @@ function GrownUps() {
           {error && <p className="w-full text-lg text-berry">{error}</p>}
         </div>
       )}
+      <YourGames />
       <KeyManagement onCredentials={setCredentials} />
     </section>
   )
@@ -176,6 +177,56 @@ function KeyManagement({ onCredentials }: { onCredentials: (value: { key: string
       <button type="button" disabled={!credential || busy} onClick={() => { if (window.confirm('Revoke agent access? Your saved recovery code will still work.')) void submit('revoke') }} className="rounded-full border-2 border-berry px-5 py-2 font-semibold text-berry disabled:opacity-50">Revoke creator key</button>
     </div>
     {message && <p role="status" className="mt-3 text-ink-soft">{message}</p>}
+  </details>
+}
+
+function reviewState(game: { status: string; listed: boolean; reviewNote: string | null }) {
+  if (game.status === 'review') return game.listed ? 'In the store · an update is waiting for review' : 'Waiting for review'
+  if (game.listed) return 'In the store'
+  if (game.status === 'rejected') return `Not in the store${game.reviewNote ? `: ${game.reviewNote}` : ''}`
+  return 'Not in the store'
+}
+
+/** Every game's private link works before and without review, so creators can always share them. */
+function YourGames() {
+  const list = useServerFn(listCreatorGames)
+  const [credential, setCredential] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [games, setGames] = useState<Awaited<ReturnType<typeof listCreatorGames>> | null>(null)
+  const origin = typeof window === 'undefined' ? '' : window.location.origin
+  async function submit() {
+    if (!credential || busy) return
+    setBusy(true)
+    setError(null)
+    try { setGames(await list({ data: { credential } })); setCredential('') }
+    catch (e) { setError(e instanceof Error ? e.message : 'Could not find your games.') }
+    finally { setBusy(false) }
+  }
+  return <details className="mt-6 border-t-2 border-sky pt-4">
+    <summary className="cursor-pointer text-lg font-semibold">Your games and their private links</summary>
+    <p className="my-3 text-ink-soft">Each game has its own private link. Anyone who has it can play the newest version you shipped, even while it waits for review or if it isn't in the store. Share it with family and friends.</p>
+    <form onSubmit={e => { e.preventDefault(); void submit() }}>
+      <label htmlFor="games-credential" className="block font-semibold">Creator key or recovery code</label>
+      <div className="my-2 flex flex-wrap gap-3">
+        <input id="games-credential" type="password" autoComplete="off" value={credential} onChange={e => setCredential(e.target.value)} className="min-w-0 flex-1 rounded-xl border-2 border-sky px-4 py-2" />
+        <button type="submit" disabled={!credential || busy} className="toy rounded-full px-5 py-2 font-semibold text-white disabled:opacity-50">Show my games</button>
+      </div>
+    </form>
+    {error && <p role="status" className="mt-3 text-berry">{error}</p>}
+    {games && (games.length ? (
+      <ul className="mt-4 space-y-4">
+        {games.map(game => (
+          <li key={game.id} className="rounded-2xl bg-cloud p-4">
+            <h3 className="text-xl font-bold"><span aria-hidden>{game.emoji}</span> {game.title}</h3>
+            <p className="mb-2 text-ink-soft">{reviewState(game)}</p>
+            {game.playable
+              ? <><CopyBox label="Private link" value={origin + game.linkPath} /><a href={game.linkPath} className="mt-2 inline-block underline">Play it</a></>
+              : <p className="text-ink-soft">Nothing shipped yet. Ask your agent to publish it, then its link will play here.</p>}
+          </li>
+        ))}
+      </ul>
+    ) : <p className="mt-3 text-ink-soft">No games yet. Ask your agent to make one.</p>)}
   </details>
 }
 

@@ -4,11 +4,18 @@ import { GameFrame } from '#/components/GameFrame'
 import { PlayScreen } from '#/components/PlayScreen'
 import { Loading } from '#/components/GameShelf'
 import { enterFullscreen } from '#/lib/fullscreen'
+import { shareMeta } from '#/lib/share'
 import { isPreviewToken } from '#/server/limits'
 import { getPreview } from '#/server/preview'
 
-/** A creator's private preview inside the store page, so "play together" works while testing. */
+/**
+ * A game's private link: anyone who has it can play the newest shipped version,
+ * whether or not it is in the store yet. It plays inside the store page, so
+ * "play together" works. The loader and head run on the server so a shared link
+ * previews as the game itself; the page renders in the browser.
+ */
 export const Route = createFileRoute('/try/$token')({
+  ssr: 'data-only',
   validateSearch: (search: Record<string, unknown>) => ({ submission: typeof search.submission === 'string' && /^[0-9a-f-]{36}$/.test(search.submission) ? search.submission : undefined }),
   loaderDeps: ({ search }) => ({ submissionId: search.submission }),
   loader: async ({ params, deps }) => {
@@ -18,7 +25,15 @@ export const Route = createFileRoute('/try/$token')({
     return game
   },
   head: ({ loaderData }) => ({
-    meta: [{ title: `Preview: ${loaderData?.title ?? 'Game'} · BitGames` }, { name: 'robots', content: 'noindex' }],
+    meta: [
+      ...shareMeta({
+        title: `${loaderData?.title ?? 'Game'} · BitGames`,
+        description: loaderData?.tagline,
+        image: loaderData?.cover ?? undefined,
+      }),
+      // Private links stay out of search results.
+      { name: 'robots', content: 'noindex' },
+    ],
   }),
   component: TryPage,
   pendingComponent: Loading,
@@ -35,8 +50,8 @@ function TryPage() {
     <>
       <p className="mt-2 rounded-2xl bg-sun/30 px-4 py-2 text-center font-semibold">
         {game.live
-          ? `🌍 This game is in the store. This link plays its newest version${game.status === 'review' ? ', which is waiting for a grown-up to review it for the store' : ''}.`
-          : `🔗 This game's own link: anyone who has it can play. ${game.status === 'review' ? 'A grown-up will review it for the store, so other families can find it too.' : 'It is not in the store.'}`}
+          ? `🌍 This game is in the store. This link plays its newest version${game.status === 'review' ? ', which is waiting for a grown-up to check it for the store' : ''}.`
+          : `🔗 A private link from the game's maker: anyone who has it can play. ${game.status === 'review' ? 'A grown-up is checking it for the store, so other families can find it too.' : 'It is not in the store.'}`}
       </p>
       <h1 className="mb-3 mt-4 flex items-center gap-3 text-3xl font-bold">
         <span aria-hidden>{game.emoji}</span>

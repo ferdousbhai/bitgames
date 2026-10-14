@@ -10,13 +10,29 @@ export async function createCreator() {
     .bind(crypto.randomUUID(), await sha256Hex(credentials.key), await sha256Hex(credentials.recoveryCode), Date.now()).run()
   return credentials
 }
-/** Recovery credentials are accepted only by the management form, never MCP. */
-export async function manageCredentials(credential: string, action: 'rotate' | 'revoke') {
+/** The creator behind a current creator key or recovery code. Recovery codes work only on the /make page, never MCP. */
+async function creatorFor(credential: string) {
   if (!/^(bg_|bgr_)[A-Za-z0-9_-]{43}$/.test(credential)) throw new Error('Use your current creator key or recovery code.')
   const hash = await sha256Hex(credential)
   const row = await env.DB.prepare('SELECT id, key_hash, recovery_hash FROM creators WHERE (key_hash = ? AND revoked = 0) OR recovery_hash = ?')
     .bind(hash, hash).first<{ id: string; key_hash: string; recovery_hash: string | null }>()
   if (!row) throw new Error('That key or recovery code is no longer valid.')
+  return row
+}
+/** A creator's games with their private links, so a lost agent message never loses a link. */
+export async function creatorGames(credential: string) {
+  const { id } = await creatorFor(credential)
+  const { results } = await env.DB.prepare(`SELECT id, title, emoji, status, live, preview_token, play_version, live_version, review_note
+    FROM games WHERE creator_id = ? ORDER BY updated_at DESC`).bind(id)
+    .all<{ id: string; title: string; emoji: string; status: string; live: number; preview_token: string; play_version: string | null; live_version: string | null; review_note: string | null }>()
+  return results.map(game => ({
+    id: game.id, title: game.title, emoji: game.emoji, status: game.status, listed: Boolean(game.live),
+    playable: Boolean(game.play_version ?? game.live_version), reviewNote: game.review_note,
+    linkPath: `/try/${game.preview_token}`,
+  }))
+}
+export async function manageCredentials(credential: string, action: 'rotate' | 'revoke') {
+  const row = await creatorFor(credential)
   if (action === 'revoke') {
     const result = await env.DB.prepare('UPDATE creators SET revoked = 1 WHERE id = ? AND key_hash = ? AND recovery_hash IS ?')
       .bind(row.id, row.key_hash, row.recovery_hash).run()
