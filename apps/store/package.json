@@ -11,7 +11,7 @@
     "deploy": "node scripts/vendor.ts && cf deploy",
     "cf-typegen": "cf workers types",
     "typecheck": "cf workers types >/dev/null && tsc --noEmit",
-    "db:migrate": "node scripts/db.ts migrate",
+    "db:migrate": "node scripts/db.ts migrate --remote",
     "db:migrate:remote": "node scripts/db.ts migrate --remote",
     "seed": "node scripts/db.ts seed",
     "seed:remote": "node scripts/db.ts seed --remote",

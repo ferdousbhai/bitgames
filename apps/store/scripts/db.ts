@@ -1,14 +1,12 @@
 /**
  * Database and storage setup for the store.
  *
- *   node scripts/db.ts migrate            # local: needs `pnpm dev` running
+ *   node scripts/db.ts migrate --remote   # remote D1; needs `cf auth login`
  *   node scripts/db.ts seed               # local: list the deployed games in ../../examples
- *   node scripts/db.ts migrate --remote   # remote: needs `cf auth login`
  *   node scripts/db.ts seed --remote
  *
- * Local commands go through the dev server's local explorer API, because
- * `cf ... --local` commands don't exit yet. Remote commands use the cf CLI.
- * Migrations are tracked in the same d1_migrations table that cf and Wrangler use.
+ * D1 migrations apply to the remote database. Seed can still target the dev
+ * server's local explorer API. Migrations are tracked in the d1_migrations table.
  */
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -60,23 +58,12 @@ async function sql(query: string): Promise<Record<string, unknown>[]> {
 }
 
 async function migrate() {
-  if (remote) {
-    console.log(cf(['d1', 'migrations', 'apply', DATABASE_ID, '--dir', 'migrations']))
-    await backfillVersions(sql)
-    return
+  if (!remote) {
+    console.error('D1 migrations apply to the remote database: node scripts/db.ts migrate --remote')
+    process.exit(1)
   }
-  await sql(`CREATE TABLE IF NOT EXISTS d1_migrations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
-  const applied = new Set((await sql('SELECT name FROM d1_migrations')).map((r) => String(r.name)))
-  const files = readdirSync(join(root, 'migrations')).filter((f) => f.endsWith('.sql')).sort()
-  for (const file of files) {
-    if (applied.has(file)) continue
-    await sql(readFileSync(join(root, 'migrations', file), 'utf8'))
-    await sql(`INSERT INTO d1_migrations (name) VALUES ('${file}')`)
-    console.log(`applied ${file}`)
-  }
+  console.log(cf(['d1', 'migrations', 'apply', DATABASE_ID, '--dir', 'migrations']))
   await backfillVersions(sql)
-  console.log('local database is up to date')
 }
 
 interface ExampleGame {
