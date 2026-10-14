@@ -7,7 +7,7 @@ description: Review BitGames submissions, playtest the exact shipped version, an
 
 BitGames is for children about 4 to 8. Shipping already makes a game playable at its creator's link; review decides store listing. Rejection and takedown leave shared playback available.
 
-Use the repository's review CLI from its root. It calls the authenticated API and returns JSON. Set `BITGAMES_ADMIN_KEY` in the agent's environment; `BITGAMES_ORIGIN` defaults to `https://bitgames.store`, or use `http://localhost:3030` locally. Never print the key, pass it as a command argument, or expose it to a game. If credentials or the API are unavailable, report the blocker. No reviewer MCP connection is needed.
+Use the repository's review CLI from its root. It calls the authenticated API and returns JSON. Set `BITGAMES_ADMIN_KEY` in the agent's environment; it talks to `https://bitgames.store`. Never print the key, pass it as a command argument, or expose it to a game. If credentials or the API are unavailable, report the blocker. No reviewer MCP connection is needed.
 
 Review requests that authorize decisions can approve or reject. Requests only to inspect or audit should produce findings. Takedowns require a request to remove the listing; discovering a questionable listed game alone does not authorize one.
 

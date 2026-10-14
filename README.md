@@ -15,14 +15,7 @@ A web game store built on BitChat's technology. Games are made with Blender and 
 
 ## Running the store
 
-The store deploys with the [`cf` CLI](https://developers.cloudflare.com/) using `apps/store/cloudflare.config.ts`.
-
-```sh
-cd apps/store
-echo 'ADMIN_KEY=pick-a-long-random-string' > .dev.vars
-pnpm dev          # http://localhost:3030, keep it running
-pnpm seed         # list the deployed games in ../../examples
-```
+The store deploys with the [`cf` CLI](https://developers.cloudflare.com/) using `apps/store/cloudflare.config.ts`. There is no local store setup: test changes with `pnpm test` and check them on the deployed store.
 
 The store is live at https://bitgames.store. Work on `main`. Run `pnpm run deploy` in `apps/store` to deploy (it vendors three.js and the multiplayer SDK, then `cf deploy`). Secrets set on the Worker are kept across deploys. Database migrations are not run automatically; apply them with `pnpm db:migrate:remote`.
 
@@ -94,7 +87,7 @@ Run `pnpm --dir apps/store db:migrate:remote` before deploying this update. Migr
 
 Review decides which shipped games are listed in the store. Ask Claude Code or Codex in this repository to “review the submitted games”. The shared [review-games skill](.agents/skills/review-games/SKILL.md) inspects source, plays pinned versions with the agent's browser tools, and approves or returns games with actionable feedback. Uncertain or untested games remain waiting. Claude discovers the same skill through `.claude/skills/review-games/SKILL.md`.
 
-Review uses a small CLI and authenticated JSON API at `/api/review`; it adds no MCP tools. Start the agent with `BITGAMES_ADMIN_KEY` set to the store's `ADMIN_KEY`. Set `BITGAMES_ORIGIN=http://localhost:3030` for a local dev store; the default is `https://bitgames.store`. Keep credentials in the environment, not command arguments.
+Review uses a small CLI and authenticated JSON API at `/api/review`; it adds no MCP tools. Start the agent with `BITGAMES_ADMIN_KEY` set to the store's `ADMIN_KEY`. It talks to `https://bitgames.store`. Keep credentials in the environment, not command arguments.
 
 From the repository root:
 
