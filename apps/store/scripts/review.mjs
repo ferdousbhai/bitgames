@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util'
 import { pathToFileURL } from 'node:url'
 
 const HELP = `BitGames review CLI — JSON output; uses BITGAMES_ADMIN_KEY from the environment.
-BITGAMES_ORIGIN defaults to https://bitgames.store (use http://localhost:3030 locally).
+BITGAMES_ORIGIN defaults to https://bitgames.store.
 
 From the repository root:
   node apps/store/scripts/review.mjs queue [--scope all|waiting|listed] [--offset N]

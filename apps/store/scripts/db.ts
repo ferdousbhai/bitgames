@@ -1,12 +1,10 @@
 /**
- * Database and storage setup for the store.
+ * Database setup for the store's remote D1 database. Needs `cf auth login`.
  *
- *   node scripts/db.ts migrate --remote   # remote D1; needs `cf auth login`
- *   node scripts/db.ts seed               # local: list the deployed games in ../../examples
- *   node scripts/db.ts seed --remote
+ *   node scripts/db.ts migrate   # apply migrations, then backfill version records
+ *   node scripts/db.ts seed      # list the deployed games in ../../examples
  *
- * D1 migrations apply to the remote database. Seed can still target the dev
- * server's local explorer API. Migrations are tracked in the d1_migrations table.
+ * Migrations are tracked in the d1_migrations table.
  */
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -19,49 +17,22 @@ import { checkVersion } from '../src/server/versions.ts'
 import { backfillVersions, literal } from './backfill-versions.ts'
 
 const DATABASE_ID = config.worker.env.DB.id!
-const LOCAL_API = `${process.env.DEV_URL ?? 'http://localhost:3030'}/cdn-cgi/local/explorer/api`
 
 const root = fileURLToPath(new URL('..', import.meta.url))
-const remote = process.argv.includes('--remote')
 const command = process.argv[2]
 
 function cf(args: string[]): string {
   return execFileSync('pnpm', ['exec', 'cf', ...args], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] })
 }
 
-async function localApi(path: string, init: RequestInit): Promise<unknown> {
-  let response: Response
-  try {
-    response = await fetch(LOCAL_API + path, init)
-  } catch {
-    throw new Error(`Can't reach the dev server at ${LOCAL_API}. Start it with \`pnpm dev\` first.`)
-  }
-  const body = (await response.json()) as { success: boolean; errors: unknown[]; result: unknown }
-  if (!response.ok || !body.success) throw new Error(`${path}: ${JSON.stringify(body.errors)}`)
-  return body.result
-}
-
 /** Runs SQL and returns the rows of the last statement. */
 async function sql(query: string): Promise<Record<string, unknown>[]> {
-  if (remote) {
-    const out = JSON.parse(cf(['d1', 'query', DATABASE_ID, '--sql', query])) as { result?: { results: Record<string, unknown>[] }[] } | { results: Record<string, unknown>[] }[]
-    const results = Array.isArray(out) ? out : (out.result ?? [])
-    return results.at(-1)?.results ?? []
-  }
-  const result = (await localApi(`/d1/database/${DATABASE_ID}/raw`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ sql: query }),
-  })) as { results: { columns: string[]; rows: unknown[][] } }[]
-  const last = result.at(-1)?.results
-  return (last?.rows ?? []).map((row) => Object.fromEntries(last!.columns.map((c, i) => [c, row[i]])))
+  const out = JSON.parse(cf(['d1', 'query', DATABASE_ID, '--sql', query])) as { result?: { results: Record<string, unknown>[] }[] } | { results: Record<string, unknown>[] }[]
+  const results = Array.isArray(out) ? out : (out.result ?? [])
+  return results.at(-1)?.results ?? []
 }
 
 async function migrate() {
-  if (!remote) {
-    console.error('D1 migrations apply to the remote database: node scripts/db.ts migrate --remote')
-    process.exit(1)
-  }
   console.log(cf(['d1', 'migrations', 'apply', DATABASE_ID, '--dir', 'migrations']))
   await backfillVersions(sql)
 }
@@ -118,12 +89,12 @@ async function seed() {
     seeded++
     console.log(`listed ${game.id} at ${game.url}`)
   }
-  console.log(`seeded ${seeded} games (${remote ? 'remote' : 'local'})`)
+  console.log(`seeded ${seeded} games`)
 }
 
 if (command === 'migrate') await migrate()
 else if (command === 'seed') await seed()
 else {
-  console.error('usage: node scripts/db.ts <migrate|seed> [--remote]')
+  console.error('usage: node scripts/db.ts <migrate|seed>')
   process.exit(1)
 }
