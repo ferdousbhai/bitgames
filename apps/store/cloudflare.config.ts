@@ -33,9 +33,9 @@ export default defineConfig({
 			},
 		},
 		env: {
-			// Admin key for /admin and /api/review. Locally it comes from .dev.vars.
+			// Admin key for /admin and /api/review.
 			ADMIN_KEY: bindings.secret(),
-			// Turnstile secret for the creator-key form. Locally it's Cloudflare's always-pass test secret.
+			// Turnstile secret for the creator-key form.
 			TURNSTILE_SECRET: bindings.secret(),
 			ROOMS: bindings.durableObject({ worker: "bitgames-store", exportName: "GameRoom" }),
 			NEARBY: bindings.durableObject({ worker: "bitgames-store", exportName: "Nearby" }),

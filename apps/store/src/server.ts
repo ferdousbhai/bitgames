@@ -24,13 +24,9 @@ function sameOrigin(request: Request): boolean {
   return request.headers.get('origin') === new URL(request.url).origin
 }
 
-/** The address the request came from. Local development has none; every local device is one network there. */
+/** The address the request came from. */
 function requestIp(request: Request): string {
-  const url = new URL(request.url)
-  const local = url.hostname === 'localhost'
-  // Tests on localhost can pretend to come from another network.
-  if (local && url.searchParams.get('devip')) return url.searchParams.get('devip')!
-  return request.headers.get('cf-connecting-ip') ?? (local ? '127.0.0.1' : '')
+  return request.headers.get('cf-connecting-ip') ?? ''
 }
 
 /**

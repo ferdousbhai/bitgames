@@ -13,7 +13,6 @@ __unconfig*
 todos.json
 
 .dev.vars*
-!.dev.vars.example
 !.env.example
 
 # cf build output and generated types (regenerate with pnpm cf-typegen)
@@ -22,5 +21,5 @@ todos.json
 # three.js copied from node_modules by scripts/vendor.ts
 public/vendor
 
-# Production secrets for `cf deploy --secrets-file` (never loaded by local dev or preview)
+# Production secrets for `cf deploy --secrets-file`
 secrets.production.env
