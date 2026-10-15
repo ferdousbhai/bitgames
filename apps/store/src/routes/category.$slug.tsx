@@ -1,4 +1,5 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
+import { createIsomorphicFn } from '@tanstack/react-start'
 import { eq, useLiveQuery } from '@tanstack/react-db'
 import { CategoryBar } from '#/components/CategoryBar'
 import { Empty, GameGrid, Loading } from '#/components/GameShelf'
@@ -7,12 +8,16 @@ import { useGamePreferences } from '#/lib/use-game-preferences'
 import { gamesCollection } from '#/lib/collections'
 import { shareMeta } from '#/lib/share'
 
+// Games load in the browser; the server only needs the category for the page's title and preview.
+const preloadGames = createIsomorphicFn()
+  .server(async () => {})
+  .client(() => gamesCollection.preload())
+
 export const Route = createFileRoute('/category/$slug')({
   loader: async ({ params }) => {
     const category = findCategory(params.slug)
     if (!category) throw notFound()
-    // Games load in the browser; the server only needs the category for the page's title and preview.
-    if (typeof window !== 'undefined') await gamesCollection.preload()
+    await preloadGames()
     return category
   },
   ssr: 'data-only',
