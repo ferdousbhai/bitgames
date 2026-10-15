@@ -12,10 +12,12 @@ Updated 2026-10-13. Work on `main`.
 - **Owner's call:** ship Crash Racers at its current review level (last scored 8.0, latest fixes unreviewed) and continue in a future session.
 - **Uncommitted changes from another session:** `AGENTS.md`, `CLAUDE.md`, `apps/store/**` (llms.txt, WebMCP, agent tools). Leave them to that session.
 
-### Store review (paused 2026-10-13)
-- **Splat Tanks** (`tank-clash`, from the separate splat-tanks repo) is waiting in the review queue: submission `f17e8e7f-53c5-41ed-b999-bd52fa20b04c`, revision `ce5eee58-71fa-4c95-829e-9a0fd2911acf`. Its listed version is `813afc2f-…`.
-- The review was stopped by the owner before any decision, so nothing has been approved or rejected yet.
-- Re-inspect before deciding, because the revision may change. Follow the `review-games` skill.
+### Store review (code passed 2026-10-14; playtest pending)
+- **Splat Tanks** (`tank-clash`, from the separate splat-tanks repo) is still waiting: submission `f17e8e7f-53c5-41ed-b999-bd52fa20b04c`, revision `ce5eee58-71fa-4c95-829e-9a0fd2911acf`. Its listed version is `813afc2f-59ac-4356-9ba1-36dd4024fa19`. The owner asked for it to be approved if all looks good.
+- **Code review passed** on that submission: every HTML/JS/CSS file read in full and hash-checked. No outside requests beyond its own files and BitGames' vendor scripts; no links, popups, ads, tracking, purchases, text input or chat. Names are generated from a word list, and network names and colours are escaped or clamped. Only the camera-view choice goes in localStorage. Splashes only tint tanks; there's no game over, and the ending is "Great painting!" with medals for everyone. The update makes "Paint together" (fractions, no clock, bots never aim at tanks) the default; the timed match stays as a second mode. Sky and textures are Poly Haven CC0. Store metadata is unchanged from the listed version.
+- **Minor, non-blocking:** the how-to-play text still says "Most paint wins", which fits only the timed match.
+- **Still needed: the playtest.** Two Chrome sessions failed. First the extension disconnected; then the tab reported `visibilityState: hidden` (the Chrome window was off-screen), so screenshots timed out and the game couldn't run. Before playtesting, check `document.visibilityState === 'visible'`.
+- **To finish:** re-run `inspect tank-clash` and confirm the submission and revision above are unchanged. If they changed, the code review must be redone. Play the pinned `playUrl` with "Just me" (it keeps `?submission=`), check startup, console errors, keyboard/mouse and touch controls, portrait and landscape layouts, and both modes. If nothing breaks, run `approve tank-clash --submission … --revision …`. Follow the `review-games` skill.
 - **Admin key:** the store's admin key was rotated on 2026-10-13 and lives only in the owner's GNOME keyring. Run the CLI as `BITGAMES_ADMIN_KEY="$(secret-tool lookup service bitgames key admin)" node apps/store/scripts/review.mjs …`.
 
 ### Next steps
