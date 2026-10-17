@@ -19,6 +19,7 @@ export class Dragon {
     this.root = new THREE.Group()
     this.bank = new THREE.Group()
     this.model = copy(template, look)
+    this.baseScale = this.model.scale.clone()
     this.model.rotation.y = Math.PI // the model looks at +Z; flying, it looks away from the camera
     this.bank.add(this.model)
     this.root.add(this.bank)
@@ -57,6 +58,11 @@ export class Dragon {
     if (this.roll <= 0) this.roll = 1
   }
 
+  /** A happy squash and a big grin when something is caught. */
+  yum() {
+    this.joy = 1
+  }
+
   /** vx/vy: how fast the dragon is moving sideways/up, for leaning into turns. */
   update(dt, { vx = 0, vy = 0, flap = 1, glide = false } = {}) {
     this.t += dt
@@ -90,7 +96,12 @@ export class Dragon {
     // Jaw opens for fire
     this.breath = Math.max(0, this.breath - dt)
     const open = this.breath > 0 ? Math.sin((this.breath / 0.35) * Math.PI) : 0
-    this.jaw.rotation.x = this.jawBase + open * 0.55
+    // a catch: the jaw opens in a grin while the body squashes and springs back
+    this.joy = Math.max(0, (this.joy ?? 0) - dt * 3)
+    const grin = Math.sin(this.joy * Math.PI)
+    this.jaw.rotation.x = this.jawBase + Math.max(open * 0.55, grin * 0.35)
+    const squash = Math.sin(this.joy * Math.PI * 2) * this.joy * 0.18
+    this.model.scale.set(1 + squash, 1 - squash, 1 + squash).multiply(this.baseScale)
 
     // Blink every few seconds
     this.blink -= dt

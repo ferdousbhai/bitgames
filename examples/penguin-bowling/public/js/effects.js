@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
 /**
- * Juice: snow spray behind the sliding penguin, puffs and soft sparkles.
+ * Juice: snow spray behind the sliding penguin, puffs, soft sparkles and a strike's confetti.
  * Particles live in pooled InstancedMeshes so a strike stays smooth on a tablet.
  */
 /** A texture painted once by `draw(ctx, width, height)`. */
@@ -149,7 +149,13 @@ export class Effects {
       drag: 1.2,
       billboard: true,
     })
-    this.labels = document.getElementById('labels')
+    this.paper = new Pool(scene, {
+      count: 120,
+      geometry: new THREE.PlaneGeometry(1, 0.6),
+      material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+      gravity: 5,
+      drag: 1.8,
+    })
     this.shake = 0
     this.tmp = new THREE.Vector3()
     this.v = new THREE.Vector3()
@@ -193,25 +199,42 @@ export class Effects {
   /** Clear celebration particles before the next aim. */
   clearCelebration() {
     this.sparkles.clear()
+    this.paper.clear()
   }
 
-  /** "+3" or "⭐" floating up from a point in the world. */
-  label(text, pos, color, big = false) {
-    const p = this.tmp.copy(pos).project(this.camera)
-    const el = document.createElement('div')
-    el.className = 'float' + (big ? ' big' : '')
-    el.textContent = text
-    el.style.left = `${((p.x + 1) / 2) * 100}%`
-    el.style.top = `${((1 - p.y) / 2) * 100}%`
-    el.style.color = color
-    this.labels.appendChild(el)
-    el.addEventListener('animationend', () => el.remove())
+  /** A strike's party: one soft burst of paper confetti over the deck, drifting down. */
+  confetti(pos, n = 70, hues = ['#ffd23f', '#ff6b9d', '#4cc9f0', '#8ac926', '#9b5de5', '#ff9f1c']) {
+    const v = this.v
+    for (let i = 0; i < n; i++) {
+      v.set((Math.random() - 0.5) * 6, 4 + Math.random() * 4, (Math.random() - 0.5) * 3)
+      this.paper.spawn(this.tmp.copy(pos).add({ x: (Math.random() - 0.5) * 2, y: 0, z: (Math.random() - 0.5) }), v, { life: 2.2 + Math.random() * 0.8, size: 0.12 + Math.random() * 0.06, color: hues[i % hues.length], spin: 6 + Math.random() * 6 })
+    }
+  }
+
+  /** A shooting star: a bright head with a fading tail of sparkles, all flying the same way. */
+  shootingStar(from, vel) {
+    const dir = this.tmp.copy(vel).normalize()
+    for (let i = 0; i < 14; i++) {
+      const p = from.clone().addScaledVector(dir, -i * 0.12)
+      this.sparkles.spawn(p, vel, { life: 0.9 - i * 0.045, size: 0.42 - i * 0.022, color: i < 2 ? '#ffffff' : '#fff3b0' })
+    }
+  }
+
+  /** A shower of soft snow (or sea spray) tumbling down over the pin deck. */
+  flurry(pos, color = '#ffffff', n = 140) {
+    const v = this.v
+    for (let i = 0; i < n; i++) {
+      v.set((Math.random() - 0.5) * 1.5, -1 - Math.random() * 2, (Math.random() - 0.5) * 1.5)
+      this.snow.spawn(this.tmp.copy(pos).add({ x: (Math.random() - 0.5) * 3.6, y: Math.random() * 1.6, z: (Math.random() - 0.5) * 2.6 }), v, { life: 0.9 + Math.random() * 0.6, size: 0.1 + Math.random() * 0.14, color })
+    }
+    this.puff(this.tmp.copy(pos).setY(0.4), 10, 1.2, color)
   }
 
   update(dt) {
     this.snow.update(dt, this.camera)
     this.puffs.update(dt, this.camera)
     this.sparkles.update(dt, this.camera)
+    this.paper.update(dt, this.camera)
     this.shake = Math.max(0, this.shake - dt * 2.5)
   }
 }

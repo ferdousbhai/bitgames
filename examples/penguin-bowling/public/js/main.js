@@ -1,15 +1,12 @@
-import { createPrediction, pins as pinWord } from './prediction.js'
-import { COUNT_ALOUD, createVoice, listWords } from './speech.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
-import { Counter, Mist, Spot, zoneOf } from './count.js'
 import { Effects } from './effects.js'
-import { LANE, Lane, PENGUIN_R, PIN_H, PIN_SPOTS, Pins } from './lane.js'
+import { LANE, Lane, PENGUIN_R, PIN_SPOTS, Pins } from './lane.js'
 import { Crowd, Penguin } from './penguin.js'
 import { Scenery, THEMES } from './scenery.js'
-import { FRAMES, SHORT_FRAMES, ScoreCard } from './score.js'
+import { FRAMES, ScoreCard } from './score.js'
 
 const $ = (id) => document.getElementById(id)
 const clamp = THREE.MathUtils.clamp
@@ -66,12 +63,6 @@ const effects = new Effects(scene, camera)
 const card = new ScoreCard()
 let penguinTemplate = null
 
-/** Spoken words for pre-readers, quiet when the game is muted. Words queue; taps interrupt. */
-const voice = createVoice({ muted: audio.muted, rate: 0.9, pitch: 1.1 })
-const counter = new Counter(scene)
-const spot = new Spot(scene, LANE.start - 1.2, LANE.headPin + 2.5)
-const mist = new Mist(scene, LANE.headPin + 0.5, LANE.deckEnd + 0.4, LANE.half)
-
 // --- Settings -------------------------------------------------------------------------
 
 const MIN_SPEED = 7.5
@@ -79,105 +70,40 @@ const MAX_SPEED = 13.5
 const MAX_ANGLE = 0.15
 const HOOK = 2.6 // sideways pull of a full curve, units/s²
 const MAX_X = LANE.half - 0.45 // 1.05
-const STEP_X = 0.35 // one ◀ ▶ step; MAX_X is three of them, so the footprints are always reachable
-const WOBBLE = 0.006 // radians of random wobble on every slide (about ±3.5 cm at the pins): enough that no two
-// slides are the same, small enough that where the penguin stands decides about how many fall
+const STEP_X = 0.35 // one ◀ ▶ step
+const WOBBLE = 0.014 // radians of random wobble on every slide, so no two slides are quite the same
+const HATS = ['crown', 'party', 'tophat', 'fish'] // won one after another, a strike each
 
 const game = {
   state: 'loading', // loading | title | aim | roll | settle | result | over
   theme: store.get('lane') in THEMES ? store.get('lane') : 'village',
   bumpers: store.get('bumpers') !== '0',
-  short: store.get('frames') !== String(FRAMES), // five frames unless the family picked the full ten
   x: 0,
   angle: 0,
-  curve: 0, // -1 left, 0 straight, 1 right
   timer: 0,
   standingBefore: 10,
   outcome: null,
   touchedPins: false,
-  thrown: Number(store.get('thrown')) || 0,
+  thrown: 0, // slides this visit; the swipe hint comes sooner for the first few
+  swipes: Number(store.get('swipes')) || 0, // slides ever made with a swipe: after three, only the first-aim reminder remains
+  hints: 0, // drawn swipes shown this visit
+  hat: HATS.includes(store.get('hat')) ? store.get('hat') : null, // the strike hat the penguin wears
+  event: null, // the last surprise, so the same one doesn't come twice in a row
+  spares: 0, // spares this game, and the spare that last brought the baby penguin
+  babyAt: -9,
+  hats: (store.get('hats') || '').split(',').filter((h) => HATS.includes(h)), // hats won so far, kept between visits
   stuck: 0,
   hitSoundAt: 0,
+  boingAt: 0,
+  falls: 0, // pins tipped over so far this slide: each one's "bwoop" is a note higher
+  peek: 0, // seconds of a close look at a special rack before aiming
+  slowmo: 0, // seconds of gentle slow motion left, as the penguin meets a full rack
   idle: 0, // seconds without a touch while aiming
   resultWait: 2,
-  bonds: new Map(), // the ways to make 10 met this game: "7+3" -> { self, plan } (worked out by the child; made as planned)
-  bondKey: '', // the bond of the roll being counted
-  // How the pins left standing are counted, and how much help the spare gets, adapting to the child:
-  // 1 = tap each standing pin to count it (taps on fallen pins don't count), then say how many from two
-  //     numbers with the numbers over the pins tucked away; "where?" lays a footprint trail.
-  // 2 = work out the missing part of the bond (7 + ? = 10) from three numbers while a cloud hides the pins;
-  //     "where?" marks only where to stand. Each fresh rack starts with an optional plan ("knock 7"),
-  //     chosen from ways to make 10 not met yet; footprints with the plan's number show where to stand.
-  // 3 = the same bond on a 1-10 number strip. Plans name what to leave standing ("leave 3"), so where to
-  //     stand takes the bond; curved plans (leave 7, leave 8) add numbers and the curve to aim with.
-  //     The spare is the child's own plan: rings only, no question, no trail.
-  // A plan that comes out just right asks for the other part of its bond.
-  // With only a few pins standing, tiers 2 and 3 sometimes ask for the fallen part instead ("? + 1 = 10").
-  // Three careful counts move a child from 1 to 2 (a hasty one takes one back), four right answers from
-  // 2 to 3 (a miss takes two back); two misses in a row move them back a tier.
-  // Each game starts from the title card's age chip, not from whoever played last on this device:
-  // "3–5" starts at tier 1; "6–8" starts at tier 2, or at 3 if the last 6–8 game ended there.
-  tier: 1,
-  big: store.get('level') === 'big',
-  bigTier: store.get('bigtier') === '3' ? 3 : 2,
-  selfCounts: 0,
-  bigRolls: 0, // tier 1: strikes, spares and first slides of 8 or more this game; two of them make two careful counts enough to move up
-  rights: 0,
-  misses: 0,
-  counting: null, // { up, fallen, tapped, slips, asked } while the pins left are being counted
-  countsAloud: 0, // counts this game where the voice says the numbers with the child's taps
-  tapHints: 0, // the finger over the first pin, shown for the first two counts of a game
-  wrongSides: 0, // wrong "where / which side" answers this game; the first three are explained aloud
-  asked: 0, // spoken "where / which side" questions this game; later ones are pictures only
-  ask: null, // 'where' | 'more' while that question is open
-  askOk: [], // the sides that answer it
-  plan: null, // tiers 2-3: { k, got, leave } — knock k on the first slide of this rack; got is what fell; leave: shown as 10 - k
-  plansAsked: 0, // spoken plan questions this game
-  planSaid: false, // the first plan of a game is read out
-  bondsSaid: 0, // "7 and 3 make 10." sentences this game; the first four new ways are said
-  onSpot: false, // the penguin stands on the footprints
-  veil: null, // { f } while a bond question is open: frame f's numbers, the rack map and the plan result hide
-  ignored: 0, // tier 1: counts in a row the child let the game do; after two, the rest light together
-  planHits: 0, // plans at this tier that came out exactly
-  planNear: 0, // plans at this tier that came out one away
-  curvePlans: 0, // tier 3: curved plans chosen this game; the first gets footprints
-  plansMade: 0, // tier 2: plans chosen this game; only the first two get footprints...
-  planOff: false, // ...unless the last plan came out two or more away
-  bumperOffer: false, // tier 3: "bumpers down?" has been offered this game
+  dance: false,
 }
 
-const prediction = createPrediction({
-  button: $('predict-pins'),
-  hud: $('hud'),
-  getStanding: () => pins.countStanding(),
-  // The same triangle as the lane and the rack: back row first, knocked pins as gaps.
-  getLayout: () => {
-    const up = standingSet()
-    return [3, 2, 1, 0].map((row) => PIN_SPOTS.flatMap((s, i) => (s.row === row ? [up[i]] : [])))
-  },
-  voice,
-  sound: (kind) => {
-    audio.unlock()
-    if (kind === 'tap') audio.squeak(0.9 + Math.random() * 0.4)
-    else if (kind === 'keep') audio.jingle(3)
-    else if (kind === 'exact') setTimeout(() => audio.jingle(10), 500)
-  },
-  // Drop any aim in progress so the penguin doesn't launch when the dialog closes.
-  // One decision a slide: a 💭 prediction stands in for the plan card, which waits behind it and comes
-  // back if the child closes the dialog without keeping a guess. (Picking a plan puts 💭 away instead.)
-  onOpen: () => {
-    keys.clear()
-    drag.on = false
-    drag.aim = null
-    planWaits = !$('plan').hidden
-    $('plan').hidden = true
-  },
-})
-let planWaits = false
-$('pin-prediction').addEventListener('close', () => {
-  if (planWaits && prediction.guess === null && game.state === 'aim' && !game.plan) $('plan').hidden = false
-  planWaits = false
-})
+if (game.hat && !game.hats.includes(game.hat)) game.hats.push(game.hat)
 
 // --- Layout -----------------------------------------------------------------------------
 
@@ -194,18 +120,34 @@ function resize() {
 addEventListener('resize', resize)
 resize()
 
-// --- Physics events: sounds and crowd -----------------------------------------------------
+// --- Physics events: sounds, squash and crowd ------------------------------------------
 
 lane.world.addEventListener('preStep', () => penguin.pull())
 
 penguin.onHit = (e) => {
-  if (e.body.material !== lane.pinMat) return
   const v = Math.abs(e.contact.getImpactVelocityAlongNormal())
+  if (e.body.material === lane.bumperMat) {
+    // Off a bumper: a springy boing and a squash.
+    const now = performance.now()
+    if (v > 0.6 && now - game.boingAt > 250) {
+      game.boingAt = now
+      audio.boing()
+      penguin.bump(v / 6)
+      effects.puff(penguin.group.position.clone().setY(0.3), 4, 0.4)
+    }
+    return
+  }
+  if (e.body.material !== lane.pinMat) return
   if (!game.touchedPins) {
     game.touchedPins = true
-    effects.shake = Math.min(0.3, v * 0.03) // a small physical bump only
+    effects.shake = Math.min(0.35, v * 0.035)
+    // A full rack gets a moment of slow motion, so the crash can be enjoyed.
+    if (game.standingBefore === 10 && v > 4) game.slowmo = 0.55
   }
-  if (v > 1) audio.bonk(v / 10)
+  if (v > 1) {
+    audio.bonk(v / 10)
+    penguin.bump(v / 9)
+  }
   pins.wake()
 }
 pins.onHit = (pin, e) => {
@@ -214,11 +156,35 @@ pins.onHit = (pin, e) => {
   const now = performance.now()
   if (now - game.hitSoundAt < 35) return
   game.hitSoundAt = now
+  pin.squish = Math.max(pin.squish, Math.min(1, v / 4))
   if (e.body.material === lane.pinMat || e.body.material === lane.iceMat || e.body.material === lane.bumperMat) audio.clack(v / 6)
 }
 scenery.onSpout = (p) => {
   for (let i = 0; i < 14; i++) effects.sparkleAt(p, '#d6f6ff', 1, 2.5)
   effects.puff(p, 8, 1.6, '#e8f8ff')
+  audio.squeak(0.6)
+}
+
+/** Each pin that tips over says "bwoop", a note higher than the last, in a puff of its own colour. */
+function watchFalls() {
+  for (const p of pins.list) {
+    if (p.removed || p.fell || !pins.isDown(p)) continue
+    p.fell = true
+    game.falls++
+    audio.topple(game.falls)
+    const at = p.mesh.position.clone().setY(Math.max(0.25, p.mesh.position.y))
+    effects.puff(at, 4, 0.55)
+    effects.sparkleAt(at, p.color, 3, 1.6)
+    if (p.special === 'gold') {
+      audio.gold()
+      effects.sparkleAt(at, '#ffe066', 14, 2.4)
+      effects.confetti(at.clone().setY(0.6), 30, ['#ffd23f', '#ffe066', '#ffb703', '#fff3b0'])
+    } else if (p.special === 'giant') {
+      audio.thump()
+      effects.shake = Math.max(effects.shake, 0.35)
+      effects.puff(at.setY(0.3), 14, 1.2)
+    }
+  }
 }
 
 // --- Aim ----------------------------------------------------------------------------------
@@ -231,7 +197,7 @@ function predict(x, angle, speed, hook) {
   let vx = Math.sin(angle) * speed
   const vz = -Math.cos(angle) * speed
   const dt = 0.02
-  let next = 0.9
+  let next = 1.9 // the first dot lies well ahead of the penguin, never across its back
   let travelled = 0
   while (pz > LANE.headPin + 0.3 && pts.length < 14) {
     const ramp = clamp((LANE.start - pz) / 7, 0, 1)
@@ -269,7 +235,13 @@ function swipeToThrow(pts) {
     dy = -dy
   }
   if (dy > -len * 0.25) return null // mostly sideways: not a throw
-  const angle = clamp(Math.atan2(dx, -dy) * 0.4, -MAX_ANGLE, MAX_ANGLE)
+  // Sideways drift in a small finger's swipe is gentle on the aim (gain 0.22), and a mostly-forward
+  // swipe is helped towards the pins: half of the way to the line that meets them.
+  // On a second slide the help is lighter and the drift counts more, so a spare is a good shot, not a given.
+  const raw = Math.atan2(dx, -dy)
+  const full = pins.countStanding() === 10
+  const assist = Math.abs(raw) < 0.6 ? (full ? 0.5 : 0.38) : full ? 0.2 : 0.13
+  const angle = clamp(raw * (full ? 0.22 : 0.26) * (1 - assist) + aimAt() * assist, -MAX_ANGLE, MAX_ANGLE)
   const power = clamp(len / (Math.min(innerWidth, innerHeight) * 0.38), 0.3, 1)
   // Curve: how far the middle of the swipe bulged sideways from the straight line.
   let bulge = 0
@@ -287,47 +259,51 @@ function swipeToThrow(pts) {
   return { angle: clamp(angle + bulge * 0.05, -MAX_ANGLE, MAX_ANGLE), power, hook: -bulge * HOOK }
 }
 
+/** The straight line from where the penguin stands to the middle of the pins it should go for. */
+function aimAt() {
+  const up = pins.list.filter((p) => !p.removed && !pins.isDown(p))
+  if (!up.length) return 0
+  const front = Math.min(...up.map((p) => p.spot.row))
+  // A full rack: the head pin. Pins left: the middle of the group the penguin lined up with.
+  const group = up.length === 10 ? up.filter((p) => p.spot.row === front) : up.filter((p) => Math.abs(p.body.position.x - game.x) < 0.8)
+  const tx = (group.length ? group : up).reduce((a, p) => a + p.body.position.x, 0) / (group.length || up.length)
+  return Math.atan2(tx - game.x, LANE.start - LANE.headPin)
+}
+
 function currentAim() {
   if (drag.on && drag.aim) return drag.aim
-  return { angle: game.angle, power: 0.8, hook: game.curve * HOOK }
+  return { angle: game.angle, power: 0.8, hook: 0 }
 }
 
 function updateAimPreview() {
   if (game.state !== 'aim') return lane.hideAim()
   const a = currentAim()
   const speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * a.power
-  lane.showAim(predict(game.x, a.angle, speed, a.hook), drag.on ? '#ff6b9d' : '#ffca3a')
+  // Yellow while waiting; pink, bigger and bending with the finger while a swipe is being drawn.
+  lane.showAim(predict(game.x, a.angle, speed, a.hook), drag.on ? '#ff6b9d' : '#ffca3a', simT, drag.on && drag.aim ? drag.aim.power : 0)
 }
 
-function throwPenguin({ angle, power, hook }) {
+function throwPenguin({ angle, power, hook }, { swiped = false } = {}) {
   if (game.state !== 'aim') return
+  if (swiped) store.set('swipes', ++game.swipes)
+  game.peek = 0
   audio.unlock()
-  prediction.rolling()
   game.state = 'roll'
   game.timer = 0
   game.stuck = 0
+  game.falls = 0
   game.touchedPins = false
-  game.planSpoke = false
   game.standingBefore = pins.countStanding()
-  // The curve a planned slide really had (a swipe makes its own), so a curved plan's tip can say so.
-  if (game.plan && game.plan.got === null) game.plan.slid = Math.abs(hook) < 0.1 ? 0 : Math.sign(hook)
   game.thrown += 1
-  store.set('thrown', game.thrown)
-  $('hint').classList.add('hidden')
+  hideHint()
   $('controls').classList.add('away')
-  $('where').hidden = true
-  $('plan').hidden = true
-  game.ask = null
-  spot.hide()
-  counter.fade()
   lane.hideAim()
-  // A real penguin never slides exactly the same way twice: a tiny wobble, so the
-  // same throw from the same spot doesn't always give the same pins.
+  // A real penguin never slides exactly the same way twice: a tiny wobble.
   const wobble = (Math.random() - 0.5) * WOBBLE
   penguin.launch(angle + wobble, MIN_SPEED + (MAX_SPEED - MIN_SPEED) * power, hook)
   audio.whoosh()
   audio.squeak(1.2)
-  effects.puff(penguin.group.position, 6, 0.5)
+  effects.puff(penguin.group.position, 8, 0.6)
   pins.wake()
 }
 
@@ -337,1017 +313,336 @@ function standingSet() {
   return pins.list.map((p) => !p.removed && !pins.isDown(p))
 }
 
-/** The pins still up, in counting order: front row first, left to right. */
-function standingPins() {
-  return pins.list
-    .filter((p) => !p.removed && !pins.isDown(p))
-    .map((p) => ({ i: p.i, x: p.body.position.x, z: p.body.position.z, color: p.color, row: p.spot.row }))
-    .sort((a, b) => a.row - b.row || a.x - b.x)
-}
-
-const pinIcon = (color, id) => {
-  const i = document.createElement('i')
-  i.className = 'pin-ic'
-  i.style.setProperty('--c', color)
-  if (id) i.id = id
-  return i
-}
-
-/** The number bond for the whole rack: fallen + standing = 10, as two groups of pins. */
-function showBond(up) {
-  const fallen = pins.list.filter((p) => p.removed || pins.isDown(p))
-  const f = $('bond-fallen')
-  const s = $('bond-standing')
-  f.replaceChildren(...fallen.map((p) => pinIcon(p.color)))
-  s.replaceChildren(...up.map((p) => {
-    const ic = pinIcon(p.color, `bond-pin-${p.i}`)
-    ic.dataset.pin = p.i
-    return ic
-  }))
-  f.style.setProperty('--cols', Math.max(1, Math.min(5, fallen.length)))
-  s.style.setProperty('--cols', Math.max(1, Math.min(5, up.length)))
-  $('bond-fallen-n').textContent = fallen.length
-  // The standing number grows as the pins are counted.
-  $('bond-standing-n').textContent = up.length ? '' : '0'
-  $('bond').classList.remove('guess', 'guess-fallen', 'show-fallen', 'guess-total')
-  $('bond').setAttribute('aria-label', `${fallen.length} fell and ${up.length} standing make 10`)
-  $('bond').hidden = false
-  // A spare clears what the first slide left; its way to make 10 (say 9 + 1) was met on that first slide.
-  // So "10 + 0" is met only by a strike: all ten from a full rack in one slide.
-  const spare = !up.length && game.standingBefore < 10
-  game.bondKey = spare ? '' : `${fallen.length}+${up.length}`
-  if (game.bondKey && !game.bonds.has(game.bondKey)) game.bonds.set(game.bondKey, { self: false, plan: false })
-  return fallen.length
-}
-
-/** This roll's way to make 10 was worked out by the child ('self') or made just as planned ('plan'). */
-const markBond = (flag) => {
-  const b = game.bonds.get(game.bondKey)
-  if (b) b[flag] = true
-}
-
 function finishRoll() {
+  watchFalls()
   // Pins pushed off the deck are out of play: they puff away now, even ones that landed upright.
   for (const p of pins.clearOffDeck()) effects.puff(p, 6, 0.7)
-  // A pin still counted as standing but leaning on a fallen one stands up straight now, before the count,
-  // so "tap the pins standing up" matches what the child sees.
+  // A pin leaning on a fallen one stands up straight, so what stands looks like it stands.
   pins.straighten()
   const standing = pins.countStanding()
   const knocked = game.standingBefore - standing
-  const guessed = prediction.guess !== null
-  prediction.result(knocked, standing, game.standingBefore)
-  // Without a prediction the number bond below says it all; the 💭 line is for comparing.
-  document.body.classList.toggle('bond-only', !guessed)
   const r = card.add(knocked)
   game.outcome = { ...r, knocked }
   game.state = 'result'
   game.timer = 0
-  penguin.hide()
+  game.resultWait = 0
   updateHud()
   updateRack(standingSet())
 
-  // Every roll gets the same calm reply: what happened, in pictures and one number.
-  // Strikes and spares are named, with one soft glow and chord; said aloud only the first time.
+  // The penguin, up behind the pins, reacts to what it did.
+  if (penguin.state === 'slide') popUp()
+  penguin.mood = r.strike ? 'wow' : knocked === 0 ? 'dizzy' : 'joy'
   const deck = new THREE.Vector3(0, 1.6, LANE.headPin - 0.8)
-  // Every roll ends with the number bond: the fallen pins and the pins still standing make 10.
-  const up = standingPins()
-  const fallen = showBond(up)
-  // A strike says its own line; the plan's tip would make two sentences for one slide.
-  const planHit = game.plan?.got === null && planResult(game.plan, knocked, { quiet: r.strike })
-  // The curve a plan set was for that slide only; the spare starts straight again.
-  if (game.plan?.curve && game.curve) {
-    game.curve = 0
-    updateCurveBtn()
-  }
-  if (r.strike || r.spare || (game.standingBefore === 10 && knocked >= 8)) game.bigRolls++
+  if (r.strike) {
+    newHat()
+    if (game.theme === 'aurora') shootingStars()
+  } else surprise(knocked, r)
   if (r.strike || r.spare) {
-    banner(r.strike ? 'Strike!' : 'Spare!', { kind: r.strike ? 'strike' : 'spare' })
     audio.fanfare()
+    audio.twinkle = 64
     audio.cheer(true)
     crowd.start(true)
-    game.dance = r.strike
-    effects.glow(deck, r.strike ? 16 : 12)
-    voice.sayOnce(r.strike ? 'Strike! All 10 fell.' : 'Spare! You got them all.')
-    game.resultWait = 3.4
+    if (r.strike) game.dance = 'strike'
+    effects.confetti(new THREE.Vector3(0, 0.8, LANE.headPin - 1), r.strike ? 80 : 45)
+    effects.glow(deck, r.strike ? 16 : 10)
+    game.resultWait = Math.max(game.resultWait, r.strike ? 3.6 : 3)
     return
   }
-  if (knocked === 0) banner('Wheee! 🐧', { plus: 0 })
+  if (knocked === 0) {
+    audio.whoops()
+    crowd.start(false)
+    game.resultWait = Math.max(game.resultWait, 2.2)
+    return
+  }
   audio.jingle(knocked)
-  crowd.start(false)
-  // A few pale sparkles above the deck, never a cloud over the pins left to count
-  if (knocked) effects.glow(deck, 6)
-  // Nothing left to count (a pin that toppled before the slide can make this happen without a spare)
-  if (!up.length) {
-    game.resultWait = 2.6
-    return
-  }
-  // Now the pins still standing are counted, the child's way (see game.tier); the next
-  // roll waits until they are.
-  game.resultWait = Infinity
-  // strays: taps on bare ice while counting; fast: two taps closer than a careful finger makes them.
-  game.counting = { up, fallen, tapped: 0, slips: 0, strays: 0, fast: false, lastTap: 0, asked: false, aloud: game.tier === 1 && game.countsAloud++ < 2 }
-  counter.begin(up, {
-    onStep: (q, last, how) => {
-      $(`bond-pin-${q.i}`)?.classList.add('lit')
-      $(`rack-${q.i}`)?.classList.add('lit')
-      $('bond-standing-n').textContent = q.n
-      if (how === 'all') return
-      audio.tick(q.n)
-      // The voice counts with the child's own taps for the first two counts of a game, up to 5;
-      // the child then says how many (askTotal), so the total is not said for them.
-      // Otherwise, and whenever the game counts along with a child who waits, it is quiet:
-      // the rings, the numbers over the pins and the rising ticks carry the count, and a small
-      // total is named once a game.
-      // While the voice counts with the child, the numbers the game fills in (a child who paused) are
-      // said too, so the spoken count never skips one: "1, 2, 3, 4, 5".
-      if (how === 'tap' || game.counting?.aloud) {
-        if (game.counting?.aloud) voice.count(q.n)
-      } else if (last && q.n <= COUNT_ALOUD && !game.standingSaid) {
-        // One shared line a game, whatever the number: the ring numbers carry every count after it.
-        game.standingSaid = true
-        voice.say(`${q.n} standing.`)
-      }
-    },
-    onDone: bondDone,
-  })
-  // A plan that came out just right: the child knows one part of the bond already, and works out
-  // the other under the cloud (tier 2: how many are left; tier 3, whose plan named what is left: how many fell).
-  if (planHit) markBond('plan')
-  // A spare slide that missed leaves the very pins the child counted a moment ago: no repeat question.
-  if ((planHit && guessed) || (game.tier >= 2 && !knocked && game.standingBefore < 10)) counter.showAll()
-  else if (planHit) askHowMany(false, false, game.tier >= 3 ? 'fallen' : 'standing')
-  else if (game.tier >= 2) askHowMany(guessed, r.frameDone || r.resetPins)
-  else {
-    $('bond').classList.add('tap')
-    game.counting.hint = game.tapHints++ < 2
-    // One sentence a slide: after a plan's or a prediction's line, the 👆 over a pin asks instead.
-    if (!game.planSpoke && !guessed) voice.sayOnce('Tap the pins still standing.')
-    // A child who waits is counted along with, starting where they are. A child who has let the
-    // game count twice in a row isn't made to sit through a slow count: the pins light together.
-    if (game.ignored >= 2) counter.countRest(guessed ? 4 : 3, { all: true })
-    else counter.countRest(guessed ? 6 : 5)
-  }
+  audio.cheer(knocked >= 5)
+  crowd.start(knocked >= 5)
+  effects.glow(deck, 3 + knocked)
+  game.resultWait = Math.max(game.resultWait, 2.3)
 }
 
-/** The count is finished: the bond is complete, said once per game, then the next roll. */
-function bondDone() {
-  const c = game.counting
-  if (!c) return
-  // Tier 1: a child who tapped every pin says how many there are, with the numbers hidden:
-  // the last number counted tells how many (askTotal). A single pin needs no question.
-  if (game.tier === 1 && !c.asked && !c.total && c.tapped === c.up.length && c.up.length >= 2) return askTotal()
-  game.counting = null
-  unveil()
-  mist.hide()
-  $('bond').classList.remove('tap', 'guess', 'guess-fallen', 'show-fallen', 'guess-total')
-  $('howmany').hidden = true
-  $('tap-hint').hidden = true
-  $('bond-fallen-n').textContent = c.fallen
-  const s = c.up.length
-  // A count of the child's own: every standing pin tapped, one at a time (no taps quicker than a careful
-  // finger, most taps on a pin rather than the bare ice), no fallen pin counted, and the total said right.
-  const careful = c.tapped === s && !c.slips && !c.missed && !c.fast && c.strays * 2 <= c.tapped + c.strays
-  // Tapping a single pin is a careful count (it moves a strong bowler up) but not a bond worked out.
-  if (careful && (c.asked || s >= 2)) markBond('self')
-  if (!c.asked) game.ignored = c.tapped ? 0 : game.ignored + 1
-  // Three careful counts move them up a step; a strong bowler who leaves one pin counts it carefully too,
-  // and after two strikes, spares or big first slides two careful counts are enough, so a strong bowler
-  // isn't left tapping one pin for half a game. A hasty count (taps everywhere) takes one back.
-  // A step up also needs one careful count of 3 or more pins with its total said right: single pins
-  // and pairs alone (a strong bowler's, or lucky taps) don't show counting yet.
-  if (careful && s >= 3 && c.total === 'done' && !c.missed) game.bigCount = true
-  if (game.tier === 1 && careful && ++game.selfCounts >= (game.bigRolls >= 2 ? 2 : 3) && game.bigCount) setTier(2)
-  else if (game.tier === 1 && !careful && c.tapped) game.selfCounts = Math.max(0, game.selfCounts - 1)
-  // Each new way is said once, for the first four ways of a game; after that the card says it.
-  const said = game.bondsSaid < 4 && voice.sayOnce(`${c.fallen} and ${s} make 10.`)
-  if (said) game.bondsSaid++
-  game.resultWait = game.timer + (said ? 2.8 : 1.6)
-}
-
-function setTier(t) {
-  game.tier = t
-  game.selfCounts = 0
-  game.rights = 0
-  game.misses = 0
-  game.planHits = 0 // the bumpers offer counts this tier's plans only
-  game.planNear = 0
-  game.plansMade = 0 // a new tier's plans get their footprints again
-  // Only a 6–8 game remembers where it got to; a 3–5 game always starts at the beginning.
-  if (game.big) store.set('bigtier', (game.bigTier = Math.max(2, t)))
-}
-
-/** The child taps a pin on the lane (or its picture in the bond) to count it. */
-function countPin(i) {
-  const c = game.counting
-  if (!c || c.waiting) return false
-  if (!counter.left.some((q) => q.i === i)) return false
-  const now = performance.now()
-  // A careful finger points, looks and taps: taps closer than 0.4 s are a sweep, not a count.
-  if (c.lastTap && now - c.lastTap < 400) c.fast = true
-  c.lastTap = now
-  c.tapped++ // before the tap: counting the last pin finishes the bond straight away
-  counter.tap(i)
-  $('tap-hint').hidden = true
-  // Wait for the next tap (long enough for a small child counting slowly); if the child pauses, the game counts on from here.
-  counter.countRest(3.5)
-  return true
-}
-
-const pinEnds = [new THREE.Vector3(), new THREE.Vector3()]
-const pinAxis = new THREE.Vector3()
-const toScreen = (v) => ({ x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight })
-
-/**
- * The pin under a screen point: the nearest pin (standing or fallen) whose drawn body the
- * finger touches, with a little slack around it. Fallen pins are found too, so a tap on one
- * can be answered ("that one fell down") instead of counting the nearest standing pin.
- */
-function pinAt(x, y) {
-  let best = null
-  let bestD = Infinity
-  for (const p of pins.list) {
-    if (p.removed || !p.mesh.visible) continue
-    // The pin's own axis, base to top, as it lies now.
-    pinAxis.set(0, PIN_H / 2, 0).applyQuaternion(p.body.quaternion)
-    pinEnds[0].copy(p.body.position).sub(pinAxis).project(camera)
-    pinEnds[1].copy(p.body.position).add(pinAxis).project(camera)
-    const a = toScreen(pinEnds[0])
-    const b = toScreen(pinEnds[1])
-    const len2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2
-    const t = len2 ? clamp(((x - a.x) * (b.x - a.x) + (y - a.y) * (b.y - a.y)) / len2, 0, 1) : 0
-    const d = Math.hypot(x - (a.x + t * (b.x - a.x)), y - (a.y + t * (b.y - a.y)))
-    // About half a pin's height either side of its axis, and never smaller than a fingertip.
-    const reach = clamp(Math.sqrt(len2) * 0.42, 18, 46)
-    if (d < reach && d < bestD) {
-      bestD = d
-      best = p
-    }
-  }
-  if (!best) return null
-  const q = counter.left.find((q) => q.i === best.i)
-  if (q) return { q }
-  return { fallen: pins.isDown(best), counted: !pins.isDown(best) }
-}
-
-/** A tap on a pin lying down: it is not counted, and the child hears why, once a game. */
-function slipPin() {
-  const c = game.counting
-  if (!c) return
-  c.slips++
-  audio.squeak(0.7)
-  const f = $('bond-fallen')
-  f.classList.remove('nudge')
-  void f.offsetWidth
-  f.classList.add('nudge')
-  voice.sayOnce('That one fell down. Count the pins standing up.')
-  counter.countRest(3)
-}
-
-/**
- * Three neighbouring numbers around the answer, with the answer first, middle or last at
- * random, so a child can't find it by where it sits. 0 is never a choice: a question is only
- * asked when pins are left, so 0 would be an answer to rule out without looking.
- */
-function nearChoices(s) {
-  const windows = [[s - 2, s - 1, s], [s - 1, s, s + 1], [s, s + 1, s + 2]].filter((w) => w[0] >= 1 && w[2] <= 10)
-  return windows[Math.floor(Math.random() * windows.length)]
-}
-
-/**
- * The harder steps for children who count well: the bond shows one part and a "?", and the
- * child works out the missing part (looking at the lane is allowed).
- * Usually the hidden part is the pins standing ("7 + ? = 10"). With three or fewer standing,
- * which a glance can tell, it is sometimes the pins that fell ("? + 2 = 10"): the fallen pins
- * hide in the card, and on a second slide some have already been swept away, so the bond itself
- * is the way to the answer.
- * Tier 2 picks from three neighbouring numbers; tier 3 from a 1-10 strip, in two rows of five.
- * A right answer lights them all at once; a wrong one means counting them.
- */
-function askHowMany(guessed, frameOver, part) {
-  const c = game.counting
-  const s = c.up.length
-  c.asked = true
-  c.plan = !!part // asked after a plan came out just right
-  // A kept 💭 prediction has just said how many fell, so then the question is always the standing part.
-  c.part = part ?? (s <= 3 && !guessed && Math.random() < 0.5 ? 'fallen' : 'standing')
-  // While the question is open, nothing on screen gives the answer away: the frame card's numbers,
-  // the rack map and the plan's result wait behind a "?", and a snow cloud settles over the pins,
-  // so the bond itself is the way to the answer, not counting the lane again.
-  veil()
-  const answer = c.part === 'fallen' ? c.fallen : s
-  if (c.part === 'fallen') {
-    $('bond').classList.add('guess-fallen')
-    $('bond-fallen-n').textContent = '?'
-    // The standing part is the one given: its pins stand lit in the card.
-    for (const q of c.up) $(`bond-pin-${q.i}`)?.classList.add('lit')
-    $('bond-standing-n').textContent = s
-  } else {
-    $('bond').classList.add('guess')
-    $('bond-standing-n').textContent = '?'
-  }
-  // The numbers and the question wait until the cloud hides the pins, so the lane can't be counted through it.
-  c.waiting = true
-  mist.show(() => {
-    if (game.counting !== c) return
-    c.waiting = false
-    numberChoices(game.tier >= 3 ? Array.from({ length: 10 }, (_, k) => k + 1) : nearChoices(answer), c.part === 'fallen' ? 'fell' : 'standing')
-    $('howmany').setAttribute('aria-label', c.part === 'fallen' ? 'How many fell down?' : 'How many are still standing?')
-    // After a first slide the missing part is what the spare needs; after a last one, what was left.
-    // Spoken in full the first time; after that the "?" and the numbers ask it. A slide whose plan or
-    // 💭 prediction has just been answered aloud already has its sentence: the "?" asks for itself.
-    const asks = c.part === 'fallen' ? 'How many fell down?' : frameOver ? 'How many are still standing?' : 'How many more make 10?'
-    // The cloud is explained the first time it settles; each question is spoken once a game.
-    const spoke = game.planSpoke || guessed
-    const cloud = !spoke && voice.sayOnce('The pins are hiding in a cloud.')
-    if (!spoke && !voice.sayOnce(asks) && !cloud) audio.tick(3)
-    // A child who doesn't answer is counted along with, with no fuss.
-    counter.countRest(guessed ? 8 : 7)
-  })
-}
-
-/**
- * After a wrong pick, a fresh deal: the answer and the numbers nearest it that weren't tried, in order,
- * so the next try is still a choice made by counting (not the one button left to press).
- */
-function redeal(answer, tried, size) {
-  const near = Array.from({ length: 10 }, (_, k) => k + 1)
-    .filter((n) => n !== answer && !tried.has(n))
-    .sort((a, b) => Math.abs(a - answer) - Math.abs(b - answer) || Math.random() - 0.5)
-  return [answer, ...near.slice(0, size - 1)].sort((a, b) => a - b)
-}
-
-/** The number buttons under the bond, each answering "how many?". */
-function numberChoices(picks, word) {
-  $('howmany').classList.toggle('strip', picks.length > 3)
-  $('howmany').replaceChildren(...picks.map((n) => {
-    const b = Object.assign(document.createElement('button'), { textContent: n })
-    b.dataset.n = n
-    b.setAttribute('aria-label', `${n} ${word}`)
-    b.addEventListener('click', (e) => {
-      e.stopPropagation()
-      answerHowMany(b)
-    })
-    return b
-  }))
-  $('howmany').hidden = false
-}
-
-/**
- * Tier 1, after the child has tapped every pin standing: the numbers over the pins tuck away and the
- * child says how many there are, from two neighbouring numbers. The last number counted tells how
- * many, so a careful counter knows; a child who tapped about at random has to guess.
- * Not answering is fine: the numbers come back and the game goes on, without the "worked out" mark.
- */
-function askTotal() {
-  const c = game.counting
-  const s = c.up.length
-  c.total = 'open'
-  c.part = 'total'
-  counter.labels(false)
-  $('bond').classList.add('guess-total')
-  $('bond-standing-n').textContent = '?'
-  const other = s >= 10 || (s > 1 && Math.random() < 0.5) ? s - 1 : s + 1
-  numberChoices(Math.random() < 0.5 ? [s, other] : [other, s], 'standing')
-  $('howmany').setAttribute('aria-label', 'How many are standing?')
-  if (!voice.sayOnce('How many are standing?')) audio.tick(3)
+/** A strike wins the penguin its next hat, put on with a sparkle as it pops up. */
+function newHat() {
+  // The next hat not won yet; once all are won, the next one along.
+  const next = HATS.find((h) => !game.hats.includes(h)) ?? HATS[(HATS.indexOf(game.hat) + 1) % HATS.length]
+  game.hat = next
+  if (!game.hats.includes(next)) game.hats.push(next)
+  store.set('hats', game.hats.join(','))
+  store.set('hat', game.hat)
   setTimeout(() => {
-    if (game.counting === c && c.total === 'open') {
-      c.missed = true
-      totalDone()
+    if (game.state !== 'result') return
+    penguin.wear(game.hat, pins.templates.fish)
+    audio.hat()
+    penguin.sqV += 6
+    effects.sparkleAt(penguin.group.position.clone().setY(1.3), '#fff3b0', 12, 2)
+  }, 450)
+}
+
+/**
+ * Now and then, something different happens after a slide: a baby penguin dives into a gutter and
+ * slides down after the penguin, a shower of snow (the whale's spray in Fishy Bay) drenches the pins,
+ * the crowd does a wave, and each lane has its own: a fish leaps over the deck in Fishy Bay, shooting
+ * stars streak across the Night lane after a big knock. Every spare gets a party, taking turns: the baby
+ * at most every third spare, otherwise the pins' conga, the crowd's wave, the shower or the lane's own.
+ * Never the same surprise twice running.
+ */
+function surprise(knocked, r) {
+  let kind = null
+  if (r.spare) {
+    game.spares++
+    const party = ['conga', 'wave', 'shower']
+    // Each lane's own party comes up most.
+    if (game.theme === 'bay') party.push('leap', 'leap', 'leap')
+    if (game.theme === 'aurora') party.push('stars', 'stars', 'stars')
+    if (game.spares - game.babyAt >= 3) kind = 'baby'
+    else {
+      const fresh = party.filter((k) => k !== game.event)
+      kind = fresh[Math.floor(Math.random() * fresh.length)]
     }
-  }, 10000)
-}
-
-function totalDone() {
-  const c = game.counting
-  c.total = 'done'
-  counter.labels(true)
-  $('bond').classList.remove('guess-total')
-  $('bond-standing-n').textContent = c.up.length
-  bondDone()
-}
-
-function answerHowMany(btn) {
-  const c = game.counting
-  if (!c || btn.disabled) return
-  audio.unlock()
-  const s = c.up.length
-  const answer = c.part === 'fallen' ? c.fallen : s
-  const n = Number(btn.dataset.n)
-  for (const b of $('howmany').children) b.disabled = true
-  if (c.part === 'total') {
-    if (n === s) {
-      btn.className = 'yes'
-      audio.jingle(s * 2)
-      return totalDone()
-    }
-    // Not quite: the numbers come back over the pins, and the last one is the answer. Two fresh
-    // numbers are dealt (the one tried is gone), so the child reads the last number to choose.
-    c.missed = true
-    ;(c.tried ??= new Set()).add(n)
-    audio.squeak(0.8)
-    counter.labels(true)
-    numberChoices(redeal(s, c.tried, 2), 'standing')
-    if (!voice.sayOnce('The last number you counted tells how many.')) voice.hush()
+  } else if (Math.random() < 0.45) {
+    const options = ['shower', 'wave']
+    if (knocked >= 4 && game.spares - game.babyAt >= 1) options.push('baby')
+    if (game.theme === 'bay') options.push('leap', 'leap', 'leap')
+    if (game.theme === 'aurora' && knocked >= 4) options.push('stars', 'stars', 'stars')
+    const fresh = options.filter((k) => k !== game.event)
+    kind = fresh[Math.floor(Math.random() * fresh.length)]
+  }
+  if (!kind) return
+  game.event = kind
+  if (kind === 'stars') return shootingStars()
+  if (kind === 'conga') {
+    game.dance = 'conga'
+    game.resultWait = Math.max(game.resultWait, 3.6)
     return
   }
-  if (n === answer) {
-    // Answered: the cloud lifts and the numbers come back, to check by. After a wrong try they stay
-    // hidden until the right number is picked, so the second try comes from counting, not copying.
-    mist.hide()
-    unveil()
-    btn.className = 'yes'
-    // Only a first-try answer ends a run of misses: re-dealt numbers always reach the answer in the end.
-    if (!c.missed) game.misses = 0
-    audio.jingle(answer * 2)
-    // The bond sentence that follows says the number; "Yes" is said aloud only while it is new.
-    if (!voice.sayOnce('Yes!')) audio.tick(answer)
-    if (!c.missed) markBond('self')
-    $('bond-fallen-n').textContent = c.fallen
-    $('bond').classList.remove('guess-fallen', 'show-fallen')
-    counter.showAll()
-    // Four right answers and the number strip replaces the three choices (see the miss below). A 3–5
-    // child needs six, and not before the fourth frame, so tier 2 has time to settle first.
-    if (game.tier === 2 && !c.missed && ++game.rights >= (game.big ? 4 : 6) && (game.big || card.frame >= 3)) setTier(3)
+  if (kind === 'wave') {
+    crowd.wave((c) => audio.squeak(1.2 + Math.random() * 0.4))
+    game.resultWait = Math.max(game.resultWait, 3)
     return
   }
-  btn.className = 'no'
-  audio.squeak(0.8)
-  const first = !c.missed
-  c.missed = true
-  // A miss takes two right answers back, so guessing among three numbers doesn't climb a tier.
-  // Two misses in a row: one step back for a while.
-  if (first) game.rights = Math.max(0, game.rights - 2)
-  if (first && ++game.misses >= 2) setTier(game.tier - 1)
-  if (c.part === 'fallen') {
-    // Only the fallen pins in the card come out from behind the "?" so the child can count them and
-    // pick again; the cloud, the frame card's "?" and the hidden plan stay as they are.
-    $('bond').classList.add('show-fallen')
-    // The strip keeps every other number live; three choices are dealt afresh around the answer.
-    ;(c.tried ??= new Set()).add(n)
-    if (game.tier >= 3) for (const b of $('howmany').children) b.disabled = b.className === 'no'
-    else numberChoices(redeal(answer, c.tried, 3), 'fell')
-    if (!voice.sayOnce('Count the pins lying down.')) voice.hush()
-    counter.countRest(9)
+  if (kind === 'leap') {
+    leap = { t: -0.5, obj: null }
+    game.resultWait = Math.max(game.resultWait, 3.2)
     return
   }
-  // A wrong guess means counting them: the child taps the pins, as in the first tier. The cloud lifts
-  // so the pins can be tapped; the frame card and the plan stay hidden until the count is done.
-  mist.hide()
-  if (!voice.sayOnce(`Let's count them. Tap the pins standing up.`)) voice.hush()
-  $('howmany').hidden = true
-  $('bond').classList.remove('guess')
-  $('bond').classList.add('tap')
-  $('bond-standing-n').textContent = ''
-  counter.countRest(5)
-}
-$('bond-standing').addEventListener('click', (e) => {
-  const i = e.target.closest?.('.pin-ic')?.dataset.pin
-  if (i !== undefined && countPin(Number(i))) e.stopPropagation()
-})
-$('bond-fallen').addEventListener('click', (e) => {
-  if (!$('bond').classList.contains('tap') || !e.target.closest?.('.pin-ic')) return
-  e.stopPropagation()
-  slipPin()
-})
-
-/** Hide what would give a bond question's answer away: this roll's frame numbers, the rack map, the plan's result. */
-function veil() {
-  const r = game.outcome
-  game.veil = { f: r.frameDone ? card.frame - 1 : card.frame }
-  document.body.classList.add('veiled')
-  updateHud()
-  updatePlanPill()
+  if (kind === 'baby') {
+    game.babyAt = game.spares
+    if (crowd.slider(() => audio.whee())) game.resultWait = Math.max(game.resultWait, 3.4)
+    return
+  }
+  const bay = game.theme === 'bay'
+  if (bay) scenery.spout()
+  setTimeout(() => {
+    if (game.state !== 'result') return
+    audio.splash()
+    effects.flurry(new THREE.Vector3(0, 3.2, LANE.headPin - 0.8), bay ? '#bfe8ff' : '#ffffff')
+    for (const p of pins.list) p.squish = 0.8
+    penguin.sqV -= 5
+  }, bay ? 500 : 150)
+  game.resultWait = Math.max(game.resultWait, 3.2)
 }
 
-function unveil() {
-  if (!game.veil) return
-  game.veil = null
-  document.body.classList.remove('veiled')
-  updateHud()
-  updatePlanPill()
+/** Night lane: three shooting stars streak across the sky over the pins, each with a soft twinkle. */
+function shootingStars() {
+  for (let k = 0; k < 3; k++) {
+    setTimeout(() => {
+      if (game.state !== 'result' && game.state !== 'aim') return
+      const dir = Math.random() < 0.5 ? 1 : -1
+      effects.shootingStar(new THREE.Vector3(-dir * (2 + Math.random()), 3.4 + Math.random() * 1.4, LANE.back + 0.6), new THREE.Vector3(dir * 7, -1.6, 0))
+      audio.squeak(1.8 + k * 0.15)
+    }, 300 + k * 550)
+  }
+  game.resultWait = Math.max(game.resultWait, 2.8)
 }
 
-/** After the cheering: tidy the pins and get the penguin ready for the next roll. */
+/** Fishy Bay: a fish leaps out of one gutter, flips over the pins and splashes into the other. */
+let leap = null
+function updateLeap(dt) {
+  if (!leap) return
+  leap.t += dt
+  if (leap.t < 0) return
+  if (!leap.obj) {
+    const tpl = pins.templates.fish
+    if (!tpl) return (leap = null)
+    leap.obj = tpl.clone(true)
+    leap.obj.scale.setScalar(0.8)
+    leap.dir = Math.random() < 0.5 ? 1 : -1
+    scene.add(leap.obj)
+    effects.puff(new THREE.Vector3(-leap.dir * 2, 0, LANE.headPin - 0.9), 10, 0.8, '#bfe8ff')
+    audio.whee()
+  }
+  const k = Math.min(1, leap.t / 1.3)
+  const x = -leap.dir * 2 + leap.dir * 4 * k
+  leap.obj.position.set(x, -0.2 + Math.sin(k * Math.PI) * 2.4, LANE.headPin - 0.9)
+  leap.obj.rotation.set(0, leap.dir > 0 ? 0 : Math.PI, Math.PI / 2 - (k - 0.5) * 2.4)
+  if (k >= 1) {
+    effects.puff(new THREE.Vector3(leap.dir * 2, 0, LANE.headPin - 0.9), 12, 0.9, '#bfe8ff')
+    effects.flurry(new THREE.Vector3(leap.dir * 2, 1.2, LANE.headPin - 0.9), '#bfe8ff', 30)
+    audio.splash()
+    for (const p of pins.list) p.squish = Math.max(p.squish, 0.5)
+    leap.obj.removeFromParent()
+    leap = null
+  }
+}
+
+/** The penguin pops up behind the deck, happy while pins are tumbling, dizzy if nothing fell yet. */
+function popUp() {
+  const b = penguin.body.position
+  if (b.y > -0.1) effects.puff(new THREE.Vector3(b.x, 0.3, b.z), 8, 0.7)
+  penguin.react(clamp(b.x, -LANE.half + 0.4, LANE.half - 0.4), game.falls ? 'joy' : 'dizzy')
+  audio.pop()
+  effects.puff(new THREE.Vector3(penguin.x, 0.1, LANE.deckEnd - 0.7), 6, 0.6)
+}
+
+/** After the cheering: tidy the pins and get the penguin ready for the next slide. */
 function nextRoll() {
   const r = game.outcome
   game.dance = false
-  $('bond').hidden = true
-  for (const d of document.querySelectorAll('.rack i.lit')) d.classList.remove('lit')
   if (card.over) return gameOver()
+  crowd.home()
   if (r.resetPins) {
-    // A fresh rack: the last frame's "fell + standing" line no longer matches.
-    prediction.reset()
     pins.reset()
     audio.drop()
-    if (r.frameDone) showIntro(card.frame === card.count - 1 ? '🏁' : '🎳', card.frame === card.count - 1 ? 'Last frame!' : `Frame ${card.frame + 1}`)
+    specialPin()
   } else {
     for (const p of pins.clearFallen()) effects.puff(p, 5, 0.6)
     audio.poof()
-    // The plan was for the first slide; the spare question has the stage to itself.
-    game.plan = null
-    updatePlanPill()
+    // For the second slide the penguin waddles over in line with the pins left, so a straight slide can reach them.
+    const up = pins.list.filter((p) => !p.removed && !pins.isDown(p))
+    // The spot in line with the most pins (a split leaves two groups: it picks the bigger one).
+    if (up.length) {
+      const mid = up.reduce((a, p) => a + p.body.position.x, 0) / up.length
+      let best = 0
+      let bestScore = -Infinity
+      for (let k = -3; k <= 3; k++) {
+        const x = k * STEP_X
+        const score = up.filter((p) => Math.abs(p.body.position.x - x) < 0.42).length - Math.abs(x - mid) * 0.1
+        if (score > bestScore) {
+          bestScore = score
+          best = x
+        }
+      }
+      game.x = clamp(best, -MAX_X, MAX_X)
+      game.angle = 0
+    }
   }
   updateRack(standingSet())
   toAim()
-  // Bumpers only guard the gutters; aiming is the child's job. Before a second
-  // roll the rings stay under the pins left, and the child says where they are.
-  if (r.resetPins) {
-    counter.clear()
-    offerPlan()
-  } else askWhere()
 }
 
-/**
- * Tiers 2 and 3, a fresh rack: the child may plan the first slide as a way to make 10 ("knock down 7,
- * leave 3"). Two plans are offered, one knocking a few pins and one knocking many, picked from
- * the ways not met yet this game, so a strong bowler meets new numbers too. Where the penguin
- * stands sets how many fall (the middle knocks nearly all, the edge just one), so a plan makes
- * aiming deliberate. Sliding without choosing is fine.
- */
-function offerPlan() {
-  game.plan = null
-  updatePlanPill()
-  if (game.tier < 2) return offerRoughPlan()
-  // Only plans a spot really gives about half the time or more, so following the plan honestly works
-  // (measured 2026-10-11, 20 straight Go slides a spot on each side: the edge 1 (75-90%, else 2);
-  // two steps out 4 (about 55%, else 3 or 5); one step 8 (about 55%, else 7 or 9); the middle 9
-  // (about 55%, else 8 or 10); and 24 curved Go slides a spot: from the middle 3 (left curve 24/24,
-  // right 14/24, else 4); one step out curving away from the middle 2 (21-22/24 with bumpers up;
-  // with them down it slips into the gutter, so that plan needs the bumpers). 5, 6 and 7 come up too
-  // seldom to be fair plans), and four times as likely when not met yet.
-  const pick = (weights) => {
-    const all = Object.entries(weights).map(([k, w]) => [Number(k), w * (game.bonds.has(`${k}+${10 - k}`) ? 1 : 4)])
-    let r = Math.random() * all.reduce((a, [, w]) => a + w, 0)
-    for (const [k, w] of all) if ((r -= w) < 0) return k
-    return all[0][0]
-  }
-  // Tier 3 names a plan by what is left standing ("leave 3"), so where to stand takes the bond:
-  // leave 3 means knock 7. Tier 2 names what to knock down, with a ten-frame showing both parts.
-  const leave = game.tier >= 3
-  $('plan').classList.toggle('leave', leave)
-  $('plan-text').textContent = leave ? 'How many will you leave standing?' : 'How many will you knock down?'
-  // Tier 3 also gets the curved plans (leave 7, leave 8): more numbers to reason about, and the curve to aim with.
-  const few = leave ? { ...FEW, 3: 1, ...(game.bumpers ? { 2: 1 } : {}) } : FEW
-  $('plan-row').replaceChildren(...[pick(few), pick(MANY)].map((k) => {
-    const b = document.createElement('button')
-    b.dataset.k = leave ? 10 - k : k
-    b.dataset.knock = k
-    const curved = leave && CURVED.has(k)
-    b.setAttribute('aria-label', leave ? `Leave ${10 - k} standing${curved ? ', with a curve' : ''}` : `Knock down ${k}, leave ${10 - k} standing`)
-    b.append(Object.assign(document.createElement('b'), { textContent: leave ? 10 - k : k }), leave ? standRow(10 - k) : tenFrame(k))
-    // The same arrow the curve button will show once the plan is picked.
-    if (curved) b.append(Object.assign(document.createElement('small'), { className: 'plan-curve', textContent: `${CURVE_ICONS[planCurve(k) + 1]} curve` }))
-    b.addEventListener('click', (e) => {
-      e.stopPropagation()
-      choosePlan(k)
-    })
-    return b
-  }).sort((a, b) => a.dataset.k - b.dataset.k))
-  $('plan').hidden = false
-  // A tier-3 bowler whose plans keep coming out right is offered the next challenge once a game:
-  // bumpers down, so the aim has to be true too.
-  // The plans counted are this tier's own (setTier starts them again), and the last frame keeps its bumpers.
-  $('bumpers-down').hidden = !(game.tier >= 3 && game.bumpers && game.planHits >= 2 && game.planHits + game.planNear >= 4 && !game.bumperOffer && card.frame < card.count - 1)
-  if (!$('bumpers-down').hidden) game.bumperOffer = true
-  // Asked aloud the first time in a game; after that the picture asks.
-  if (game.plansAsked++ < 1) voice.say(`Make a plan. ${$('plan-text').textContent}`)
-  else audio.tick(2)
-}
-
-/**
- * Tier 1, a fresh rack: the same decision without numbers. "A few or a lot?" as two pictures of ten
- * dots, a few lying down or most of them. Where the penguin stands decides it (the edge knocks a few,
- * the middle a lot), so the first slide is aimed, not only pressed. A few means 1 to 4 fall, a lot 7
- * or more. The first two plans of a game show the footprints; after that the child finds the spot.
- */
-const ROUGH = { 2: 'a few', 9: 'a lot' }
-const roughHit = (k, n) => (k === 2 ? n >= 1 && n <= 4 : n >= 7)
-function offerRoughPlan() {
-  $('plan').classList.remove('leave')
-  $('plan-text').textContent = 'A few or a lot?'
-  $('plan-row').replaceChildren(...Object.entries(ROUGH).map(([k, words]) => {
-    const b = document.createElement('button')
-    b.dataset.k = k
-    b.dataset.knock = k
-    b.className = 'rough'
-    b.setAttribute('aria-label', `Knock down ${words}`)
-    b.append(tenFrame(Number(k)), Object.assign(document.createElement('small'), { textContent: words }))
-    b.addEventListener('click', (e) => {
-      e.stopPropagation()
-      choosePlan(Number(k))
-    })
-    return b
-  }))
-  $('bumpers-down').hidden = true
-  $('plan').hidden = false
-  if (game.plansAsked++ < 1) voice.say('Make a plan. Will you knock down a few, or a lot?')
-  else audio.tick(2)
-}
-
-const FEW = { 1: 1, 4: 1 }
-const MANY = { 8: 1, 9: 1 }
-/** Tier 3's curved plans: knock 3 (leave 7) curving from the middle, knock 2 (leave 8) one step out curving away. */
-const CURVED = new Set([2, 3])
-/**
- * A curved plan sets the curve button for the child: from the middle to the left (it gives 3 every time),
- * from one step out away from the middle, on the side the penguin is nearest.
- */
-const planCurve = (k) => (!CURVED.has(k) ? 0 : k === 3 ? -1 : game.x < 0 ? -1 : 1)
-const CURVE_ICONS = ['↖️', '⬆️', '↗️']
-/**
- * Where a slide knocks about k: straight, the middle 9, one step out 8, two steps 4, the edge just one;
- * curved (tier 3), the middle 3 and one step out 2.
- */
-const planSpot = (k, curved = false) => (curved ? (k === 2 ? STEP_X : 0) : k >= 9 ? 0 : k >= 7 ? STEP_X : k >= 3 ? STEP_X * 2 : MAX_X)
-
-/** Just the pins left standing: n upright dots, with no gaps to count the knocked ones by. */
-function standRow(n) {
-  const el = document.createElement('span')
-  el.className = 'ten stand'
-  for (let i = 0; i < n; i++) el.append(document.createElement('i'))
-  return el
-}
-
-/** Ten dots like a ten-frame: the first k lie knocked down, the rest stand. */
-function tenFrame(k) {
-  const el = document.createElement('span')
-  el.className = 'ten'
-  for (let n = 0; n < 10; n++) el.append(Object.assign(document.createElement('i'), { className: n < k ? 'f' : '' }))
-  return el
-}
-
-function choosePlan(k) {
-  if (game.state !== 'aim' || $('plan').hidden) return
-  audio.unlock()
-  audio.click()
-  game.idle = 0
-  const leave = game.tier >= 3
-  const rough = game.tier < 2
-  const side = game.x < 0 ? -1 : 1
-  const curve = leave ? planCurve(k) : 0
-  game.plan = { k, got: null, leave, curve, slid: null, rough }
-  $('plan').hidden = true
-  $('predict-pins').disabled = true // the plan is this slide's decision; 💭 comes back for the next one
-  if (curve) {
-    game.curve = curve
-    updateCurveBtn()
-  }
-  updatePlanPill()
-  // The first plan of a game is read out; after that the 🎯 card beside the rack says it.
-  if (game.plansAsked === 1 && !game.planSaid) {
-    game.planSaid = true
-    voice.sayNow(rough ? `Knock down ${ROUGH[k]}.` : game.plan.leave ? `Leave ${10 - k} standing.` : `Knock down ${k}. Leave ${10 - k} standing.`)
-  }
-  // Tier 1: the whole footprint trail for the first two plans of a game (the edge for a few, the middle
-  // for a lot); after that the child finds the spot, and the prints come back after a plan that missed.
-  if (rough) {
-    if (game.plansMade++ < 2 || game.planOff) spot.show(k === 2 ? side * MAX_X : 0)
+/** From the second frame on, about half the fresh racks hold a giant snowman at the front or one golden pin. */
+function specialPin() {
+  if (card.frame < 1) return
+  // Rarely (about one rack in eight), the head pin is a cheeky one that jumps over the penguin.
+  if (Math.random() < 0.12) {
+    pins.list[0].dodger = true
     return
   }
-  // Tier 2: for the first two plans of a game footprints show where to stand, on the side the penguin is
-  // nearest; after that the child finds the spot (the middle knocks many, the edge few), and the prints
-  // come back only after a plan that came out two or more away. Tier 3 remembers the straight spots alone;
-  // a curved plan is new, so its first one in a game (and one after a curved plan far off) gets the prints.
-  if (game.tier === 2 && (game.plansMade++ < 2 || game.planOff)) spot.show(side * planSpot(k), { short: true, label: k })
-  else if (game.tier === 2) voice.sayOnce('Now you find where to stand.')
-  else if (curve && (game.curvePlans++ < 1 || game.planOff)) {
-    spot.show(k === 3 ? 0 : side * planSpot(k, true), { short: true, label: 10 - k })
-    voice.sayOnce('A curved plan. Stand on the footprints, then press Go.')
-  }
-}
-
-/** The plan stays in view beside the rack: what was planned, then what fell. */
-function updatePlanPill() {
-  const el = $('plan-pill')
-  const p = game.plan
-  el.hidden = !p
-  if (!p) return
-  // A "leave" plan (tier 3) is shown and checked by the pins left standing; a "knock" plan by the pins that fell.
-  const show = (n) => (p.leave ? 10 - n : n)
-  if (p.rough) {
-    // A picture plan: what was planned in words, then a ✓ or how many fell.
-    const ok = p.got !== null && roughHit(p.k, p.got)
-    const done = p.got === null || game.veil ? '' : ok ? ' ✓' : ` → ${p.got}`
-    const pic = tenFrame(p.k)
-    pic.classList.add('rough')
-    el.replaceChildren(Object.assign(document.createElement('span'), { textContent: `🎯 ${ROUGH[p.k]}${done}` }), pic)
-    el.classList.toggle('hit', !game.veil && ok)
-    el.classList.remove('near')
-    el.setAttribute('aria-label', p.got === null || game.veil ? `Plan: knock down ${ROUGH[p.k]}` : `Planned ${ROUGH[p.k]}, ${p.got} fell`)
-    return
-  }
-  const got = p.got === null || game.veil ? '' : p.got === p.k ? ' ✓' : ` → ${show(p.got)}`
-  el.replaceChildren(Object.assign(document.createElement('span'), { textContent: `🎯 ${p.leave ? 'leave ' : ''}${show(p.k)}${p.curve ? ` ${CURVE_ICONS[p.curve + 1]}` : ''}${got}` }), p.leave ? standRow(10 - p.k) : tenFrame(p.k))
-  el.classList.toggle('hit', !game.veil && p.got === p.k)
-  el.classList.toggle('near', !game.veil && p.got !== null && Math.abs(p.got - p.k) === 1)
-  el.setAttribute('aria-label', p.got === null || game.veil ? `Plan: ${p.leave ? `leave ${10 - p.k} standing` : `knock down ${p.k}`}` : `Planned ${p.k}, ${p.got} fell`)
-}
-
-/**
- * The planned slide is over: the two numbers side by side. Returns true when it came out just
- * as planned. A different result is no failure, only a hint about where to stand next time.
- */
-function planResult(plan, knocked, { quiet = false } = {}) {
-  plan.got = knocked
-  game.planOff = Math.abs(knocked - plan.k) >= 2
-  updatePlanPill()
-  // A line spoken here is this slide's sentence; the question after it doesn't add the cloud line too.
-  game.planSpoke = false
-  const say = (t) => !quiet && (game.planSpoke = voice.sayOnce(t))
-  if (plan.rough) {
-    // Tier 1's picture plan: right or not, the count of the pins still standing comes next, by tapping.
-    game.planOff = !roughHit(plan.k, knocked)
-    if (!game.planOff) {
-      audio.jingle(8)
-      say('Just as you planned!')
-    } else say(plan.k === 2 ? 'For a few, stand near the side.' : 'For a lot, stand in the middle.')
-    return false
-  }
-  if (knocked === plan.k) {
-    game.planHits++
-    audio.jingle(10)
-    say('Just as you planned!')
-    return true
-  }
-  // One away is close: the right spot, with a little luck in how the pins tumble (from the best spot
-  // a straight slide gives the planned number about half the time, and one away nearly all the rest).
-  // The card turns pale green; no tip is needed.
-  if (Math.abs(knocked - plan.k) === 1) {
-    game.planNear++
-    audio.jingle(4)
-    say('Close to your plan!')
-    return false
-  }
-  // The 🎯 card shows both numbers; the voice gives only a tip about where to stand, once a game each way.
-  if (plan.curve) {
-    say(plan.slid !== plan.curve
-      ? 'A curved plan needs the curve. Press Go to slide it.'
-      : knocked > plan.k ? 'To leave more standing, curve away from the middle.' : 'To leave fewer standing, curve from the middle.')
-    return false
-  }
-  say(knocked > plan.k
-    ? (plan.leave ? 'To leave more standing, stand nearer the side.' : 'To knock down fewer, stand nearer the side.')
-    : (plan.leave ? 'To leave fewer standing, stand nearer the middle.' : 'To knock down more, stand nearer the middle.'))
-  return false
-}
-
-const SIDE_WORDS = { left: 'on the left', middle: 'in the middle', right: 'on the right' }
-const SIDES = ['left', 'middle', 'right']
-
-/**
- * The pins on each side: `lo` surely there, `hi` maybe there (a pin between the middle and a
- * side counts for both), and `score`, half-way between, to weigh which group is biggest.
- */
-function sideCounts(up) {
-  const lo = { left: 0, middle: 0, right: 0 }
-  const hi = { left: 0, middle: 0, right: 0 }
-  for (const p of up) {
-    const z = zoneOf(p.x)
-    hi[z.side]++
-    if (z.between) hi.middle++
-    else lo[z.side]++
-  }
-  const score = Object.fromEntries(SIDES.map((s) => [s, (lo[s] + hi[s]) / 2]))
-  return { lo, hi, score }
-}
-
-/** The pins that answer "on this side": surely there, or between it and the middle. */
-const pinsOn = (up, side) => up.filter((p) => {
-  const z = zoneOf(p.x)
-  return z.side === side || (side === 'middle' && z.between)
-})
-
-/**
- * Spare time: look at the pins left. The question is only asked when it matters, and only
- * when its answer is clear from the lane:
- * - pins surely on both sides, with clearly more on one: "Which side has more?"
- *   (so the child goes for the bigger group);
- * - otherwise, pins off to one side: "Where are the pins?" ("Where are most?" when some
- *   stand in the middle too). The side holding the most pins answers it, or either of two
- *   groups that are about the same size; a pin between the middle and a side counts for both.
- * Pins in the middle, or an even split, need no question; the rings show them.
- */
-function askWhere() {
-  const up = standingPins()
-  if (!up.length) return counter.clear()
-  counter.keepRings()
-  // The top tier plans the spare alone: the rings show the pins; where to stand and how to aim is theirs.
-  if (game.tier >= 3) return
-  const { lo, hi, score } = sideCounts(up)
-  game.ask = null
-  if (lo.left && lo.right) {
-    const more = lo.left > hi.right ? 'left' : lo.right > hi.left ? 'right' : null
-    if (more) {
-      game.ask = 'more'
-      game.askOk = [more]
-    }
-  } else {
-    const best = Math.max(...Object.values(score))
-    game.askOk = SIDES.filter((s) => hi[s] && score[s] >= best - 0.5)
-    // Asked only when some side would be a wrong answer, and not when the middle is an answer: a pin
-    // between the middle and a side counts for both, so with the middle accepted too the spoken counts
-    // ("5 in the middle", "4 on the right") would add up to more pins than are standing.
-    if (game.askOk.length && !game.askOk.includes('middle')) game.ask = 'where'
-  }
-  if (!game.ask) return
-  for (const b of document.querySelectorAll('#where button')) {
-    b.className = ''
-    b.disabled = false
-    b.hidden = game.ask === 'more' && b.dataset.side === 'middle'
-  }
-  // "Most" only when the pins stand in more than one group.
-  const oneGroup = game.askOk.some((s) => hi[s] === up.length)
-  const text = game.ask === 'more' ? 'Which side has more pins?' : up.length === 1 ? 'One pin left. Where is it?' : oneGroup ? `${up.length} pins left. Where are they?` : 'Where are most of the pins?'
-  $('where-text').textContent = game.ask === 'more' ? 'Which side has more?' : up.length === 1 ? 'Where is the pin?' : oneGroup ? 'Where are the pins?' : 'Where are most pins?'
-  $('where').hidden = false
-  // Asked aloud the first two times in a game; after that the picture asks.
-  if (game.asked++ < 2) voice.say(text)
-  else audio.tick(2)
-}
-
-function chooseSide(btn) {
-  if (game.state !== 'aim' || !game.ask || btn.disabled) return
-  audio.unlock()
-  game.idle = 0
-  const ask = game.ask
-  const side = btn.dataset.side
-  const up = standingPins()
-  const { hi, score } = sideCounts(up)
-  if (!game.askOk.includes(side)) {
-    // No help this time: the child looks again and tries another side.
-    btn.className = 'no'
-    btn.disabled = true
-    audio.squeak(0.8)
-    // The comparison is written on the card every time, and spoken for the first three misses of a game.
-    // For "which side has more" both counts are said; for "where" just where most of them are.
-    // Every accepted side is named, so a right answer after this never contradicts it: "Most are on the
-    // left and on the right" is never said as "Most are on the left" before "Yes! 3 on the right".
-    // The sides named are left and right only (the middle is never asked), so no pin is counted twice.
-    const best = game.askOk[0]
-    const all = game.askOk.reduce((a, s) => a + hi[s], 0) === up.length
-    const where = listWords.format(game.askOk.map((s) => SIDE_WORDS[s]))
-    const shown = ask === 'more'
-      ? `${hi[side]} ${SIDE_WORDS[side]}, ${hi[best]} ${SIDE_WORDS[best]}`
-      : !hi[side] ? `No pins ${SIDE_WORDS[side]}` : `${all ? (up.length === 1 ? 'It is' : 'They are') : 'Most are'} ${where}`
-    $('where-text').textContent = shown
-    const words = ask === 'more' ? `${shown}. Which is more?` : `${shown}. Look at the rings.`
-    if (game.wrongSides++ < 3) voice.sayNow(words)
-    return
-  }
-  const there = pinsOn(up, side)
-  for (const b of document.querySelectorAll('#where button')) {
-    if (b.className !== 'no') b.className = b === btn ? 'yes' : ''
-    b.disabled = true
-  }
-  game.ask = null
-  // The card shows the answer in place of the question (or of a wrong try's comparison).
-  $('where-text').textContent = ask === 'more' ? `${hi[side]} ${SIDE_WORDS[side]}` : `${there.length} ${SIDE_WORDS[side]}`
-  audio.jingle(there.length)
-  // Said aloud while the questions are (the first two a game); after that the jingle and footprints answer.
-  if (game.asked <= 2) {
-    const other = side === 'left' ? 'right' : 'left'
-    voice.sayNow(ask === 'more'
-      ? `Yes! ${hi[side]} is more than ${hi[other]}.`
-      : `Yes! ${pinWord(there.length)} ${SIDE_WORDS[side]}.`)
-  }
-  // Footprints show where to stand for those pins; walking there and aiming are the child's job.
-  // Tier 1 gets the whole trail down the lane; tier 2 only the first prints: where to stand, not where to slide.
-  const mid = there.reduce((a, p) => a + p.x, 0) / there.length
-  spot.show(clamp(Math.round(mid / STEP_X) * STEP_X, -MAX_X, MAX_X), { short: game.tier >= 2 })
-}
-for (const b of document.querySelectorAll('#where button')) {
-  b.addEventListener('click', (e) => {
-    e.stopPropagation()
-    chooseSide(b)
-  })
+  if (Math.random() > 0.5) return
+  const giant = Math.random() < 0.5
+  pins.setSpecial(giant ? pins.list[0] : pins.list[1 + Math.floor(Math.random() * 9)], giant ? 'giant' : 'gold')
+  // The camera takes a quick peek at the pins, so the surprise is seen before the slide.
+  game.peek = 1.6
+  setTimeout(() => (giant ? audio.thump() : audio.gold()), 450)
 }
 
 function toAim() {
   effects.clearCelebration()
-  prediction.aim()
   game.state = 'aim'
   game.idle = 0
-  game.hinted = false
-  game.ask = null
-  spot.hide()
   penguin.ready(game.x)
+  audio.squeak(1.1)
   effects.puff(penguin.group.position.clone().setY(0.2), 6, 0.5)
   $('controls').classList.remove('away')
-  if (game.thrown < 2) $('hint').classList.remove('hidden')
+  // More of the band joins in as the game goes on.
+  audio.layer = card.frame >= 3 ? 2 : card.frame >= 1 ? 1 : 0
   updateHud()
 }
 
+let resultTimers = []
 function gameOver() {
-  prediction.reset() // the results card gets the stage to itself
-  counter.clear()
-  spot.hide()
-  game.plan = null
-  updatePlanPill()
-  $('where').hidden = true
-  $('plan').hidden = true
   game.state = 'over'
-  // What was learned, in pictures rather than a score: all eleven ways of making 10, in order,
-  // like a staircase. The ways met this game stand out; the ones the child worked out (counted
-  // carefully or answered) are marked, and ways made just as planned carry a 🎯.
-  const own = [...game.bonds.values()].filter((b) => b.self).length
-  // The headline is what the child worked out: careful counts and bonds answered, not pins that just fell.
-  const plans = [...game.bonds.values()].filter((b) => b.plan).length
-  $('bonds').replaceChildren(...Array.from({ length: 11 }, (_, k) => bondPicture(10 - k, k, game.bonds.get(`${10 - k}+${k}`))))
-  const ways = (n) => `${n} ${n === 1 ? 'way' : 'ways'} to make 10`
-  // The headline is the child's own work: the ways they worked out (careful counts, bonds answered),
-  // not the ways that merely happened, which random bowling meets as many of as careful bowling.
-  // With none worked out it is a plain picture title. The staircase still shows every way met.
-  $('bonds-title').textContent = own ? `You worked out ${ways(own)}` : 'Ways to make 10'
-  $('bonds-own').textContent = own
-  $('bonds-plans').textContent = plans
-  $('bonds-plan').hidden = !plans
-  $('bonds-key').hidden = !own && !plans
-  $('bonds-key-self').hidden = !own
-  $('bonds-plan').firstChild.textContent = own ? ' · 🎯 ' : '🎯 '
-  voice.say(own
-    ? `You worked out ${ways(own)} yourself${plans ? `, and made ${plans} just as you planned` : ''}.`
-    : plans ? `You made ${plans} ${plans === 1 ? 'way' : 'ways'} to make 10 just as you planned.` : 'Here are the ways the pins made 10.')
+  for (const pos of pins.clearFallen()) effects.puff(pos, 6, 0.5)
+  // Dance behind even displaced standing pins, with room for the flippers.
+  const back = Math.min(LANE.deckEnd - 0.7, ...pins.list.filter((p) => !p.removed).map((p) => p.body.position.z - 1.3))
+  penguin.react(0, 'wow', back)
+  hideHint()
+  // Each frame as a little rack of the pins it knocked over, a star on strikes and spares: no score.
+  // A little penguin hops along them; each one pops in as it lands, and the star frames bounce.
+  const medals = card.frames.map((rolls) => {
+    const el = document.createElement('div')
+    el.className = 'medal'
+    const sum = rolls.reduce((a, n) => a + n, 0)
+    if (rolls[0] === 10) el.classList.add('star', 'strike')
+    else if (rolls.length >= 2 && rolls[0] + rolls[1] === 10) el.classList.add('star', 'spare')
+    el.append(miniRack(Math.min(10, sum)))
+    return el
+  })
+  const hopper = Object.assign(document.createElement('span'), { className: 'hopper', textContent: '🐧' })
+  $('medals').replaceChildren(...medals, hopper)
   show('results')
   audio.fanfare()
+  audio.cheer(true)
   crowd.start(true)
   effects.clearCelebration()
-  effects.glow(new THREE.Vector3(0, 1.6, LANE.headPin - 1.2), 14)
+  for (const t of resultTimers) clearTimeout(t)
+  resultTimers = medals.map((el, i) => setTimeout(() => {
+    hopper.style.transform = `translate(${el.offsetLeft + el.offsetWidth / 2}px, ${el.offsetTop}px)`
+    hopper.classList.remove('hop')
+    void hopper.offsetWidth
+    hopper.classList.add('hop')
+    setTimeout(() => {
+      el.classList.add('in')
+      audio.topple(i * 2 + 1)
+      if (el.classList.contains('star')) audio.jingle(8)
+    }, 220)
+  }, 500 + i * 520))
+  resultTimers.push(setTimeout(() => {
+    // The little penguin jumps up beside the trophy for its happy dance, clear of the frames.
+    hopper.style.transform = ''
+    hopper.classList.remove('hop')
+    document.querySelector('#results .trophy').append(hopper)
+    hopper.classList.add('done')
+    audio.cheer(true)
+    crowd.start(true)
+    effects.confetti(new THREE.Vector3(0, 0.8, LANE.headPin - 1.2), 90)
+  }, 500 + medals.length * 520 + 200))
 }
 
-/** One way to make 10 as a picture: the fallen pins lying down, then the ones left standing. */
-function bondPicture(fallen, up, met) {
+/** A tiny triangle of ten dots, back row on top: the first `knocked` pins (front first) filled in. */
+function miniRack(knocked) {
   const el = document.createElement('div')
-  el.className = `way${met ? '' : ' faint'}${met?.self ? ' self' : ''}`
-  el.setAttribute('aria-label', `${fallen} and ${up} make 10${met ? (met.self ? ', worked out' : ', met') : ''}${met?.plan ? ', as planned' : ''}`)
-  const dots = document.createElement('span')
-  dots.className = 'way-pins'
-  for (let k = 0; k < 10; k++) dots.append(Object.assign(document.createElement('i'), { className: k < fallen ? 'f' : '' }))
-  el.append(dots, Object.assign(document.createElement('b'), { textContent: `${fallen} + ${up}` }))
-  if (met?.plan) el.append(Object.assign(document.createElement('span'), { className: 'way-plan', textContent: '🎯' }))
+  el.className = 'mini'
+  const order = [6, 7, 8, 9, 3, 4, 5, 1, 2, 0] // back row first, as on the lane
+  let k = 0
+  for (const n of [4, 3, 2, 1]) {
+    const row = document.createElement('div')
+    for (let j = 0; j < n; j++) {
+      const i = order[k++]
+      const d = document.createElement('i')
+      if (i < knocked) d.className = 'hit'
+      row.append(d)
+    }
+    el.append(row)
+  }
   return el
 }
 
 // --- HUD ------------------------------------------------------------------------------
 
 function buildCard() {
-  const el = $('card')
-  el.innerHTML = ''
-  for (let i = 0; i < card.count; i++) {
-    const f = document.createElement('div')
-    f.className = 'frame' + (i === card.count - 1 ? ' wide' : '')
-    f.innerHTML = `<div class="rolls">${'<span></span>'.repeat(i === card.count - 1 ? 3 : 2)}</div><div class="tot"></div>`
-    el.appendChild(f)
-  }
+  $('card').replaceChildren(...Array.from({ length: card.count }, () => document.createElement('i')))
 }
 
-/** The frame card keeps what each slide knocked over, and each finished frame's pins: no running score. */
+/** One pip a frame: the one being played breathes, finished ones fill in, a star for a strike or spare. */
 function updateHud() {
-  const frames = $('card').children
+  const pips = $('card').children
   for (let i = 0; i < card.count; i++) {
-    const f = frames[i]
     const rolls = card.frames[i]
-    const hid = game.veil?.f === i
-    f.querySelectorAll('.rolls span').forEach((s, k) => {
-      s.textContent = rolls[k] === undefined ? '' : hid ? '?' : rolls[k]
-      s.className = rolls[k] === 10 && !hid ? 'x' : ''
-    })
-    const tot = f.querySelector('.tot')
-    tot.textContent = i < card.frame && !hid ? rackSums(rolls).join('·') : ''
-    tot.classList.toggle('racks', tot.textContent.length > 2)
-    f.classList.toggle('now', i === card.frame && game.state !== 'over')
+    const done = i < card.frame
+    const star = rolls.length > 0 && (rolls[0] === 10 || (rolls.length >= 2 && rolls[0] + rolls[1] === 10))
+    pips[i].className = done ? (star ? 'done star' : 'done') : i === card.frame && game.state !== 'over' ? 'now' : ''
   }
-}
-
-/**
- * The pins each rack in a frame gave, out of 10. A frame has one rack; the tenth can bring fresh
- * racks after a strike or spare, and each keeps its own sum ("10·10·9"), never a total past 10.
- */
-function rackSums(rolls) {
-  const sums = []
-  let n = 0
-  for (const r of rolls) {
-    n += r
-    if (n === 10) {
-      sums.push(10)
-      n = 0
-    }
-  }
-  if (n || !sums.length) sums.push(n)
-  return sums
-}
-
-const tipAt = new THREE.Vector3()
-/** For the first counts of a game: a still finger over the first pin to tap, until the child taps or the game counts along. */
-function updateTapHint() {
-  const c = game.counting
-  const q = c?.hint && !c.tapped && !c.asked && counter.n === 0 && game.timer > 1.2 ? counter.left[0] : null
-  const el = $('tap-hint')
-  el.hidden = !q
-  if (!q) return
-  tipAt.set(q.x, PIN_H * 0.55, q.z).project(camera)
-  el.style.left = `${((tipAt.x + 1) / 2) * innerWidth}px`
-  el.style.top = `${((1 - tipAt.y) / 2) * innerHeight}px`
 }
 
 function buildRack() {
@@ -1359,8 +654,6 @@ function buildRack() {
     for (let i = 0; i < PIN_SPOTS.length; i++) if (PIN_SPOTS[i].row === row) r.appendChild(Object.assign(document.createElement('i'), { id: `rack-${i}` }))
     el.appendChild(r)
   }
-  // A plan for this rack sits just under the little map of it.
-  el.appendChild($('plan-pill'))
 }
 
 function updateRack(standing) {
@@ -1369,29 +662,6 @@ function updateRack(standing) {
     d.classList.toggle('down', !up)
     d.style.background = up ? pins.list[i]?.color ?? '' : ''
   })
-}
-
-let bannerTimer = 0
-function banner(word, { kind = '', stars = 0, plus = 0 } = {}) {
-  const el = $('banner')
-  el.querySelector('.b-stars').textContent = '⭐'.repeat(stars)
-  el.querySelector('.b-word').textContent = word
-  el.querySelector('.b-plus').textContent = plus ? `+${plus}` : ''
-  el.className = `banner show ${kind}`
-  clearTimeout(bannerTimer)
-  bannerTimer = setTimeout(() => (el.className = 'banner'), kind === 'strike' ? 2600 : 1800)
-}
-
-let introTimer = 0
-function showIntro(emoji, title) {
-  $('intro-emoji').textContent = emoji
-  $('intro-title').textContent = title
-  const el = $('intro')
-  el.classList.remove('show')
-  void el.offsetWidth
-  el.classList.add('show')
-  clearTimeout(introTimer)
-  introTimer = setTimeout(() => el.classList.remove('show'), 1800)
 }
 
 function show(screen) {
@@ -1403,8 +673,28 @@ function show(screen) {
   $('controls').classList.toggle('hidden', screen !== 'play')
 }
 
-function updateCurveBtn() {
-  $('curve').textContent = CURVE_ICONS[game.curve + 1]
+/**
+ * The drawn swipe: a finger sliding up a dotted trail from the penguin, only while nobody is touching,
+ * After three swipes, only one first-aim reminder is shown per visit.
+ */
+function hideHint() {
+  game.idle = 0
+  if ($('hint').classList.contains('hidden')) return
+  $('hint').classList.add('hidden')
+}
+const hintAt = new THREE.Vector3()
+/** The drawn swipe starts from wherever the penguin stands on screen. */
+function placeHint() {
+  if ($('hint').classList.contains('hidden')) return
+  hintAt.copy(penguin.group.position).project(camera)
+  $('hint').style.left = `${((hintAt.x + 1) / 2) * innerWidth}px`
+}
+function maybeHint() {
+  const firstAimReminder = game.thrown === 0 && game.hints === 0
+  if ((game.swipes >= 3 && !firstAimReminder) || game.hints >= 5 || !$('hint').classList.contains('hidden')) return
+  if (game.idle < (game.swipes >= 3 ? 8 : game.thrown < 3 ? 2.5 : 9)) return
+  game.hints++
+  $('hint').classList.remove('hidden')
 }
 
 // --- Screens ------------------------------------------------------------------------------
@@ -1416,93 +706,91 @@ function setTheme(name) {
   scenery.setTheme(name)
   lane.setNight(THEMES[name].night)
   pins.build(THEMES[name].pins)
-  document.body.classList.toggle('pins-fish', THEMES[name].pins === 'fish')
   pins.list.forEach((p) => (p.drop = 0))
   audio.setTune(name)
 }
 
-/** The title chip's choice is the family's and is kept; `keep: false` lasts only this game (the tier-3 offer). */
-function setBumpers(on, { keep = true } = {}) {
+function setBumpers(on) {
   game.bumpers = on
-  if (keep) store.set('bumpers', on ? '1' : '0')
+  store.set('bumpers', on ? '1' : '0')
   lane.setBumpers(on)
   $('bumpers').classList.toggle('on', on)
-  $('bumpers-state').textContent = on ? 'ON' : 'OFF'
+  $('bumpers').setAttribute('aria-pressed', String(on))
 }
 
-/** The one cleanup every exit and fresh start shares: words stop and the counting cards clear. */
-function stopPlay() {
-  voice.hush()
-  prediction.reset()
-  counter.clear()
-  spot.hide()
-  game.counting = null
-  game.ask = null
-  $('bond').hidden = true
-  $('where').hidden = true
-  $('plan').hidden = true
-  $('howmany').hidden = true
-  $('tap-hint').hidden = true
-  game.plan = null
-  unveil()
-  mist.hide()
-  updatePlanPill()
+/** The hat wardrobe on the title card: hats won with strikes, tap one to wear it (tap again to take it off). */
+function updateWardrobe() {
+  for (const b of document.querySelectorAll('#wardrobe button')) {
+    const won = game.hats.includes(b.dataset.hat)
+    b.setAttribute('aria-disabled', String(!won))
+    b.classList.toggle('won', won)
+    b.classList.toggle('on', won && game.hat === b.dataset.hat)
+  }
+}
+for (const b of document.querySelectorAll('#wardrobe button')) {
+  b.addEventListener('click', () => {
+    audio.unlock()
+    if (!game.hats.includes(b.dataset.hat)) {
+      b.classList.remove('wobble')
+      void b.offsetWidth
+      b.classList.add('wobble')
+      audio.tone({ freq: 420, type: 'sine', gain: 0.08, decay: 0.16, slide: 280 })
+      penguin.glance = 1.1
+      penguin.glanceSide = [...b.parentElement.children].indexOf(b) < 2 ? -1 : 1
+      return
+    }
+    game.hat = game.hat === b.dataset.hat ? null : b.dataset.hat
+    store.set('hat', game.hat ?? '')
+    penguin.wear(game.hat, pins.templates.fish)
+    penguin.poke()
+    penguin.sqV += 7
+    audio.hat()
+    if (game.hat) effects.sparkleAt(penguin.group.position.clone().setY(1.2), '#fff3b0', 14, 1.8)
+    else effects.puff(penguin.group.position.clone().setY(1.1), 6, 0.4)
+    updateWardrobe()
+  })
 }
 
 function toTitle() {
-  stopPlay()
+  for (const t of resultTimers) clearTimeout(t)
+  leap?.obj?.removeFromParent()
+  leap = null
+  crowd.home()
   game.state = 'title'
   game.dance = false
+  hideHint()
   lane.hideAim()
+  effects.clearCelebration()
   pins.reset()
   pins.list.forEach((p) => (p.drop = 0))
   game.x = 0
   penguin.ready(0)
+  penguin.face = 0
+  updateWardrobe()
   show('title')
 }
 
 function start() {
-  stopPlay()
-  voice.newRound()
-  game.bonds.clear()
-  game.asked = 0
-  game.plansAsked = 0
-  game.planSaid = false
-  game.bondsSaid = 0
-  game.wrongSides = 0
-  game.tapHints = 0
-  game.countsAloud = 0
-  game.selfCounts = 0
-  game.bigRolls = 0
-  game.bigCount = false
-  game.standingSaid = false
-  game.rights = 0
-  game.misses = 0
-  game.ignored = 0
-  game.plansMade = 0
-  game.curvePlans = 0
-  game.planOff = false
-  game.planHits = 0
-  game.planNear = 0
-  game.bumperOffer = false
-  // Bumpers start as the title chip says, so one game's "bumpers down" isn't the next child's game.
-  setBumpers(store.get('bumpers') !== '0', { keep: false })
-  setTier(game.big ? game.bigTier : 1)
+  for (const t of resultTimers) clearTimeout(t)
+  game.event = null
+  game.spares = 0
+  game.babyAt = -9
+  leap?.obj?.removeFromParent()
+  leap = null
+  crowd.home()
+  audio.twinkle = 0
   audio.unlock()
   audio.click()
-  card.reset(game.short ? SHORT_FRAMES : FRAMES)
+  card.reset(FRAMES)
   buildCard()
   pins.reset()
   game.x = 0
   game.angle = 0
-  game.curve = 0
-  updateCurveBtn()
+  penguin.face = Math.PI
   show('play')
   updateRack(standingSet())
   audio.drop()
-  showIntro('🎳', 'Frame 1')
   toAim()
-  offerPlan()
 }
 
 for (const b of document.querySelectorAll('.lane-btn')) {
@@ -1514,76 +802,133 @@ for (const b of document.querySelectorAll('.lane-btn')) {
 }
 $('bumpers').addEventListener('click', () => {
   audio.unlock()
-  audio.click()
+  if (game.bumpers) audio.whoops()
+  else audio.boing()
   setBumpers(!game.bumpers)
-})
-function setLevel(big) {
-  game.big = big
-  store.set('level', big ? 'big' : 'little')
-  $('level-icon').textContent = big ? '🐧' : '🐣'
-  $('level-state').textContent = big ? '6–8' : '3–5'
-}
-$('level').addEventListener('click', () => {
-  audio.unlock()
-  audio.click()
-  setLevel(!game.big)
-})
-function setShort(on) {
-  game.short = on
-  store.set('frames', on ? SHORT_FRAMES : FRAMES)
-  $('frames-state').textContent = on ? SHORT_FRAMES : FRAMES
-}
-$('frames').addEventListener('click', () => {
-  audio.unlock()
-  audio.click()
-  setShort(!game.short)
-})
-$('bumpers-down').addEventListener('click', (e) => {
-  e.stopPropagation()
-  audio.unlock()
-  audio.click()
-  setBumpers(false, { keep: false })
-  $('bumpers-down').hidden = true
-  // Without bumpers the curve from one step out slips into the gutter: the plans are picked again.
-  offerPlan()
-  voice.sayNow('Bumpers down. Now your aim matters too!')
 })
 $('play').addEventListener('click', start)
 $('again').addEventListener('click', start)
-$('to-home').addEventListener('click', () => {
+holdButton($('to-home'), () => {
   audio.click()
   toTitle()
-})
-$('home').addEventListener('click', (e) => {
+}, { ms: 600 })
+/**
+ * The top-bar buttons need a short press-and-hold (a ring fills around them), so a stray tap or a mash
+ * never ends a game or turns the sound off. `instant()` says when a plain tap is enough.
+ */
+const touching = new Set() // every finger (or mouse button) down anywhere on the page
+let spoiled = false // a second finger landed during a hold: no hold starts again until every finger is up
+const holdStops = new Set()
+document.addEventListener('pointerdown', (e) => {
+  touching.add(e.pointerId)
+  // Any other finger anywhere (a resting palm on the lane, a second tap) cancels a running hold.
+  if (touching.size > 1) {
+    if (holdStops.size) spoiled = true
+    for (const stop of holdStops) stop()
+  }
+}, true)
+// Ghost clicks: when a hold fires with the finger still down and the screen changes (to the title), the
+// finger's lift would click whatever is now under it. The next click after that lift is swallowed.
+let ghostFinger = null
+let ghostUntil = 0
+for (const ev of ['pointerup', 'pointercancel']) {
+  document.addEventListener(ev, (e) => {
+    touching.delete(e.pointerId)
+    if (!touching.size) spoiled = false
+    if (e.pointerId === ghostFinger) {
+      ghostFinger = null
+      ghostUntil = performance.now() + 500
+    }
+  }, true)
+}
+document.addEventListener('click', (e) => {
+  if (ghostFinger === null && performance.now() > ghostUntil) return
+  e.preventDefault()
   e.stopPropagation()
-  audio.click()
+  ghostUntil = 0
+}, true)
+
+function holdButton(btn, fn, { ms = 600 } = {}) {
+  let raf = 0
+  let pointer = null // the finger that started the hold
+  const stop = () => {
+    cancelAnimationFrame(raf)
+    raf = 0
+    pointer = null
+    holdStops.delete(stop)
+    btn.style.setProperty('--hold', 0)
+    btn.classList.remove('holding')
+  }
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    audio.unlock()
+    // A hold starts only when this is the one finger on the whole screen.
+    if (touching.size !== 1 || spoiled) {
+      spoiled = true
+      return stop()
+    }
+    stop()
+    const id = (pointer = e.pointerId)
+    holdStops.add(stop)
+    let lastTick = performance.now()
+    let elapsed = 0
+    btn.classList.add('holding')
+    audio.click()
+    const tick = () => {
+      if (pointer !== id || spoiled) return
+      const now = performance.now()
+      // A stalled render must not turn a queued short tap into a completed hold.
+      elapsed += Math.min(50, now - lastTick)
+      lastTick = now
+      const held = Math.min(1, elapsed / ms)
+      btn.style.setProperty('--hold', held)
+      if (held >= 1) {
+        stop()
+        if (touching.has(id)) ghostFinger = id
+        return fn()
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+  })
+  // Only the starting finger lifting (or being lost) ends the hold early.
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) btn.addEventListener(ev, (e) => {
+    if (e.pointerId === pointer) stop()
+  })
+  // Enter or Space on a focused button still works straight away.
+  btn.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    e.stopPropagation()
+    fn()
+  })
+}
+holdButton($('home'), () => {
+  audio.poof()
   toTitle()
-})
+}, { ms: 700 })
+
 const soundBtn = $('sound')
 function setSound(on) {
   audio.setMuted(!on)
-  voice.setMuted(!on)
   soundBtn.textContent = on ? '🔊' : '🔇'
-  store.set('sound', on ? '1' : '0')
+
 }
-if (store.get('sound') === '0') setSound(false)
-soundBtn.addEventListener('click', (e) => {
-  e.stopPropagation()
-  audio.unlock()
+// Sound choices last only for this visit; old saved mutes are ignored.
+holdButton(soundBtn, () => {
   setSound(audio.muted)
   audio.click()
 })
 const musicBtn = $('music')
-// Music on/off is remembered between visits, like the sound button.
+// Music, like sound, always starts on for a fresh visit.
 function setMusic(on) {
   audio.musicOn = on
   musicBtn.classList.toggle('off', !on)
-  store.set('music', on ? '1' : '0')
+
 }
-if (store.get('music') === '0') setMusic(false)
-musicBtn.addEventListener('click', (e) => {
-  e.stopPropagation()
-  audio.unlock()
+
+holdButton(musicBtn, () => {
   setMusic(!audio.musicOn)
   audio.click()
 })
@@ -1592,44 +937,70 @@ musicBtn.addEventListener('click', (e) => {
 
 function move(dir) {
   if (game.state !== 'aim') return
+  hideHint()
   game.x = clamp(Math.round((game.x + dir * STEP_X) / STEP_X) * STEP_X, -MAX_X, MAX_X)
   penguin.x = game.x
   penguin.hop = Math.max(penguin.hop, 0.5)
   audio.squeak(0.8 + Math.random() * 0.3)
 }
 
-function cycleCurve() {
-  game.idle = 0
-  game.curve = game.curve === 0 ? 1 : game.curve === 1 ? -1 : 0
-  updateCurveBtn()
-  audio.click()
+// The slide button: about straight ahead, with a little natural give in the push-off and the line, so
+// pressing it is a lucky dip while a swipe (the way to aim) is in the child's own hands.
+// A second slide's Go wanders a little more, so near-misses happen and a swipe is worth it.
+const go = () => {
+  const spread = pins.countStanding() < 10 ? 0.11 : 0.12
+  throwPenguin({ angle: game.angle + (Math.random() - 0.5) * spread, power: 0.58 + Math.random() * 0.32, hook: 0 })
 }
 
-const go = () => throwPenguin({ angle: game.angle, power: 0.8, hook: game.curve * HOOK })
-const holdable = (id, fn) => {
-  let iv = 0
+/** A finger that lands on a button and then slides up the screen is a swipe after all, not a press. */
+function startDrag(e, x = e.clientX, y = e.clientY) {
+  drag.on = true
+  drag.id = e.pointerId
+  drag.pts = [{ x, y }]
+  drag.aim = null
+  drag.tapPenguin = false
+}
+const SWIPE_SLOP = 22
+
+/** A button that acts on a tap (`fn`), or repeats while held (`repeat`), and hands a slide-up over to the swipe. */
+function pressable(id, fn, { repeat = false } = {}) {
   const el = $(id)
+  let press = null
+  let iv = 0
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault()
     e.stopPropagation()
     audio.unlock()
-    game.idle = 0
-    fn()
-    clearInterval(iv)
-    iv = setInterval(fn, 180)
+    hideHint()
+    press = { id: e.pointerId, x: e.clientX, y: e.clientY, swiping: false }
+    el.setPointerCapture?.(e.pointerId)
+    if (repeat) {
+      fn()
+      clearInterval(iv)
+      iv = setInterval(fn, 180)
+    }
   })
-  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, () => clearInterval(iv))
+  el.addEventListener('pointermove', (e) => {
+    if (!press || e.pointerId !== press.id || press.swiping || game.state !== 'aim') return
+    if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < SWIPE_SLOP) return
+    press.swiping = true
+    clearInterval(iv)
+    startDrag(e, press.x, press.y)
+  })
+  const end = (e, cancelled) => {
+    if (!press || e.pointerId !== press.id) return
+    clearInterval(iv)
+    const p = press
+    press = null
+    if (p.swiping) return cancelled ? cancelDrag() : endDrag(e)
+    if (!repeat && !cancelled) fn()
+  }
+  el.addEventListener('pointerup', (e) => end(e, false))
+  el.addEventListener('pointercancel', (e) => end(e, true))
 }
-holdable('left', () => move(-1))
-holdable('right', () => move(1))
-$('curve').addEventListener('click', (e) => {
-  e.stopPropagation()
-  cycleCurve()
-})
-$('go').addEventListener('click', (e) => {
-  e.stopPropagation()
-  go()
-})
+pressable('left', () => move(-1), { repeat: true })
+pressable('right', () => move(1), { repeat: true })
+pressable('go', () => go())
 
 const raycaster = new THREE.Raycaster()
 const ndc = new THREE.Vector2()
@@ -1637,7 +1008,7 @@ const ndc = new THREE.Vector2()
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault()
   audio.unlock()
-  game.idle = 0
+  hideHint()
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
   // The baby penguins on the snow banks hop and cheep when tapped, any time.
@@ -1646,27 +1017,16 @@ canvas.addEventListener('pointerdown', (e) => {
     audio.squeak(1.35 + Math.random() * 0.3)
     effects.sparkleAt(baby, '#fff3b0', 4, 1.2)
   }
-  // Tapping the penguin makes it hop and squeak (also on the title screen)
+  // Tapping the penguin makes it hop, spin and squeak (also on the title screen)
   const onPenguin = raycaster.intersectObject(penguin.group, true).length > 0
   if (game.state === 'title' && onPenguin && penguin.poke()) audio.squeak(1 + Math.random() * 0.3)
-  // Counting time: a tap on a standing pin counts it.
-  if (game.state === 'result' && game.counting) {
-    if (game.counting.waiting) return // the cloud is still settling before the question
-    const hit = pinAt(e.clientX, e.clientY)
-    if (hit?.q && $('howmany').hidden) countPin(hit.q.i)
-    else if (hit?.fallen && $('howmany').hidden) slipPin()
-    else if (!hit && $('howmany').hidden) game.counting.strays++ // bare ice: not a count, but a careful counter seldom does it
-    return
-  }
   if (game.state !== 'aim') return
+  startDrag(e)
   drag.tapPenguin = onPenguin
-  drag.on = true
-  drag.id = e.pointerId
-  drag.pts = [{ x: e.clientX, y: e.clientY }]
-  drag.aim = null
   canvas.setPointerCapture?.(e.pointerId)
 })
-canvas.addEventListener('pointermove', (e) => {
+// Moves arrive at the canvas or at a button whose press turned into a swipe; both bubble here.
+addEventListener('pointermove', (e) => {
   if (!drag.on || e.pointerId !== drag.id) return
   drag.pts.push({ x: e.clientX, y: e.clientY })
   if (drag.pts.length > 80) drag.pts.splice(1, 1)
@@ -1678,22 +1038,32 @@ function endDrag(e) {
   drag.pts.push({ x: e.clientX, y: e.clientY })
   const t = swipeToThrow(drag.pts)
   drag.aim = null
-  if (t) throwPenguin(t)
-  else if (drag.tapPenguin && penguin.poke()) audio.squeak(1 + Math.random() * 0.3)
+  if (t) return throwPenguin(t, { swiped: true })
+  if (drag.tapPenguin && penguin.poke()) return audio.squeak(1 + Math.random() * 0.3)
+  // A tapped snowman (or fish) jiggles and boops.
+  const hit = raycaster.intersectObjects(pins.list.filter((p) => p.mesh.visible && !p.removed).map((p) => p.mesh), true)[0]
+  const pin = hit && pins.list.find((p) => hit.object === p.mesh || p.mesh.getObjectById(hit.object.id))
+  if (pin) {
+    pin.squish = 1
+    audio.squeak(1.5 + pin.i * 0.05)
+    effects.sparkleAt(pin.mesh.position.clone().setY(0.8), pin.color, 3, 1)
+  }
 }
-canvas.addEventListener('pointerup', endDrag)
-canvas.addEventListener('pointercancel', (e) => {
+function cancelDrag() {
   drag.on = false
   drag.aim = null
-})
-for (const ev of ['touchmove', 'gesturestart', 'dblclick', 'contextmenu']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false })
+}
+canvas.addEventListener('pointerup', endDrag)
+canvas.addEventListener('pointercancel', cancelDrag)
+for (const ev of ['touchmove', 'gesturestart', 'dblclick', 'contextmenu']) document.addEventListener(ev, (e) => e.cancelable && e.preventDefault(), { passive: false })
 
 const keys = new Set()
 addEventListener('keydown', (e) => {
   audio.unlock()
-  game.idle = 0
+  hideHint()
   const k = e.key.toLowerCase()
-  if (k === 'escape' && game.state !== 'title' && game.state !== 'loading') return toTitle()
+  // Escape leaves only from the results card; during play 🏠 is held instead.
+  if (k === 'escape' && game.state === 'over') return toTitle()
   if ((game.state === 'title' || game.state === 'over') && (k === 'enter' || k === ' ')) {
     e.preventDefault()
     return start()
@@ -1703,17 +1073,6 @@ addEventListener('keydown', (e) => {
     if (!e.repeat) go()
     return
   }
-  // Number keys pick a plan, or answer "How many are still standing?"
-  if (!$('plan').hidden && /^\d$/.test(k)) {
-    const b = $('plan-row').querySelector(`[data-k="${k}"]`)
-    return b && choosePlan(Number(b.dataset.knock))
-  }
-  if (!$('howmany').hidden && /^\d$/.test(k)) {
-    const all = [...$('howmany').children]
-    const b = all.find((b) => b.dataset.n === k) ?? (k === '0' ? all.find((b) => b.dataset.n === '10') : null)
-    return b && answerHowMany(b)
-  }
-  if (k === 'c' && game.state === 'aim') return cycleCurve()
   if (k === 'a') return move(-1)
   if (k === 'd') return move(1)
   if (['arrowleft', 'arrowright'].includes(k)) {
@@ -1725,7 +1084,7 @@ addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()))
 addEventListener('blur', () => keys.clear())
 
 function updateKeys(dt) {
-  if (game.state !== 'aim' || prediction.open) return
+  if (game.state !== 'aim') return
   if (keys.has('arrowleft')) game.angle = clamp(game.angle - dt * 0.18, -MAX_ANGLE, MAX_ANGLE)
   if (keys.has('arrowright')) game.angle = clamp(game.angle + dt * 0.18, -MAX_ANGLE, MAX_ANGLE)
 }
@@ -1734,42 +1093,54 @@ function updateKeys(dt) {
 
 const camPos = new THREE.Vector3(0, 2.4, 6)
 const camLook = new THREE.Vector3(0, 0.4, -8)
+const titleOff = [0, 0] // where on screen the camera puts the title penguin (eased)
 const wantPos = new THREE.Vector3()
 const wantLook = new THREE.Vector3()
 
 /**
  * Camera framing per state. Aiming uses a long lens from further back, so the
  * pins at the far end look big while the penguin stays the same size.
- * [landscape, portrait] pairs; aim adds a third, for sideways phones.
- * Phones aim tighter (about 35-60% bigger pins); the lane still fits across.
+ * [landscape, portrait] pairs; aim and deck add a third, for sideways phones.
  * Sideways phones stand further back with a longer lens: pins as big, and the
  * whole penguin fits above the bottom edge.
- * iPads held sideways and laptops get a longer lens too (pins about 30% bigger).
  */
 const CAM = {
   aim: { fov: [17, 19, 13], back: [14, 12, 13.5], up: [4.4, 4.3, 4.3], look: [-9.5, -8.8, -6.0] },
   roll: { fov: 40, back: [5.6, 6.6], up: [2.9, 3.4] },
-  // Counting: tablets and laptops held sideways look down from higher with a longer lens, so the pins are
-  // about 40% bigger and the rows stand apart to tap; sideways phones a little less, to keep the bond card clear.
-  deck: { fov: [26, 40, 34], back: [6.6, 6.2, 6.6], up: [5.2, 4.1, 4.2], look: [-1.8, -1.8, -1.6] },
+  // After the crash: close on the deck, with the penguin peeking up behind the pins.
+  deck: { fov: [27, 35, 29], back: [6.6, 6.2, 6.6], up: [3.4, 3.4, 3.2], look: [-2.4, -2.3, -2.2] },
 }
 
 function updateCamera(dt, t) {
   const pi = camera.aspect < 1 ? 1 : 0
   let wantFov = 50
   switch (game.state) {
-    case 'loading':
-    case 'title': {
+    case 'loading': {
       const a = Math.sin(t * 0.15) * 0.5
       wantPos.set(Math.sin(a) * 5, 2.6, LANE.start + 4 + Math.cos(a) * 1.5)
       wantLook.set(0, 0.5, -8)
       break
     }
+    case 'title': {
+      // In front of the penguin, which turns to face us: the lane and pins behind it, and its hat in clear view.
+      wantFov = 40
+      wantPos.set(Math.sin(t * 0.2) * 0.3, 1.25, LANE.start + (pi ? 4.6 : 3.6))
+      wantLook.set(0, 0.75, LANE.start)
+      break
+    }
     case 'aim': {
+      if (game.peek > 0) {
+        const d = CAM.deck
+        const di = pi || (innerHeight <= 520 ? 2 : 0)
+        wantFov = d.fov[di]
+        wantPos.set(0, d.up[di], LANE.headPin + d.back[di])
+        wantLook.set(0, 0.4, LANE.headPin + d.look[di])
+        break
+      }
       const c = CAM.aim
       const ai = pi || (innerHeight <= 520 ? 2 : 0)
       // Very short sideways screens (~260-330px tall): a touch wider, so the
-      // back pins stay below the scorecard and the penguin above the buttons.
+      // back pins stay below the top bar and the penguin above the buttons.
       wantFov = c.fov[ai] * (ai === 2 ? 1 + clamp((330 - innerHeight) / 300, 0, 0.25) : 1)
       wantPos.set(game.x * 0.5, c.up[ai], LANE.start + c.back[ai])
       wantLook.set(game.x * 0.15, 0, c.look[ai])
@@ -1790,7 +1161,7 @@ function updateCamera(dt, t) {
       const di = pi || (innerHeight <= 520 ? 2 : 0)
       wantFov = c.fov[di]
       wantPos.set(0, c.up[di] + (game.dance ? 0.3 : 0), LANE.headPin + c.back[di] + (game.dance ? 0.6 : 0))
-      wantLook.set(0, game.dance ? 1.2 : 0.3, LANE.headPin + c.look[di])
+      wantLook.set(0, game.dance ? 1.0 : 0.4, LANE.headPin + c.look[di])
       break
     }
   }
@@ -1807,23 +1178,31 @@ function updateCamera(dt, t) {
   const sh = effects.shake * effects.shake * 0.3
   camera.position.set(camPos.x + (Math.random() - 0.5) * sh, camPos.y + (Math.random() - 0.5) * sh, camPos.z)
   camera.lookAt(camLook)
+  // On the title the penguin sits beside the card: under it when upright, to its right when sideways.
+  const portrait = camera.aspect < 1
+  const want = game.state === 'title' ? (portrait ? [0, -0.66] : [0.5, -0.12])
+    : game.state === 'over' ? [0, 0.42] : [0, 0]
+  titleOff[0] = damp(titleOff[0], want[0], k, dt)
+  titleOff[1] = damp(titleOff[1], want[1], k, dt)
+  if (Math.abs(titleOff[0]) + Math.abs(titleOff[1]) > 0.001) {
+    const ty = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+    camera.rotateY(Math.atan(titleOff[0] * ty * camera.aspect))
+    camera.rotateX(Math.atan(-titleOff[1] * ty))
+  }
 }
 
 // --- Loading ----------------------------------------------------------------------------
 
 async function load() {
   const loader = new GLTFLoader()
-  let done = 0
-  const step = () => ($('loading-text').textContent = `Polishing the ice… ${++done}/3`)
   const [pg, pn, wd] = await Promise.allSettled([
-    loader.loadAsync('./models/penguin.glb').then((g) => (step(), g)),
-    loader.loadAsync('./models/pins.glb').then((g) => (step(), g)),
-    loader.loadAsync('./models/world.glb').then((g) => (step(), g)),
+    loader.loadAsync('./models/penguin.glb'),
+    loader.loadAsync('./models/pins.glb'),
+    loader.loadAsync('./models/world.glb'),
   ])
   if (pg.status === 'fulfilled') {
     penguinTemplate = pg.value.scene.getObjectByName('penguin')
-    const me = penguinTemplate.clone(true)
-    penguin.setModel(me)
+    penguin.setModel(penguinTemplate.clone(true))
   } else console.warn('penguin.glb failed', pg.reason)
   if (pn.status === 'fulfilled') pins.attach(pn.value)
   else console.warn('pins.glb failed', pn.reason)
@@ -1834,8 +1213,7 @@ async function load() {
   buildCard()
   setTheme(game.theme)
   setBumpers(game.bumpers)
-  setShort(game.short)
-  setLevel(game.big)
+  penguin.wear(game.hat, pins.templates.fish)
   toTitle()
   renderer.compile(scene, camera)
 }
@@ -1848,13 +1226,17 @@ timer.connect(document)
 let simT = 0
 function frame(fixedDt) {
   timer.update()
-  const dt = fixedDt ?? Math.min(timer.getDelta(), 1 / 20)
+  const realDt = fixedDt ?? Math.min(timer.getDelta(), 1 / 20)
+  // Slow motion eases in and out over the first crash into a full rack.
+  game.slowmo = Math.max(0, game.slowmo - realDt)
+  const dt = realDt * (game.slowmo > 0 ? 0.4 + 0.6 * (1 - Math.sin((game.slowmo / 0.55) * Math.PI)) : 1)
   simT += dt
   const t = simT
   game.timer += dt
   updateKeys(dt)
 
   if (game.state === 'roll' || game.state === 'settle' || game.state === 'aim' || game.state === 'title') lane.world.step(1 / 120, dt, 4)
+  if (game.state === 'roll' || game.state === 'settle') watchFalls()
 
   if (game.state === 'roll') {
     const b = penguin.body
@@ -1866,46 +1248,60 @@ function frame(fixedDt) {
       game.state = 'settle'
       game.timer = 0
       audio.slide(0)
-      if (b.position.z < LANE.deckEnd) effects.puff(new THREE.Vector3(b.position.x, 0, LANE.deckEnd - 1), 8, 0.9)
+      if (b.position.z < LANE.deckEnd) effects.puff(new THREE.Vector3(b.position.x, 0, LANE.deckEnd - 1), 10, 1)
     }
   } else if (game.state === 'settle') {
-    if (penguin.state === 'slide' && penguin.body.position.y < -0.3) penguin.hide()
+    // Once the penguin has tumbled into the pit (or stopped), it pops up behind the pins to watch them fall.
+    if (penguin.state === 'slide' && (penguin.body.position.y < -0.3 || game.timer > 0.5)) popUp()
     if ((game.timer > 1.1 && !pins.moving()) || game.timer > 3.4) finishRoll()
-  } else if (game.state === 'aim' && !drag.on) {
-    // One quiet hint for a child who has paused for a long while: the swipe hand, once, no sound
+  } else if (game.state === 'aim' && (drag.on || game.peek > 0)) {
+    // Any touch ends the peek at a special rack.
+    game.peek = drag.on ? 0 : game.peek - dt
+  } else if (game.state === 'aim') {
+    // Wait for idle before offering the drawn swipe or the once-per-visit reminder.
     game.idle += dt
-    if (game.idle > 30 && !game.hinted) {
-      game.hinted = true
-      $('hint').classList.remove('hidden')
-    }
+    maybeHint()
   } else if (game.state === 'result') {
     if (game.timer > game.resultWait) nextRoll()
   }
 
   if (game.state === 'result' && game.dance && game.timer > 0.7) {
-    if (game.timer < 0.75) {
+    if (game.timer - dt <= 0.7) {
       for (const p of pins.list) effects.puff(new THREE.Vector3(p.spot.x, 0.3, p.spot.z), 2, 0.5)
       audio.drop()
     }
-    pins.dance(game.timer)
+    if (game.dance === 'conga') {
+      pins.conga(game.timer - 0.7)
+      // A little hop-hop beat for the conga line.
+      if (Math.floor((game.timer - 0.7) * 3) !== Math.floor((game.timer - 0.7 - dt) * 3)) audio.topple(Math.floor((game.timer - 0.7) * 3) % 5 + 3)
+    } else pins.dance(game.timer)
   } else pins.sync(dt)
+  // The cheeky head pin jumps over the penguin as it arrives, then lands back on its spot.
+  for (const p of pins.list) {
+    if (p.dodger && p.jump === undefined && game.state === 'roll' && penguin.body.position.z < LANE.headPin + 2.4) {
+      p.dodger = false
+      pins.dodge(p)
+      audio.boing()
+      audio.squeak(1.6)
+    }
+    if (pins.updateDodge(p, dt)) {
+      audio.thump()
+      effects.puff(new THREE.Vector3(p.spot.x, 0.1, p.spot.z), 8, 0.7)
+    }
+  }
 
+  // The golden pin twinkles now and then while it stands.
+  for (const p of pins.list) {
+    if (p.special === 'gold' && !p.fell && !p.removed && Math.random() < dt * 7) effects.sparkleAt(p.mesh.position.clone().add({ x: (Math.random() - 0.5) * 0.4, y: 0.1 + Math.random() * 0.6, z: 0 }), '#fff3b0', 1, 0.5)
+  }
+  updateLeap(dt)
   penguin.update(dt, t)
   crowd.update(dt, t)
-  // While the pins are counted, a bond question is open or the child is aiming, the whale doesn't spout
-  // and the lamps hold still.
-  scenery.hush = (game.state === 'result' && !!game.counting) || game.state === 'aim'
   scenery.update(dt, t)
-  counter.update(dt, t)
-  mist.update(dt, t)
-  // Stepping onto the footprints: one soft chime, no words.
-  const onSpot = spot.update(dt, game.x)
-  if (onSpot && !game.onSpot && game.state === 'aim') audio.jingle(4)
-  game.onSpot = onSpot
-  updateTapHint()
   effects.update(dt)
   updateAimPreview()
   updateCamera(dt, t)
+  placeHint()
   audio.updateMusic(game.state !== 'loading')
   renderer.render(scene, camera)
 }
@@ -1913,4 +1309,4 @@ renderer.setAnimationLoop(() => frame())
 
 show('loading')
 load()
-if (new URLSearchParams(location.search).has('debug')) window.__pb = { counter, spot, mist, planSpot, standingPins, sideCounts, chooseSide, choosePlan, offerPlan, rackSums, countPin, pinAt, answerHowMany, setTier, prediction, CAM, frame, scene, camera, effects, game, lane, pins, penguin, card, throwPenguin, renderer }
+if (new URLSearchParams(location.search).has('debug')) window.__pb = { CAM, frame, surprise, shootingStars, newHat, scene, camera, effects, game, lane, pins, penguin, crowd, audio, scenery, card, throwPenguin, renderer }

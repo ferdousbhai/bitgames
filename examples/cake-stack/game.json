@@ -1,17 +1,17 @@
 {
   "id": "cake-stack",
   "title": "Cake Stack",
-  "tagline": "Stack yummy cake layers into a giant birthday cake for your animal friends!",
-  "howToPlay": "Each birthday friend orders a cake in pictures, from the bottom layer to the top. Wait for the layer the order needs (or, later, choose it), then tap, click or press Space to drop it when it lines up. A layer that is not in the order sits crooked until you tap it off. Later friends ask for patterns to finish, orders to remember, or a pattern you make up. In the counting missions, tap the candle when the cake has the friend's number of layers; if it has too many, tap the cake to take layers off. Blow out the candles, then share the cake fairly: tap a plate to give it a slice, and when the cake is empty, tap a slice to put it back if the plates are not the same. The 🎂 📖 studio has picture recipes to build, and a cake to cut into 4, 6, 8 or 12 slices and share between two or three friends, with any slices that cannot go round on the baker's plate.",
+  "tagline": "Stack a wobbly giant cake and throw an animal birthday party!",
+  "howToPlay": "Tap to drop each sliding layer and build a towering cake, then tap the cake to decorate it, blow out the candles and pop the party balloons.",
   "emoji": "🎂",
   "color": "#ff8fab",
-  "category": "puzzle",
+  "category": "pop",
   "together": false,
   "featured": false,
-  "url": "https://d194b94a-bitgames-cake-stack.ferdousbd.workers.dev/",
+  "url": "https://6b9b868a-bitgames-cake-stack.ferdousbd.workers.dev/",
   "ages": [
     3,
     8
   ],
-  "learning": "Sequencing, patterns, counting and comparing, and equal sharing"
+  "learning": "Timing and a steady hand, with decorating just for fun"
 }

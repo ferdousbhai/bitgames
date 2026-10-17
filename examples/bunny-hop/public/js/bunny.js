@@ -4,6 +4,7 @@ import { clamp } from './util.js'
 export const GRAVITY = 30
 export const HOP = 11.5 // first hop: about 2.2 high, 0.77 s in the air
 const DOUBLE_HOP = 10
+export const SPRING = 16 // a springy mushroom's bounce: about 4.3 high, with a flip
 const COYOTE = 0.12 // a hop still works just after running off the ground
 const BUFFER = 0.16 // a tap just before landing hops on landing
 
@@ -56,11 +57,19 @@ export class Bunny {
     this.jumps = 0
     this.sinceGround = 0
     this.buffered = 0
+    this.tapHop = false
+    this.lastTap = -1
+    this.rapidTap = false
+    this.hopChain = 0
+    this.holdChain = 0
     this.s = 0
     this.sv = 0
     this.ear = [0, 0]
     this.earV = [0, 0]
     this.flipT = 1
+    this.doubleCount = 0
+    this.twist = false
+    this.spin.rotation.y = 0
     this.tumbleT = 1
     this.munchT = 1
     this.dizzy = 0
@@ -69,15 +78,28 @@ export class Bunny {
     this.runPhase = 0
     this.idleHop = 2
     this.cheers = 0 // happy hops still to come on arriving home
+    this.floatT = 0 // seconds left hanging from a balloon
     this.lookAtCamera = 0
     this.spin.rotation.z = 0
   }
 
   /** Returns 'hop', 'double' or null (a tap buffered until landing). */
-  hop() {
-    if (this.tumbleT < 0.6) return null
+  hop(auto = false, queued = false) {
+    if (this.tumbleT < 0.6 || this.floatT > 0) return null
+    // Count actual rapid taps, not buffered takeoffs. Ordinary 2–5 taps/s stay
+    // full height; only sustained 6+ taps/s soften the arc a little.
+    if (!auto && !queued) {
+      this.rapidTap = this.time - this.lastTap < 0.18
+      this.hopChain = this.rapidTap ? this.hopChain + 1 : 0
+      this.lastTap = this.time
+    }
+    const rapid = this.hopChain >= 8
     if (this.grounded || this.sinceGround < COYOTE) {
-      this.vy = HOP
+      this.tapHop = !auto
+      // A calm three-hop wave gives resting fingers a big flip too.
+      const heldStep = auto ? this.holdChain++ % 3 : -1
+      if (!auto) this.holdChain = 0
+      this.vy = auto ? [8.2, 9.5, HOP][heldStep] : rapid ? 10.5 : HOP
       this.grounded = false
       this.jumps = 1
       this.sinceGround = 1
@@ -85,9 +107,12 @@ export class Bunny {
       return 'hop'
     }
     if (this.jumps < 2) {
-      this.vy = DOUBLE_HOP
+      this.tapHop = !auto
+      this.vy = rapid && !auto ? 9 : DOUBLE_HOP
       this.jumps = 2
       this.flipT = 0
+      // Every fourth double adds a corkscrew, keeping the familiar arc intact.
+      this.twist = ++this.doubleCount % 4 === 0
       this.sv += 4
       return 'double'
     }
@@ -114,6 +139,7 @@ export class Bunny {
   }
 
   bonk() {
+    this.tapHop = false
     this.vy = 8
     this.grounded = false
     this.jumps = 2
@@ -133,30 +159,44 @@ export class Bunny {
     this.idleHop = 0.2
   }
 
-  /** One small hop of joy (an answer at home, a flower planted); never while already up. */
-  happyHop() {
-    if (!this.grounded) return
-    this.vy = 6
+  /**
+   * Bounced up by something underfoot: a spring sends Pip sky high with a flip of joy (no flip of
+   * his own on the way), the top of a log a little hop he can still flip from.
+   */
+  bounce(vy, flip = false) {
+    if (flip) this.tapHop = false
+    this.vy = vy
+    this.y = Math.max(this.y, 0.01)
     this.grounded = false
-    this.jumps = 1
-    this.sv += 3
+    this.sinceGround = 1
+    this.jumps = flip ? 2 : 1
+    if (flip) this.flipT = 0
+    this.sv += 6
+  }
+
+  /** Holding a balloon: Pip floats up to `height` and drifts along for `secs`, then drops gently. */
+  float(secs, height) {
+    this.floatT = secs
+    this.floatY = height
+    this.grounded = false
+    this.jumps = 2
+    this.sv += 4
   }
 
   /**
-   * mode: 'menu' (idling, with a little hop now and then), 'run', or 'still' (at home, or waiting
-   * for an answer: a few happy hops on arriving home, then only ears, blinks and a look at the
-   * child, so nothing moves beside a question). Returns the landing speed when the bunny touches
+   * mode: 'menu' (idling, with a little hop now and then), 'run', or 'home' (a few happy hops on
+   * arriving, then ears, blinks and a look at the child). Returns the landing speed when the bunny touches
    * down this frame, else 0.
    */
   update(dt, speed, mode) {
     this.time += dt
     let landed = 0
 
-    // A little hop now and then on the menu; at home, only the few happy hops of arriving
-    if (mode !== 'run' && this.grounded && (mode === 'menu' || this.cheers > 0)) {
+    // A little hop now and then on the menu and at home, after a few quick happy hops on arriving
+    if (mode !== 'run' && this.grounded) {
       this.idleHop -= dt
       if (this.idleHop <= 0) {
-        const cheer = mode !== 'menu'
+        const cheer = this.cheers > 0
         if (cheer) this.cheers--
         this.idleHop = cheer ? 0.25 + Math.random() * 0.15 : 2 + Math.random() * 3
         this.vy = cheer ? 8 : 6
@@ -167,7 +207,14 @@ export class Bunny {
     }
 
     // Physics
-    if (!this.grounded) {
+    if (this.floatT > 0) {
+      // up on the balloon: ease towards its height with a slow bob, legs dangling
+      this.floatT = Math.max(0, this.floatT - dt)
+      const goal = this.floatY + Math.sin(this.time * 2.2) * 0.25
+      this.vy = THREE.MathUtils.damp(this.vy, (goal - this.y) * 2.2, 4, dt)
+      this.y += this.vy * dt
+      if (this.floatT === 0) this.vy = 1.5
+    } else if (!this.grounded) {
       this.vy -= GRAVITY * dt
       this.y += this.vy * dt
       if (this.y <= 0) {
@@ -180,8 +227,10 @@ export class Bunny {
         this.sv -= 2 + Math.min(1, landed / 12) * 5
         if (this.buffered > 0 && mode === 'run') {
           this.buffered = 0
-          this.hop()
+          this.hop(false, true)
           landed = -landed // signal: landed and hopped again at once
+        } else {
+          this.hopChain = 0
         }
       }
     } else {
@@ -211,6 +260,7 @@ export class Bunny {
     if (this.flipT < 1) spin = -Math.PI * 2 * ease(this.flipT)
     if (this.tumbleT < 1) spin = Math.PI * 2 * ease(this.tumbleT)
     this.spin.rotation.z = spin
+    this.spin.rotation.y = this.twist && this.flipT < 1 ? Math.PI * 2 * ease(this.flipT) : 0
 
     // Turn to face the camera on the menu and at home
     const look = mode === 'run' ? 0 : 1

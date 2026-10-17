@@ -171,8 +171,8 @@ export class Sound {
   }
 
   /**
-   * Perfect: one soft two-note chime. Stacking always plays the same chime (it never climbs into a
-   * streak); the recipe studio passes each layer's place so a checked recipe sounds as a little scale.
+   * Perfect: a soft two-note chime. Each lined-up drop in a row passes the next step, so a careful
+   * run of layers plays a little rising scale.
    */
   perfect(step = 0) {
     const t = this.now
@@ -228,10 +228,43 @@ export class Sound {
     this.tone({ at: t, type: 'sine', dur: 0.1, gain: 0.08, freq: penta(i + 3) })
   }
 
-  /** A gentle chord, played once: no party horn or crowd noise. */
-  cheer() {
+  /** A party popper: a soft paper pop and a little rising whistle. */
+  popper(i = 0) {
     const t = this.now
-    for (const [i, n] of [72, 76, 79, 84].entries()) this.tone({ at: t + i * 0.12, type: 'sine', dur: 1.1, gain: 0.07, freq: NOTE(n) })
+    this.noise({ at: t, dur: 0.12, gain: 0.12, filter: { type: 'bandpass', freq: [[0, 1800], [0.12, 600]], Q: 0.9 } })
+    this.tone({ at: t + 0.02, type: 'sine', dur: 0.35, gain: 0.07, freq: [[0, 600 + i * 120], [0.35, 1500 + i * 200]] })
+  }
+
+  /** A balloon pops: a quick bright snap and a squeak of rubber. */
+  balloonPop() {
+    const t = this.now
+    this.noise({ at: t, dur: 0.07, gain: 0.16, filter: { type: 'highpass', freq: 1200 } })
+    this.tone({ at: t, type: 'sine', dur: 0.14, gain: 0.08, freq: [[0, 900 + Math.random() * 300], [0.14, 300]] })
+  }
+
+  /** A butterfly's loop-the-loop: a quick fluttery trill up and down. */
+  flutter() {
+    const t = this.now
+    for (let i = 0; i < 6; i++) this.tone({ at: t + i * 0.06, type: 'sine', dur: 0.08, gain: 0.06, freq: penta([5, 7, 9, 10, 9, 7][i]) })
+  }
+
+  /** A soap bubble pops: a soft round bloop. */
+  bloop() {
+    const t = this.now
+    this.tone({ at: t, type: 'sine', dur: 0.16, gain: 0.12, freq: [[0, 380 + Math.random() * 200], [0.16, 1100]] })
+  }
+
+  /** A little firework rises with a soft whistle... */
+  whistle() {
+    const t = this.now
+    this.tone({ at: t, type: 'sine', dur: 0.6, gain: 0.035, freq: [[0, 700], [0.6, 1500]] })
+  }
+
+  /** ...and blooms with a gentle, low puff and a twinkle. */
+  bloom() {
+    const t = this.now
+    this.noise({ at: t, dur: 0.35, gain: 0.07, filter: { type: 'lowpass', freq: [[0, 900], [0.35, 200]] } })
+    for (let i = 0; i < 3; i++) this.tone({ at: t + 0.1 + i * 0.07, type: 'sine', dur: 0.3, gain: 0.04, freq: penta(9 + ((Math.random() * 5) | 0)) })
   }
 
   /** Happy Birthday on a little music box. Returns how long it lasts. */

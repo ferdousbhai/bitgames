@@ -3,13 +3,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Audio } from './audio.js'
 import { Particles, Popups, Rings, makeGlowTexture } from './effects.js'
-import { COLORS, DESTS, PARTS, SLOTS, isSteady, isUnlocked, modelName, part, reach, sanitize, unlocksAt, wobble } from './parts.js'
+import { COLORS, DESTS, PARTS, SLOTS, flops, isSteady, isUnlocked, modelName, part, reach, sanitize, unlocksAt, wobble } from './parts.js'
 import { Rocket } from './rocket.js'
 import { Thumbs } from './thumbs.js'
-import { createVoice } from './speech.js'
-import { BOOSTER_WORDS, createWorkshop, flyRace, placeName } from './workshop.js'
-import { TIERS, afterFlight, changesFrom, checkMission, createWhere, makeMission, missionPicture, missionShort, missionVerdict, missionWords, robotBuild, sanitizeMission } from './missions.js'
-import { WOB_MARK, addNote, createNotebook, createPredict, fairTest, flightRace, learnParts, noteFrom, partsOf, sanitizeKnown, sanitizeNotes, testChip, validBuild, verdict, verdictShort } from './fairtest.js'
+import { STARS_PER_DOT, makeEventModels, pictureAt } from './events.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -37,42 +34,33 @@ const store = {
 const SAVE = 'rocket-garage'
 const saved = store.get(SAVE, {}) || {}
 const visited = DESTS.map((_, i) => !!(Array.isArray(saved.visited) && saved.visited[i]))
+// Gifts found so far ("slot:id"). Older saves had every gift of each planet they had been to.
+const got = new Set(Array.isArray(saved.got) ? saved.got.filter((s) => typeof s === 'string') : DESTS.flatMap((_, i) => (visited[i] ? unlocksAt(i).map((n) => `${n.slot}:${n.id}`) : [])))
+const count = (v) => (Number.isInteger(v) && v >= 0 ? v : 0)
 const save = {
   visited,
-  rocket: sanitize(saved.rocket, visited),
+  got,
+  rocket: sanitize(saved.rocket, got),
   fresh: new Set(Array.isArray(saved.fresh) ? saved.fresh.filter((s) => typeof s === 'string') : []),
   stars: Number.isFinite(saved.stars) ? saved.stars : 0,
   flights: Number.isFinite(saved.flights) ? saved.flights : 0,
   picked: !!saved.picked,
-  // The parts of the rocket that flew last, so the next launch can ask "farther, same or less far?"
-  last: validBuild(saved.last),
-  // The "what I found out" notebook, and whether it has a page the child has not seen yet
-  notes: sanitizeNotes(saved.notes),
-  notesNew: !!saved.notesNew,
-  // Single noses, tanks and fins the child has tested on their own: 'w' wobbly or 's' steady
-  known: sanitizeKnown(saved.known),
-  // Where the last flight landed: the reach bar shows this record, never the next flight's answer
+  // Where the last flight landed: the reach bar wears a little 🚀 under it
   landed: Number.isInteger(saved.landed) && saved.landed >= 0 && saved.landed < DESTS.length ? saved.landed : -1,
-  // Guesses in a row that matched, and Robot's missions (the harder tier)
-  guessRun: Number.isInteger(saved.guessRun) ? saved.guessRun : 0,
-  mission: sanitizeMission(saved.mission),
-  // Boosters that have landed somewhere: the notebook's booster page lists where each one went
-  // (older saves start from the places already visited)
-  // Turbos taken: once the child knows the lightning, the fives are no longer counted aloud
-  turbos: Number.isInteger(saved.turbos) ? saved.turbos : 0,
-  // The notebook has opened by itself once (after a second tier-1 miss); after that the 📓 is only framed
-  hinted: !!saved.hinted,
-  // Robot has told the child about the workshop's race challenge (once, on reaching the top tier)
-  raceTold: !!saved.raceTold,
-  // The last landing was carried one stop past the boosters' reach by the turbo (the reach bar marks it ⚡)
-  landedTurbo: !!saved.landedTurbo,
-  flown: new Set(Array.isArray(saved.flown) ? saved.flown.filter((id) => PARTS.booster.some((p) => p.id === id)) : PARTS.booster.filter((p) => visited[Math.min(DESTS.length - 1, p.power)] && Number.isFinite(saved.flights)).map((p) => p.id)),
+  // Stars caught for the star picture on the garage wall, and how many of them it already shows
+  sky: count(saved.sky ?? saved.stars),
+  skyShown: count(saved.skyShown ?? saved.sky ?? saved.stars),
+  // Planet souvenirs already on the shelf, and the alien friend who came home from the Alien Planet
+  shelf: DESTS.map((_, i) => !!(Array.isArray(saved.shelf) ? saved.shelf[i] : visited[i])),
+  friend: !!saved.friend,
+  friendHome: !!(saved.friendHome ?? saved.friend),
+  // Places flown past (they leave a souvenir too), and the place picked on the reach bar
+  waved: DESTS.map((_, i) => !!(Array.isArray(saved.waved) && saved.waved[i])),
+  // A place picked on the reach bar lasts one trip, and is never brought back from the save
+  aim: null,
 }
-if (save.mission.own) save.mission.own = sanitize(save.mission.own, visited)
-/** Missions appear after a few landings; the card waits quietly until the child taps it. */
-const MISSION_AFTER = 3
 function persist() {
-  store.set(SAVE, { visited: save.visited, rocket: save.rocket, fresh: [...save.fresh], stars: save.stars, flights: save.flights, picked: save.picked, last: save.last, notes: save.notes, notesNew: save.notesNew, landed: save.landed, guessRun: save.guessRun, mission: save.mission, flown: [...save.flown], turbos: save.turbos, known: save.known, hinted: save.hinted, raceTold: save.raceTold, landedTurbo: save.landedTurbo })
+  store.set(SAVE, { visited: save.visited, got: [...save.got], rocket: save.rocket, fresh: [...save.fresh], stars: save.stars, flights: save.flights, picked: save.picked, landed: save.landed, sky: save.sky, skyShown: save.skyShown, shelf: save.shelf, friend: save.friend, friendHome: save.friendHome, waved: save.waved })
 }
 
 // --- Renderer, scene, camera --------------------------------------------------------
@@ -187,8 +175,8 @@ const starField = (() => {
 })()
 
 const audio = new Audio()
-audio.muted = store.get('rocket-garage-muted', false)
-audio.musicOn = store.get('rocket-garage-music', true)
+// Sound and music start on with every visit (a muted game must never greet a returning child
+// with silence); turning either off takes a press-and-hold, like 🏠 away from the garage.
 const glowTex = makeGlowTexture(false)
 const sparks = new Particles(scene, 900)
 const smoke = new Particles(scene, 500, true)
@@ -198,17 +186,15 @@ const popups = new Popups($('popups'), camera)
 // --- Game state ----------------------------------------------------------------------
 
 // Turbo needs three groups of five stars (stars are counted in fives)
-const TURBO = 15
 const LAND = new THREE.Vector3(0, -2000, 0)
 const PLANET_R = 4
 const game = {
-  state: 'loading', // loading | title | garage | countdown | flight | arrive | landing | party
+  state: 'loading', // loading | title | garage | countdown | flop | flight | arrive | landing | party
   t: 0,
   time: 0,
   tab: 'nose',
   count: 3,
   busy: false,
-  look: false, // the camera is showing the rocket before the "as it is" question
 }
 let models = {}
 let rocket = null
@@ -269,6 +255,9 @@ async function load() {
     })
   }
 
+  Object.assign(models, makeEventModels(models, glowTex))
+  buildWall()
+
   rocket = new Rocket(models, glowTex)
   scene.add(rocket.root)
   rocket.build(save.rocket)
@@ -280,16 +269,15 @@ async function load() {
   allThumbs()
   // Pictures drawn while the thumbnail context was lost are blank: draw them all again
   thumbs.canvas.addEventListener('webglcontextrestored', () => {
-    rocketThumbs.clear()
     allThumbs()
-    renderItems()
+    renderTray()
   })
 }
 
 /**
- * The robot and the toolbox stand beside the rocket. The 🧪, 🎲 and GO buttons sit at the
- * bottom left on every screen, so the robot always stands on the right (in view and tappable)
- * and the toolbox takes the left.
+ * The robot and the toolbox stand beside the rocket. The 🎲 and 🚀 buttons sit at the bottom
+ * left on every screen, so the robot always stands on the right (in view and tappable) and the
+ * toolbox takes the left.
  */
 const ROBOT_X = 2.1
 function placeHelpers() {
@@ -299,6 +287,9 @@ function placeHelpers() {
   robot.obj.rotation.y = robot.turn
   robot.toolbox.position.set(-2.5, 0, 1.5)
   robot.toolbox.rotation.y = 0.4
+  // The alien friend stands back behind the pad on the left, under the star picture, where the
+  // 🎲 and 🚀 buttons never cover it (they sit low in the corner)
+  if (wall.friend) wall.friend.position.set(-1.75, wall.friend.userData.feet, -1.25)
 }
 
 const padLights = []
@@ -322,7 +313,7 @@ const shadow = (() => {
 
 const thumbPaint = {}
 // Boosters are pictured nearly to one shared scale, so bigger ones look bigger, but the scale is
-// eased (not true size) so the small booster still reads clearly on notebook pages and race lanes
+// eased (not true size) so the small booster still reads clearly in the tray
 const BOOSTER_R = 0.84
 const boosterRadius = (id) => BOOSTER_R * (0.6 + 0.4 * (part('booster', id).r ?? 0.32) / 0.32)
 function makeThumb(slot, id) {
@@ -451,11 +442,18 @@ function camTarget(out) {
     out.oy = innerHeight / 2 - (f.y + f.h / 2)
     out.tilt = 0.12
     if (game.state === 'title') out.x = Math.sin(game.time * 0.3) * 0.4
-    // "As it is": the camera eases in toward the boosters before the question opens
-    if (game.look && rocket) {
-      out.d = Math.max(6, d * 0.62)
-      out.y = padTop + rocket.half * 0.7
-    }
+    return out
+  }
+  if (game.state === 'flop') {
+    // Pulled back a little, so the whole sputtering hop and the bounces stay in the picture
+    const H = (rocket ? rocket.half * 2 : 5) + FLOP_UP + 1.6
+    const d = clamp(Math.max((H * innerHeight) / (0.86 * innerHeight * 2 * TAN), (6 * innerHeight) / (0.7 * innerWidth * 2 * TAN)), 10, 70)
+    out.x = 0
+    out.y = padTop + H * 0.48
+    out.d = d
+    out.ox = 0
+    out.oy = 0
+    out.tilt = 0.08
     return out
   }
   if (game.state === 'flight' || game.state === 'arrive') {
@@ -571,29 +569,30 @@ function renderSound() {
 }
 
 /**
- * The journey bar in the garage: every place, a 🚩 where you have been, and the 🚀 under the place
- * the last flight landed. It is a record, not a forecast: how far this build goes is for the
- * child to work out (and guess before launch), not for the bar to give away.
+ * The journey bar in the garage: every place, a 🚩 where you have landed, and the 🚀 under the
+ * place this rocket will fly to. Its boosters reach so far; tapping a nearer place flies there
+ * instead (a farther one shakes no, and the booster tab wiggles).
  */
+function aimAt() {
+  const far = reach(save.rocket)
+  return save.aim !== null && save.aim <= far ? save.aim : far
+}
 function renderReach(ping = -1) {
-  // Robot's rocket has not flown yet: the 🚀 record belongs to the child's own rocket, so it waits
-  // A tier 1-2 card waiting for its "as it is" guess about the child's own rocket: the 🚀 record
-  // would give the answer away, so it waits until the guess is made
-  const card = save.mission.on ? save.mission.card : null
-  const waiting = save.mission.card
-  const guessing = !!waiting && !waiting.robot && waiting.diag === null && save.flights >= MISSION_AFTER && game.state === 'garage'
-  const r = (card?.robot && save.mission.own && !card.flew) || guessing ? -1 : save.landed
+  const r = aimAt()
+  const far = reach(save.rocket)
   const el = $('reach')
   el.innerHTML = ''
   DESTS.forEach((d, i) => {
     if (i > 0) {
       const dash = document.createElement('span')
-      // The last stop of a turbo landing wears a small ⚡: the boosters reached one stop less far
-      dash.className = 'dash' + (i <= r ? ' lit' : '') + (i === r && save.landedTurbo ? ' turbo' : '')
+      dash.className = 'dash' + (i <= r ? ' lit' : '')
       el.append(dash)
     }
-    const s = document.createElement('span')
-    s.className = 'd' + (i > r ? ' far' : '') + (i === r ? ' goal' : '') + (i === ping ? ' ping' : '')
+    const s = document.createElement('button')
+    // Places never landed on are dark silhouettes; places past the boosters' reach are faded
+    s.className = 'd' + (save.visited[i] ? '' : ' far') + (i > far ? ' out' : '') + (i === r ? ' goal' : '') + (i === ping ? ' ping' : '')
+    s.dataset.i = i
+    s.setAttribute('aria-label', d.name)
     s.textContent = d.emoji
     if (save.visited[i]) {
       const f = document.createElement('span')
@@ -604,6 +603,29 @@ function renderReach(ping = -1) {
     el.append(s)
   })
 }
+const reachDot = (i) => $('reach').querySelector(`.d[data-i="${i}"]`)
+$('reach').addEventListener('click', (e) => {
+  const b = e.target.closest('.d')
+  if (!b || game.state !== 'garage') return
+  audio.unlock()
+  const i = Number(b.dataset.i)
+  if (i > reach(save.rocket)) {
+    // Too far for these boosters: a soft no, and the booster tab wiggles
+    audio.nope()
+    renderReach()
+    reachDot(i)?.classList.add('no')
+    const tab = $('tabs').querySelector('[data-slot="booster"]')
+    tab.classList.remove('shake')
+    void tab.offsetWidth
+    tab.classList.add('shake')
+    return
+  }
+  save.aim = i === reach(save.rocket) ? null : i
+  audio.snap(i)
+  robot.wave = 1.5
+  renderReach(i)
+  persist()
+})
 
 function renderVisited() {
   const el = $('visited')
@@ -642,6 +664,7 @@ function renderTray() {
   renderPaints()
   fitItems()
   layoutActions()
+  renderReach()
 }
 
 function renderItems() {
@@ -652,7 +675,7 @@ function renderItems() {
   const newest = [...save.fresh].pop()
   for (const p of PARTS[slot]) {
     const b = document.createElement('button')
-    const open = isUnlocked(p, save.visited)
+    const open = isUnlocked(p, save.got)
     b.className = 'item' + (save.rocket[slot] === p.id ? ' on' : '') + (open ? '' : ' locked')
     b.dataset.id = p.id
     b.setAttribute('aria-label', `${slot} ${p.id}`)
@@ -671,12 +694,6 @@ function renderItems() {
       b.insertAdjacentHTML('beforeend', `<span class="lock">🔒</span><span class="where">${DESTS[p.at].emoji}</span>`)
     } else if (newest === `${slot}:${p.id}`) {
       b.insertAdjacentHTML('beforeend', '<span class="new">✨</span>')
-    }
-    // What the child's own one-part tests found: steady ━ or wobbly 〰️ (untested parts stay blank)
-    const found = save.known[`${slot}:${p.id}`]
-    if (found && open) {
-      b.insertAdjacentHTML('beforeend', `<span class="wob ${found === 'w' ? 'wobbly' : 'steady'}" aria-hidden="true">${WOB_MARK[found]}</span>`)
-      b.setAttribute('aria-label', `${slot} ${p.id}, ${found === 'w' ? 'wobbly' : 'steady'}`)
     }
     el.append(b)
   }
@@ -738,13 +755,12 @@ function setTab(slot) {
 
 /** Put a part on the rocket. */
 function choose(slot, id, { quiet = false } = {}) {
-  if (game.look) return
   const p = part(slot, id)
-  if (!isUnlocked(p, save.visited)) return nope(slot, id)
+  if (!isUnlocked(p, save.got)) return nope(slot, id)
   const same = save.rocket[slot] === id
   save.rocket[slot] = id
   save.fresh.delete(`${slot}:${id}`)
-  if (slot === 'booster' && id === helpBooster) helpBooster = null
+  if (slot === 'booster' && !same) save.aim = null
   if (!save.picked) {
     save.picked = true
     hintStep()
@@ -785,7 +801,7 @@ function sparkleAt(slot) {
 }
 
 function nextUnlocked(slot) {
-  const list = PARTS[slot].filter((p) => isUnlocked(p, save.visited))
+  const list = PARTS[slot].filter((p) => isUnlocked(p, save.got))
   const i = list.findIndex((p) => p.id === save.rocket[slot])
   return list[(i + 1) % list.length].id
 }
@@ -814,7 +830,7 @@ function paint(color) {
 function surprise() {
   audio.rattle()
   for (const slot of SLOTS) {
-    const list = PARTS[slot.id].filter((p) => isUnlocked(p, save.visited))
+    const list = PARTS[slot.id].filter((p) => isUnlocked(p, save.got))
     save.rocket[slot.id] = pick(list).id
     if (slot.paint) save.rocket.colors[slot.id] = pick(COLORS.slice(0, 8))
   }
@@ -843,7 +859,7 @@ $('items').addEventListener('pointerdown', (e) => {
 addEventListener('pointermove', (e) => {
   if (drag) {
     if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 14) {
-      if (!isUnlocked(part(drag.slot, drag.id), save.visited)) return
+      if (!isUnlocked(part(drag.slot, drag.id), save.got)) return
       drag.moved = true
       const g = $('ghost')
       const src = drag.id === 'none' ? null : thumbOf(drag.slot, drag.id)
@@ -864,7 +880,7 @@ addEventListener('pointerup', (e) => {
   const d = drag
   drag = null
   show('ghost', false)
-  if (!isUnlocked(part(d.slot, d.id), save.visited)) return nope(d.slot, d.id)
+  if (!isUnlocked(part(d.slot, d.id), save.got)) return nope(d.slot, d.id)
   if (!d.moved) return choose(d.slot, d.id)
   const t = $('tray').getBoundingClientRect()
   const overTray = e.clientX >= t.left && e.clientX <= t.right && e.clientY >= t.top && e.clientY <= t.bottom
@@ -888,7 +904,7 @@ $('paints').addEventListener('click', (e) => {
 })
 $('dice').addEventListener('click', () => {
   audio.unlock()
-  if (game.state === 'garage' && !game.look) surprise()
+  if (game.state === 'garage') surprise()
 })
 $('launch').addEventListener('click', () => {
   audio.unlock()
@@ -903,22 +919,47 @@ for (const type of ['pointerdown', 'keydown']) addEventListener(type, () => (las
 const idle = () => (performance.now() - lastInput) / 1000
 
 function hintTarget() {
-  if (game.state === 'party') return !$('reward').classList.contains('hidden') && idle() > 30 ? $('again') : null
-  if (game.state !== 'garage' || $('workshop')?.open || $('predict')?.open || $('where')?.open || $('notebook')?.open) return null
-  if (!save.picked) {
-    const items = [...$('items').children]
-    return items.find((b) => !b.classList.contains('on') && !b.classList.contains('locked')) ?? null
+  if (game.state === 'party') {
+    if (party.pilot && !party.trick && !party.tricks && idle() > 4 && game.t > 3) return onScreen(party.pilot.position, 0.8)
+    return !$('reward').classList.contains('hidden') && idle() > 20 ? $('again') : null
   }
-  // A tier-1 card missed three times with no nearer planet: the finger shows the booster to try
-  if (helpBooster) {
-    if (game.tab !== 'booster') return $('tabs').querySelector('[data-slot="booster"]')
-    return [...$('items').children].find((b) => b.dataset.id === helpBooster) ?? null
+  if (game.state !== 'garage') return null
+  const items = [...$('items').children]
+  // Two flops in a row, then a pause: the finger shows the booster tab, then a bigger booster
+  // (or, with the biggest one already on, the tab of the wobbliest part to swap)
+  if (flopRun >= 2 && idle() > 3) {
+    const strong = strongerBooster()
+    const slot = strong ? 'booster' : wobbliestSlot()
+    if (game.tab !== slot) return $('tabs').querySelector(`[data-slot="${slot}"]`)
+    const want = strong ?? PARTS[slot].find((p) => !p.wobble && isUnlocked(p, save.got))?.id
+    return items.find((b) => b.dataset.id === want) ?? $('tabs').querySelector(`[data-slot="${slot}"]`)
   }
-  if (save.flights === 0 || idle() > 30) return $('launch')
+  // A child who has not touched a part yet: after a still moment the finger shows one
+  if (!save.picked) return idle() > 5 ? items.find((b) => !b.classList.contains('on') && !b.classList.contains('locked')) ?? null : null
+  if ((save.flights === 0 && idle() > 6) || idle() > 30) return $('launch')
   return null
 }
-/** The booster the finger points at after the third tier-1 miss (until the child puts it on). */
-let helpBooster = null
+/** A screen box around a point in the scene, so the finger can point at the pilot. */
+const screenAt = new THREE.Vector3()
+function onScreen(pos, up = 0) {
+  screenAt.copy(pos)
+  screenAt.y += up
+  screenAt.project(camera)
+  const x = (screenAt.x * 0.5 + 0.5) * innerWidth
+  const y = (-screenAt.y * 0.5 + 0.5) * innerHeight
+  return { getBoundingClientRect: () => ({ left: x - 30, right: x + 30, top: y - 30, bottom: y + 30, width: 60, height: 60 }) }
+}
+/** The next unlocked booster up from the one on the rocket (none when it already has the biggest). */
+function strongerBooster() {
+  const now = part('booster', save.rocket.booster).power
+  return PARTS.booster.find((p) => p.power > now && isUnlocked(p, save.got))?.id ?? null
+}
+/** The nose, tank or fins doing the most wobbling. */
+function wobbliestSlot() {
+  return ['fins', 'tank', 'nose'].reduce((a, b) => ((part(b, save.rocket[b]).wobble ?? 0) > (part(a, save.rocket[a]).wobble ?? 0) ? b : a))
+}
+/** Flops in a row (a real flight resets it). */
+let flopRun = 0
 function placeFinger() {
   const el = game.state === 'garage' || game.state === 'party' ? hintTarget() : null
   const f = $('finger')
@@ -935,247 +976,8 @@ function hintStep() {
 
 // --- Title & garage -------------------------------------------------------------------
 
-/** Speaks short phrases for children who are not reading yet (only when sound is on). */
-const voice = createVoice({ muted: audio.muted, rate: 0.95, pitch: 1.15 })
-
-/** A picture of a whole rocket, for comparing builds side by side. */
-let thumbRocket = null
-const rocketThumbs = new Map()
-function rocketThumb(cfg) {
-  const key = JSON.stringify(cfg)
-  if (!rocketThumbs.has(key)) {
-    thumbRocket ??= new Rocket(models, glowTex)
-    thumbRocket.build(cfg)
-    // Forget only the oldest picture (a Map keeps insertion order)
-    if (rocketThumbs.size > 12) rocketThumbs.delete(rocketThumbs.keys().next().value)
-    rocketThumbs.set(key, thumbs.shot(thumbRocket.wobbler, { turn: -0.35, tilt: 0.08, fill: 0.92, px: 256 }))
-    thumbRocket.root.add(thumbRocket.wobbler)
-  }
-  return rocketThumbs.get(key)
-}
-
-function workshopSound(kind) {
-  if (kind === 'pick') audio.click()
-  else if (kind === 'save') audio.paint()
-  else if (kind === 'go') audio.whoosh(1.6)
-  else if (kind === 'yay') audio.fanfare()
-  else if (kind === 'hmm') audio.reach()
-}
-
-/**
- * Past the top tier the workshop holds an open race challenge: one steady and one wobbly rocket to
- * the same planet. A new planet each time it is met; no score, only the race.
- */
-let raceGoal = null
-function raceChallenge() {
-  if (save.mission.tier < TIERS) return null
-  const places = [...new Set(PARTS.booster.filter((p) => isUnlocked(p, save.visited)).map((p) => Math.min(DESTS.length - 1, p.power)))].filter((d) => d > 0)
-  if (!places.includes(raceGoal)) raceGoal = places.length ? pick(places) : null
-  return raceGoal
-}
-const workshop = createWorkshop({ readRocket: () => save.rocket, thumbOf, rocketThumb, voice, sound: workshopSound, challenge: raceChallenge, onChallenge: () => (raceGoal = -1) })
-const predictor = createPredict({
-  thumbOf,
-  rocketThumb,
-  voice,
-  sound: workshopSound,
-  onGuess: (test) => {
-    pendingTest = test
-    launch({ asked: true })
-  },
-  onBack: () => backToBuilding(),
-})
-/** A question closed without launching: the tray and GO come back (they may be away after 🚀). */
-function backToBuilding() {
-  $('tray').classList.remove('away')
-  $('actions').classList.remove('away')
-  show('reach')
-  layoutActions()
-  hintStep()
-}
-// The 🧪 workshop now opens from the notebook ("test again"), so the garage keeps one 📓 for findings
-const notebook = createNotebook({ notes: () => save.notes, thumbOf, voice, sound: workshopSound, onTest: () => workshop.open(), flown: () => save.flown, known: () => save.known })
-/** The 📓 button wears a ✨ while there is a page the child has not looked at yet. */
-function renderNotebookButton() {
-  $('notebook-btn').classList.toggle('fresh', save.notesNew)
-}
-$('notebook-btn').onclick = () => {
-  if (game.state !== 'garage' || game.look || predictor.open || where.open) return
-  audio.unlock()
-  audio.click()
-  keys.clear()
-  workshop.close()
-  save.notesNew = false
-  persist()
-  // Framed after a tier-1 miss: it opens on where each booster went
-  const look = $('notebook-btn').classList.contains('look')
-  $('notebook-btn').classList.remove('look')
-  renderNotebookButton()
-  notebook.show({ look: look ? 'flown' : '' })
-}
-let pendingTest = null
-const where = createWhere({
-  rocketThumb,
-  thumbOf,
-  voice,
-  sound: workshopSound,
-  onBack: () => {
-    renderMission()
-    renderReach()
-    backToBuilding()
-  },
-  // Robot's rocket "as it is": the guess and whether it was right ride on the card
-  // The last flight's record came from the turbo: say so, so the reach bar and the boosters never disagree silently
-  aside: (card, build) => (!card.robot && save.landedTurbo && save.last && changesFrom(save.last, build) === 0 && reach(build) + 1 === save.landed ? ` Last time the turbo carried it one stop farther, to ${placeName(save.landed)}.` : ''),
-  onDiagnose: (dest, ok) => {
-    const card = save.mission.card
-    if (!card) return
-    card.diag = dest
-    card.diagOk = ok
-    persist()
-  },
-})
-
-// --- Robot's missions (the harder tier) ------------------------------------------------------
-
-let missionTold = false
-function missionCard() {
-  const m = save.mission
-  if (save.flights < MISSION_AFTER) return null
-  if (!m.card) {
-    m.card = makeMission(Math.max(m.tier, save.guessRun >= 3 ? 2 : 1), save.rocket, save.visited, { near: m.near })
-    m.near = null
-  }
-  return m.card
-}
-function renderMission() {
-  const box = $('mission')
-  const card = game.state === 'garage' ? missionCard() : null
-  show('mission', !!card)
-  if (!card) return
-  // Robot mentions the first card of a visit once; after that new cards wait quietly to be picked up
-  if (!save.mission.on && !missionTold) {
-    missionTold = true
-    voice.say('Robot has a mission card. Tap it when you are ready!')
-  }
-  box.classList.toggle('on', save.mission.on)
-  const words = missionWords(card)
-  $('mission-go').replaceChildren(missionPicture(card, { rocketThumb }))
-  $('mission-go').setAttribute('aria-label', save.mission.on ? `${words} Tap to hear it again.` : `Robot has a mission. ${words}`)
-  show('mission-off', save.mission.on)
-  renderPadTag()
-  renderReach()
-}
-
-/** A small 🤖 on the pad while Robot's rocket stands there, so it is clear whose rocket it is. */
-const padTagAt = new THREE.Vector3()
-function renderPadTag() {
-  const card = save.mission.on ? save.mission.card : null
-  const on = game.state === 'garage' && !!card?.robot && !!save.mission.own
-  show('pad-tag', on)
-  if (!on) return
-  padTagAt.set(rocket.width * 0.5 + 0.2, padTop + 0.05, 1.6).project(camera)
-  const tag = $('pad-tag')
-  tag.style.left = `${(padTagAt.x * 0.5 + 0.5) * innerWidth}px`
-  tag.style.top = `${(-padTagAt.y * 0.5 + 0.5) * innerHeight}px`
-}
-
-/** Put a whole rocket on the pad (Robot's for a fix-it card, or the child's own back again). */
-function putOnPad(build) {
-  save.rocket = sanitize(build, save.visited)
-  rocket.build(save.rocket)
-  placeOnPad()
-  rocket.squash = 0.8
-  swayOnPad()
-  for (const s of SLOTS) if (s.paint) for (const p of PARTS[s.id]) if (p.id !== 'none') makeThumb(s.id, p.id)
-  renderTray()
-}
-
-/** The child's own rocket comes back once Robot's puzzle is over (done, put away or swapped). */
-function restoreOwn() {
-  const own = save.mission.own
-  if (!own || save.mission.on) return false
-  save.mission.own = null
-  putOnPad(own)
-  persist()
-  return true
-}
-
-$('mission-go').onclick = () => {
-  const card = missionCard()
-  if (game.state !== 'garage' || !card || game.look) return
-  audio.unlock()
-  audio.click()
-  let words = missionWords(card)
-  if (!save.mission.on) {
-    save.mission.on = true
-    robot.wave = 2
-    // A fix-it card: Robot's rocket goes on the pad, and the child's own waits safely for later
-    if (card.robot) {
-      save.mission.own ??= { ...save.rocket, colors: { ...save.rocket.colors } }
-      putOnPad(robotBuild(card))
-    }
-    persist()
-  } else if (card.robot && changesFrom(card.base ?? card.robot, save.rocket) > 1) {
-    // Lost track of the changes? Tapping the card puts Robot's rocket back as it last flew
-    putOnPad(robotBuild(card))
-    persist()
-    words = card.base ? 'Here is Robot’s rocket as it last flew. Change just one part!' : 'Here is Robot’s rocket again. Change just one part!'
-  }
-  renderMission()
-  // Before any change: as it is, where does the rocket on the pad land? (Robot's, or the child's own)
-  if (card.diag === null && (!card.robot || changesFrom(card.robot, save.rocket) === 0)) return lookThenAsk(card)
-  voice.sayNow(words)
-}
-
-/**
- * The "as it is" question waits a moment while the camera eases down to the boosters, so the
- * child sees the real rocket (and what it has on its sides) before the planets are asked.
- */
-const LOOK_FOR = 1.6
-let lookTimer = 0
-function lookThenAsk(card) {
-  $('finger').classList.add('hidden')
-  keys.clear()
-  voice.hush()
-  game.look = true
-  document.body.classList.add('looking')
-  show('reach', false)
-  clearTimeout(lookTimer)
-  lookTimer = setTimeout(() => {
-    endLook()
-    if (game.state !== 'garage' || !save.mission.on || save.mission.card !== card) return backToBuilding()
-    where.ask(save.rocket, card)
-  }, LOOK_FOR * 1000)
-}
-function endLook() {
-  clearTimeout(lookTimer)
-  game.look = false
-  document.body.classList.remove('looking')
-}
-$('mission-off').onclick = () => {
-  if (game.state !== 'garage' || game.look) return
-  audio.click()
-  save.mission.on = false
-  save.mission.misses = 0
-  restoreOwn()
-  persist()
-  renderMission()
-  voice.sayNow('Okay! The mission waits here for later.')
-}
-
 function toTitle() {
   game.state = 'title'
-  endLook()
-  helpBooster = null
-  voice.hush()
-  workshop.close()
-  predictor.close()
-  where.close()
-  notebook.close()
-  show('notebook-btn', false)
-  show('mission', false)
-  show('pad-tag', false)
   show('title')
   show('topbar', false)
   show('tray', false)
@@ -1187,11 +989,13 @@ function toTitle() {
   audio.playSong('garage')
 }
 
-function toGarage({ snap = false } = {}) {
+function toGarage({ snap = false, keepFx = false } = {}) {
   clearFlight()
   clearParty()
-  smoke.clear()
-  sparks.clear()
+  if (!keepFx) {
+    smoke.clear()
+    sparks.clear()
+  }
   game.state = 'garage'
   rocket.root.visible = true
   rocket.setFlame(0)
@@ -1204,11 +1008,7 @@ function toGarage({ snap = false } = {}) {
   show('flightbar', false)
   show('tray')
   show('actions')
-  show('notebook-btn')
-  renderNotebookButton()
-  restoreOwn()
-  renderMission()
-  // A wobbly rocket rocks once as the garage comes back, so its kind is plain before the next launch
+  // A wobbly rocket rocks once as the garage comes back
   swayOnPad()
   show('reward', false)
   show('journey', false)
@@ -1221,7 +1021,10 @@ function toGarage({ snap = false } = {}) {
   audio.setEngine(0)
   if (snap) cam.snap = true
   robot.wave = 2
+  // Stillness is counted from here, so a long flight never brings the finger straight back
+  lastInput = performance.now()
   hintStep()
+  showHomecoming()
 }
 
 $('play').addEventListener('click', () => {
@@ -1230,33 +1033,210 @@ $('play').addEventListener('click', () => {
   toGarage()
 })
 
-// --- Countdown and lift-off ------------------------------------------------------------
+// --- The garage wall: a star picture, a shelf of planet souvenirs, and the alien friend --------
 
 /**
- * GO. If a part changed since the last flight, the robot first asks for a guess
- * (farther, the same, or less far); with nothing changed it is straight to the countdown.
+ * Stars caught on every flight light the dots of a picture on the garage wall (a rocket, a cat,
+ * a heart...). Back in the garage the new dots pop on one by one; a whole picture joins up its
+ * lines and glows, and the next one starts. Each place visited leaves a little souvenir planet
+ * on the shelf below (tap one to make it bounce and sing), and after the Alien Planet the pink
+ * friend comes home to stand beside the rocket.
  */
-function launch({ asked = false } = {}) {
-  if (game.state !== 'garage' || game.busy || game.look || (!asked && (predictor.open || where.open))) return
-  workshop.close()
-  notebook.close()
-  if (!asked) {
-    pendingTest = null
-    // A mission flight goes straight up: its guess was made "as it is", before any part changed.
-    // Otherwise a changed part asks for a guess first: farther, the same or less far, and from
-    // tier 2 the very planet, so every fair test uses what the boosters are known to reach.
-    const card = save.mission.on ? save.mission.card : null
-    const test = card ? null : fairTest(save.last, save.rocket)
-    if (test) {
-      $('finger').classList.add('hidden')
-      keys.clear()
-      return predictor.ask(test, { planets: save.mission.tier >= 2 })
+const wall = { board: null, dots: [], lines: [], shownPic: -1, shelf: [], friend: null, toys: [], queue: [] }
+const BOARD = { x: -2.2, y: 3.7, z: -3.27, w: 1.95, h: 1.6 }
+function buildWall() {
+  const g = new THREE.Group()
+  garage.add(g)
+  const navy = new THREE.MeshStandardMaterial({ color: '#2a2266', roughness: 0.8 })
+  const gold = new THREE.MeshStandardMaterial({ color: '#ffd23f', roughness: 0.5 })
+  const board = new THREE.Mesh(new THREE.BoxGeometry(BOARD.w, BOARD.h, 0.05), navy)
+  board.position.set(BOARD.x, BOARD.y, BOARD.z)
+  g.add(board)
+  for (const [w, h, x, y] of [[BOARD.w + 0.12, 0.08, 0, BOARD.h / 2], [BOARD.w + 0.12, 0.08, 0, -BOARD.h / 2], [0.08, BOARD.h, BOARD.w / 2, 0], [0.08, BOARD.h, -BOARD.w / 2, 0]]) {
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.08), gold)
+    edge.position.set(BOARD.x + x, BOARD.y + y, BOARD.z + 0.02)
+    g.add(edge)
+  }
+  wall.board = g
+  // The souvenir shelf under it
+  const wood = new THREE.MeshStandardMaterial({ color: '#e3b27a', roughness: 0.8 })
+  const plank = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.09, 0.5), wood)
+  plank.position.set(BOARD.x, 2.25, -3.1)
+  g.add(plank)
+  DESTS.forEach((d, i) => {
+    const mini = models[d.model].clone()
+    mini.scale.setScalar(0.2)
+    for (const n of ['dest_ringed_band', 'dest_ringed_band2']) mini.getObjectByName(n)?.rotateX(0.85)
+    mini.position.set(BOARD.x - 0.86 + i * 0.43, 2.25 + 0.045 + 0.2, -3.05)
+    mini.visible = save.shelf[i]
+    mini.userData = { i, hop: 0, y: mini.position.y }
+    g.add(mini)
+    wall.shelf.push(mini)
+    wall.toys.push(mini)
+  })
+  wall.friend = makeFriend(0.9)
+  wall.friend.rotation.y = 0.35
+  wall.friend.visible = save.friendHome
+  wall.friend.userData.hop = 0
+  g.add(wall.friend)
+  wall.toys.push(wall.friend)
+  placeHelpers()
+  drawPicture(pictureAt(save.skyShown))
+}
+
+const dotAt = (pic, k) => new THREE.Vector3(BOARD.x + (pic.dots[k][0] - 0.5) * BOARD.w * 0.82, BOARD.y + (pic.dots[k][1] - 0.5) * BOARD.h * 0.82, BOARD.z + 0.05)
+function drawPicture(at) {
+  for (const o of [...wall.dots, ...wall.lines]) wall.board.remove(o)
+  wall.dots = []
+  wall.lines = []
+  wall.shownPic = at.n
+  const { pic } = at
+  pic.dots.forEach((_, k) => {
+    const dot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false }))
+    dot.position.copy(dotAt(pic, k))
+    wall.board.add(dot)
+    wall.dots.push(dot)
+    lightDot(k, k < at.lit, pic)
+  })
+  for (const [a, b] of pic.lines) {
+    const pa = dotAt(pic, a)
+    const pb = dotAt(pic, b)
+    const len = pa.distanceTo(pb)
+    const line = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len, 6), new THREE.MeshBasicMaterial({ color: pic.color }))
+    line.position.copy(pa).add(pb).multiplyScalar(0.5)
+    line.quaternion.setFromUnitVectors(v3.set(0, 1, 0), v3b.copy(pb).sub(pa).normalize())
+    line.visible = at.lit >= pic.dots.length
+    wall.board.add(line)
+    wall.lines.push(line)
+  }
+}
+function lightDot(k, on, pic) {
+  const dot = wall.dots[k]
+  dot.material.color.set(on ? pic.color : '#7c74b8')
+  dot.material.opacity = on ? 1 : 0.55
+  dot.scale.setScalar(on ? 0.46 : 0.16)
+}
+
+/** Back in the garage: new star dots pop on, a new souvenir hops onto the shelf, the friend waves. */
+let homeTimers = []
+function showHomecoming() {
+  for (const t of homeTimers) clearTimeout(t)
+  homeTimers = []
+  // First the wall catches up with what it already showed (a visit cut short leaves nothing behind)
+  wall.shelf.forEach((mini, i) => (mini.visible = save.shelf[i]))
+  wall.friend.visible = save.friendHome
+  drawPicture(pictureAt(save.skyShown))
+  const later = (ms, fn) => homeTimers.push(setTimeout(() => game.state === 'garage' && fn(), ms))
+  let ms = 700
+  DESTS.forEach((_, i) => {
+    if (!(save.visited[i] || save.waved[i]) || save.shelf[i]) return
+    save.shelf[i] = true
+    const mini = wall.shelf[i]
+    later(ms, () => {
+      mini.visible = true
+      mini.userData.hop = 1
+      sparks.burst(mini.getWorldPosition(v3), ['#fff3a0', '#ffd23f', '#ffffff'], 10, 2, 0.4)
+      audio.unlock1(i)
+    })
+    ms += 450
+  })
+  if (save.friend && !save.friendHome) {
+    save.friendHome = true
+    later(ms, () => {
+      wall.friend.visible = true
+      wall.friend.userData.hop = 1
+      audio.whistle(true)
+    })
+    ms += 600
+  }
+  // Star dots pop on one at a time. A picture that comes whole stays up, joined, for this visit:
+  // the stars left over start the next picture after the next flight.
+  const from = pictureAt(save.skyShown)
+  const to = pictureAt(save.sky)
+  const whole = from.pic.dots.length
+  let upTo = save.sky
+  if (from.lit >= whole && to.n > from.n) {
+    // The last visit finished a picture: now the next one begins
+    later(ms, () => drawPicture({ n: to.n, pic: to.pic, lit: 0 }))
+    ms += 300
+    for (let k = 0; k < to.lit; k++) {
+      later(ms, () => popDot(k, to.pic))
+      ms += 220
+    }
+    if (to.lit >= to.pic.dots.length) later(ms, () => joinUp(to.pic))
+  } else {
+    const end = to.n > from.n ? whole : to.lit
+    for (let k = from.lit; k < end; k++) {
+      later(ms, () => popDot(k, from.pic))
+      ms += 220
+    }
+    if (end >= whole && from.lit < whole) later(ms, () => joinUp(from.pic))
+    if (to.n > from.n) upTo = save.skyShown + (whole - from.lit) * STARS_PER_DOT - (save.skyShown % STARS_PER_DOT)
+  }
+  save.skyShown = Math.min(save.sky, upTo)
+  persist()
+}
+function popDot(k, pic) {
+  if (!wall.dots[k]) return
+  lightDot(k, true, pic)
+  wall.dots[k].scale.setScalar(0.7)
+  wall.dots[k].userData.pop = 1
+  audio.unlock1(k)
+  sparks.burst(wall.dots[k].position.clone().applyMatrix4(garage.matrixWorld), [pic.color, '#ffffff'], 6, 1.4, 0.3)
+}
+/** A whole picture: its lines join up one by one, then a ta-da and a wave from Robot. */
+function joinUp(pic) {
+  wall.lines.forEach((l, i) => homeTimers.push(setTimeout(() => (l.visible = true), i * 90)))
+  homeTimers.push(setTimeout(() => {
+    audio.fanfare()
+    robot.wave = 2.5
+    sparks.burst(v3.set(BOARD.x, BOARD.y, BOARD.z + 0.3), [pic.color, '#ffffff', '#fff3a0'], 22, 3, 0.5)
+  }, wall.lines.length * 90 + 100))
+}
+function updateWall(dt) {
+  const t = game.time
+  for (const d of wall.dots) {
+    if (!d.userData.pop) continue
+    d.userData.pop = Math.max(0, d.userData.pop - dt * 3)
+    d.scale.setScalar(0.46 + 0.24 * d.userData.pop)
+  }
+  for (const m of wall.shelf) {
+    m.rotation.y += dt * 0.4
+    if (m.userData.hop > 0) {
+      m.userData.hop = Math.max(0, m.userData.hop - dt * 1.6)
+      m.position.y = m.userData.y + Math.abs(Math.sin(m.userData.hop * Math.PI * 2)) * 0.35 * m.userData.hop
     }
   }
-  helpBooster = null
-  show('notebook-btn', false)
-  show('mission', false)
-  show('pad-tag', false)
+  const f = wall.friend
+  if (f?.visible) {
+    const [al, ar] = f.userData.arms
+    f.userData.hop = Math.max(0, f.userData.hop - dt * 1.4)
+    f.position.y = f.userData.feet + Math.abs(Math.sin(f.userData.hop * Math.PI * 3)) * 0.4 * f.userData.hop
+    ar.rotation.z = f.userData.hop > 0 ? 2.4 + Math.sin(t * 9) * 0.4 : damp(ar.rotation.z, 0.2 + Math.sin(t * 1.3) * 0.1, 4, dt)
+    al.rotation.z = damp(al.rotation.z, -0.2, 4, dt)
+    f.userData.head.rotation.z = Math.sin(t * 1.1) * 0.12
+  }
+}
+/** Tapping a souvenir or the friend in the garage. */
+function tapToy(raycaster) {
+  const hit = raycaster.intersectObjects(wall.toys.filter((o) => o.visible), true)[0]
+  if (!hit) return false
+  let o = hit.object
+  while (o && !wall.toys.includes(o)) o = o.parent
+  if (!o) return false
+  o.userData.hop = 1
+  if (o === wall.friend) {
+    audio.tone(700, { dur: 0.18, vol: 0.08, type: 'sine', slide: 1.6 })
+    audio.tone(900, { when: 0.16, dur: 0.22, vol: 0.07, type: 'sine', slide: 1.4 })
+  } else audio.unlock1(o.userData.i * 2)
+  return true
+}
+
+// --- Countdown and lift-off ------------------------------------------------------------
+
+/** The big 🚀: a 3-2-1 with rumble and smoke, then up it goes (or, far too wobbly for its boosters, a goofy flop). */
+function launch() {
+  if (game.state !== 'garage' || game.busy) return
   padSway = 0
   game.state = 'countdown'
   game.t = 0
@@ -1281,10 +1261,10 @@ function showCount(text) {
 function updateCountdown(dt) {
   game.t += dt
   const k = game.t / 3
-  // Shake, rumble and smoke grow toward lift-off
-  // A small engine rumble that builds gently
-  rocket.wobbler.position.x = Math.sin(game.time * 20) * 0.01 * k
-  rocket.wobbler.rotation.z = Math.sin(game.time * 14) * 0.008 * k
+  // A small engine rumble that builds (a wobbly rocket already shivers a little more)
+  const w = wobble(save.rocket)
+  rocket.wobbler.position.x = Math.sin(game.time * 20) * (0.01 + 0.03 * w) * k
+  rocket.wobbler.rotation.z = Math.sin(game.time * 14) * (0.008 + 0.04 * w) * k
   doors.open = Math.min(1, doors.open + dt * 0.5)
   if (game.t > 1) rocket.setFlame(0.15 + Math.random() * 0.1 * k)
   audio.setEngine(k * 0.5)
@@ -1300,7 +1280,7 @@ function updateCountdown(dt) {
     showCount(String(n))
     audio.beep()
   }
-  if (game.t >= 3) liftoff()
+  if (game.t >= 3) flops(save.rocket) ? flopOff() : liftoff()
 }
 
 // --- Flight ---------------------------------------------------------------------------
@@ -1327,8 +1307,12 @@ const flight = {
   nextCloud: 0,
   passed: new Set(),
   flyby: [],
-  combo: 0,
-  comboT: 0,
+  cheer: 0,
+  whirl: 0,
+  rainbow: false,
+  rainbowAt: -1,
+  ufo: null,
+  need: 20,
 }
 const items = []
 const pools = {}
@@ -1344,13 +1328,8 @@ function liftoff() {
   audio.liftoff()
   audio.playSong('flight')
   rocket.wobbler.position.set(0, 0, 0)
-  const base = reach(save.rocket)
-  // A fair test changes one thing: the stars' turbo waits for a flight with no part changed
-  flight.test = pendingTest
-  pendingTest = null
-  flight.mission = save.mission.on ? save.mission.card : null
-  flight.used = false
-  flight.ready = false
+  const base = aimAt()
+  flopRun = 0
   Object.assign(flight, {
     base,
     target: base,
@@ -1369,70 +1348,56 @@ function liftoff() {
     wob: wobble(save.rocket),
     nextSpawn: rocket.root.position.y + 10,
     nextCloud: 5,
-    combo: 0,
-    comboT: 0,
+    cheer: 0,
+    whirl: 0,
+    rainbow: false,
+    ufo: null,
+    // Now and then (never on the first two flights) a rainbow shooting star crosses the sky
+    rainbowAt: save.flights >= 2 && Math.random() < 0.3 ? rand(0.3, 0.7) : -1,
   })
   flight.passed.clear()
   flight.flyby = []
   flight.dist = flight.cruise * (12 + base * 3.2)
   // About two seconds between star groups on short flights; nine groups at most on long ones
   flight.gap = Math.max(flight.cruise * 1.6, (flight.dist - 24) / 9)
+  // The ⚡ needs about a third of what this trip can hold (perfect steering catches about five stars
+  // per group, bonuses included; long trips ask a little less per group, since their stars are
+  // spread out), so a child who steers roughly toward the stars earns it in time
+  const groups = Math.max(1, Math.floor((flight.dist - 22) / flight.gap) + 1)
+  flight.need = Math.round(groups * (base >= 2 ? 1.6 : 1.8))
+  flight.lit = false
   flight.side = 0
   shadow.visible = false
   show('flightbar')
   show('journey')
-  // Turbo carries you one stop further, but only past places you have already visited: a first
-  // trip always lands at the boosters' own destination, so no planet (or its new parts) gets skipped.
-  // Fifteen stars make it ready; using it is the child's choice (on a mission it can be the plan,
-  // or the thing that overshoots).
-  flight.canTurbo = !flight.test && base < DESTS.length - 1 && save.visited[base]
-  startGhost()
+  // Enough stars light the ⚡ turbo, which carries the rocket one stop farther (the child's choice)
+  flight.picked = save.aim !== null && base < reach(save.rocket)
+  flight.canTurbo = base < DESTS.length - 1 && !flight.picked
   $('turbo').classList.toggle('hidden', !flight.canTurbo)
   $('turbo').classList.remove('full', 'used')
   $('turbo').disabled = true
   $('turbo-to').textContent = flight.canTurbo ? DESTS[base + 1].emoji : ''
-  $('turbo').setAttribute('aria-label', 'Turbo: catch fifteen stars')
-  // The guess (or the mission card and the planet the child picked) rides along in the top bar
-  const chip = flight.test ? testChip(flight.test, rocketThumb) : flight.mission ? missionPicture(flight.mission, { rocketThumb }) : null
-  $('guess').replaceChildren(...(chip ? [chip] : []))
-  show('guess', !!chip)
+  $('turbo').setAttribute('aria-label', 'Turbo')
+  show('turbo-cue', false)
   renderStars()
   renderJourney()
+  // A big ring of smoke rolls out across the pad, and the rocket stretches as it leaps
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2
+    smoke.emit(Math.cos(a) * 0.8, padTop + 0.2, Math.sin(a) * 0.8, { vx: Math.cos(a) * rand(3, 6.5), vy: rand(0.2, 1.4), vz: Math.sin(a) * rand(1.5, 3), spread: 0.4, life: 1.9, size: rand(1, 1.7), endSize: 3.2, color: '#ffffff', drag: 1.6 })
+  }
+  rocket.squash = 1
 }
 
-/** Stars are counted in fives: a frame of five fills up, and the number beside it goes 5, 10, 15… */
+/** The ⚡ bar fills with the stars caught, up to what this trip's turbo needs. */
 function renderStars() {
-  const fives = Math.floor(flight.stars / 5) * 5
-  const left = flight.stars - fives
-  $('stars-fives').textContent = fives ? String(fives) : '⭐'
-  $('stars-fives').classList.toggle('some', fives > 0)
-  ;[...$('stars-frame').children].forEach((dot, i) => dot.classList.toggle('on', i < left))
-  $('stars').setAttribute('aria-label', `${flight.stars} stars`)
-  $('turbo-fill').style.width = `${Math.min(1, flight.stars / TURBO) * 100}%`
+  $('turbo-fill').style.width = `${Math.min(1, flight.stars / flight.need) * 100}%`
 }
 
 function passAlt(i) {
-  return flight.start + flight.dist * (0.3 + (0.6 * (i + 1)) / (flight.target + 1))
+  // The first stretch is short on long trips, so every trip does not open the same way
+  return flight.start + flight.dist * (0.12 + (0.76 * (i + 1)) / (flight.target + 1))
 }
-
-/**
- * Last time's rocket flies again as a faded ghost on the journey track, at its own pace, and
- * parks at the planet it reached: the child watches the comparison happen.
- */
-const ghost = { on: false, base: 0, cruise: 0, dist: 0, alt: 0, speed: 0, t: 0, park: 1, el: null, parked: false }
-function startGhost() {
-  ghost.on = !!flight.test
-  if (!ghost.on) return
-  ghost.base = flight.test.result.a.reach
-  ghost.cruise = 10 + ghost.base * 1.3
-  ghost.dist = ghost.cruise * (12 + ghost.base * 3.2)
-  ghost.alt = 0
-  ghost.speed = 0
-  ghost.t = 0
-  ghost.parked = false
-}
-/** The track's top is whichever trip is longer. */
-const trackLength = () => (ghost.on ? Math.max(flight.dist, ghost.dist) : flight.dist)
 
 let journeyMe = null
 const journeyFill = $('journey-fill')
@@ -1445,11 +1410,9 @@ function setTrackAt(marker, f) {
 }
 function renderJourney() {
   const track = $('journey')
-  track.querySelectorAll('.stop, .me, .ghost-me, .ghost-line').forEach((e) => e.remove())
-  const t = $('journey-track')
+  track.querySelectorAll('.stop, .me').forEach((e) => e.remove())
   const pct = (f) => `calc(18px + (100% - 36px) * ${f})`
-  const scale = flight.dist / trackLength()
-  const stopAt = (i) => (i === flight.target ? 1 : (passAlt(i) - flight.start) / flight.dist) * scale
+  const stopAt = (i) => (i === flight.target ? 1 : (passAlt(i) - flight.start) / flight.dist)
   const add = (className, text, f) => {
     const s = document.createElement('span')
     s.className = className
@@ -1460,39 +1423,10 @@ function renderJourney() {
   }
   add('stop', '🏠', 0)
   for (let i = 0; i <= flight.target; i++) add('stop' + (i === flight.target ? ' goal' : ''), DESTS[i].emoji, stopAt(i))
-  if (ghost.on) {
-    // Planets only the ghost reaches sit faded above this flight's goal
-    const g = ghost.base
-    const ghostStop = (i) => (i === g ? 1 : 0.3 + (0.6 * (i + 1)) / (g + 1)) * (ghost.dist / trackLength())
-    for (let i = flight.target + 1; i <= g; i++) add('stop ghost-stop', DESTS[i].emoji, ghostStop(i))
-    ghost.park = g <= flight.target ? stopAt(g) : ghostStop(g)
-    add('ghost-line', '', ghost.park)
-    ghost.el = add('ghost-me', '', 0)
-    const img = document.createElement('img')
-    img.src = rocketThumb(flight.test.before)
-    img.alt = ''
-    ghost.el.append(img)
-    ghost.el.classList.toggle('parked', ghost.parked)
-  }
   journeyMe = document.createElement('span')
   journeyMe.className = 'me'
   journeyMe.textContent = '🚀'
   track.append(journeyMe)
-  t.dataset.ok = '1'
-}
-
-function updateGhost(dt) {
-  if (!ghost.on || ghost.parked) return
-  // The same take-off and cruise as a real flight, so the ghost is a fair rival
-  ghost.t += dt
-  ghost.speed = damp(ghost.speed, ghost.cruise * smoothstep(ghost.t, 0, 2.6), 3, dt)
-  ghost.alt = Math.min(ghost.dist, ghost.alt + ghost.speed * dt)
-  const u = ghost.alt / ghost.dist
-  setTrackAt(ghost.el, u * ghost.park)
-  if (u >= 1) {
-    ghost.parked = true
-    ghost.el.classList.add('parked')
-  }
 }
 
 function spawn(kind, x, y, z = 0, extra = {}) {
@@ -1526,15 +1460,23 @@ function clearFlight() {
 }
 
 /**
- * Stars come in small groups of four, spaced out along the flight and mostly out to the sides, so
- * the ⚡ turbo is earned by steering: a rocket left in the middle catches only the odd middle
- * group (about 4–8 stars), while steering to each group gathers 20–30. Now and then a piece of
+ * Stars come in small groups of three, spaced out along the flight and mostly out to the sides,
+ * so the ⚡ turbo is earned by steering. Each stretch of the trip has its own things to meet on
+ * the way to the place ahead: smiling moonlets to bounce off near the Moon, dust swirls that spin
+ * the rocket near Mars, hoops to fly through near the Ring Planet, ice crystals (worth two) near
+ * the Comet, and a flying saucer that drops stars near the Alien Planet. Now and then a piece of
  * space junk drifts in between (bumping it makes the rocket dizzy for a moment).
  */
+const STAR_SCALE = 0.62
+function zoneAt(y) {
+  for (let i = 0; i < flight.target; i++) if (y < passAlt(i)) return i
+  return flight.target
+}
 function spawnPattern(y) {
   const f = flight
   const xm = Math.max(1.5, view.hw - 1.4)
-  if (f.alt - f.start > 60 && Math.random() < 0.35) {
+  const zone = zoneAt(y)
+  if (f.alt - f.start > 60 && Math.random() < 0.18) {
     const kind = pick(['junk_satellite', 'junk_boot', 'junk_teapot', 'junk_duck'])
     spawn(kind, rand(-xm, xm), y + f.gap * 0.5, 0, { scale: rand(0.8, 1.05), spin: rand(-0.8, 0.8), vx: rand(-0.4, 0.4), junk: true })
   }
@@ -1544,8 +1486,24 @@ function spawnPattern(y) {
   const near = Math.min(xm * 0.9, Math.max(rocket.width * 0.5 + 1.2, xm * 0.5))
   const x = side ? side * rand(near, xm * 0.92) : rand(-0.4, 0.4)
   // A short column, or a diagonal leaning outward (never in toward a rocket that is not steering)
-  const lean = Math.random() < 0.5 ? 0 : 0.55 * (side || pick([-1, 1]))
-  for (let i = 0; i < 3; i++) spawn('star', clamp(x + lean * i, -xm, xm), y + i * 1.3, 0, { scale: 0.44, star: true })
+  let lean = Math.random() < 0.5 ? 0 : 0.55 * (side || pick([-1, 1]))
+  if (zone === 0 && Math.random() < 0.6) {
+    // A moonlet floats on the other side: bump it for a boing and two stars
+    const mx = clamp(-(side || pick([-1, 1])) * rand(0.6, xm * 0.7), -xm, xm)
+    spawn('moonlet', mx, y + f.gap * 0.55, 0, { scale: rand(0.62, 0.8), moonlet: true, spin: rand(-0.6, 0.6), vx: rand(-0.4, 0.4) })
+  } else if (zone === 1 && Math.random() < 0.55) {
+    // A Mars dust swirl with its stars going round inside: fly in and the rocket twirls
+    const cx = clamp(x, -xm + 0.6, xm - 0.6)
+    spawn('swirl', cx, y + 1.3, 0, { swirl: true })
+    for (let i = 0; i < 3; i++) spawn('star', cx, y + 1.3, 0, { scale: STAR_SCALE, star: true, orbit: { cx, cy: y + 1.3, a: (i / 3) * Math.PI * 2, r: 0.9 } })
+    return f.gap
+  } else if (zone === 2 && Math.random() < 0.6) {
+    // A hoop from the Ring Planet, with its stars going straight up through the middle
+    lean = 0
+    spawn('hoop', clamp(x, -xm, xm), y + 1.3, 0, { hoop: true, below: true })
+  }
+  const ice = zone === 3 && Math.random() < 0.65
+  for (let i = 0; i < 3; i++) spawn(ice ? 'ice' : 'star', clamp(x + lean * i, -xm, xm), y + i * 1.3, 0, { scale: ice ? 0.78 : STAR_SCALE, star: true, worth: ice ? 2 : 1, ice })
   return f.gap
 }
 
@@ -1564,54 +1522,67 @@ addEventListener('deviceorientation', (e) => {
 })
 
 function catchStar(it) {
-  flight.stars++
-  save.stars++
+  const at = it.obj.position
   // The note follows where the star was (left low, right high): it never climbs with streaks
-  audio.catch(Math.round(clamp((it.obj.position.x - cam.x) / (view.hw * 2) + 0.5, 0, 1) * 5))
-  sparks.burst(it.obj.position, ['#fff3a0', '#ffd23f', '#ffffff'], 6, 2.5, 0.5)
+  const step = Math.round(clamp((at.x - cam.x) / (view.hw * 2) + 0.5, 0, 1) * 5)
+  if (it.ice) {
+    audio.ice(step)
+    sparks.burst(at, ['#c9f6ff', '#9fe8ff', '#ffffff'], 10, 2.8, 0.55)
+  } else {
+    audio.catch(step)
+    sparks.burst(at, ['#fff3a0', '#ffd23f', '#ffffff'], 8, 2.8, 0.55)
+  }
+  giveStars(it.worth ?? 1)
+}
+
+/**
+ * Stars always show what they bought: every five, the pilot jumps for joy and the exhaust takes
+ * on new colours; enough of them light the ⚡ turbo; and each lights the star picture in the garage.
+ */
+function giveStars(n) {
+  const before = Math.floor(flight.stars / 5)
+  flight.stars += n
+  save.stars += n
+  save.sky += n
   renderStars()
-  // Stars only matter when they can buy a turbo: then the fives are counted aloud up to fifteen
-  // (only until the child has used the lightning a couple of times; then the bar does the counting)
-  if (!flight.canTurbo || game.state !== 'flight') return
-  const ready = flight.stars === TURBO && !flight.turbo
-  if (ready) {
-    flight.ready = true
-    $('turbo').classList.add('full')
-    $('turbo').disabled = false
-    $('turbo').setAttribute('aria-label', `Turbo to ${placeName(flight.target + 1)}`)
-    audio.reach()
-    // Said once a visit, and only when the lightning could help the plan; after that it lights quietly
-    if (turboRelevant() && !turboTold) {
-      voice.say(`Fifteen! Tap the lightning to zoom on to ${placeName(flight.target + 1)}, or just land on ${placeName(flight.target)}.`)
-      turboTold = true
-    }
-  } else if (flight.stars % 5 === 0 && flight.stars < TURBO && fivesAloud()) {
-    fivesOn = save.flights
-    voice.say(String(flight.stars))
+  if (Math.floor(flight.stars / 5) > before && game.state === 'flight') {
+    flight.cheer = 0.7
+    audio.cheer()
+    rings.spawn(rocket.root.position, pick(exhaust()), 4, 0.5)
   }
 }
 
 /**
- * The fives are counted aloud only while the turbo could matter to this flight's plan: never on a
- * mission flight where it would carry the rocket past the card's planet, on one flight a visit at
- * most (reaching fifteen or not), and never once the child has used the lightning twice.
+ * Checked every frame: once enough stars are caught, the ⚡ lights up and waits for a tap, up top
+ * and floating beside the rocket. Never in the last stretch of a trip, where there is no time
+ * left to use it; and never when the child picked a nearer place on purpose, so a deliberate
+ * Moon trip lands on the Moon.
  */
-function fivesAloud() {
-  return turboRelevant() && !turboTold && save.turbos < 2 && (fivesOn < 0 || fivesOn === save.flights)
+function checkTurbo() {
+  const f = flight
+  // (a place picked on purpose is where the trip goes: no turbo past it)
+  if (!f.canTurbo || f.picked || f.turbo || f.lit || game.state !== 'flight' || f.stars < f.need) return
+  if ((f.alt - f.start) / f.dist > 0.85) return
+  f.lit = true
+  $('turbo').classList.add('full')
+  $('turbo').disabled = false
+  show('turbo-cue')
+  audio.reach()
 }
-/** The flight (by number) whose fives were counted this visit. */
-let fivesOn = -1
-// (Not on a two-fault card: there the turbo never counts as the booster fix, so it is never invited)
-const turboRelevant = () => !flight.mission || (!flight.mission.two && flight.mission.dest === flight.base + 1)
 
-let turboTold = false
+/** The exhaust grows more colourful with every five stars (and goes rainbow after a rainbow star). */
+const EXHAUSTS = [
+  ['#ffd23f', '#ff9f43', '#ff6b6b', '#fff3a0'],
+  ['#ffd23f', '#ff8fc7', '#ff6b6b', '#fff3a0', '#ffb3e0'],
+  ['#8ef0c8', '#3bb5ff', '#ff8fc7', '#fff3a0', '#c9b6ff'],
+  ['#ff4f6d', '#ff9f43', '#ffd23f', '#5cd65c', '#3bb5ff', '#9b5de5'],
+]
+const exhaust = () => EXHAUSTS[flight.rainbow ? 3 : Math.min(3, Math.floor(flight.stars / 5))]
 
-/** The child's in-flight choice: spend the fifteen stars on one more planet, or land where the boosters go. */
+/** The child's in-flight choice: spend the stars on one more planet, or land where the rocket was going. */
 function useTurbo() {
-  if (game.state !== 'flight' || flight.turbo || !flight.canTurbo || flight.stars < TURBO) return
+  if (game.state !== 'flight' || flight.turbo || !flight.canTurbo || !flight.lit) return
   flight.turbo = true
-  flight.used = true
-  save.turbos++
   flight.target++
   flight.dist += flight.cruise * 4.5
   flight.boost = 2.5
@@ -1619,30 +1590,64 @@ function useTurbo() {
   banner(`⚡ ${DESTS[flight.target].emoji}`, 2000)
   $('turbo').disabled = true
   $('turbo').classList.add('used')
+  show('turbo-cue', false)
   renderJourney()
   sparks.burst(rocket.root.position, ['#8ef0c8', '#3bb5ff', '#c9b6ff', '#ffd23f'], 12, 3, 0.8)
 }
-$('turbo').addEventListener('pointerdown', (e) => e.stopPropagation())
-$('turbo').addEventListener('click', () => useTurbo())
+for (const id of ['turbo', 'turbo-cue']) {
+  $(id).addEventListener('pointerdown', (e) => e.stopPropagation())
+  $(id).addEventListener('click', () => useTurbo())
+}
+/** The floating ⚡ rides just beside the rocket's nose while the turbo is ready. */
+const cueAt = new THREE.Vector3()
+function placeTurboCue() {
+  const cue = $('turbo-cue')
+  if (cue.classList.contains('hidden')) return
+  if (game.state !== 'flight') return show('turbo-cue', false)
+  const side = rocket.root.position.x > cam.x ? -1 : 1
+  cueAt.set(rocket.root.position.x + side * (rocket.width * 0.5 + 1.1), rocket.root.position.y + rocket.half * 0.5, 0).project(camera)
+  cue.style.left = `${(cueAt.x * 0.5 + 0.5) * innerWidth}px`
+  cue.style.top = `${(-cueAt.y * 0.5 + 0.5) * innerHeight}px`
+}
 
 /**
- * Flying past a planet for the first time still counts: it waves, drops its new parts, and
- * they join the reward card. (Otherwise a child who fits boosters before the first flight
- * would never reach the Moon, and its parts would stay locked for good.)
+ * Flying past a planet still counts: it waves, and if it has gifts left it hands over one of
+ * them (the rest wait for a landing there). So a child who always fits big boosters still finds
+ * every part in time, and one long trip never pours out two planets' gifts at once.
  */
+function giftsLeft(i) {
+  return unlocksAt(i).filter((n) => !save.got.has(`${n.slot}:${n.id}`))
+}
 function flyBy(i, pos) {
   audio.reach()
-  if (save.visited[i]) return popups.show(pos, `👋 ${DESTS[i].emoji}`, true)
-  save.visited[i] = true
-  const news = unlocksAt(i)
-  for (const n of news) {
-    save.fresh.add(`${n.slot}:${n.id}`)
-    flight.flyby.push({ ...n, from: i })
+  save.waved[i] = true
+  const gift = giftsLeft(i)[0]
+  if (!gift) {
+    persist()
+    return popups.show(pos, `👋 ${DESTS[i].emoji}`, true)
   }
+  save.got.add(`${gift.slot}:${gift.id}`)
+  save.fresh.add(`${gift.slot}:${gift.id}`)
+  flight.flyby.push({ ...gift, from: i })
   persist()
   popups.show(pos, `👋 ${DESTS[i].emoji} 🎁`, true)
   setTimeout(() => audio.unlock1(0), 250)
   sparks.burst(rocket.root.position, ['#fff3a0', '#ffd23f', '#ff8fc7', '#8ef0c8'], 10, 3, 0.8)
+}
+
+/** A moonlet bump: a springy boing that pushes the rocket aside, and two stars pop out. */
+function bounceMoonlet(it, dx) {
+  it.hit = true
+  const dir = Math.sign(dx) || 1
+  flight.vx += dir * 7
+  it.vx = -dir * 3.5
+  it.vy = 1.5
+  it.spin = -dir * 3
+  it.squash = 1
+  rocket.squash = 0.8
+  audio.boing()
+  sparks.burst(it.obj.position, ['#e9e4f5', '#fff3a0', '#ffd23f'], 10, 3, 0.6)
+  giveStars(2)
 }
 
 function bumpJunk(it) {
@@ -1653,7 +1658,6 @@ function bumpJunk(it) {
   it.spin = dir * -5
   flight.dizzy = 1.1
   flight.vx -= dir * 5
-  flight.combo = 0
   audio.boing()
   popups.show(it.obj.position, '💫')
 }
@@ -1689,18 +1693,27 @@ function updateFlight(dt) {
   rocket.wobbler.rotation.z = clamp(-f.vx * 0.05, -0.45, 0.45) + W * (0.3 * Math.sin(t * 2.6) + 0.07 * Math.sin(t * 7.7))
   rocket.wobbler.rotation.x = W * 0.14 * Math.sin(t * 2.1)
   rocket.wobbler.position.x = W * 0.35 * Math.sin(t * 1.5)
-  f.spin = f.dizzy > 0 ? f.spin + dt * 14 * (f.dizzy / 1.1 + 0.2) : damp(f.spin, Math.round(f.spin / (Math.PI * 2)) * Math.PI * 2, 6, dt)
+  // Dizzy after junk, a happy twirl in a Mars swirl, or settling back to face the front
+  f.whirl = Math.max(0, f.whirl - dt)
+  f.spin = f.dizzy > 0 ? f.spin + dt * 14 * (f.dizzy / 1.1 + 0.2) : f.whirl > 0 ? f.spin + dt * 9 : damp(f.spin, Math.round(f.spin / (Math.PI * 2)) * Math.PI * 2, 6, dt)
   rocket.wobbler.rotation.y = f.spin
+  // The pilot jumps for joy at every five stars
+  f.cheer = Math.max(0, f.cheer - dt)
+  if (rocket.pilot) {
+    const p = rocket.pilot
+    p.userData.y0 ??= p.position.y
+    p.position.y = p.userData.y0 + Math.sin((1 - f.cheer / 0.7) * Math.PI * 2) ** 2 * (f.cheer > 0 ? 0.3 : 0)
+  }
 
   // Exhaust: smoke billows near the ground, sparks all the way
   const nz = rocket.nozzles(nozzleList)
   const low = 1 - smoothstep(f.alt - f.start, 0, 30)
   for (const n of nz) {
     for (let i = 0; i < 2; i++) {
-      sparks.emit(n.x + rand(-0.1, 0.1), n.y - 0.6 * rocket.root.scale.y, n.z, { vx: rand(-0.4, 0.4) - f.vx * 0.1, vy: -f.speed * 0.5 - 2, spread: 0.6, life: 0.4, size: rand(0.45, 0.7), endSize: 0.1, color: pick(EXHAUST), drag: 1.5 })
+      sparks.emit(n.x + rand(-0.1, 0.1), n.y - 0.6 * rocket.root.scale.y, n.z, { vx: rand(-0.4, 0.4) - f.vx * 0.1, vy: -f.speed * 0.5 - 2, spread: 0.6, life: 0.4, size: rand(0.45, 0.7), endSize: 0.1, color: pick(exhaust()), drag: 1.5 })
     }
     if (Math.random() < 0.35 + low * 0.6) {
-      smoke.emit(n.x, n.y - 0.9, n.z - 0.2, { vx: rand(-1, 1) * (1 + low * 3), vy: -f.speed * 0.25 - 1, spread: 0.8, life: 1.2 + low, size: rand(0.6, 1) * (1 + low), endSize: 2.4 + low * 2, color: f.boost > 0 ? pick(['#c9b6ff', '#8ef0c8', '#fff3a0']) : '#ffffff', drag: 1 })
+      smoke.emit(n.x, n.y - 0.9, n.z - 0.2, { vx: rand(-1, 1) * (1 + low * 3), vy: -f.speed * 0.25 - 1, spread: 0.8, life: 1.2 + low, size: rand(0.6, 1) * (1 + low), endSize: 2.4 + low * 2, color: f.boost > 0 || f.rainbow ? pick(exhaust()) : '#ffffff', drag: 1 })
     }
   }
 
@@ -1724,28 +1737,96 @@ function updateFlight(dt) {
     if (f.passed.has(i)) continue
     if (f.alt + 30 < passAlt(i)) continue
     f.passed.add(i)
-    const side = i % 2 ? -1 : 1
-    const p = spawn(DESTS[i].model, side * (view.hw * 1.1 + 2), passAlt(i) + 10, -18, { scale: 3, planet: true, hello: i })
+    // Always on the left: the journey track runs down the right edge
+    const p = spawn(DESTS[i].model, -(view.hw * 1.1 + 2), passAlt(i) + 10, -18, { scale: 3, planet: true, hello: i })
     p.obj.rotation.x = -0.2
   }
 
   updateItems(dt)
-  f.comboT -= dt
+  updateVisitors(dt)
+  checkTurbo()
+  placeTurboCue()
 
   // Journey marker
   const prog = clamp((f.alt - f.start) / f.dist, 0, 1)
-  const shown = prog * (f.dist / trackLength())
-  if (journeyMe) setTrackAt(journeyMe, shown)
-  const filled = Math.round(shown * 2000) / 20
+  if (journeyMe) setTrackAt(journeyMe, prog)
+  const filled = Math.round(prog * 2000) / 20
   if (journeyFill.filled !== filled) {
     journeyFill.filled = filled
     journeyFill.style.height = `${filled}%`
   }
-  updateGhost(dt)
   if (prog >= 1) arrive()
 }
+/**
+ * Near the Alien Planet a flying saucer comes alongside, its friend waving, and drops stars for
+ * the rocket to catch. On a few flights a rainbow shooting star crosses the sky: catching it is
+ * five stars and a rainbow exhaust for the rest of the trip.
+ */
+function updateVisitors(dt) {
+  const f = flight
+  const rp = rocket.root.position
+  if (!f.ufo && f.target === DESTS.length - 1 && game.state === 'flight' && zoneAt(f.alt + view.hh) === DESTS.length - 1) {
+    const from = pick([-1, 1])
+    f.ufo = spawn('ufo', from * (view.hw + 3), rp.y + view.hh * 0.7, -0.5, { ufo: true, drop: 1.2, from })
+    audio.ufo()
+  }
+  if (f.rainbowAt > 0 && game.state === 'flight' && (f.alt - f.start) / f.dist > f.rainbowAt) {
+    f.rainbowAt = -1
+    const from = pick([-1, 1])
+    spawn('rainbow', from * (view.hw + 1.5), rp.y + view.hh * 0.55, 0.3, { rainbow: true, vx: -from * 4.2, scale: 1 })
+    audio.sparkle()
+  }
+}
+function updateUfo(it, dt) {
+  const o = it.obj
+  const rp = rocket.root.position
+  if (game.state !== 'flight') {
+    // Zooms off upward when the rocket arrives
+    it.vy += dt * 30
+    o.position.y += it.vy * dt
+    return
+  }
+  const gx = Math.sin(it.t * 0.8) * Math.max(1.5, view.hw - 2)
+  const gy = rp.y + 4 + Math.sin(it.t * 1.7) * 0.5
+  const px = o.position.x
+  // Keeps pace with the rocket, then eases to its spot just ahead
+  o.position.x = damp(o.position.x, gx, 1.5, dt)
+  o.position.y = damp(o.position.y + flight.speed * dt, gy, 3, dt)
+  o.rotation.z = clamp((px - o.position.x) * 4, -0.3, 0.3)
+  o.rotation.y += dt * 0.6
+  // (a clone keeps its own lights and arm, so they are looked up on it once)
+  o.userData.lights ??= o.children.filter((c) => c.name === 'ufo_light')
+  o.userData.arm ??= o.getObjectByName('alien_arm_r') ?? null
+  const { lights, arm } = o.userData
+  lights.forEach((l, i) => l.material.emissive.setHSL((it.t * 0.08 + i / 8) % 1, 0.8, 0.6))
+  if (arm) arm.rotation.z = 2.4 + Math.sin(it.t * 8) * 0.4
+  it.drop -= dt
+  if (it.drop <= 0) {
+    it.drop = 0.7
+    spawn('star', o.position.x, o.position.y - 0.9, 0, { scale: STAR_SCALE, star: true })
+    audio.tone(1320, { dur: 0.12, vol: 0.04, type: 'sine', slide: 0.7, echo: false })
+  }
+}
+function updateRainbow(it, dt) {
+  const o = it.obj
+  o.position.x += it.vx * dt
+  o.position.y += flight.speed * dt * 0.8
+  o.rotation.z += dt * 3
+  const c = EXHAUSTS[3]
+  sparks.emit(o.position.x, o.position.y, 0.2, { vx: -it.vx * 0.3, vy: rand(-0.5, 0.5), spread: 0.4, life: 0.8, size: 0.55, endSize: 0.1, color: c[(it.t * 12 | 0) % c.length], drag: 1 })
+  const rp = rocket.root.position
+  if (!it.hit && game.state === 'flight' && Math.abs(rp.x - o.position.x) < rocket.width * 0.5 + 0.9 && Math.abs(rp.y - o.position.y) < rocket.half + 0.6) {
+    it.hit = true
+    o.visible = false
+    flight.rainbow = true
+    audio.turbo()
+    banner('🌈', 1600)
+    sparks.burst(o.position, EXHAUSTS[3], 18, 4, 0.7)
+    giveStars(5)
+  }
+}
+
 const nozzleList = []
-const EXHAUST = ['#ffd23f', '#ff9f43', '#ff6b6b', '#fff3a0']
 
 function updateItems(dt) {
   const rp = rocket.root.position
@@ -1756,19 +1837,65 @@ function updateItems(dt) {
     const o = it.obj
     it.t += dt
     if (it.star) {
-      o.rotation.y = Math.sin(it.t * 2.2) * 0.6
+      o.rotation.y = Math.sin(it.t * 2.2) * 0.6 + (it.ice ? it.t * 1.5 : 0)
       o.rotation.z = Math.sin(it.t * 1.4) * 0.2
+      if (it.orbit) {
+        // Going round inside a dust swirl
+        it.orbit.a += dt * 2.4
+        o.position.set(it.orbit.cx + Math.cos(it.orbit.a) * it.orbit.r, it.orbit.cy + Math.sin(it.orbit.a) * it.orbit.r * 0.8, 0)
+      }
       // Stars that only just miss drift in, so steering matters but a near miss still counts
       const dx = rp.x - o.position.x
       const dy = rp.y - o.position.y
-      if (Math.abs(dx) < rw + 0.4 && Math.abs(dy) < rh + 0.4 && game.state === 'flight') {
-        o.position.x += dx * dt * 1.2
-        o.position.y += dy * dt * 1.0
+      const close = Math.abs(dx) < rw + 0.6 && Math.abs(dy) < rh + 0.6 && game.state === 'flight'
+      if (close) {
+        o.position.x += dx * dt * 1.6
+        o.position.y += dy * dt * 1.2
       }
+      // Squishy: a slow breathing pulse, and a stretch toward a rocket that comes close
+      const b = 1 + Math.sin(it.t * 4) * 0.07
+      const pull = close ? 1.18 : 1
+      o.scale.set(it.scale * b / Math.sqrt(pull), it.scale * b * pull, it.scale * b)
       if (Math.abs(dx) < rw && Math.abs(dy) < rh && game.state === 'flight') {
         catchStar(it)
         recycle(i)
         continue
+      }
+    } else if (it.moonlet) {
+      o.rotation.z += it.spin * dt
+      o.position.x += it.vx * dt
+      o.position.y += it.vy * dt
+      it.squash = Math.max(0, (it.squash ?? 0) - dt * 2.5)
+      const sq = 1 - 0.3 * it.squash * Math.cos(it.t * 22)
+      o.scale.set(it.scale / sq, it.scale * sq, it.scale)
+      const dx = rp.x - o.position.x
+      const dy = rp.y - o.position.y
+      if (!it.hit && game.state === 'flight' && Math.abs(dx) < rw + it.scale * 0.8 && Math.abs(dy) < rh + it.scale * 0.6) bounceMoonlet(it, dx)
+    } else if (it.swirl) {
+      // Dust goes round and round; flying into the middle twirls the rocket
+      for (let k = 0; k < 3; k++) {
+        const a = it.t * 5 + (k / 3) * Math.PI * 2
+        smoke.emit(o.position.x + Math.cos(a) * 1.4, o.position.y + Math.sin(a) * 1.1, -0.3, { vx: -Math.sin(a) * 3, vy: Math.cos(a) * 2.4, spread: 0.3, life: 0.7, size: rand(0.35, 0.6), endSize: 0.9, color: pick(['#ffb08a', '#ff8a5c', '#ffd0b0']), drag: 2 })
+      }
+      if (!it.hit && game.state === 'flight' && Math.abs(rp.x - o.position.x) < 1.4 && Math.abs(rp.y - o.position.y) < 1.5) {
+        it.hit = true
+        flight.whirl = 0.75
+        audio.whistle(true)
+        audio.whoosh(0.6)
+      }
+    } else if (it.hoop) {
+      it.pulse = Math.max(0, (it.pulse ?? 0) - dt * 1.5)
+      o.scale.setScalar(1 + 0.25 * Math.sin(it.pulse * Math.PI))
+      o.rotation.y = Math.sin(it.t * 0.8) * 0.15
+      // Through the hole as the rocket's middle rises past it: a chime, a shower and two stars
+      if (it.below && rp.y >= o.position.y && game.state === 'flight') {
+        it.below = false
+        if (Math.abs(rp.x - o.position.x) < 1.55 - rocket.width * 0.25) {
+          it.pulse = 1
+          audio.hoop()
+          sparks.burst(o.position, ['#ffe0b0', '#d9c7ff', '#ffb76b', '#ffffff'], 16, 4, 0.6)
+          giveStars(2)
+        }
       }
     } else if (it.junk) {
       o.rotation.z += it.spin * dt
@@ -1781,6 +1908,15 @@ function updateItems(dt) {
         const dy = rp.y - o.position.y
         if (Math.abs(dx) < rw * 0.8 + 0.4 && Math.abs(dy) < rh * 0.8 + 0.3) bumpJunk(it)
       }
+    } else if (it.ufo) {
+      updateUfo(it, dt)
+      if (o.position.y > cam.y + view.hh * 3) {
+        flight.ufo = null
+        recycle(i)
+      }
+      continue
+    } else if (it.rainbow) {
+      updateRainbow(it, dt)
     } else if (it.cloud) {
       o.position.x += Math.sin(it.t * 0.3) * 0.2 * dt
     } else if (it.planet) {
@@ -1795,6 +1931,114 @@ function updateItems(dt) {
   }
 }
 
+// --- The flop: a rocket far too wobbly for its boosters sputters up, coughs and bounces home -----
+
+const FLOP_UP = 6.5
+const flop = { stage: 0, y: 0, rest: 0, vy: 0, top: 0, dir: 1, at: 0, nextPop: 0, bounces: 0 }
+
+function flopOff() {
+  game.state = 'flop'
+  game.t = 0
+  flopRun++
+  rocket.wobbler.position.set(0, 0, 0)
+  Object.assign(flop, { stage: 0, rest: rocket.root.position.y, y: rocket.root.position.y, vy: 0, dir: pick([-1, 1]), nextPop: 0, bounces: 0 })
+  // (no big 🚀 over the screen here: nothing should hide the cartwheel)
+  $('countdown').classList.remove('show')
+  audio.pop()
+  audio.setEngine(0.3)
+}
+
+/** A grey puff from the engines (a sputter), or a ring of dust where the rocket hits the pad. */
+function puff(n, color, power = 1) {
+  for (const p of rocket.nozzles(nozzleList)) {
+    for (let i = 0; i < n; i++) smoke.emit(p.x, p.y - 0.4, p.z, { vx: rand(-1.5, 1.5) * power, vy: rand(-2.5, -0.5) * power, vz: rand(-0.5, 0.5), spread: 0.4, life: 1.1, size: rand(0.6, 1), endSize: 2, color, drag: 1.5 })
+  }
+}
+function dustRing(count, power) {
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2
+    smoke.emit(Math.cos(a) * 0.8, padTop + 0.15, Math.sin(a) * 0.8, { vx: Math.cos(a) * rand(2, 4) * power, vy: rand(0.2, 1), vz: Math.sin(a) * rand(1, 2) * power, spread: 0.4, life: 1.2, size: rand(0.7, 1.2), endSize: 2.2, color: '#f4efe6', drag: 2 })
+  }
+}
+
+function updateFlop(dt) {
+  game.t += dt
+  const f = flop
+  const t = game.t
+  const wob = rocket.wobbler
+  if (f.stage === 0) {
+    // Up it goes, wobbling harder and harder, the engine popping and coughing
+    const u = Math.min(1, t / 1.9)
+    f.y = f.rest + FLOP_UP * (1 - (1 - u) ** 2)
+    wob.rotation.z = Math.sin(t * 9) * 0.4 * u
+    wob.position.x = Math.sin(t * 4.5) * 0.5 * u
+    rocket.setFlame(t > f.nextPop - 0.08 ? 0.15 : 0.55)
+    if (t > f.nextPop) {
+      f.nextPop = t + rand(0.2, 0.34)
+      audio.pop()
+      puff(3, pick(['#cfcad8', '#b8b2c6', '#ffffff']))
+    }
+    audio.setEngine(0.25 + Math.random() * 0.15)
+    if (u >= 1) {
+      // Out of puff: a little cough, a slide whistle down, and a cartoon hang in the air
+      f.stage = 1
+      f.at = t
+      rocket.setFlame(0)
+      audio.setEngine(0)
+      audio.cough()
+      audio.whistle(false)
+      puff(6, '#9d97ad', 0.6)
+    }
+  } else if (f.stage === 1) {
+    wob.rotation.z = damp(wob.rotation.z, f.dir * 0.25, 6, dt)
+    if (t - f.at > 0.5) {
+      f.stage = 2
+      f.top = f.y
+    }
+  } else if (f.stage === 2) {
+    f.vy -= 26 * dt
+    f.y += f.vy * dt
+    // One cartwheel on the first fall, upright again just as it lands
+    if (f.bounces === 0) {
+      const fallen = clamp((f.top - f.y) / (f.top - f.rest), 0, 1)
+      wob.rotation.z = f.dir * (0.25 + smoothstep(fallen, 0, 0.92) * (Math.PI * 2 - 0.25))
+    } else wob.rotation.z = damp(wob.rotation.z, 0, 8, dt)
+    wob.position.x = damp(wob.position.x, 0, 4, dt)
+    if (f.y <= f.rest) {
+      const hit = -f.vy
+      f.y = f.rest
+      f.vy = hit * 0.42
+      f.bounces++
+      wob.rotation.z = f.bounces === 1 ? 0 : wob.rotation.z
+      rocket.squash = Math.min(1.6, hit / 12)
+      audio.boing()
+      audio.thump()
+      dustRing(Math.round(10 + hit * 1.5), Math.min(1.4, hit / 12))
+      if (f.bounces === 1) {
+        robot.spin = 1
+        robot.wave = 2
+      }
+      if (f.vy < 2.2 || f.bounces >= 4) {
+        f.stage = 3
+        f.at = t
+        f.vy = 0
+        // A dizzy pilot: little stars go round
+        const head = (rocket.pilot ?? rocket.root).getWorldPosition(new THREE.Vector3())
+        for (let i = 0; i < 3; i++) setTimeout(() => game.state === 'flop' && popups.show(head.clone().add(v3b.set(rand(-0.6, 0.6), 0.9 + i * 0.3, 0.5)), '💫', true), i * 260)
+        audio.dizzy()
+      }
+    }
+  } else if (f.stage === 3) {
+    const k = Math.max(0, 1 - (t - f.at) / 1.4)
+    wob.rotation.z = Math.sin(t * 7) * 0.08 * k
+    if (t - f.at > 1.8) return toGarage({ keepFx: true })
+  }
+  rocket.root.position.y = f.y
+  // The shadow shrinks as the rocket climbs
+  const h = clamp((f.y - f.rest) / FLOP_UP, 0, 1)
+  shadow.scale.setScalar((rocket.width * 1.4 + 0.6) * (1 - h * 0.5))
+}
+
 // --- Arrival and landing ----------------------------------------------------------------
 
 const party = { planet: null, pilot: null, flag: null, friend: null, dest: 0, t: 0, spot: new THREE.Vector3(), flagSpot: new THREE.Vector3(), friendSpot: new THREE.Vector3(), hopFrom: new THREE.Vector3(), news: [], stage: 0 }
@@ -1802,6 +2046,12 @@ const party = { planet: null, pilot: null, flag: null, friend: null, dest: 0, t:
 function arrive() {
   game.state = 'arrive'
   game.t = 0
+  // The picked place was for this trip only: next time the 🚀 goes back to the boosters' reach
+  save.aim = null
+  // The trip is over: a ⚡ still waiting goes dark and the floating one goes away
+  $('turbo').classList.remove('full')
+  $('turbo').disabled = true
+  show('turbo-cue', false)
   const d = DESTS[flight.target]
   goalPlanet = models[d.model].clone()
   goalPlanet.scale.setScalar(3.4)
@@ -1819,7 +2069,6 @@ function updateArrive(dt) {
   rocket.wobbler.rotation.z = damp(rocket.wobbler.rotation.z, 0, 4, dt)
   goalPlanet.rotation.y += dt * 0.3
   goalPlanet.position.y -= dt * 4
-  updateGhost(dt)
   updateItems(dt)
   if (game.t > 1.4 && !game.busy) {
     game.busy = true
@@ -1858,6 +2107,7 @@ function setupLanding() {
   game.t = 0
   show('journey', false)
   show('flightbar', false)
+  show('turbo-cue', false)
   show('tray', false)
   show('actions', false)
   show('reach', false)
@@ -1897,7 +2147,8 @@ function setupLanding() {
 }
 
 function clearParty() {
-  for (const k of ['planet', 'pilot', 'flag', 'friend']) {
+  party.trick = null
+  for (const k of ['planet', 'pilot', 'flag', 'friend', 'toy']) {
     if (party[k]) scene.remove(party[k])
     party[k] = null
   }
@@ -1914,6 +2165,20 @@ function makeDancer(id, scale) {
   return p
 }
 
+/** The pink alien friend from the Alien Planet (the alien pilot in other colours). */
+function makeFriend(scale) {
+  const f = makeDancer('alien', scale)
+  const pink = new Map()
+  f.traverse((o) => {
+    if (o.isMesh && (o.material.name === 'fur_alien' || o.material.name === 'suit_alien')) {
+      if (!pink.has(o.material)) pink.set(o.material, o.material.clone())
+      o.material = pink.get(o.material)
+    }
+  })
+  for (const [orig, m] of pink) m.color.set(orig.name === 'fur_alien' ? '#ff9ad5' : '#3bb5ff')
+  return f
+}
+
 function updateLanding(dt) {
   game.t += dt
   const t = game.t
@@ -1924,7 +2189,7 @@ function updateLanding(dt) {
     rocket.wobbler.rotation.z = Math.sin(t * 3) * 0.05 * (1 - u)
     rocket.setFlame(0.4 + (1 - u) * 0.5)
     const nz = rocket.nozzles(nozzleList)
-    for (const n of nz) sparks.emit(n.x, n.y - 0.4, n.z, { vx: rand(-0.3, 0.3), vy: -4, spread: 0.5, life: 0.35, size: 0.5, endSize: 0.1, color: pick(EXHAUST), drag: 1.5 })
+    for (const n of nz) sparks.emit(n.x, n.y - 0.4, n.z, { vx: rand(-0.3, 0.3), vy: -4, spread: 0.5, life: 0.35, size: 0.5, endSize: 0.1, color: pick(exhaust()), drag: 1.5 })
     if (u >= 1) {
       party.stage = 1
       rocket.setFlame(0)
@@ -1946,18 +2211,13 @@ function updateLanding(dt) {
     party.pilot = makeDancer(save.rocket.pilot, 1.25)
     party.pilot.position.copy(party.hopFrom)
     scene.add(party.pilot)
+    party.trick = null
+    party.tricks = 0
+    makeToy(party.dest)
     audio.whistle(true)
     if (party.dest === DESTS.length - 1) {
       // The alien friend waves hello
-      party.friend = makeDancer('alien', 1.25)
-      const pink = new Map()
-      party.friend.traverse((o) => {
-        if (o.isMesh && (o.material.name === 'fur_alien' || o.material.name === 'suit_alien')) {
-          if (!pink.has(o.material)) pink.set(o.material, o.material.clone())
-          o.material = pink.get(o.material)
-        }
-      })
-      for (const [orig, m] of pink) m.color.set(orig.name === 'fur_alien' ? '#ff9ad5' : '#3bb5ff')
+      party.friend = makeFriend(1.25)
       party.friend.position.set(party.friendSpot.x, party.friendSpot.y + party.friend.userData.feet, party.friendSpot.z)
       party.friend.rotation.y = 0.3
       scene.add(party.friend)
@@ -1999,214 +2259,111 @@ function updateLanding(dt) {
   animateDancers(dt, party.stage >= 4)
 }
 
+/** Each landing hands over a few of the planet's gifts; the rest wait for coming back. */
+const GIFTS_PER_LANDING = 3
 function startParty() {
   party.stage = 4
   game.state = 'party'
   game.t = 0
   const d = party.dest
-  const first = !save.visited[d]
   save.visited[d] = true
-  party.news = [...flight.flyby, ...(first ? unlocksAt(d).map((n) => ({ ...n, from: d })) : [])]
+  party.news = [...flight.flyby, ...giftsLeft(d).slice(0, GIFTS_PER_LANDING).map((n) => ({ ...n, from: d }))]
   flight.flyby = []
-  for (const n of party.news) save.fresh.add(`${n.slot}:${n.id}`)
-  // A fair test (one part changed) adds a page to the "what I found out" notebook. A mission
-  // flight with one part changed is a fair test too, just unasked: on Robot's rocket it is
-  // measured from his rocket as the card put it on the pad.
-  const m0 = flight.mission
-  const tested = flight.test ?? fairTest(m0?.robot ? partsOf(m0.base ?? m0.robot) : save.last, save.rocket)
-  party.found = !!tested && addNote(save.notes, noteFrom(tested))
-  // ...and marks that single nose, tank or fins steady ━ or wobbly 〰️ in the tray
-  party.learned = tested ? learnParts(save.known, tested) : []
-  if (party.learned.length) save.notesNew = true
-  if (party.found) save.notesNew = true
-  if (flight.test) save.guessRun = verdict(flight.test).matched ? save.guessRun + 1 : 0
-  save.landed = d
-  save.landedTurbo = !!flight.used && d === reach(save.rocket) + 1
-  // Only a flight that lands counts as flown (one left mid-air never claims a landing)
-  save.last = partsOf(save.rocket)
-  save.flown.add(save.rocket.booster)
-  save.flights++
-  // A mission flight is checked against its card and the child's guess; the tier follows how they are doing
-  party.mission = null
-  if (flight.mission) {
-    const m = flight.mission
-    const check = checkMission(m, { rocket: save.rocket, dest: d })
-    m.flew = true
-    // The "as it is" guess made when the card was picked up is what counts toward the next tier
-    const matched = m.diag !== null && !!m.diagOk
-    let next = afterFlight(save.mission, check.done, matched, check, save.rocket)
-    if (next === 'nearer') {
-      // A nearer card only when there is a different planet one booster size away; otherwise the
-      // same card stays and the finger shows the booster to try (never "a new card" that is not)
-      const card = makeMission(1, save.rocket, save.visited, { near: m.dest })
-      if (card.dest === m.dest && !m.helped) {
-        Object.assign(save.mission, { card: m, on: true, near: null })
-        m.helped = true
-        next = 'help'
-      } else if (card.dest === m.dest) {
-        // Helped once already: the card is put away for now, so hint and help never loop
-        Object.assign(save.mission, { card: m, on: false, near: null })
-        next = 'rest'
-      } else Object.assign(save.mission, { card, near: null })
-    }
-    let say = missionVerdict(m, check, { dest: d, turbo: flight.used, turboReady: flight.ready, rocket: save.rocket, next, flown: save.flown, known: Object.keys(save.known).length })
-    // Any line already heard this visit, even about another planet: a short one instead (the
-    // picture card shows the rest). A card put away keeps its own brief line.
-    const heard = toldMiss.get(lineKey(say)) ?? 0
-    toldMiss.set(lineKey(say), heard + 1)
-    if (heard && next !== 'rest') {
-      // ...skipping any short line already heard, until the briefest one
-      let n = heard
-      let short
-      do short = missionShort(m, check, d, { next, n: n++, rocket: save.rocket })
-      while (short && toldMiss.has(lineKey(short)) && n < 8)
-      if (short) toldMiss.set(lineKey((say = short)), (toldMiss.get(lineKey(short)) ?? 0) + 1)
-    }
-    party.mission = { m, check, say, matched, next }
+  for (const n of party.news) {
+    save.got.add(`${n.slot}:${n.id}`)
+    save.fresh.add(`${n.slot}:${n.id}`)
   }
+  // The friend from the Alien Planet rides home and waits in the garage from now on
+  if (d === DESTS.length - 1) save.friend = true
+  save.landed = d
+  save.flights++
   persist()
   audio.fanfare()
   audio.playSong('dance')
   banner(`🎉 ${DESTS[d].emoji} 🎉`, 3200, true)
   confetti()
+  // The card waits, so the first tricks are in plain view: it comes after the first trick, or at 4.5 s
   setTimeout(() => {
-    if (game.state === 'party') showReward()
-  }, 2200)
+    if (game.state === 'party' && $('reward').classList.contains('hidden')) showReward()
+  }, 4500)
 }
 
-/** Mission lines already said this visit, and how often (said again, it is a short line). */
-const toldMiss = new Map()
-/** A line with its planets taken out, so the same sentence about another planet counts as heard. */
-const lineKey = (say) => DESTS.reduce((key, d) => key.replaceAll(d.name, '•'), say)
-/** Fair-test verdicts already said this visit (said again: short, then just the mark). */
-const toldTest = new Map()
-
-/** The one soft moment on landing: a few pale sparkles drift up around the pilot and the flag, once. */
+/** One happy pop of confetti around the pilot and the flag as the party starts. */
+const CONFETTI = ['#ff4f6d', '#ffd23f', '#5cd65c', '#3bb5ff', '#9b5de5', '#ff8fc7', '#ffffff']
 function confetti() {
   const at = party.pilot?.position ?? rocket.root.position
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2
-    sparks.emit(at.x + Math.cos(a) * 1.4, at.y + 0.6 + Math.sin(a) * 0.6, at.z + 0.5, { vx: Math.cos(a) * 0.3, vy: rand(0.5, 1), spread: 0.2, life: 2.2, size: rand(0.35, 0.5), endSize: 0, color: '#fff3c4', drag: 0.6 })
+  for (let i = 0; i < 34; i++) {
+    const a = (i / 34) * Math.PI * 2
+    sparks.emit(at.x + Math.cos(a) * 0.6, at.y + 1, at.z + 0.5, { vx: Math.cos(a) * rand(1.5, 3.5), vy: rand(3, 6), vz: Math.sin(a) * rand(0.5, 1.5), spread: 0.3, life: 2, size: rand(0.35, 0.55), endSize: 0.2, color: CONFETTI[i % CONFETTI.length], grav: -6, drag: 0.8 })
   }
 }
 
 function showReward() {
   const d = DESTS[party.dest]
   $('reward-head').textContent = `${d.emoji} 🚩`
-  renderRewardStars()
   const el = $('reward-new')
   el.innerHTML = ''
-  el.classList.toggle('many', party.news.length > 6)
+  el.classList.toggle('many', party.news.length + (flight.stars ? 1 : 0) > 6)
   party.news.forEach((n, i) => {
     const g = document.createElement('div')
     g.className = 'gift'
-    g.style.animationDelay = `${0.3 + i * 0.18}s`
+    g.style.animationDelay = `${0.15 + i * 0.1}s`
     g.innerHTML = `<img src="${thumbOf(n.slot, n.id)}" alt="">`
     // Gifts found on the way wear their planet's badge
     if (n.from !== party.dest) g.insertAdjacentHTML('beforeend', `<span class="from">${DESTS[n.from].emoji}</span>`)
     el.append(g)
-    setTimeout(() => audio.unlock1(i), 300 + i * 180)
+    setTimeout(() => audio.unlock1(i), 150 + i * 100)
   })
-  renderTest()
-  renderMissionResult()
-  // A missed mission card that is still on: the same rocket would land the same, so 🔧 is the way on
-  // (unless it stopped one short and the turbo could carry it, which is a real plan to try again)
-  const pm = party.mission
-  const turboFix = pm && !pm.m.two && pm.check.fix && party.dest + 1 === pm.m.dest && flight.canTurbo
-  show('again', !(pm && !pm.check.done && save.mission.on && !turboFix))
+  // The star picture leads the row whenever this trip caught stars
+  if (flight.stars) {
+    const g = document.createElement('div')
+    g.className = 'gift pic'
+    g.append(cardPicture())
+    el.prepend(g)
+  }
+  lastInput = performance.now()
   show('reward')
-  rewardAt = performance.now()
 }
 
-/** The fair-test result on the reward card: the two rockets race again, then the robot names the cause. */
-let raceTimer = 0
-function renderTest() {
-  const box = $('reward-test')
-  clearTimeout(raceTimer)
-  box.replaceChildren()
-  show('reward-test', !!flight.test)
-  if (!flight.test) return
-  const test = flight.test
-  const v = verdict(test)
-  const race = flightRace(test, rocketThumb)
-  const row = document.createElement('div')
-  row.className = 'ft-verdict'
-  row.append(testChip(test, rocketThumb))
-  const mark = document.createElement('b')
-  mark.className = 'ft-mark-result'
-  row.append(mark)
-  const why = document.createElement('p')
-  why.className = 'ft-why'
-  why.setAttribute('role', 'status')
-  row.append(why)
-  box.append(race, row)
-  raceTimer = flyRace(race, test.result, { onDone: () => {
-    mark.textContent = v.matched ? '✔' : '💡'
-    why.textContent = v.why
-    if (party.found) {
-      const page = document.createElement('span')
-      page.className = 'ft-new-page'
-      page.textContent = '📓✨'
-      row.append(page)
+/**
+ * The wall's star picture, small on the reward card: the dots this trip's stars lit pop on, so
+ * every landing (even one with no gifts left) shows what the stars were for.
+ */
+function cardPicture() {
+  const before = pictureAt(save.skyShown)
+  const after = pictureAt(save.sky)
+  // A picture finished on this trip is shown whole (the next one starts on the wall at home)
+  const now = after.n === before.n ? after : { n: before.n, pic: before.pic, lit: before.pic.dots.length }
+  const fresh = before.lit
+  const NS = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(NS, 'svg')
+  svg.setAttribute('viewBox', '0 0 100 100')
+  svg.setAttribute('class', 'card-pic')
+  const bg = document.createElementNS(NS, 'rect')
+  Object.entries({ x: 2, y: 2, width: 96, height: 96, rx: 16, fill: '#2a2266', stroke: '#ffd23f', 'stroke-width': 4 }).forEach(([k, v]) => bg.setAttribute(k, v))
+  svg.append(bg)
+  const at = ([u, v]) => [10 + u * 80, 90 - v * 80]
+  if (now.lit >= now.pic.dots.length) {
+    for (const [a, b] of now.pic.lines) {
+      const l = document.createElementNS(NS, 'line')
+      const [x1, y1] = at(now.pic.dots[a])
+      const [x2, y2] = at(now.pic.dots[b])
+      Object.entries({ x1, y1, x2, y2, stroke: now.pic.color, 'stroke-width': 3, 'stroke-linecap': 'round', class: 'pic-line' }).forEach(([k, v]) => l.setAttribute(k, v))
+      svg.append(l)
     }
-    // Several parts changed: any such verdict counts as heard, since the lesson is the same one
-    const key = test.result.changed.length > 1 ? 'many' : v.say
-    const heard = toldTest.get(key) ?? 0
-    toldTest.set(key, heard + 1)
-    let say = v.say
-    if (heard) {
-      // (a right guess adds "Yes!" to the short line, but it is the same line all the same)
-      const short = verdictShort(test, v)
-      const shortKey = short.replace(/^Yes! /, '')
-      say = toldTest.has(shortKey) ? (v.matched ? 'Yes!' : '') : short
-      toldTest.set(shortKey, (toldTest.get(shortKey) ?? 0) + 1)
+  }
+  now.pic.dots.forEach((d, k) => {
+    const c = document.createElementNS(NS, 'circle')
+    const [cx, cy] = at(d)
+    const lit = k < now.lit
+    Object.entries({ cx, cy, r: lit ? 6 : 3, fill: lit ? now.pic.color : '#7c74b8' }).forEach(([k2, v]) => c.setAttribute(k2, v))
+    if (lit && k >= fresh) {
+      c.setAttribute('class', 'pic-new')
+      c.style.animationDelay = `${0.4 + (k - fresh) * 0.15}s`
     }
-    say = `${say}${party.found ? ' I put it in your notebook!' : ''}`.trim()
-    if (say) voice.say(say)
-  } })
-}
-let rewardAt = 0
-
-/** The mission card again, each thing it asked for marked ✔ or 💡, and one sentence from Robot. */
-function renderMissionResult() {
-  const box = $('reward-mission')
-  box.replaceChildren()
-  show('reward-mission', !!party.mission)
-  if (!party.mission) return
-  const { m, check, say, next } = party.mission
-  box.classList.toggle('done', check.done)
-  const why = document.createElement('p')
-  why.className = 'ft-why'
-  why.setAttribute('role', 'status')
-  why.textContent = say
-  const pic = missionPicture(m, { rocketThumb, marks: { ...check, place: check.place && !(m.two && !check.done && check.carried) } })
-  box.append(pic, why)
-  let more = { easier: ' Let’s try a different mission next.', nearer: ' Robot has a new card for you, one booster size away.', help: ' Let’s try it together!', hint: ' Have a look!', rest: ' Let’s just fly for fun. Robot’s card will wait.' }[next] ?? ''
-  // Reaching the top tier opens the workshop's race challenge: said once, ever
-  if (next === 'done' && save.mission.tier >= TIERS && !save.raceTold) {
-    save.raceTold = true
-    persist()
-    more += ' Robot left you a race challenge in the test workshop. Open your notebook, then the test tube!'
-  }
-  setTimeout(() => { if (game.state === 'party') voice.say(say + more) }, 700)
-}
-
-/** The stars caught, counted in fives: a gold 5, 10, 15… then the stars left over. */
-function renderRewardStars() {
-  const el = $('reward-stars')
-  el.replaceChildren()
-  // Stars are only shown where they could buy something: a flight with no turbo keeps no tally
-  // (and not on a mission flight where the turbo would only have carried it past the card's planet)
-  if (!flight.canTurbo || !turboRelevant()) return el.removeAttribute('aria-label')
-  const fives = Math.floor(flight.stars / 5) * 5
-  if (fives) {
-    const chip = document.createElement('span')
-    chip.className = 'five-chip'
-    chip.textContent = String(fives)
-    el.append(chip)
-  }
-  if (flight.stars - fives) el.append(document.createTextNode('⭐'.repeat(flight.stars - fives)))
-  el.setAttribute('aria-label', `${flight.stars} stars`)
+    svg.append(c)
+  })
+  return svg
 }
 
 /** The landing song is one phrase (about nine seconds); after it the dancers ease into a still pose. */
@@ -2265,18 +2422,210 @@ function animateDancers(dt, dancing, resting = false) {
 
 function updateParty(dt) {
   game.t += dt
-  const dancing = game.t < DANCE_FOR
+  const dancing = game.t < DANCE_FOR && !party.trick
   animateDancers(dt, dancing, !dancing)
+  updateToy(dt)
+}
+
+/**
+ * Each place has its own landing toy: tap the scene and the pilot plays with it. Floaty
+ * moon-gravity hops on the Moon; a dust devil on Mars that whisks the pilot round; a hula hoop
+ * from the Ring Planet; a loop-the-loop on an icy comet trail; a jump-and-spin with the friend on
+ * the Alien Planet.
+ */
+const TRICK_FOR = [
+  [2.4, 2.6],
+  [2.4, 2.2],
+  [2.6, 2.4],
+  [2.2, 2.6],
+  [2.2, 2.0],
+]
+function makeToy(d) {
+  party.toy = null
+  if (d === 1) {
+    // A little dust devil wandering about the surface
+    const devil = new THREE.Group()
+    devil.userData = { x: -1.6, dir: 1 }
+    party.toy = devil
+  } else if (d === 2) {
+    // A hula hoop lying beside the pilot, in the Ring Planet's colours
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.06, 8, 36), new THREE.MeshStandardMaterial({ color: '#ffe0b0', emissive: '#ffb76b', emissiveIntensity: 0.35, roughness: 0.4 }))
+    hoop.rotation.x = Math.PI / 2
+    hoop.position.set(party.spot.x - 0.9, party.spot.y + 0.05, party.spot.z + 0.5)
+    hoop.userData.rest = hoop.position.clone()
+    party.toy = hoop
+  }
+  if (party.toy) scene.add(party.toy)
+}
+function startTrick() {
+  if (game.state !== 'party' || party.trick || !party.pilot) return
+  // Taps take turns between the planet's two tricks
+  party.trick = { t: 0, from: party.pilot.position.clone(), v: party.tricks % 2 }
+  party.tricks++
+  const d = party.dest
+  // Every trick starts with a pop: a ring, a puff of the planet's dust and a springy stretch
+  const at = party.pilot.position
+  rings.spawn(v3.set(at.x, at.y + 0.6, at.z + 0.3), DESTS[d].dust, 3.2, 0.5)
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2
+    smoke.emit(at.x + Math.cos(a) * 0.4, party.spot.y + 0.05, at.z + Math.sin(a) * 0.4, { vx: Math.cos(a) * rand(1.5, 2.5), vy: rand(0.3, 1), vz: Math.sin(a) * rand(0.8, 1.4), spread: 0.3, life: 0.9, size: rand(0.5, 0.8), endSize: 1.4, color: DESTS[d].dust, drag: 2 })
+  }
+  sparks.burst(v3.set(at.x, at.y + 0.8, at.z + 0.3), ['#fff3a0', '#ffffff', DESTS[d].dust], 12, 3, 0.5)
+  if (d === 0) audio.whistle(true)
+  else if (d === 1) audio.whoosh(1.6)
+  else if (d === 2) audio.hoop()
+  else if (d === 3) audio.ice(3)
+  else audio.cheer()
+}
+function updateToy(dt) {
+  const d = party.dest
+  const t = game.time
+  const toy = party.toy
+  if (d === 1 && toy) {
+    // The dust devil wanders to and fro (and comes to the pilot during its trick)
+    const u = toy.userData
+    if (!party.trick || party.trick.v) {
+      u.x += u.dir * dt * 0.5
+      if (u.x > -0.9 || u.x < -2.6) u.dir *= -1
+      toy.position.set(u.x, groundAt(u.x, 1.4), 1.4)
+    } else toy.position.lerp(v3.set(party.spot.x, party.spot.y, party.spot.z), Math.min(1, dt * 6))
+    const big = party.trick && !party.trick.v ? 1.6 : 1
+    for (let k = 0; k < 3; k++) {
+      const h = Math.random() * 1.6 * big
+      const a = t * 9 + k * 2.1 + h * 3
+      const r = (0.15 + h * 0.3) * big
+      smoke.emit(toy.position.x + Math.cos(a) * r, toy.position.y + h, toy.position.z + Math.sin(a) * r, { vx: -Math.sin(a) * 2, vy: 0.6, vz: Math.cos(a) * 2, spread: 0.2, life: 0.5, size: rand(0.25, 0.45), endSize: 0.7, color: pick(['#ffb08a', '#ff8a5c', '#ffd0b0']), drag: 2 })
+    }
+  }
+  const tr = party.trick
+  const p = party.pilot
+  if (!tr || !p) return
+  tr.t += dt
+  const len = TRICK_FOR[d][tr.v]
+  const u = Math.min(1, tr.t / len)
+  const [al, ar] = p.userData.arms
+  const base = v3b.set(party.spot.x, party.spot.y + p.userData.feet, party.spot.z)
+  // A springy squash-and-stretch as the trick starts
+  const spring = 1 + 0.3 * Math.exp(-tr.t * 5) * Math.sin(tr.t * 22)
+  p.scale.set(1.25 / Math.sqrt(spring), 1.25 * spring, 1.25 / Math.sqrt(spring))
+  if (d === 0 && tr.v) {
+    // Moon gravity, again: three bouncy hops, each one higher
+    const k = Math.min(2, Math.floor(u * 3))
+    const w = u * 3 - k
+    p.position.set(base.x - 0.25 + k * 0.25, base.y + Math.sin(w * Math.PI) * (0.8 + k * 0.7), base.z)
+    p.rotation.z = Math.sin(w * Math.PI) * 0.3 * (k % 2 ? 1 : -1)
+    al.rotation.z = -1.6 - Math.sin(w * Math.PI)
+    ar.rotation.z = 1.6 + Math.sin(w * Math.PI)
+  } else if (d === 1 && tr.v) {
+    // A cartwheel across the red sand and back
+    const there = Math.sin(u * Math.PI)
+    p.position.set(base.x - there * 2.2, base.y + Math.abs(Math.sin(u * Math.PI * 2)) * 0.8, base.z)
+    p.rotation.z = u * Math.PI * 4
+    al.rotation.z = -2.8
+    ar.rotation.z = 2.8
+    if (Math.random() < 0.3) smoke.emit(p.position.x, party.spot.y, p.position.z, { vy: 0.4, spread: 0.6, life: 0.6, size: 0.4, endSize: 0.8, color: DESTS[1].dust, drag: 2 })
+  } else if (d === 2 && tr.v && toy) {
+    // Ring toss: the hoop sails up and drops over the rocket's nose, then hops back
+    const nose = v3.set(rocket.root.position.x, rocket.root.position.y + rocket.half * 0.8 * 0.9, rocket.root.position.z)
+    const go = smoothstep(u, 0, 0.45)
+    const back = smoothstep(u, 0.65, 1)
+    const arc = Math.sin(go * Math.PI) * 2.2 * (1 - back) + Math.sin(back * Math.PI) * 1.5
+    const down = smoothstep(u, 0.45, 0.62) * rocket.half * 0.8 * 0.3
+    toy.position.lerpVectors(toy.userData.rest, nose, go * (1 - back))
+    toy.position.y += arc - down * (1 - back)
+    toy.rotation.set(Math.PI / 2, 0, u * Math.PI * 6)
+    al.rotation.z = -2.6 * (1 - go)
+    ar.rotation.z = 2.6
+    if (u > 0.45 && !tr.clink) {
+      tr.clink = true
+      audio.hoop()
+      sparks.burst(toy.position, ['#ffe0b0', '#d9c7ff', '#ffffff'], 12, 3, 0.5)
+    }
+  } else if (d === 3 && tr.v) {
+    // A zoom round the comet in a big figure-eight, icy sparkles behind
+    const a = u * Math.PI * 2
+    p.position.set(base.x - 1.4 - Math.sin(a) * 2, base.y + 1.5 + Math.sin(a * 2) * 0.9, base.z + Math.cos(a) * 0.4)
+    p.rotation.z = Math.sin(a) * 0.5
+    al.rotation.z = -2.6
+    ar.rotation.z = 2.6
+    sparks.emit(p.position.x, p.position.y, p.position.z, { vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3), spread: 0.3, life: 0.9, size: rand(0.35, 0.55), endSize: 0, color: pick(['#c9f6ff', '#9fe8ff', '#ffffff']), drag: 1 })
+  } else if (d === 4 && tr.v && party.friend) {
+    // High five: pilot and friend leap toward each other and clap in the middle
+    const f = party.friend
+    const meet = Math.sin(u * Math.PI)
+    const mid = (party.spot.x + party.friendSpot.x) / 2
+    p.position.set(lerp(base.x, mid + 0.45, meet), base.y + meet * 2, base.z)
+    f.position.set(lerp(party.friendSpot.x, mid - 0.45, meet), party.friendSpot.y + f.userData.feet + meet * 2, party.friendSpot.z)
+    ar.rotation.z = 2.8
+    f.userData.arms[1].rotation.z = 2.8
+    if (u > 0.5 && !tr.clap) {
+      tr.clap = true
+      audio.cheer()
+      sparks.burst(v3.set(mid, base.y + 3, base.z), EXHAUSTS[3], 22, 4, 0.7)
+    }
+  } else if (d === 0) {
+    // Moon gravity: a slow, high, floaty hop with a somersault
+    p.position.set(base.x, base.y + Math.sin(u * Math.PI) * 2.6, base.z)
+    p.rotation.x = smoothstep(u, 0.2, 0.8) * Math.PI * 2
+    al.rotation.z = -2.6
+    ar.rotation.z = 2.6
+  } else if (d === 1) {
+    // Whisked round and up by the dust devil
+    const lift = Math.sin(u * Math.PI)
+    p.position.set(base.x + Math.sin(u * Math.PI * 4) * 0.5 * lift, base.y + lift * 2.4, base.z + Math.cos(u * Math.PI * 4) * 0.5 * lift)
+    p.rotation.y = -0.2 + u * Math.PI * 6
+    al.rotation.z = -2.4
+    ar.rotation.z = 2.4
+  } else if (d === 2 && toy) {
+    // The hoop hops up round the pilot's middle and spins, the pilot wiggling with it
+    const on = smoothstep(u, 0, 0.15) * (1 - smoothstep(u, 0.85, 1))
+    const waist = v3.set(base.x, base.y + 0.55 + Math.abs(Math.sin(u * Math.PI * 2)) * 0.9, base.z)
+    const a = tr.t * 14
+    const spin = v3.set(waist.x + Math.cos(a) * 0.12, waist.y + Math.sin(a * 0.5) * 0.04, waist.z + Math.sin(a) * 0.12)
+    toy.position.lerpVectors(toy.userData.rest, spin, on)
+    toy.rotation.set(Math.PI / 2 + Math.sin(a) * 0.25 * on, 0, Math.cos(a) * 0.25 * on)
+    // ...and the pilot bounces up and twirls inside it
+    p.position.set(base.x + Math.sin(a) * 0.08 * on, base.y + Math.abs(Math.sin(u * Math.PI * 2)) * 0.9, base.z)
+    p.rotation.y = -0.2 + u * Math.PI * 4
+    p.rotation.z = Math.sin(a) * 0.15 * on
+    al.rotation.z = -1.4
+    ar.rotation.z = 1.4
+  } else if (d === 3) {
+    // A loop-the-loop on an icy comet trail
+    const a = u * Math.PI * 2
+    p.position.set(base.x - Math.sin(a) * 1.3, base.y + (1 - Math.cos(a)) * 1.3, base.z)
+    p.rotation.z = a
+    al.rotation.z = -2.6
+    ar.rotation.z = 2.6
+    sparks.emit(p.position.x, p.position.y, p.position.z, { vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3), spread: 0.3, life: 0.9, size: rand(0.35, 0.55), endSize: 0, color: pick(['#c9f6ff', '#9fe8ff', '#ffffff']), drag: 1 })
+  } else {
+    // Alien Planet: pilot and friend jump and spin together
+    tr.v = 0
+    for (const [who, spot] of [[p, party.spot], [party.friend, party.friendSpot]]) {
+      if (!who) continue
+      who.position.y = spot.y + who.userData.feet + Math.sin(u * Math.PI) * 2.6
+      who.rotation.y = (who === p ? -0.2 : 0.3) + u * Math.PI * 4
+    }
+  }
+  if (u >= 1) {
+    party.trick = null
+    if ($('reward').classList.contains('hidden')) setTimeout(() => game.state === 'party' && $('reward').classList.contains('hidden') && showReward(), 400)
+    p.rotation.set(0, -0.2, 0)
+    p.scale.setScalar(1.25)
+    p.position.copy(base)
+    if (toy && d === 2) {
+      toy.position.copy(toy.userData.rest)
+      toy.rotation.set(Math.PI / 2, 0, 0)
+    }
+    audio.thump()
+    smoke.emit(base.x, party.spot.y, base.z, { vy: 0.5, spread: 1.5, life: 0.8, size: 0.6, endSize: 1.2, color: DESTS[d].dust, drag: 2 })
+    if (d === 4) confetti()
+  }
 }
 
 function backToGarage(thenLaunch = false) {
   if (game.busy) return
-  const hint = party.mission?.next === 'hint'
-  const help = party.mission?.next === 'help' ? party.mission.m : null
   game.busy = true
-  voice.hush()
-  clearTimeout(raceTimer)
-  ghost.on = false
   audio.click()
   $('finger').classList.add('hidden')
   // Head to the tab with something new, so it is easy to find
@@ -2290,31 +2639,7 @@ function backToGarage(thenLaunch = false) {
     }
   }).then(() => {
     game.busy = false
-    if (thenLaunch) {
-      launch()
-      // A launch that stopped for a question (or did not start) brings the tray and GO back
-      if (game.state !== 'countdown') backToBuilding()
-      return
-    }
-    // The second miss on a tier-1 card: the notebook opens on where each booster went, by itself
-    // only the first time; after that the 📓 is framed for the child to open
-    if (hint && save.flown.size) {
-      if (save.hinted) return $('notebook-btn').classList.add('look')
-      save.hinted = true
-      save.notesNew = false
-      persist()
-      renderNotebookButton()
-      notebook.show({ look: 'flown' })
-    }
-    // The third miss with no nearer planet: the booster tab, and the finger on the boosters to try
-    if (help) {
-      const needed = PARTS.booster.find((p) => isUnlocked(p, save.visited) && Math.min(DESTS.length - 1, p.power) === help.dest)
-      if (!needed || needed.id === save.rocket.booster) return
-      helpBooster = needed.id
-      setTab('booster')
-      hintStep()
-      voice.say(needed.id === 'none' ? 'Try it with no boosters!' : `Try the ${BOOSTER_WORDS[needed.id]}!`)
-    }
+    if (thenLaunch) launch()
   })
 }
 $('to-garage').addEventListener('click', () => backToGarage(false))
@@ -2331,6 +2656,7 @@ canvas.addEventListener('pointerdown', (e) => {
   audio.unlock()
   pointerHeld = true
   if (game.state === 'flight') return steerPointer(e)
+  if (game.state === 'party') return startTrick()
   if (game.state !== 'garage' && game.state !== 'title') return
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
@@ -2340,6 +2666,7 @@ canvas.addEventListener('pointerdown', (e) => {
     choose(slot, nextUnlocked(slot))
     return
   }
+  if (game.state === 'garage' && tapToy(raycaster)) return
   if (raycaster.intersectObject(robot.obj, true).length) {
     robot.spin = 1
     robot.wave = 2
@@ -2350,45 +2677,122 @@ canvas.addEventListener('pointerdown', (e) => {
   }
 })
 
-$('home').addEventListener('click', () => {
-  audio.unlock()
-  goHome()
+/**
+ * Buttons a stray tap (or a palm) must not trigger: 🏠, 🔊 and 🎵. A ring fills round the
+ * button while it is held; let go early and nothing
+ * happens.
+ */
+// Every finger on the screen, wherever it is: a hold starts only with one finger down in the
+// whole page, any other finger landing cancels it, and no new hold starts until all have lifted.
+const fingers = new Set()
+let fingersClear = true
+let cancelHold = () => {}
+addEventListener('pointerdown', (e) => {
+  cancelHold()
+  fingers.add(e.pointerId)
+  if (fingers.size > 1) {
+    fingersClear = false
+    cancelHold()
+  }
+}, true)
+for (const type of ['pointerup', 'pointercancel']) addEventListener(type, (e) => {
+  fingers.delete(e.pointerId)
+  if (!fingers.size) fingersClear = true
+}, true)
+function holdButton(id, needsHold, act, holdFor = 700) {
+  const b = $(id)
+  let timer = 0
+  let finger = null
+  const release = () => {
+    clearTimeout(timer)
+    timer = 0
+    finger = null
+    b.classList.remove('holding')
+  }
+  b.style.setProperty('--hold-for', `${holdFor}ms`)
+  b.addEventListener('pointerdown', (e) => {
+    audio.unlock()
+    e.stopPropagation()
+    if (!needsHold()) return
+    release()
+    if (fingers.size !== 1 || !fingersClear) return
+    cancelHold()
+    finger = e.pointerId
+    cancelHold = release
+    void b.offsetWidth
+    b.classList.add('holding')
+    timer = setTimeout(() => {
+      const valid = finger !== null && fingers.has(finger) && fingers.size === 1 && fingersClear
+      release()
+      if (valid) act()
+    }, holdFor)
+  })
+  for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, (e) => { if (e.pointerId === finger) release() }, true)
+  b.addEventListener('pointerleave', (e) => { if (e.pointerId === finger) release() })
+  b.addEventListener('lostpointercapture', release)
+  b.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  })
+  b.addEventListener('click', (e) => {
+    // Native Enter/Space clicks have no pointer and must never bypass a hold.
+    if (e.detail === 0 || needsHold()) {
+      e.preventDefault()
+      return
+    }
+    act()
+  })
+}
+addEventListener('keydown', () => cancelHold(), true)
+addEventListener('blur', () => {
+  cancelHold()
+  fingers.clear()
+  fingersClear = true
 })
+holdButton('home', () => game.state !== 'title' && game.state !== 'loading', () => goHome())
+holdButton('sound', () => true, () => toggleSound(), 1300)
+holdButton('music', () => true, () => toggleMusic(), 1300)
 function goHome() {
   if (game.busy) return
   if (game.state === 'garage') {
     audio.click()
     toTitle()
-  } else if (['countdown', 'flight', 'arrive', 'landing', 'party'].includes(game.state)) backToGarage(false)
+  } else if (['countdown', 'flop', 'flight', 'arrive', 'landing', 'party'].includes(game.state)) backToGarage(false)
 }
 
 function toggleSound() {
   audio.unlock()
   audio.setMuted(!audio.muted)
-  store.set('rocket-garage-muted', audio.muted)
-  voice.setMuted(audio.muted)
   renderSound()
 }
-$('sound').addEventListener('click', toggleSound)
-$('music').addEventListener('click', () => {
+function toggleMusic() {
   audio.unlock()
   audio.setMusic(!audio.musicOn)
-  store.set('rocket-garage-music', audio.musicOn)
   renderSound()
-})
+}
 
 addEventListener('keydown', (e) => {
   audio.unlock()
   const k = e.key
-  if (k === 'm' || k === 'M') return toggleSound()
-  if (k === 'Escape') return goHome()
+  // Keyboard mute is available only outside play; play settings require a pointer hold.
+  if ((k === 'm' || k === 'M') && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault()
+    if (['title', 'loading'].includes(game.state)) toggleSound()
+    return
+  }
+  if (k === 'Escape') {
+    // Building and flying are play: leave through the deliberate home-button hold.
+    if (['title', 'loading'].includes(game.state)) return goHome()
+    return
+  }
   if (game.state === 'title' && (k === 'Enter' || k === ' ')) {
     e.preventDefault()
     audio.click()
     return toGarage()
   }
   if (game.state === 'garage') {
-    if (game.look) return
     const i = SLOTS.findIndex((s) => s.id === game.tab)
     if (k === 'Enter' || k === ' ') {
       e.preventDefault()
@@ -2401,7 +2805,7 @@ addEventListener('keydown', (e) => {
     }
     if (k === 'ArrowUp' || k === 'ArrowDown') {
       e.preventDefault()
-      const list = PARTS[game.tab].filter((p) => isUnlocked(p, save.visited))
+      const list = PARTS[game.tab].filter((p) => isUnlocked(p, save.got))
       const j = list.findIndex((p) => p.id === save.rocket[game.tab])
       return choose(game.tab, list[(j + (k === 'ArrowDown' ? 1 : list.length - 1)) % list.length].id)
     }
@@ -2418,7 +2822,7 @@ addEventListener('keydown', (e) => {
   }
   if (game.state === 'party' && (k === 'Enter' || k === ' ')) {
     e.preventDefault()
-    return backToGarage(!$('again').classList.contains('hidden'))
+    return backToGarage(true)
   }
   keys.add(k)
   if (k.startsWith('Arrow') || k === ' ') e.preventDefault()
@@ -2482,12 +2886,12 @@ function updateGarage(dt) {
   robot.obj.rotation.y = robot.turn + (1 - robot.spin) * (robot.spin > 0 ? Math.PI * 2 : 0) + Math.sin(t * 1.2) * 0.08 * lively
   robot.obj.position.y = Math.abs(Math.sin(t * 3)) * 0.04 * lively
   updatePadSway(dt)
-  renderPadTag()
   // Roof hatch and gantry arm move aside for take-off
   doors.l.position.x = damp(doors.l.position.x, -doors.open * 2.4, 3, dt)
   doors.r.position.x = damp(doors.r.position.x, doors.open * 2.4, 3, dt)
   doors.arm.position.x = damp(doors.arm.position.x, doors.armX + doors.open * 1.2, 3, dt)
   if (game.state !== 'countdown') padLights.forEach((m, i) => (m.emissiveIntensity = 1 + 0.8 * lively * Math.sin(t * 3 + i * 0.8)))
+  updateWall(dt)
 }
 
 const debug = { paused: false }
@@ -2509,6 +2913,9 @@ function tick(dt) {
   switch (game.state) {
     case 'countdown':
       updateCountdown(dt)
+      break
+    case 'flop':
+      updateFlop(dt)
       break
     case 'flight':
       updateFlight(dt)
@@ -2548,9 +2955,9 @@ load()
   })
   .catch((err) => {
     console.error(err)
-    $('loading-text').textContent = 'Oops! Tap to try again 🔄'
+    $('loading-text').textContent = '🔄'
     $('loading').addEventListener('click', () => location.reload())
   })
 
 // Handy for testing: ?debug exposes the game state in the console
-if (new URLSearchParams(location.search).has('debug')) window.rg = { probe(x, y) { ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.intersectObjects(scene.children, true).slice(0, 5).map((h) => `${h.object.type}:${h.object.name}:${h.object.material?.name}:${h.object.visible}`) }, land(d) { clearFlight(); flight.target = d; flight.stars = 7; setupLanding() }, debug, predictor, notebook, ghost, get pendingTest() { return pendingTest }, step(sec = 1) { for (let i = 0; i < sec * 30; i++) tick(1 / 30) }, keys, game, save, flight, party, choose, launch, surprise, toGarage, backToGarage, useTurbo, missionCard, renderMission, where, items, spawnPattern, padLights, get robot() { return robot }, get rocket() { return rocket } }
+if (new URLSearchParams(location.search).has('debug')) window.rg = { land(d) { clearFlight(); flight.target = d; flight.stars = 7; setupLanding() }, debug, flop, step(sec = 1) { for (let i = 0; i < sec * 30; i++) tick(1 / 30) }, keys, game, save, flight, party, choose, launch, surprise, toGarage, backToGarage, useTurbo, items, spawnPattern, get flopRun() { return flopRun }, wall, giveStars, zoneAt, get robot() { return robot }, get rocket() { return rocket } }

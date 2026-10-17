@@ -191,9 +191,49 @@ export class Audio {
   }
 
   /** A brand new sticker for the book. */
-  newOne() {
-    this.tone({ freq: note(10), type: 'triangle', gain: 0.14, decay: 0.2, delay: 0.0 })
-    this.tone({ freq: note(12), type: 'triangle', gain: 0.14, decay: 0.4, delay: 0.1 })
+  newOne(delay = 0) {
+    this.tone({ freq: note(10), type: 'triangle', gain: 0.14, decay: 0.2, delay })
+    this.tone({ freq: note(12), type: 'triangle', gain: 0.14, decay: 0.4, delay: delay + 0.1 })
+  }
+
+  /** A sticker in the book sings its own note (the pentatonic scale keeps any tune happy). */
+  chime(step = 0) {
+    this.tone({ freq: note(5 + (step % 10)), type: 'triangle', gain: 0.14, decay: 0.35 })
+    this.tone({ freq: note(7 + (step % 10)), type: 'sine', gain: 0.07, decay: 0.3, delay: 0.08 })
+  }
+
+  /** The fish pulls back: a few wobbly line twangs and a churn of water. */
+  tug() {
+    for (let i = 0; i < 4; i++) this.tone({ freq: 330 + (i % 2) * 90, type: 'triangle', gain: 0.1, decay: 0.09, delay: i * 0.11, slide: i % 2 ? -120 : 120 })
+    this.burst({ freq: 900, q: 0.7, gain: 0.18, decay: 0.45, attack: 0.05, sweep: -400 })
+  }
+
+  /** A tickled catch: a springy boing (higher for little ones). */
+  boing(pitch = 1) {
+    this.tone({ freq: 260 * pitch, type: 'sine', gain: 0.22, decay: 0.32, slide: 420 * pitch })
+    this.tone({ freq: 520 * pitch, type: 'triangle', gain: 0.06, decay: 0.2, delay: 0.05, slide: 600 * pitch })
+  }
+
+  /** A big one: a deep, happy whump under the splash. */
+  bigOne() {
+    this.tone({ freq: 110, type: 'sine', gain: 0.4, decay: 0.5, slide: -40 })
+    this.tone({ freq: 220, type: 'triangle', gain: 0.12, decay: 0.4, delay: 0.12, slide: 180 })
+  }
+
+  /** The rubber duck squeaks. */
+  quack() {
+    this.tone({ freq: 900, type: 'triangle', gain: 0.14, decay: 0.16, slide: -350, attack: 0.01 })
+    this.tone({ freq: 1250, type: 'sine', gain: 0.1, decay: 0.14, slide: -500, delay: 0.02 })
+  }
+
+  /** A little bloop: a fish jumping out, or a poke at the bobber. */
+  blip(pitch = 1) {
+    this.tone({ freq: 420 * pitch, type: 'sine', gain: 0.16, decay: 0.12, slide: 500 * pitch })
+  }
+
+  /** Into the book it flies. */
+  whoosh() {
+    this.burst({ freq: 1200, q: 0.9, gain: 0.12, decay: 0.4, attack: 0.12, sweep: 2400 })
   }
 
   giggle() {

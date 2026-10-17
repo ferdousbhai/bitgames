@@ -1,17 +1,17 @@
 {
   "id": "dragon-glide",
   "title": "Dragon Glide",
-  "tagline": "Fly Ember the baby dragon through floating sky islands, cloud rings and rainbow waterfalls!",
-  "howToPlay": "Drag anywhere (or use the arrow keys) to steer Ember the dragon home through four sky worlds. Each world has one goal, shown as a picture and spoken: fly through the number that comes next (counting up, down, on, or by twos, threes and fives), or gather the hearts, stars or moons asked for. In the gathering worlds, line Ember up with the bubble holding a treasure you need and tap 🔥 to pop it. Missed a ring? It waits for you. At each nest you finish the lesson with Ember's family: take out any number flown by mistake, fill the missing numbers (and say which comes next), give back what wasn't asked for, sort onto shelves and say how many. The family waits until you tap to fly on.",
+  "tagline": "Swoop baby dragon Ember through cloud rings, sparkly treasures and rainbow skies!",
+  "howToPlay": "Touch or drag anywhere (or use the arrow keys) and Ember flies there, through four sky worlds of cloud rings, gems, hearts, stars and moons; tap or hold 🔥 (or Space) to puff fire that pops bubbles, wakes lanterns, launches fireworks and lights up night stars. Each world has its own surprise, and at each nest the treasures land with Ember's family before a tap on ▶ flies on.",
   "emoji": "🐉",
   "color": "#3fbf7f",
   "category": "jump",
   "together": false,
   "featured": false,
-  "url": "https://a8c45180-bitgames-dragon-glide.ferdousbd.workers.dev/",
+  "url": "https://d2e9709c-bitgames-dragon-glide.ferdousbd.workers.dev/",
   "ages": [
     4,
     8
   ],
-  "learning": "Number order, counting on and back (into the teens), skip counting, counting to 10 with a ten-frame, sorting by colour and shape, adding two small groups, comparing \"how many more\", and steering"
+  "learning": "Mostly pure flying fun: steering and hand-eye coordination, with colours, shapes and cause and effect along the way"
 }

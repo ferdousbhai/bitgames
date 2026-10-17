@@ -5,9 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { originalIds } from '../catalogue.mjs'
-import { mixToyPaint } from '../originals/colour-model.js'
-import { compareBuilds } from '../../rocket-garage/public/js/workshop.js'
-import { DEFAULT_ROCKET } from '../../rocket-garage/public/js/parts.js'
+import { DEFAULT_ROCKET, flops } from '../../rocket-garage/public/js/parts.js'
 
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const wipe = JSON.parse(readFileSync(new URL('../../../docs/audit/proposed-wipe-2026-10-08.json', import.meta.url)))
@@ -92,40 +90,12 @@ test('the built catalogue contains only protected originals with current metadat
   }
 })
 
-test('rocket comparisons isolate functional parts from decoration', () => {
-  const a = structuredClone(DEFAULT_ROCKET)
-  const b = structuredClone(a)
-  b.colors.nose = '#ffffff'
-  assert.equal(compareBuilds(a, b).answer, 'same')
-  assert.deepEqual(compareBuilds(a, b).changed, [])
-  b.booster = 'small'
-  assert.equal(compareBuilds(a, b).answer, 'b')
-  assert.deepEqual(compareBuilds(a, b).changed, ['booster'])
-  b.booster = 'none'
-  b.tank = 'ball'
-  const result = compareBuilds(a, b)
-  assert.equal(result.answer, 'same')
-  assert.ok(result.b.wobble > result.a.wobble)
-})
-
-test('the RYB toy model conserves drop counts and compares relative colour recipes', () => {
-  assert.equal(mixToyPaint([0, 0, 0]).name, 'Empty cup')
-  const primaries = [
-    [[1, 0, 0], 'Red'], [[0, 1, 0], 'Yellow'], [[0, 0, 1], 'Blue'],
-    [[1, 1, 0], 'Orange mixture'], [[1, 0, 1], 'Purple mixture'], [[0, 1, 1], 'Green mixture'], [[1, 1, 1], 'Earthy mixture'],
-  ]
-  for (const [drops, name] of primaries) {
-    const mix = mixToyPaint(drops)
-    assert.equal(mix.name, name)
-    assert.equal(mix.drops, drops.reduce((a, b) => a + b, 0))
-    assert.match(mix.hex, /^#[0-9a-f]{6}$/)
-  }
-  assert.equal(mixToyPaint([1, 1, 0]).hex, mixToyPaint([3, 3, 0]).hex)
-  assert.notEqual(mixToyPaint([1, 1, 0]).hex, mixToyPaint([3, 1, 0]).hex)
-})
-
-test('toy paint rejects negative, fractional, unbounded or malformed recipes', () => {
-  for (const drops of [[-1, 0, 0], [0.5, 1, 0], [13, 0, 0], [6, 6, 1], [1, 2], [NaN, 1, 0]]) {
-    assert.throws(() => mixToyPaint(drops), RangeError)
-  }
+test('a steady rocket always flies and a wobbly one flops without boosters', () => {
+  const rocket = structuredClone(DEFAULT_ROCKET)
+  assert.equal(flops(rocket), false)
+  rocket.colors.nose = '#ffffff'
+  assert.equal(flops(rocket), false, 'paint never changes the flight')
+  rocket.booster = 'none'
+  rocket.tank = 'ball'
+  assert.equal(flops(rocket), true)
 })

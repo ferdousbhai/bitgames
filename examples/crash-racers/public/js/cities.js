@@ -15,11 +15,11 @@ import { GROUP_STATIC, STATIC_MASK, canvasTexture, damp, rng, solidColor, speckl
  * are animated with `track.animate()`, on the race's clock.
  */
 export const CITIES = {
-  ubud: { name: 'Ubud', emoji: '🌾', flag: '🇮🇩', blurb: 'Rice fields, temples and monkeys', color: '#6fbf3a' },
-  helsinki: { name: 'Helsinki', emoji: '⛪', flag: '🇫🇮', blurb: 'Cobblestones, trams and the harbour', color: '#3a7bd5' },
-  montreal: { name: 'Montreal', emoji: '🍁', flag: '🇨🇦', blurb: 'Staircases, maples and orange cones', color: '#d64a2f' },
-  dino: { name: 'Dino Valley', emoji: '🦖', flag: '🌋', blurb: 'Dinosaurs, eggs and a volcano', color: '#3aa35a' },
-  stunt: { name: 'Stunt Park', emoji: '🎢', flag: '🏜️', blurb: 'Big jumps, cactus desert and hot-air balloons', color: '#e08a1e' },
+  ubud: { name: 'Ubud', emoji: '🌾', more: '🐒', color: '#6fbf3a' },
+  helsinki: { name: 'Helsinki', emoji: '⛪', more: '🚋', color: '#3a7bd5' },
+  montreal: { name: 'Montreal', emoji: '🍁', more: '🚧', color: '#d64a2f' },
+  dino: { name: 'Dino Valley', emoji: '🦖', more: '🌋', color: '#3aa35a' },
+  stunt: { name: 'Stunt Park', emoji: '🎢', more: '🎈', color: '#e08a1e' },
 }
 
 const cache = new Map()
@@ -615,7 +615,8 @@ function buildUbud(env) {
     for (const k of [-1.4, 0, 1.4]) crate(track, c.clone().addScaledVector(s.side, k), 0.8, std({ color: (d | 0) % 2 ? '#f0a020' : '#c0392b' }))
   } })
   track.addBoostPad(jump - 40)
-  track.addRamp(620, { length: 8, width: 4, height: 1.3, lateral: 1.2, material: std({ color: '#8a6a45' }) })
+  // Narrow and to the right of a narrow road, so a car can pass it on the left without slowing.
+  track.addRamp(620, { length: 8, width: 3, height: 1.3, lateral: 1.9, material: std({ color: '#8a6a45' }) })
   track.addBoostPad(150, { lateral: -1.5 })
 
   const water = std({ color: '#7fb6c7', metalness: 0.4, roughness: 0.08, transparent: true, opacity: 0.85 })

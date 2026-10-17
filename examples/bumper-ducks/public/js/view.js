@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { R, DUCKS, BUBBLE_COLOURS } from './config.js'
+import { R, DUCKS } from './config.js'
 import { FLY_TIME } from './sim.js'
 import { canvasTexture } from './effects.js'
 import { makeBubbleMaterial } from './water.js'
@@ -26,6 +26,16 @@ export function cloneTinted(template, tints = {}) {
     o.material = Array.isArray(o.material) ? out : out[0]
   })
   return copy
+}
+
+/** Shortest turn from angle a to angle b. */
+const angleTo = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a))
+
+/** A little lost duckling (the duck model, small and pale yellow). */
+export function duckling(models) {
+  const m = cloneTinted(models.duck, { duck_body: '#ffe680' })
+  m.scale.setScalar(0.42)
+  return m
 }
 
 /** A soft dark spot under things floating on the water. */
@@ -98,31 +108,6 @@ function sleepTag() {
 }
 
 const bubbleMaterial = makeBubbleMaterial()
-// Pond helpers' coloured bubbles: a tinted shell around a soft coloured bead, easy to tell apart.
-const colourBubbles = BUBBLE_COLOURS.map(({ hex }) => ({
-  shell: makeBubbleMaterial(hex),
-  bead: new THREE.MeshStandardMaterial({ color: hex, roughness: 0.35, emissive: hex, emissiveIntensity: 0.4 }),
-}))
-const beadGeometry = new THREE.SphereGeometry(0.36, 16, 12)
-// A ten raft: ten little bubbles held in a floating ten-frame (two rows of five), so a ten looks like ten.
-const raftBoard = new THREE.MeshStandardMaterial({ color: '#fff4d6', roughness: 0.7 })
-const raftRim = new THREE.MeshStandardMaterial({ color: '#ffb04d', roughness: 0.6 })
-const raftBead = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.25, emissive: '#bfe6ff', emissiveIntensity: 0.35 })
-const raftBoardGeometry = new THREE.BoxGeometry(2.3, 0.16, 1.05)
-const raftRimGeometry = new THREE.BoxGeometry(2.46, 0.12, 1.21)
-const raftBeadGeometry = new THREE.SphereGeometry(0.19, 14, 10)
-function makeRaft() {
-  const raft = new THREE.Group()
-  const rim = new THREE.Mesh(raftRimGeometry, raftRim)
-  rim.position.y = -0.03
-  raft.add(rim, new THREE.Mesh(raftBoardGeometry, raftBoard))
-  for (let i = 0; i < 10; i++) {
-    const b = new THREE.Mesh(raftBeadGeometry, raftBead)
-    b.position.set(((i % 5) - 2) * 0.44, 0.2, (Math.floor(i / 5) - 0.5) * 0.46)
-    raft.add(b)
-  }
-  return raft
-}
 const bubbleGeometry = new THREE.SphereGeometry(0.55, 20, 14)
 const shieldGeometry = new THREE.SphereGeometry(1, 24, 16)
 
@@ -171,6 +156,20 @@ export class DuckView {
     this.sleepK = 0
     this.wakeT = 0
     this.hop = 0
+    this.models = models
+    this.chicks = [] // ducklings paddling along behind, in a line
+    this.trail = [] // where the boat has been, newest first
+  }
+
+  /** A caught duckling joins the line behind this duck (up to six; more just squeak). */
+  addChick() {
+    if (this.chicks.length >= 6 || !this.root.parent) return
+    const c = new THREE.Group()
+    c.add(duckling(this.models), blobShadow(0.9))
+    c.position.copy(this.root.position)
+    c.userData.hop = 1
+    this.root.parent.add(c)
+    this.chicks.push(c)
   }
 
   /** A robot napping while the children rest: it nods off under drifting Zs. */
@@ -219,6 +218,8 @@ export class DuckView {
     this.spinner.scale.set(s * (1 + sq), s * (1 - sq), s * (1 + sq))
     this.shadow.scale.set(2.8 * s * (1 - Math.min(0.6, y * 0.1)), 1, 2.8 * s * (1 - Math.min(0.6, y * 0.1)))
     this.tag.position.y = 2.5 * s + 0.4 + y
+    // (Set a little behind the duck, so from above the pin never covers its face.)
+    this.tag.position.z = -0.9 * s
     // Napping: the duck nods forward and breathes slowly; the Zs bob beside its badge.
     this.sleepT = Math.max(0, this.sleepT - dt)
     this.sleepK += ((this.sleepT > 0 && !d.fly ? 1 : 0) - this.sleepK) * Math.min(1, dt * 4)
@@ -233,29 +234,50 @@ export class DuckView {
     }
     if (this.ring) {
       this.ring.visible = !d.fly
-      // A steady ring under your own duck (it grows only for the hello hop): no pulsing during play.
-      this.ring.scale.setScalar(s * (1 + Math.sin(this.hop * Math.PI) * 0.35))
-      this.ring.material.opacity = 0.7
+      this.ring.scale.setScalar(s * (1 + Math.sin(t * 5) * 0.05 + Math.sin(this.hop * Math.PI) * 0.35))
+      this.ring.material.opacity = 0.6 + Math.sin(t * 5) * 0.25
     }
     this.shield.visible = d.power === 'shield'
     if (this.shield.visible) {
       // As the shield runs out it shrinks smoothly away (never a blink).
       const fade = Math.min(1, Math.max(0, d.powerT / 1.5))
-      this.shield.scale.setScalar(1.75 * s * (0.7 + 0.3 * fade))
+      this.shield.scale.setScalar(1.75 * s * (0.7 + 0.3 * fade) * (1 + Math.sin(t * 4) * 0.03))
       this.shield.position.y = 0.6 * s + y
     }
-    // Foam behind a moving boat (a speedy one leaves the same foam, without a trail of sparkles).
+    // Ducklings follow the boat's path, each a little further back, bobbing and turning to follow.
+    if (this.chicks.length) {
+      const head = this.trail[0]
+      if (!d.fly && (!head || Math.hypot(head.x - d.x, head.z - d.z) > 0.3)) {
+        this.trail.unshift({ x: d.x, z: d.z })
+        this.trail.length = Math.min(this.trail.length, 60)
+      }
+      this.chicks.forEach((c, i) => {
+        const p = this.trail[Math.min(this.trail.length - 1, 5 + i * 4)] ?? { x: d.x, z: d.z }
+        const k = Math.min(1, dt * 6)
+        const dx = p.x - c.position.x
+        const dz = p.z - c.position.z
+        c.position.x += dx * k
+        c.position.z += dz * k
+        if (Math.hypot(dx, dz) > 0.05) c.rotation.y += angleTo(c.rotation.y, Math.atan2(dx, dz)) * k
+        c.userData.hop = Math.max(0, c.userData.hop - dt * 1.8)
+        c.position.y = Math.sin(t * 3 + i) * 0.05 + Math.sin(c.userData.hop * Math.PI) * 1.2
+      })
+    }
+    // Foam behind a moving boat; sparkles behind a speedy one.
     this.wakeT -= dt
     if (!d.fly && sp > 2 && this.wakeT <= 0) {
       this.wakeT = 0.06
       const bx = d.x - (d.vx / sp) * 1.1 * s
       const bz = d.z - (d.vz / sp) * 1.1 * s
       effects.wake(bx, bz, sp)
+      if (d.power === 'speedy') effects.sparkle(bx, 0.6, bz, '#ffe14d', 2)
     }
   }
 
   dispose() {
     this.root.removeFromParent()
+    for (const c of this.chicks) c.removeFromParent()
+    this.chicks = []
     this.root.traverse((o) => {
       if (o.isSprite) {
         o.material.map.dispose()
@@ -271,17 +293,17 @@ export class ItemView {
     this.item = item
     this.root = new THREE.Group()
     this.root.position.set(item.x, 0, item.z)
-    if (item.k === 'ten') {
-      this.body = makeRaft()
-      this.base = 0.25
-    } else if (item.k === 'bubble' && colourBubbles[item.c]) {
-      const look = colourBubbles[item.c]
-      this.body = new THREE.Mesh(bubbleGeometry, look.shell)
-      this.body.add(new THREE.Mesh(beadGeometry, look.bead))
-      this.base = 0.7
-    } else if (item.k === 'bubble') {
+    if (item.k === 'bubble') {
       this.body = new THREE.Mesh(bubbleGeometry, bubbleMaterial)
       this.base = 0.7
+    } else if (item.k === 'chick') {
+      // It drops in from the sky with a plop, then bobs and turns about, peeping.
+      this.body = duckling(models)
+      this.base = 0.05
+      this.fall = 9
+    } else if (item.k === 'big') {
+      this.body = new THREE.Mesh(bubbleGeometry, bubbleMaterial)
+      this.base = 1.35
     } else if (item.k === 'star') {
       this.body = models.star.clone(true)
       this.body.scale.setScalar(0.85)
@@ -292,20 +314,9 @@ export class ItemView {
       this.base = 0.15
     }
     this.root.add(this.body)
-    this.root.add(blobShadow(item.k === 'bubble' ? 1.1 : item.k === 'ten' ? 2.6 : 1.8))
+    this.root.add(blobShadow(item.k === 'bubble' || item.k === 'chick' ? 1.1 : item.k === 'big' ? 2.4 : 1.8))
     this.phase = Math.random() * 10
     this.age = 0
-  }
-
-  /**
-   * Glides to where the simulation says it is (a bubble that bobbed away from a duck). `lift` raises a
-   * bubble stuck on a lily pad, the mama duck's back or a paper boat; it drops to the water when freed.
-   */
-  follow(x, z, dt, lift = 0) {
-    const k = Math.min(1, dt * 5)
-    this.root.position.x += (x - this.root.position.x) * k
-    this.root.position.z += (z - this.root.position.z) * k
-    this.lift = (this.lift ?? lift) + (lift - (this.lift ?? lift)) * Math.min(1, dt * 4)
   }
 
   update(t, dt, effects) {
@@ -314,12 +325,23 @@ export class ItemView {
     const grow = pop < 1 ? 1 + Math.sin(pop * Math.PI) * 0.4 : 1
     const s = pop * grow
     const k = this.item.k
-    this.body.position.y = this.base + (this.lift ?? 0) + Math.sin(t * 2 + this.phase) * (k === 'gift' ? 0.08 : 0.18)
+    this.body.position.y = this.base + Math.sin(t * 2 + this.phase) * (k === 'gift' ? 0.08 : 0.18)
+    if (k === 'chick') {
+      this.fall = Math.max(0, this.fall - dt * (4 + (9 - this.fall) * 2.2))
+      if (this.fall === 0 && !this.landed) {
+        this.landed = true
+        effects.splash(this.item.x, this.item.z, 0.5)
+      }
+      this.body.position.y = this.base + this.fall + Math.sin(t * 2.6 + this.phase) * 0.06
+      this.body.rotation.y = t * 0.7 + this.phase
+      this.body.scale.setScalar(0.42)
+      return
+    }
     if (k === 'bubble') this.body.scale.setScalar(s * (1 + Math.sin(t * 3 + this.phase) * 0.05))
-    else if (k === 'ten') {
-      this.body.scale.setScalar(s)
-      this.body.rotation.y = Math.sin(t * 0.5 + this.phase) * 0.25
-      this.body.rotation.z = Math.sin(t * 1.3 + this.phase) * 0.04
+    else if (k === 'big') {
+      // A giant soap bubble wobbles like jelly: wider, then taller.
+      const w = Math.sin(t * 3.2 + this.phase) * 0.09
+      this.body.scale.set(2.1 * s * (1 + w), 2.1 * s * (1 - w), 2.1 * s * (1 + w))
     }
     else if (k === 'star') {
       this.body.scale.setScalar(0.85 * s)
@@ -376,58 +398,6 @@ export class ObstacleView {
     if (this.frog) this.hopT = 0.6
   }
 
-  /**
-   * Frog order: the number this frog holds, on a round sign above it. A frog already in the line wears a
-   * soft green sign (`done`); null takes the sign away. A frog holding the stuck bubble or raft (`high`)
-   * carries a smaller sign higher up; one with a raft floating just behind it moves its sign to the other
-   * side (`side`: -1 left, 1 right). Either way the number never covers a raft.
-   */
-  sign(n, done = false, high = false, side = 0) {
-    this.signHigh = high
-    this.signSide = side
-    const key = n == null ? '' : `${n}${done ? '+' : ''}`
-    if (!this.frog || key === this.signKey) return
-    this.signKey = key
-    if (this.signSprite) {
-      this.signSprite.material.map.dispose()
-      this.signSprite.material.dispose()
-      this.signSprite.removeFromParent()
-      this.signSprite = null
-    }
-    if (n == null) return
-    const map = canvasTexture(128, 128, (g, w) => {
-      g.beginPath()
-      g.arc(w / 2, w / 2, w / 2 - 6, 0, Math.PI * 2)
-      // Frog green with a white number, so a frog's number never looks like the jar's goal (a white card
-      // with a dark number); a frog already in line turns pale.
-      g.fillStyle = done ? '#e3f6da' : '#4f9e3a'
-      g.fill()
-      g.lineWidth = 8
-      g.strokeStyle = done ? '#7cc46a' : '#2a5f24'
-      g.stroke()
-      g.fillStyle = done ? '#3f7a35' : '#ffffff'
-      g.font = `900 ${String(n).length > 1 ? 64 : 76}px system-ui, sans-serif`
-      g.textAlign = 'center'
-      g.textBaseline = 'middle'
-      g.fillText(String(n), w / 2, w / 2 + 4)
-    })
-    this.signSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, depthTest: false }))
-    this.signSprite.renderOrder = 5
-    this.signSprite.scale.setScalar(high ? 1 : 1.2)
-    this.signSprite.position.y = high ? 4.6 : 3.3
-    this.root.add(this.signSprite)
-  }
-
-  /** The sign glides (never jumps) between its places as a raft comes and goes behind the frog. */
-  liftSign(dt) {
-    const s = this.signSprite
-    if (!s) return
-    const k = Math.min(1, dt * 4)
-    s.position.y += ((this.signHigh ? 4.6 : 3.3) - s.position.y) * k
-    s.position.x += ((this.signSide ?? 0) * 1.9 - s.position.x) * k
-    s.scale.setScalar(s.scale.x + ((this.signHigh ? 1 : 1.2) - s.scale.x) * k)
-  }
-
   update(t, dt) {
     const o = this.o
     this.root.position.set(o.x, 0, o.z)
@@ -443,12 +413,11 @@ export class ObstacleView {
       this.body.rotation.y += dt * 0.05
       if (this.frog) {
         this.hopT = Math.max(0, this.hopT - dt)
-        // Hop when bumped, and very now and then just for fun (never while holding a number).
-        if (this.hopT === 0 && !this.signKey && Math.random() < dt * 0.04) this.hopT = 0.6
+        // Hop when bumped, and now and then just for fun.
+        if (this.hopT === 0 && Math.random() < dt * 0.15) this.hopT = 0.6
         const k = this.hopT > 0 ? Math.sin((1 - this.hopT / 0.6) * Math.PI) : 0
         this.frog.position.y = 0.08 + k * 1.2
         this.frog.scale.set(1.2 * (1 - k * 0.1), 1.2 * (1 + k * 0.2), 1.2 * (1 - k * 0.1))
-        this.liftSign(dt)
       }
     } else {
       if (Math.hypot(o.vx, o.vz) > 0.05) this.body.rotation.y = Math.atan2(o.vx, o.vz)

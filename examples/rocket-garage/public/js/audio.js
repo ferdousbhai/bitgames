@@ -14,19 +14,20 @@ const SONGS = {
     type: 'sine',
   },
   flight: {
-    bpm: 112,
+    bpm: 120,
     melody: [7, 9, 10, null, 9, 7, 9, null, 10, 11, 10, 9, 7, null, null, null, 5, 7, 9, null, 7, 5, 4, null, 5, 7, 5, 4, 2, null, 4, null],
     bass: [0, 0, 3, 4],
     vol: 0.055,
     type: 'triangle',
   },
   dance: {
-    // A gentle little dance: about 100 bpm, triangle tone, no claps
-    bpm: 100,
+    // A bouncy little dance with soft claps
+    bpm: 116,
     melody: [7, 9, 7, 4, 7, 9, 10, null, 10, 9, 7, 9, 7, 4, 5, null, 7, 9, 7, 4, 7, 9, 10, 11, 10, 9, 7, 5, 7, null, null, null],
     bass: [0, 3, 4, 3],
-    vol: 0.05,
+    vol: 0.06,
     type: 'triangle',
+    clap: true,
     // Played once (one phrase, about ten seconds), then the landing goes quiet: no loop until the child leaves
     once: true,
   },
@@ -177,9 +178,10 @@ export class Audio {
   /** Big rumble and whoosh at lift-off. */
   liftoff() {
     if (!this.ctx) return
-    this.noiseBurst({ dur: 2.6, vol: 0.16, type: 'lowpass', freq: 120, to: 700, q: 0.7 })
-    this.noiseBurst({ when: 0.2, dur: 1.8, vol: 0.05, type: 'bandpass', freq: 400, to: 1800, q: 2 })
-    this.tone(90, { dur: 1.6, vol: 0.12, type: 'triangle', slide: 2.5, echo: false })
+    this.noiseBurst({ dur: 2.8, vol: 0.26, type: 'lowpass', freq: 120, to: 800, q: 0.7 })
+    this.noiseBurst({ when: 0.2, dur: 1.8, vol: 0.08, type: 'bandpass', freq: 400, to: 2200, q: 2 })
+    this.tone(90, { dur: 1.6, vol: 0.18, type: 'triangle', slide: 2.5, echo: false })
+    this.whistle(true)
   }
 
   /** step 0..5 comes from where the star was caught, so catching never climbs into a frenzy. */
@@ -226,8 +228,61 @@ export class Audio {
     this.tone(up ? 500 : 1400, { dur: 0.45, vol: 0.1, slide: up ? 2.6 : 0.4, type: 'sine', attack: 0.04 })
   }
 
+  /** An icy tinkle for a Comet crystal (it counts as two stars). */
+  ice(step) {
+    if (!this.ctx) return
+    const n = SCALE[Math.min(step + 4, SCALE.length - 1)]
+    this.tone(n, { dur: 0.25, vol: 0.08, type: 'sine' })
+    this.tone(n * 1.5, { when: 0.07, dur: 0.3, vol: 0.06, type: 'sine' })
+  }
+
+  /** The pilot's "yippee" at every five stars. */
+  cheer() {
+    if (!this.ctx) return
+    this.tone(520, { dur: 0.16, vol: 0.08, type: 'triangle', slide: 1.5, echo: false })
+    this.tone(700, { when: 0.13, dur: 0.22, vol: 0.08, type: 'triangle', slide: 1.6 })
+  }
+
+  /** Through a Ring Planet hoop: a rising little chime. */
+  hoop() {
+    ;[2, 4, 6, 9].forEach((k, i) => this.tone(SCALE[k], { when: i * 0.05, dur: 0.3, vol: 0.07, type: 'triangle' }))
+  }
+
+  /** A flying saucer arrives: a wobbly woo-oo. */
+  ufo() {
+    if (!this.ctx) return
+    this.tone(600, { dur: 0.5, vol: 0.06, type: 'sine', slide: 1.6, attack: 0.08 })
+    this.tone(960, { when: 0.45, dur: 0.6, vol: 0.05, type: 'sine', slide: 0.6, attack: 0.08 })
+  }
+
+  /** A rainbow shooting star appears. */
+  sparkle() {
+    ;[7, 9, 10, 8, 10].forEach((k, i) => this.tone(SCALE[k], { when: i * 0.06, dur: 0.25, vol: 0.05, type: 'sine' }))
+  }
+
+  /** A sputtering engine pop. */
+  pop() {
+    if (!this.ctx) return
+    this.noiseBurst({ dur: 0.1, vol: 0.22, type: 'lowpass', freq: 1100, to: 220 })
+    this.tone(150 + Math.random() * 90, { dur: 0.1, vol: 0.12, type: 'triangle', slide: 0.6, echo: false })
+  }
+
+  /** The engine gives up: a little cough, cough. */
+  cough() {
+    if (!this.ctx) return
+    for (const when of [0, 0.22]) {
+      this.noiseBurst({ when, dur: 0.14, vol: 0.2, type: 'bandpass', freq: 500, to: 260, q: 1.5 })
+      this.tone(120, { when, dur: 0.12, vol: 0.1, type: 'triangle', slide: 0.7, echo: false })
+    }
+  }
+
+  /** Dizzy twirly notes after a flop. */
+  dizzy() {
+    ;[0, 4, 2, 5, 3].forEach((k, i) => this.tone(SCALE[k + 3], { when: 0.1 + i * 0.09, dur: 0.22, vol: 0.06, type: 'sine', slide: 0.94 }))
+  }
+
   thump() {
-    this.tone(110, { dur: 0.25, vol: 0.18, type: 'sine', slide: 0.5, echo: false })
+    this.tone(110, { dur: 0.25, vol: 0.22, type: 'sine', slide: 0.5, echo: false })
     this.noiseBurst({ dur: 0.3, vol: 0.12, type: 'lowpass', freq: 600, to: 150 })
   }
 
@@ -237,9 +292,9 @@ export class Audio {
 
   fanfare() {
     if (!this.ctx) return
-    // One soft chord, played once
-    ;[523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, { when: i * 0.16, dur: 0.7, vol: 0.08, type: 'sine' }))
-    ;[523.25, 659.25, 783.99].forEach((f) => this.tone(f, { when: 0.55, dur: 1.2, vol: 0.05, type: 'triangle' }))
+    // A bright little ta-da, played once
+    ;[523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, { when: i * 0.11, dur: 0.5, vol: 0.1, type: 'triangle' }))
+    ;[523.25, 659.25, 783.99].forEach((f) => this.tone(f, { when: 0.48, dur: 1.2, vol: 0.06, type: 'triangle' }))
   }
 
   /** Sparkle for each newly unlocked part. */

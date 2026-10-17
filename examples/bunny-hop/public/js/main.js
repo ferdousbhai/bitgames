@@ -1,16 +1,13 @@
-import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { Sound } from './audio.js'
-import { BIOME_LENGTH, BIOMES, FLOWERS, HOME_X, OBSTACLE_NAMES, OBSTACLE_NOTES, biomeIndexAt } from './biomes.js'
-import { Bunny } from './bunny.js'
-import { BEAT, Course, ROW_STEP, speedAt } from './course.js'
-import { Effects, Glints, Popups, Weather } from './effects.js'
-import { Cue, carrotWords, foldPantry, groupOf, obstaclePictures, pantryWords, patternWords, renderGarden, renderPantry, repeatOf, showPantryTotal } from './learning.js'
-import { loadModels } from './models.js'
-import { createVoice } from './speech.js'
-import { clamp, easeStep, pick, randInt } from './util.js'
-import { World } from './world.js'
+import { BIOME_LENGTH, BIOMES, HOME_X, biomeIndexAt, setTripLength, shuffleTrip } from './biomes.js'
+import { Bunny, SPRING } from './bunny.js'
+import { BALLOONS, Course, STOMP_BOUNCE, makeBalloon, makeHedgehog, makeRainbow, speedAt } from './course.js'
+import { Effects, Glints, Weather } from './effects.js'
+import { copy, loadModels } from './models.js'
+import { clamp, easeStep, pick, rand } from './util.js'
+import { MOODS, World } from './world.js'
 
 const $ = (id) => document.getElementById(id)
 
@@ -60,16 +57,16 @@ function resize() {
   // Boxier screens held sideways (iPads, 4:3) are tall, so they show a bit less
   // path too: otherwise Pip is a small bunny under a big sky.
   const boxy = aspect < 1 ? 0 : clamp((1.7 - aspect) / 0.37, 0, 1)
-  view.dist = clamp((aspect < 1 ? 4.5 : 9 - 2 * short - 1.7 * boxy) / (tan * aspect), 7, 24)
-  // and short screens tilt up further with a high double hop, so Pip's ears stay clear of the score
-  view.follow = 0.3 + 0.4 * short
+  // (upright: a little less path, so Pip is a good size on a narrow phone)
+  view.dist = clamp((aspect < 1 ? 4.5 : 9 - 3 * short - 1.7 * boxy) / (tan * aspect), 7, 24)
+  // and short screens tilt up further with a high hop, so Pip's ears stay clear of the score
+  view.follow = 0.3 + 0.6 * short
   view.halfW = view.dist * tan * aspect
-  view.lead = aspect < 1 ? 0.62 : 0.45 + short * 0.07
-  // Aim so the path sits low on the screen (about 3/4 of the way down; about 4/5 on a
-  // tall portrait screen): the sky above holds the HUD, the carrots hanging at hop height
-  // and the high golden ones, with just room for the cue below and little empty grass.
-  view.height = 3.0 + view.dist * (aspect < 1 ? 0.24 : 0.1) // portrait looks down a little more: hills, not empty sky
-  const pathBelow = Math.atan(view.height / view.dist) - Math.atan((aspect < 1 ? 0.56 : 0.48) * tan)
+  view.lead = aspect < 1 ? 0.54 + 0.18 * clamp((aspect - 0.75) / 0.25, 0, 1) : 0.45 + short * 0.15 // sideways phones: Pip further left, more path ahead
+  // Aim so the path sits low on the screen (about 3/4 of the way down): the sky above holds the
+  // HUD, the carrot arcs and the high golden carrots, with little empty grass below.
+  view.height = 3.0 + view.dist * (aspect < 1 ? 0.2 : 0.1) // portrait looks down a little more: hills, not empty sky
+  const pathBelow = Math.atan(view.height / view.dist) - Math.atan((aspect < 1 ? 0.64 : 0.48) * tan)
   view.aim = view.height - view.dist * Math.tan(pathBelow)
   camera.updateProjectionMatrix()
 }
@@ -84,132 +81,64 @@ const game = {
   speed: 0,
   slow: 1,
   score: 0,
-  hops: 0,
+  golden: 0, // golden carrots caught this trip
+  combo: 0, // carrots munched close together: the munch note climbs the scale
+  comboTimer: 0,
+  stomps: 0, // bounces off the top of things in a row: each bounce rings a note higher
+  idle: 0, // seconds in play since the last tap: a long wait brings the hand back
   biome: 0,
   homeTime: 0,
   time: 0,
   shake: 0,
-  golden: 0, // golden carrots found this trip
-  rows: [], // the counted carrot rows Pip brought home, for the burrow pantry
-  patterns: [], // the obstacle rhythms hopped this trip
-  seg: null, // the row or rhythm being cued now
-  segIndex: 0,
-  cueHold: 0, // a finished row stays in its tray for a moment
-  asking: null, // the rhythm paused on "What comes next?"
   gentle: false, // the 🐢 slow pace for the littlest hoppers
-  goal: 0, // carrots Pip wants in the pantry for winter (what careful play brings home, less a slip)
-  justRight: 0, // "Just right!" is said once a trip; after that a soft bell and the basket speak for themselves
-  baskets: 0, // basket rows cued this trip: "Pip needs 4." is said for the first two (each number once), then the 🧺4 speaks
-  aways: 0, // "4 of 6. 2 got away." is said twice a trip; after that the tray shows it
-  spills: 0, // over-full baskets this trip (every carrot past full tips one back out)
-  spokeSpill: -1e9, // when "Too heavy!" was last said: the next basket's number waits a little after it
-  homeAsk: null, // the question at the burrow, while it waits for an answer
-  flowers: { blue: 0, yellow: 0, pink: 0 }, // wild flowers picked this trip, to plant by Pip's door
-  flowerHint: false, // the flower hint waits while a pattern is hopped, so it never talks over "What comes next?"
-  gardenTimer: 0,
-  // How the child is doing, remembered on this device (not a gate: it steps down as easily as up).
-  // row 0: catch the whole row; 1: fill a basket (with empty places) from a longer row and let the
-  // rest go by; 2: the basket shows only its number, so the child keeps count.
-  // pattern 0: AB, AAB; 1: ABC, ABB with three answers; 2: growing patterns.
-  // streak/right count good rows and right first answers; two in a row step up. wrong counts
-  // patterns in a row whose first answer missed: two step down, even when the second go was right.
-  tier: { row: 0, pattern: 0, streak: 0, slips: 0, right: 0, wrong: 0 },
-  // the highest tiers this trip can climb to: the 🐢 pace stays a little-ones mode (tier 1), unless
-  // the child was already further along when the trip began
-  top: { row: 2, pattern: 2 },
+  garden: 0, // things grown in the burrow's garden on this device: one a trip, more for 🌟 golden carrots
+  surprises: [], // this trip's rare moments (see SURPRISES)
+  lastSurprises: [],
+  trips: 0, // trips home on this device: every fourth is a party trip, full of surprises
+  met: [], // the surprises met on trips so far: each leaves a keepsake at the burrow
+  seen: {}, // how often each kind of surprise has come up: the rarer ones come up more
+  metCount: {}, // how many times each surprise has been met: its keepsake grows (a hedgehog family, a bunch of balloons)
+  marks: { lily: 0, frog: 0, stones: 0 }, // skill's marks at the burrow: a perfect stream's lily pad and frog, stomp chains' stone stack
+  lastMood: null,
+  balloon: null, // the balloon Pip is holding, while he floats
 }
 try {
-  game.gentle = localStorage.getItem('bunny-hop:gentle') === '1'
-  const saved = JSON.parse(localStorage.getItem('bunny-hop:tier') ?? '{}')
-  game.tier.row = clamp(Number(saved.row) || 0, 0, 2)
-  game.tier.pattern = clamp(Number(saved.pattern) || 0, 0, 2)
+  localStorage.removeItem('bunny-hop:gentle')
+  game.garden = Number(localStorage.getItem('bunny-hop:garden')) || 0
+  game.lastSurprises = (localStorage.getItem('bunny-hop:surprises') ?? '').split(',')
+  game.trips = Number(localStorage.getItem('bunny-hop:trips')) || 0
+  game.met = (localStorage.getItem('bunny-hop:met') ?? '').split(',').filter(Boolean)
+  game.seen = JSON.parse(localStorage.getItem('bunny-hop:seen') ?? '{}') ?? {}
+  game.metCount = JSON.parse(localStorage.getItem('bunny-hop:metCount') ?? '{}') ?? {}
+  Object.assign(game.marks, JSON.parse(localStorage.getItem('bunny-hop:marks') ?? '{}'))
 } catch {}
-function saveTier() {
+const remember = (key, value) => {
   try {
-    localStorage.setItem('bunny-hop:tier', JSON.stringify({ row: game.tier.row, pattern: game.tier.pattern }))
+    localStorage.setItem(`bunny-hop:${key}`, String(value))
   } catch {}
 }
-/** The 🐢 pace: the same gentle 0.6 the learning missions use. */
-const GENTLE = 0.6
+/** The 🐢 pace. */
+const GENTLE = 0.65
 // the menu camera's distance from Pip: upright, sideways tablets, sideways phones (close, to fill the short view)
-const menuZ = () => (innerWidth < innerHeight ? 8.5 : innerHeight > 480 ? 8 : 5.6)
-const CUE_LEAD = 16 // a row or rhythm is shown and named this far before it starts
-const ASK_AT = 7 // Pip stops a few steps before the hidden obstacle, so its "?" is well in view
+const menuZ = () => (innerWidth < innerHeight ? 8.5 : innerHeight > 480 ? 8 : 6.6)
+const SURPRISES = ['friend', 'balloon', 'rainbow', 'stream', 'hedgehogs']
+const HOLD_MS = 1000 // in play, 🏠 and 🔊 need a short press and hold, so a stray tap never quits or mutes
+const IDLE_HINT = 6 // seconds with no tap (and a log coming) before the hand shows again
 if (new URLSearchParams(location.search).has('debug')) window.game = game
-
-// Optional learning missions, counted from the trip's own lessons: whole rows (or clean baskets),
-// and patterns hopped with no bumps and no carrot left behind.
-/** The mission's steps as tiles: the first `count` done, the next one lit. */
-function stepRow(symbols, count = symbols.length) {
-  const row = document.createElement('span')
-  row.className = 'mission-steps'
-  symbols.forEach((symbol, i) => {
-    const icon = document.createElement('span')
-    icon.className = `mission-step ${i < count ? 'done' : i === count ? 'next' : ''}`
-    icon.textContent = symbol
-    icon.setAttribute('aria-hidden', 'true')
-    row.append(icon)
-  })
-  return row
-}
-
-function renderMissionProgress(goal, option, count) {
-  if (!option.goal) return
-  goal.replaceChildren()
-  goal.setAttribute('aria-label', `${option.goal}. ${count} of ${option.target}.`)
-  const caption = document.createElement('span')
-  caption.className = 'mission-caption'
-  caption.textContent = `${option.caption} · ${count} / ${option.target}`
-  goal.append(caption, stepRow(option.steps, count))
-}
-
-/** A mission's steps, listed once: drawn on its button and in its progress tiles. */
-const missionSteps = (steps) => ({ steps, pictures: stepRow(steps) })
-
-// One voice for the game and its missions: words wait their turn, so a mission never swallows a count.
-const voice = createVoice({ muted: sound.muted, rate: 0.82, pitch: 1 })
-
-const adventure = createAdventure({
-  id: 'bunny-hop',
-  // The mission choice and the 🐢 pace share one row on the menu.
-  place: (button) => $('menu-options').prepend(button),
-  hud: $('hud'),
-  voice,
-  // Progress is in the card's tiles, never said as a bare number: "2" straight after a row counted
-  // aloud ("1, 2, 3") would sound like the count going backwards. The choice and the reward are said.
-  announce: (text, kind) => kind !== 'count' && voice.say(text, { interrupt: kind === 'choice' }),
-  celebrate: () => {
-    // One soft moment: what the child made, a gentle chord and a few slow petals; then the card steps aside.
-    banner(adventure.option.banner, 2600)
-    sound.chord()
-    effects.confettiBurst(new THREE.Vector3(game.x, bunny.y + 1, 0), 10, true)
-    setTimeout(() => ($('adventure-goal').hidden = true), 2600)
-  },
-  renderProgress: renderMissionProgress,
-  options: [
-    { label: 'Free hopping', caption: 'Free hop', pictures: stepRow(['🐰']) },
-    { label: 'Three whole rows', caption: 'Whole rows', ...missionSteps(['🥕', '🥕', '🥕']), goal: 'Catch three rows with no carrot left behind', target: 3, accept: (kind) => kind === 'row', banner: '🥕 🥕 🥕 Three whole rows!', reward: 'Three whole rows! Pip did not leave one behind.' },
-    { label: 'Patterns with no bumps', caption: 'Smooth patterns', ...missionSteps(['🎵', '🎵']), goal: 'Hop two patterns with no bumps', target: 2, accept: (kind) => kind === 'pattern', banner: '🎵 🎵 Two smooth patterns!', reward: 'Two patterns, and not one bump!' },
-  ],
-})
 
 function renderPace() {
   $('pace').setAttribute('aria-pressed', String(game.gentle))
   $('pace').classList.toggle('gentle', game.gentle)
 }
 renderPace()
-$('pace').onclick = () => {
+function togglePace() {
   sound.unlock()
-  sound.click()
   game.gentle = !game.gentle
-  try {
-    localStorage.setItem('bunny-hop:gentle', game.gentle ? '1' : '0')
-  } catch {}
   renderPace()
-  voice.sayNow(game.gentle ? 'Slow and gentle, like a tortoise.' : 'Hopping along like a bunny.')
+  sound.pace(game.gentle)
 }
 
-let bunny, world, course, effects, weather, glints, popups, cue
+let bunny, world, course, effects, weather, glints, babyModel
 const camPos = new THREE.Vector3(1.2, 2, 8)
 const camLook = new THREE.Vector3(0.3, 1.1, 0)
 const tmp = new THREE.Vector3()
@@ -217,6 +146,7 @@ const tmp2 = new THREE.Vector3()
 
 async function init() {
   const { bunny: model, templates } = await loadModels((k) => ($('load-bar').style.width = `${10 + k * 90}%`))
+  babyModel = model.clone(true)
   bunny = new Bunny(model)
   scene.add(bunny.root)
   // a soft round shadow keeps the bunny's height readable
@@ -232,16 +162,12 @@ async function init() {
   world = new World(scene, templates)
   world.camera = camera
   course = new Course(scene, templates)
+  home.templates = templates
   effects = new Effects(scene)
   weather = new Weather(scene)
-  weather.setKind(BIOMES[0].weather)
+  weather.setKind(weatherOf(BIOMES[0]))
   glints = new Glints(scene)
-  popups = new Popups($('popups'), camera)
-  // The obstacle pictures need a second WebGL context for a moment: draw them once the menu is up.
-  cue = new Cue($('cue'), $('ask'), {})
-  const idle = window.requestIdleCallback?.bind(window) ?? ((fn) => setTimeout(fn, 300))
-  idle(() => (cue.pictures = obstaclePictures(templates)), { timeout: 2000 })
-  if (window.game) Object.assign(window, { course, view, camera, bunny, cue, world })
+  if (window.game) Object.assign(window, { course, view, camera, bunny, world, home, friend, BIOMES })
   applyQuality()
   toMenu()
   requestAnimationFrame(frame)
@@ -254,32 +180,53 @@ function show(id) {
   $('home').classList.toggle('hidden', id === 'loading' || id === 'menu')
 }
 
-/** Every way back (🏠, Escape) comes here: the trip's words stop with it. */
+/** Every way back (🏠, Escape) comes here. */
 function toMenu() {
-  voice.hush()
   game.state = 'menu'
-  game.homeAsk = null
-  clearTimeout(game.gardenTimer)
   game.x = 0
   sound.music(false)
   clearTimeout(bannerTimer)
   $('banner').classList.remove('show')
+  newTrip()
   bunny.reset()
   world.reset()
   course.reset()
-  resetLessons()
+  home.clear()
+  friend.clear()
+  dropBalloon()
   game.biome = 0
-  weather.setKind(BIOMES[0].weather)
+  weather.setKind(weatherOf(BIOMES[0]))
   // Coming home from a trip: cut straight to the close-up of Pip, never pan back across the whole trip.
   camPos.set(game.x + 0.6, 1.6, menuZ())
   camLook.set(game.x + 0.1, 1.2, 0)
-  // Calm pass: the menu no longer shows a best score to beat.
   show('menu')
 }
 
+/** A place's weather: at night, fireflies come out everywhere but the snow. */
+const weatherOf = (b) => (world.mood === 'night' && b.weather !== 'snow' ? 'fireflies' : b.weather)
+
+/** The next trip's places in a new order, and its time of day: the menu shows where it starts. */
+function newTrip() {
+  shuffleTrip()
+  // a new time of day too: the same one twice running only if it comes up twice
+  const roll = () => {
+    const r = Math.random()
+    return r < 0.45 ? 'day' : r < 0.75 ? 'sunset' : 'night'
+  }
+  // (?mood=night tries one out)
+  const asked = new URLSearchParams(location.search).get('mood')
+  let mood = asked in MOODS ? asked : roll()
+  if (mood === game.lastMood && !(asked in MOODS)) mood = roll()
+  game.lastMood = mood
+  world.setMood(mood)
+  showStops()
+}
+
 function start() {
-  voice.hush() // Play and Again start afresh: earlier words give way to the new trip
-  adventure.begin()
+  if ((game.state === 'home' || game.state === 'results') && (home.sprouts.length || home.toDrop > 0)) return
+  setTripLength(game.gentle)
+  // "hop again" from home: a new route (the menu has already chosen one)
+  if (game.state !== 'menu') newTrip()
   sound.unlock()
   sound.click()
   sound.music(true)
@@ -287,75 +234,120 @@ function start() {
   game.speed = 0
   game.slow = 1
   game.score = 0
-  game.hops = 0
   game.golden = 0
+  game.skill = 0 // golden carrots, flip-only 🌟, stomp chains and perfect streams: the garden grows with it
+  game.chains = game.perfects = 0
+  game.dizzy = 0
+  game.bubbles = 0
+  game.combo = game.comboTimer = game.stomps = 0
+  game.idle = 0
   game.time = 0
-  game.rows = []
-  game.patterns = []
-  game.justRight = game.baskets = game.aways = game.spills = 0
-  game.spokeSpill = -1e9
-  game.homeAsk = null
-  clearTimeout(game.gardenTimer)
-  game.flowers = { blue: 0, yellow: 0, pink: 0 }
-  game.flowerHint = false
-  Object.assign(game.tier, { streak: 0, slips: 0, right: 0, wrong: 0 })
-  game.top = game.gentle ? { row: Math.max(1, game.tier.row), pattern: Math.max(1, game.tier.pattern) } : { row: 2, pattern: 2 }
-  voice.newRound()
-  told.clear()
   // ?biome=2 starts further along the trip (for trying out the later places)
   const skip = clamp(Number(new URLSearchParams(location.search).get('biome')) || 0, 0, BIOMES.length - 1)
   game.x = skip ? skip * BIOME_LENGTH + 1 : 0
   game.biome = skip
   bunny.reset()
   world.reset(game.x)
-  // the 🐢 pace keeps every row to one ten-frame row of 5 or fewer; a basket hopper gets room for spares
-  course.reset(game.x, game.gentle ? 5 : Infinity, game.tier.row > 0)
-  // one fork a trip, in the autumn wood (counting hoppers: the snow, with bigger numbers), at its
-  // longer row, where a basket hopper chooses the patch that makes Pip's number. A trip that starts
-  // on whole rows keeps it for the autumn or the snow, in case the child has stepped up by then
-  // (if not, it is an ordinary row).
-  {
-    const rows = (b) => course.segments.filter((seg) => seg.kind === 'row' && seg.biome === b && seg.room >= seg.planned + 2 && seg.planned >= 4)
-    const places = game.tier.row >= 2 ? [3, 2, 1] : game.tier.row ? [2, 1, 3] : [2, 3]
-    const fork = places.map(rows).find((list) => list.length)?.reduce((a, b) => (b.planned > a.planned ? b : a))
-    if (fork) fork.fork = true
+  course.reset(game.x)
+  home.clear()
+  friend.clear()
+  dropBalloon()
+  // two rare surprises a trip, one early and one late: never one of the last trip's two, and the
+  // kinds met least often are the likeliest (?surprise=balloon tries one out first)
+  const asked = new URLSearchParams(location.search).get('surprise')
+  const draw = (count) => {
+    const chosen = SURPRISES.includes(asked) ? [asked] : []
+    while (chosen.length < count) {
+      const left = SURPRISES.filter((k) => !chosen.includes(k))
+      const fresh = left.filter((k) => !game.lastSurprises.includes(k))
+      const pool = fresh.length ? fresh : left
+      const weights = pool.map((k) => 1 / (1 + (game.seen[k] ?? 0)) ** 2)
+      let r = Math.random() * weights.reduce((a, b) => a + b, 0)
+      chosen.push(pool.find((_, i) => (r -= weights[i]) < 0) ?? pool[0])
+    }
+    return chosen
   }
-  // no scenery pumpkins or snowmen beside a pattern, where one could pass for the hidden obstacle
-  world.quiet = (x) => course.segments.some((seg) => seg.kind === 'rhythm' && x > seg.x - 10 && x < seg.end + 6)
-  // and no scenery flowers in the near grass beside a flower to pick, so the one on its mound stands out
-  world.flowerQuiet = (x) => course.flowers.some((f) => Math.abs(f.x - x) < 10)
-  // Pip's winter goal: what careful play brings home from the rows (each shaped for the tier careful
-  // play will be on when it is cued) and the pattern carrots it is sure to munch, less two for a slip
-  // on the way (every pattern but one a trip has three carrots or more, see `shapeRhythm`). Careful
-  // looking and counting get there, on any tier; hopping at everything falls
-  // short, as it sails over the carrots in the grass and over-full baskets tip carrots out.
-  const patterns = course.segments.filter((seg) => seg.kind === 'rhythm').length
-  game.goal = Math.max(5, course.careful(game.tier.row, game.top.row) + 3 * Math.max(0, patterns - 1) - 2)
-  $('score-goal').textContent = `/${game.goal}`
-  resetLessons()
+  // every fourth trip is a party: four surprises, spread through all the places
+  game.surprises = draw(game.trips % 4 === 3 ? 4 : 2)
+  for (const k of game.surprises) game.seen[k] = (game.seen[k] ?? 0) + 1
+  game.lastSurprises = game.surprises.slice(-2)
+  remember('surprises', game.lastSurprises.join(','))
+  remember('seen', JSON.stringify(game.seen))
+  const n = game.surprises.length
+  game.surprises.forEach((kind, i) => {
+    const at = Math.max(game.x + 40, (0.6 + (i + rand(0.1, 0.8)) * (2.9 / n)) * BIOME_LENGTH)
+    if (kind === 'friend') friend.at = at
+    else course.surprises.push({ kind, x: at })
+  })
+  // and on about half the trips, one rare pattern: a heart of carrots over a spring, or stairs up to a flip-only 🌟
+  if (Math.random() < 0.5) course.surprises.push({ kind: pick(['heart', 'goldstairs']), x: Math.max(game.x + 60, rand(0.4, 3.6) * BIOME_LENGTH) })
+  course.surprises.sort((a, b) => a.x - b.x)
   // swoop out from a close-up of Pip (and never pan across the whole trip)
   camPos.set(game.x + 0.6, 1.6, 6.5)
   camLook.set(game.x + 0.1, 1.1, 0)
-  weather.setKind(BIOMES[game.biome].weather)
+  weather.setKind(weatherOf(BIOMES[game.biome]))
   $('score-num').textContent = '0'
-  $('score').classList.remove('met')
-  $('tap-hint').classList.toggle('gone', !!adventure.option.goal)
+  $('tap-hint').classList.remove('gone')
   show(null)
-  fitPopups()
-  banner(`${BIOMES[game.biome].emoji} ${BIOMES[game.biome].name}`)
-  if (adventure.option.goal) voice.say(adventure.option.goal)
-  // (said apart from a basket's "Pip needs 3.": the trip's goal is the pantry's)
-  voice.say(`Pip wants ${game.goal} carrots in his pantry for winter.`)
+  banner(BIOMES[game.biome].emoji)
 }
 
-// Floating words start a little below the score and the trip bar, so a word
-// floating up fades out before it reaches them (short sideways phones especially).
-function fitPopups() {
-  if (!popups || $('hud').classList.contains('hidden')) return
-  const bottom = Math.max($('score').getBoundingClientRect().bottom, document.querySelector('.trip').getBoundingClientRect().bottom)
-  popups.minTop = bottom + 56
+/** The trip bar's stops: this trip's places in order, then home. */
+function showStops() {
+  $('trip-stops').replaceChildren(...[...BIOMES.map((b) => b.emoji), '🏡'].map((e) => Object.assign(document.createElement('span'), { textContent: e })))
 }
-addEventListener('resize', fitPopups)
+
+/** A little bunny that joins Pip on some trips: it runs along just behind him, copying his hops. */
+const friend = {
+  at: Infinity, // where on the path it turns up
+  root: null,
+  x: 0,
+  trail: [], // Pip's recent heights, so the friend hops a moment after him
+  clear() {
+    if (this.root) scene.remove(this.root)
+    this.root = null
+    this.at = Infinity
+    this.trail = []
+  },
+  update(dt) {
+    if (!this.root) {
+      if (game.x < this.at) return
+      this.root = new THREE.Group()
+      const body = babyModel.clone(true)
+      body.scale.setScalar(0.62)
+      body.rotation.y = -0.6
+      this.root.add(body)
+      this.root.userData.kind = 'friend'
+      this.x = game.x - view.halfW - 3
+      this.root.position.set(this.x, 0, -1.7)
+      scene.add(this.root)
+      this.hello = false
+    }
+    this.trail.push(bunny.y)
+    if (this.trail.length > 12) this.trail.shift()
+    const goal = game.x - 1.9
+    this.x = THREE.MathUtils.damp(this.x + game.speed * dt, goal, 1.2, dt)
+    if (!this.hello && Math.abs(this.x - goal) < 0.4) {
+      this.hello = true
+      sound.giggle()
+      effects.sparkle(tmp.set(this.x, 1, -1.7), 10, ['#ff9fba', '#ffffff', '#ffd23f'], 2.5)
+    }
+    // copies Pip's hops a beat later (a little lower), and skips along while running
+    const skip = Math.abs(Math.sin(game.time * game.speed * 1.9)) * 0.12
+    this.root.position.set(this.x, this.trail[0] * 0.85 + skip, -1.7)
+  },
+}
+
+/** Lets go of the balloon (it floats off and pops with a sparkle). */
+function dropBalloon(pop = false) {
+  const b = game.balloon
+  if (!b) return
+  game.balloon = null
+  scene.remove(b.obj)
+  if (!pop) return
+  sound.pop()
+  effects.sparkle(tmp.copy(b.obj.position).setY(b.obj.position.y + 1.5), 18, [b.color, '#ffffff', '#ffd23f'], 3.5)
+}
 
 let bannerTimer
 function banner(text, ms = 2200) {
@@ -372,21 +364,18 @@ function bumpScore() {
   void el.offsetWidth
   el.classList.add('bump')
   $('score-num').textContent = game.score
-  el.classList.toggle('met', game.score >= game.goal)
 }
 
-function hop() {
-  if (game.state !== 'play' || game.asking) return
-  const kind = bunny.hop()
+function hop(auto = false) {
+  if (game.state !== 'play') return
+  game.idle = 0
+  const kind = bunny.hop(auto)
   if (!kind) return
-  // hops along a row: hopping at everything is not the same as catching a whole row
-  const seg = game.seg
-  if (seg?.kind === 'row' && !seg.finished && game.x > seg.x - 4) seg.hops++
   sound.hop(kind === 'double')
   tmp.set(game.x, 0, 0)
-  // a puff of dust from the ground; a hop higher in the air (for a golden carrot) is its own reward, with no sparkle
   if (kind === 'hop') effects.puff(tmp, 6, dustColor(), 0.9)
-  if (++game.hops >= 3) $('tap-hint').classList.add('gone')
+  else effects.sparkle(tmp.set(game.x, bunny.y + 0.5, 0), 8, ['#ffffff', '#bfe6ff'], 2.5)
+  $('tap-hint').classList.add('gone')
 }
 
 const dustColor = () => BIOMES[game.biome].dust
@@ -394,680 +383,511 @@ const dustColor = () => BIOMES[game.biome].dust
 function finish() {
   game.state = 'home'
   game.homeTime = 0
-  bunny.celebrate(3)
-  resetLessons()
+  bunny.celebrate(4)
   sound.music(false)
   sound.finish()
-  banner('🏡 Home!', 2600)
+  clearTimeout(bannerTimer)
+  $('banner').classList.remove('show')
   $('tap-hint').classList.add('gone')
-  // One soft moment at the burrow: a few slow petals (calm pass: was a 90-piece burst, then more every frame).
   tmp.set(HOME_X + 1, 1.5, -1)
-  effects.confettiBurst(tmp, 16, true)
+  effects.confettiBurst(tmp, 24, true)
+  // the garden grows one thing for the trip, and more for skill: a 🌟 is 1, a flip-only 🌟, a stomp
+  // chain or a perfect stream 2 or 3, and every 2 of those grow one more thing (up to 6 more)
+  const grow = 1 + Math.min(6, Math.floor(game.skill / 2))
+  game.garden += grow
+  remember('garden', game.garden)
+  game.trips++
+  remember('trips', game.trips)
+  // each surprise met leaves a keepsake at the burrow, which grows each time it is met again; and
+  // skill leaves its marks: a perfect stream a lily pad (then a frog), each stomp chain a stone
+  const metNow = game.surprises.filter((k) => k !== 'friend' || friend.root)
+  for (const k of metNow) {
+    if (!game.met.includes(k)) game.met.push(k)
+    game.metCount[k] = (game.metCount[k] ?? 0) + 1
+  }
+  const before = { ...game.marks }
+  for (let i = 0; i < game.perfects; i++) game.marks.lily ? (game.marks.frog = 1) : (game.marks.lily = 1)
+  game.marks.stones = Math.min(5, game.marks.stones + game.chains)
+  remember('met', game.met.join(','))
+  remember('metCount', JSON.stringify(game.metCount))
+  remember('marks', JSON.stringify(game.marks))
+  home.arrive(grow, metNow, before)
+  friend.clear()
+  dropBalloon(true)
 }
 
-/**
- * Home: the burrow pantry has a shelf for each place, its two rows as crates. Pip asks one
- * question about a shelf (which crate has more, or, for older hoppers, how many altogether), then
- * the total shows beside his winter goal. No stars or best score (calm pass).
- */
+/** A 🌟 flies from the score (then the results card) to the thing it is about to grow. */
+function flyStar(at) {
+  const stars = [...$('haul-gold').children].filter((el) => !el.classList.contains('spent'))
+  const from = (game.state === 'home' ? $('score') : stars[0] ?? $('haul')).getBoundingClientRect()
+  stars[0]?.classList.add('spent')
+  tmp.copy(at).setY(at.y + 0.6).project(camera)
+  const to = { x: ((tmp.x + 1) / 2) * innerWidth, y: ((1 - tmp.y) / 2) * innerHeight }
+  const star = Object.assign(document.createElement('div'), { className: 'flying-star', textContent: '🌟' })
+  document.body.append(star)
+  const sx = from.left + from.width / 2
+  const sy = from.top + from.height / 2
+  const mid = { x: (sx + to.x) / 2, y: Math.min(sy, to.y) - 80 }
+  const anim = star.animate(
+    [
+      { transform: `translate(${sx}px, ${sy}px) translate(-50%, -50%) scale(1)` },
+      { transform: `translate(${mid.x}px, ${mid.y}px) translate(-50%, -50%) scale(1.3)`, offset: 0.45 },
+      { transform: `translate(${to.x}px, ${to.y}px) translate(-50%, -50%) scale(0.5)`, opacity: 0.4 },
+    ],
+    { duration: 700, easing: 'ease-in-out' },
+  )
+  anim.onfinish = () => star.remove()
+}
+
+/** The results card: the carrots Pip brought home, and the golden ones. */
 function showResults() {
   game.state = 'results'
-  const crates = renderPantry($('pantry'), game.rows)
-  // the patterns hopped, as little pictures (one strip per place), named for screen readers
-  const found = $('found')
-  found.replaceChildren(...game.patterns.map(({ unit, biome }) => {
-    const strip = document.createElement('span')
-    strip.className = 'found-pattern'
-    for (const name of unit) strip.append(cue.picture(biome, name))
-    return strip
-  }))
-  found.setAttribute('aria-label', game.patterns.length ? `Patterns hopped: ${game.patterns.map(({ unit }) => patternWords(unit)).join('; ')}` : '')
+  $('haul-num').textContent = game.score
+  $('haul-gold').replaceChildren(...Array.from({ length: Math.min(game.golden, 12) }, () => Object.assign(document.createElement('span'), { textContent: '🌟' })))
+  $('haul').setAttribute('aria-label', `${game.score} carrots, ${game.golden} golden`)
   show('results')
-  if (!askPantry(crates)) pantryTotal()
-}
-
-const pantryTotalOf = () => game.rows.reduce((sum, row) => sum + row.got, 0)
-function pantryTotal() {
-  game.homeAsk = null
-  const total = pantryTotalOf()
-  showPantryTotal($('pantry'), total, game.goal)
-  $('pantry').querySelectorAll('.pantry-shelf').forEach((el) => el.classList.remove('asked', 'quiet', 'compare'))
-  // basket hoppers work out the gap to the winter goal themselves (when it is 1 to 20: past ten,
-  // the count-on line starts with a crate of ten)
-  // (not on the 🐢 pace: there the total and the goal are enough)
-  const gap = total - game.goal
-  const winter = game.tier.row > 0 && !game.gentle && gap !== 0 && Math.abs(gap) <= 20
-  if (!winter) {
-    voice.say(pantryWords(total, game.goal, game.tier.row > 0))
-    return gardenSoon()
-  }
-  // the total on screen speaks for itself: a breath to look at it, then the one question about it
-  clearTimeout(game.gardenTimer)
-  game.gardenTimer = setTimeout(() => game.state === 'results' && askWinter(total, game.goal), 1800)
-}
-
-/** A moment to see the full shelves and the total, then they fold into one line and the garden opens. */
-function gardenSoon() {
-  game.homeAsk = null
-  $('again').hidden = false
-  // (short sideways phones fold straight away: all four shelves and the total don't fit there)
-  const short = matchMedia('(max-height: 480px)').matches
-  if (short) foldPantry($('pantry'), game.rows)
-  clearTimeout(game.gardenTimer)
-  game.gardenTimer = setTimeout(openGarden, short ? 1600 : 3200)
-}
-
-const flowerNames = (colors) => colors.join(', ')
-const capital = (words) => words[0].toUpperCase() + words.slice(1)
-
-/**
- * Pip's door garden: the child plants the flowers picked on the trip, one tap each, in a row in
- * front of the burrow (in 3D, and in the pantry). When the row repeats (two whole goes of a group
- * of two or more colours), Pip names the group once and plays the row as a tune, each colour its
- * own note. Nothing is wrong here: it is the child's own pattern. Older pattern hoppers are asked
- * for one with three colours.
- */
-function openGarden() {
-  if (game.state !== 'results') return
-  const counts = game.flowers
-  const picked = Object.values(counts).reduce((a, b) => a + b, 0)
-  foldPantry($('pantry'), game.rows)
-  if (picked < 2) return
-  // older pattern hoppers with two of every colour are asked for a three-colour pattern
-  const three = game.tier.pattern > 0 && Object.values(counts).every((n) => n >= 2)
-  const said = new Set()
-  sound.wonder()
-  // a pattern needs two goes of two colours: with fewer flowers they are simply planted
-  voice.say(picked < 4 ? 'Plant your flowers by Pip’s door.' : three ? 'Plant a pattern with three colours, by Pip’s door.' : 'Plant your flowers in a pattern, by Pip’s door.')
-  let wondered = false
-  let nudged = false
-  let wonder = 0
-  const room = Math.min(8, picked)
-  const garden = renderGarden($('pantry'), counts, cue, (row, color) => {
-    world.plantRow(row, innerWidth < innerHeight)
-    garden.lead(0)
-    clearTimeout(wonder)
-    if (!color) return
-    sound.step(FLOWERS[color].note)
-    bunny.happyHop()
-    const unit = repeatOf(row)
-    const key = unit?.join()
-    if (!unit && !wondered && row.length >= (three ? 4 : 3) && row.length < room && picked >= 4) {
-      // a row that doesn't repeat yet, and the child stops to think: once, Pip reads it back and
-      // wonders what comes next, with the group it could go on from lit (pink, yellow, pink: the
-      // pink and yellow), or the whole row
-      wonder = setTimeout(() => {
-        if (game.state !== 'results' || wondered) return
-        wondered = true
-        const group = groupOf(row)
-        garden.lead(group ? group.length : row.length)
-        voice.say(capital(`${flowerNames(row)}… what could come next?`))
-      }, 4000)
-      return
-    }
-    if (!unit || said.has(key) || row.length !== unit.length * 2) return
-    said.add(key)
-    // the row sung back, then its group named; asked for three colours, a two-colour pattern hears
-    // (once) that one with all three is still to make
-    row.forEach((c, i) => sound.step(FLOWERS[c].note, 0.5 + i * 0.32))
-    const tri = new Set(unit).size === 3
-    const more = three && !tri && !nudged && (nudged = true) ? ' Can you make one with three colours?' : ''
-    voice.sayNow(capital(`${flowerNames(unit)}, again and again. ${tri ? 'Three colours!' : 'A pattern!'}${more}`))
-  })
-  garden.buttons[0]?.focus({ preventScroll: true })
 }
 
 /**
- * One question about a shelf. Little hoppers: which crate has more? (one go, then Pip shows it).
- * Basket hoppers: how many in two crates that differ altogether; counting hoppers (and anyone whose
- * shelves are all doubles) add the shelf's 🎵 crate too. Three numbers, with a second go after a
- * hint to count on. Returns false when there is nothing fair to ask.
+ * The burrow's garden grows by one thing each trip home, and more for skill (kept on this device):
+ * [model, x from home, z, scale]. First the scenery round the burrow, then a vegetable patch,
+ * lanterns that glow at night, a swing and a few more flowers, all kept off the open lawn in front
+ * of Pip. All of it stays in view on an upright phone. Snowy things grow only in the snow.
  */
-function askPantry(allCrates) {
-  // the question is about the two counted rows of a place (and, for counting hoppers, its little 🎵 crate)
-  const crates = allCrates.filter((c) => !c.row.pattern)
-  const shelves = [...new Set(crates.map((c) => c.shelf))].filter((shelf) => crates.filter((c) => c.shelf === shelf).length === 2)
-  const adding = game.tier.row > 0
-  // the 🐢 pace adds two crates at most
-  const three = game.tier.row >= 2 && !game.gentle
-  const pair = (sh) => crates.filter((c) => c.shelf === sh)
-  const tune = (sh) => allCrates.find((c) => c.shelf === sh && c.row.pattern && c.row.got > 0)
-  let shelf, third
-  if (adding) {
-    // not a double when there is a choice (5 + 6, not 5 + 5); counting hoppers add the shelf's
-    // 🎵 crate too, and so does anyone whose shelves are all doubles
-    // (both crates with carrots in: 0 + 5 is no sum to work out)
-    const sums = shelves.filter((sh) => pair(sh).every((c) => c.row.got > 0))
-    const differ = sums.filter((sh) => pair(sh)[0].row.got !== pair(sh)[1].row.got)
-    const threes = sums.filter(tune)
-    if (three && threes.length) shelf = threes.filter((sh) => differ.includes(sh)).at(-1) ?? threes.at(-1)
-    else shelf = differ.at(-1) ?? (game.gentle ? null : threes.at(-1)) ?? sums.at(-1)
-    if (shelf && !game.gentle && (three || !differ.includes(shelf))) third = tune(shelf)
-  } else {
-    // two crates worth comparing: they differ, and each holds at least two (not 1 against 0)
-    shelf = shelves.findLast((sh) => pair(sh)[0].row.got !== pair(sh)[1].row.got && pair(sh).every((c) => c.row.got >= 2))
+const DECOR = [
+  ['mushroom_red', 3.9, -2.3, 0.4],
+  ['pumpkin', 4.1, -1.5, 0.75],
+  ['fence', -3.3, -2.7, 1],
+  ['flower', -0.5, -1.5, 1.3],
+  ['tree_round', 4.7, -5.6, 0.7],
+  ['mushroom_blue', -3.1, -1.3, 0.35],
+  ['bush', -1.5, -3.1, 0.8],
+  ['snowman', 4.6, -3.3, 0.7],
+  ['flower', 0.3, -1.7, 1.2],
+  ['mushroom_red', -2.4, -2.2, 0.3],
+  ['tree_pine', -3.6, -4.4, 0.7],
+  ['pumpkin', -2.0, -1.0, 0.5],
+  ['flower', 4.4, -0.6, 1.2],
+  ['mushroom_blue', 2.6, -3.6, 0.5],
+  ['bush', 0.9, -4.2, 0.9],
+  ['flower', -1.0, -1.2, 1.1],
+  ['lantern', -3.0, -0.6, 1],
+  ['veg', -2.6, -1.8, 0.65],
+  ['veg', -2.1, -1.9, 0.65],
+  ['swing', -2.4, -4.2, 1],
+  ['veg', -1.6, -1.9, 0.65],
+  ['lantern', 4.5, -0.2, 1],
+  ['flower', -3.0, 1.6, 1.0],
+  ['tree_pine', -1.0, -5.8, 0.8],
+  ['flower', 4.3, 1.4, 1.0],
+]
+const SNOWLESS = { tree_round: 'tree_round', tree_pine: 'tree_pine', snowman: 'bush' }
+const SNOWY = { tree_round: 'tree_round_snow', tree_pine: 'tree_pine_snow', snowman: 'snowman' }
+
+/** Little garden things made from simple shapes: a lantern, a swing, a carrot growing in the patch. */
+const wood = new THREE.MeshStandardMaterial({ color: '#8a5a32', roughness: 0.8 })
+function makeLantern() {
+  const obj = new THREE.Group()
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.8, 6), wood)
+  post.position.y = 0.4
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10), new THREE.MeshBasicMaterial({ color: '#ffd27a' }))
+  lamp.position.y = 0.92
+  obj.add(post, lamp)
+  return obj
+}
+function makeSwing() {
+  const obj = new THREE.Group()
+  for (const x of [-0.6, 0.6]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.7, 6), wood)
+    leg.position.set(x, 0.85, 0)
+    obj.add(leg)
   }
-  if (!shelf) return false
-  const [p, q] = pair(shelf)
-  const [a, b] = [p.row.got, q.row.got]
-  const pantry = $('pantry')
-  pantry.querySelectorAll('.pantry-shelf').forEach((el) => el.classList.toggle(el === shelf ? 'asked' : 'quiet', true))
-  // the shelf's 🎵 crate stays in view only when it is part of the sum
-  shelf.classList.toggle('with-tune', !!third)
-  const panel = pantry.querySelector('.pantry-ask')
-  const title = document.createElement('p')
-  title.className = 'ask-title'
-  const choices = document.createElement('div')
-  choices.className = 'pantry-choices'
-  panel.replaceChildren(title, choices)
-  panel.hidden = false
-  // the one thing to do at home: 'Hop again' waits until Pip's question is answered
-  $('again').hidden = true
-  sound.wonder()
-  if (!adding) {
-    // only the carrots that came home, side by side with no plus between: the longer crate has more
-    shelf.classList.add('compare')
-    for (const { el, row } of [p, q]) {
-      el.querySelectorAll('.away').forEach((c) => c.remove())
-      el.querySelector('.pantry-crate').style.setProperty('--cols', String(Math.min(row.got, 5)))
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.4, 6), wood)
+  bar.rotation.z = Math.PI / 2
+  bar.position.y = 1.7
+  const seat = new THREE.Group() // swings from the bar
+  seat.position.y = 1.7
+  for (const x of [-0.25, 0.25]) {
+    const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.2, 4), new THREE.MeshBasicMaterial({ color: '#f3e2c0' }))
+    rope.position.set(x, -0.6, 0)
+    seat.add(rope)
+  }
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.06, 0.25), new THREE.MeshStandardMaterial({ color: '#ff6b9d', roughness: 0.6 }))
+  board.position.y = -1.2
+  seat.add(board)
+  obj.add(bar, seat)
+  obj.userData.swing = seat
+  return obj
+}
+function makeFrog() {
+  const obj = new THREE.Group()
+  const green = new THREE.MeshStandardMaterial({ color: '#6cc644', roughness: 0.6 })
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10), green)
+  body.scale.set(1.1, 0.75, 1)
+  body.position.y = 0.11
+  obj.add(body)
+  for (const x of [-0.07, 0.07]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), green)
+    eye.position.set(x, 0.22, 0.06)
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshStandardMaterial({ color: '#1d1d1d' }))
+    dot.position.set(x, 0.23, 0.105)
+    obj.add(eye, dot)
+  }
+  return obj
+}
+function makeVeg(carrot) {
+  const obj = new THREE.Group()
+  const top = copy(carrot)
+  top.position.y = 0.12
+  const mound = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#7a4f2c', roughness: 1 }))
+  mound.scale.y = 0.35
+  obj.add(top, mound)
+  return obj
+}
+
+/**
+ * Home at the burrow: little bunnies wait by the door and hop for joy when Pip arrives (and a friend
+ * who came along joins them), the garden grows something new, and the carrots he brought tumble out
+ * of the sky into a heap by the door, one soft note each.
+ */
+const home = {
+  templates: null,
+  babies: [],
+  pile: [],
+  decor: [],
+  sprouts: [], // this trip's new things in the garden, popping up one after another
+  toDrop: 0,
+  dropTimer: 0,
+  clear() {
+    for (const b of this.babies) scene.remove(b.root)
+    for (const c of this.pile) scene.remove(c.obj)
+    for (const d of this.decor) scene.remove(d)
+    this.babies = []
+    this.pile = []
+    this.decor = []
+    this.sprouts = []
+    this.toDrop = 0
+  },
+  /**
+   * `grow`: how many garden things are new this trip; `metNow`: the surprises met on it (their
+   * keepsakes grow); `before`: the skill marks as they were before it (the new ones pop up).
+   */
+  arrive(grow, metNow, before) {
+    this.clear()
+    // The garden: earlier trips stay, and new things begin growing before the card. Skill-earned
+    // things each get a flying 🌟; once every spot is planted the
+    // trees, bushes and mushrooms grow a little bigger (never so big they hide the burrow)
+    const grown = Math.min(game.garden, DECOR.length)
+    const bigger = 1 + Math.min(0.3, Math.max(0, game.garden - DECOR.length) * 0.05)
+    const last = BIOMES[BIOMES.length - 1]
+    const swap = last.weather === 'snow' ? SNOWY : SNOWLESS
+    for (let i = 0; i < grown; i++) {
+      const [kind, dx, dz, s] = DECOR[i]
+      const name = swap[kind] ?? kind
+      const obj =
+        name === 'lantern' ? makeLantern()
+        : name === 'swing' ? makeSwing()
+        : name === 'veg' ? makeVeg(this.templates.carrot)
+        : copy(this.templates[name], { recolor: name === 'flower' ? { petal: ['#ff6b9d', '#ffd23f', '#b28dff'] } : last.recolor, shadow: true })
+      obj.position.set(HOME_X + dx, 0, dz)
+      obj.rotation.y = name === 'fence' || name === 'swing' ? 0 : rand(-0.6, 0.6)
+      obj.userData.s = s * (/tree|bush|mushroom/.test(name) ? bigger : 1)
+      obj.scale.setScalar(obj.userData.s)
+      this.add(obj)
     }
-    title.textContent = 'Which has more?'
-    voice.say('Which crate has more carrots?')
-    game.homeAsk = { choices: [p.el, q.el] }
-    const more = a > b ? p : q
-    for (const crate of [p, q]) {
-      crate.el.disabled = false
-      // the two crates' numbers wait under the question: the carrots themselves are compared
-      crate.el.classList.add('guess')
-      crate.el.onclick = () => {
-        p.el.disabled = q.el.disabled = true
-        p.el.classList.remove('guess')
-        q.el.classList.remove('guess')
-        panel.hidden = true
-        more.el.classList.add('more')
-        sound.step(OBSTACLE_NOTES.snowman)
-        bunny.happyHop()
-        const [hi, lo] = [Math.max(a, b), Math.min(a, b)]
-        voice.sayNow(`${crate === more ? 'Yes! ' : 'Look: '}${hi} is more than ${lo}.`)
-        pantryTotal()
+    // this trip's new spots; once the garden is full, the trip's growth goes to the trees, bushes and
+    // mushrooms instead (each pops up a little bigger)
+    const planted = Math.min(Math.max(0, game.garden - grow), DECOR.length)
+    const newly = this.decor.slice(planted, grown)
+    const extra = grow - newly.length
+    const growing = extra > 0 ? this.decor.filter((_, i) => /tree|bush|mushroom/.test(DECOR[i][0])).slice(-extra) : []
+    const fresh = [...newly, ...growing].map((obj, i) => ({ obj, star: i > 0 }))
+    // keepsakes of the surprises met so far, bigger each time one is met again
+    for (const kind of game.met) {
+      const obj = this.keepsake(kind, game.metCount[kind] ?? 1)
+      if (!obj) continue
+      this.add(obj)
+      if (metNow.includes(kind)) fresh.push({ obj, star: false })
+    }
+    // skill's marks: the stone stack from stomp chains, the lily pad and frog of perfect streams
+    if (game.marks.stones) {
+      const stack = this.cairn(game.marks.stones)
+      this.add(stack)
+      if (game.marks.stones > before.stones) fresh.push({ obj: stack, star: true })
+    }
+    if (game.marks.lily && !game.met.includes('stream')) {
+      const pond = this.keepsake('stream', 1)
+      this.add(pond)
+      if (!before.lily) fresh.push({ obj: pond, star: true })
+    } else if (game.marks.lily > before.lily || game.marks.frog > before.frog) {
+      const pond = this.decor.find((d) => d.userData.pond)
+      if (pond && !fresh.some((f) => f.obj === pond)) fresh.push({ obj: pond, star: true })
+    }
+    // Start with six flags, then add one each homecoming up to 48.
+    // The garland colours turn with the seasons; the flower arch changes every trip.
+    const colours = ['#ff6b9d', '#ffd23f', '#55bfc2', '#ad87e8', '#ff994d', '#89c94d']
+    const flags = new THREE.Group()
+    const countFlags = Math.min(48, game.trips + 5)
+    const season = Math.floor(game.trips / 4)
+    for (let i = 0; i < countFlags; i++) {
+      const row = Math.floor(i / 12)
+      const col = i % 12
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.23, 0)
+      shape.lineTo(0.23, 0)
+      shape.lineTo(0, -0.55)
+      shape.closePath()
+      const flag = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshStandardMaterial({ color: colours[(i + season) % colours.length], side: THREE.DoubleSide, roughness: 0.8 }))
+      flag.position.set(-3.1 + col * 0.56, 4.5 + row * 0.7 - Math.sin(col / 11 * Math.PI) * 0.25, 0)
+      flags.add(flag)
+    }
+    // A rope makes this read as a party garland rather than floating triangles.
+    const rope = new THREE.LineBasicMaterial({ color: '#775837' })
+    for (let row = 0; row <= Math.floor((countFlags - 1) / 12); row++) {
+      const points = Array.from({ length: 13 }, (_, j) => new THREE.Vector3(-3.4 + j * 0.56, 4.5 + row * 0.7 - Math.sin(j / 12 * Math.PI) * 0.25, 0))
+      flags.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), rope))
+    }
+    flags.position.set(HOME_X, 0, -4.5)
+    flags.userData.s = 1
+    flags.userData.pennants = countFlags
+    this.add(flags)
+    fresh.push({ obj: flags, star: false })
+    // A new seasonal flower arch each homecoming, even after every plot is full.
+    const blossoms = new THREE.Group()
+    const palette = [['#ff83b4', '#fff1a8'], ['#ffd23f', '#ff994d'], ['#b28dff', '#68d6df'], ['#f5fbff', '#9ecaff']][game.trips % 4]
+    for (let i = 0; i < 9; i++) {
+      const flower = copy(this.templates.flower, { recolor: { petal: palette }, shadow: true })
+      const a = i / 8 * Math.PI
+      flower.position.set(Math.cos(a) * 1.15, 0.05 + Math.sin(a) * 1.25, 0)
+      flower.scale.setScalar(0.75)
+      blossoms.add(flower)
+    }
+    blossoms.position.set(HOME_X + 1.6, 0, -1.2)
+    blossoms.userData.s = 1
+    blossoms.userData.season = game.trips % 4
+    this.add(blossoms)
+    fresh.push({ obj: blossoms, star: false })
+    const neighbours = Math.min(3, Math.max(0, Math.floor((game.trips - 3) / 3)))
+    for (let i = 0; i < neighbours; i++) {
+      const h = makeHedgehog().obj
+      h.position.set(HOME_X - 2.0 + i * 0.65, 0, 1.5)
+      h.scale.multiplyScalar(innerWidth / innerHeight > 1.8 ? 0.28 : 0.36)
+      h.userData.s = h.scale.x
+      this.add(h)
+      if (game.trips === 6 + i * 3) fresh.push({ obj: h, star: false })
+    }
+    // Growth begins before the card; replay waits for every sprout to settle.
+    fresh.forEach((f, i) => {
+      f.obj.scale.setScalar(0.001)
+      this.sprouts.push({ ...f, t: -1.15 - i * 0.48 })
+    })
+    // more little bunnies as the garden grows, and the friend once it has come along (twice: two)
+    const count = Math.min(5, 2 + Math.min(2, game.metCount.friend ?? 0) + Math.floor(game.garden / 8))
+    const spots = [[2.3, -0.4, 0.55], [3.1, -0.9, 0.48], [1.6, 0.5, 0.6], [3.8, 0.1, 0.5], [2.9, 0.9, 0.45], [4.3, -1.2, 0.42]]
+    for (const [dx, dz, s] of spots.slice(0, count)) {
+      const root = new THREE.Group()
+      const body = babyModel.clone(true)
+      body.scale.setScalar(s)
+      body.rotation.y = -1.3 + rand(-0.2, 0.2)
+      root.add(body)
+      root.position.set(HOME_X + dx, 0, dz)
+      root.userData.kind = 'baby'
+      scene.add(root)
+      this.babies.push({ root, body, s, y: 0, vy: 0, wait: rand(0.2, 0.8) })
+    }
+    // the pile: up to 30 carrots (each one standing for more on a big haul)
+    this.toDrop = Math.min(30, game.score)
+    this.dropTimer = 1.2
+  },
+  add(obj) {
+    scene.add(obj)
+    this.decor.push(obj)
+  },
+  /**
+   * What a surprise leaves at the burrow, grown by how often it has been met (`level`): a hedgehog
+   * family, a bunch of balloons by the door, a double rainbow, a pond (with a lily pad and a frog
+   * once a stream has been crossed perfectly).
+   */
+  keepsake(kind, level) {
+    const obj = new THREE.Group()
+    obj.userData.s = 1
+    if (kind === 'hedgehogs') {
+      // mum first, then little ones beside her
+      ;[[0, 0, 0.9], [0.55, 0.25, 0.55], [-0.45, 0.35, 0.5]].slice(0, Math.min(3, level)).forEach(([dx, dz, s]) => {
+        const h = makeHedgehog().obj
+        h.rotation.y = Math.PI / 2 // face the child
+        h.position.set(dx, 0, dz)
+        h.scale.multiplyScalar(s)
+        obj.add(h)
+      })
+      obj.position.set(HOME_X - 2.4, 0, 0.15)
+      obj.userData.s = innerWidth / innerHeight > 1.8 ? 0.38 : 0.48
+      obj.scale.setScalar(obj.userData.s)
+    } else if (kind === 'balloon') {
+      for (let i = 0; i < Math.min(4, level); i++) {
+        const b = makeBalloon(BALLOONS[i % BALLOONS.length])
+        b.scale.setScalar(0.8)
+        b.position.set((i - (Math.min(4, level) - 1) / 2) * 0.5, i % 2 ? 0.25 : 0, -i * 0.1)
+        b.rotation.z = (i - 1.5) * 0.12
+        obj.add(b)
+      }
+      obj.position.set(HOME_X - 1.1, 0.5, -1.9)
+      obj.userData.bob = true
+    } else if (kind === 'rainbow') {
+      obj.add(makeRainbow(10))
+      if (level > 1) {
+        const second = makeRainbow(14)
+        second.position.z = -1
+        second.children.forEach((band) => (band.material.opacity = 0.4))
+        obj.add(second)
+      }
+      obj.position.set(HOME_X + 1.6, 0, -11)
+    } else if (kind === 'stream') {
+      // a little pond, with a stepping stone
+      const pond = new THREE.Mesh(
+        new THREE.CircleGeometry(1, 32),
+        new THREE.MeshStandardMaterial({ color: '#5fb6f0', roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9, depthWrite: false }),
+      )
+      pond.rotation.x = -Math.PI / 2
+      pond.scale.set(1.0, 0.55, 1)
+      pond.position.y = 0.04
+      const stone = copy(this.templates.rock)
+      stone.scale.set(0.4, 0.2, 0.4)
+      stone.position.set(0.4, 0, 0.1)
+      obj.add(pond, stone)
+      if (game.marks.lily) {
+        const pad = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20, 0.3, Math.PI * 1.8), new THREE.MeshStandardMaterial({ color: '#5bb04a', roughness: 0.7 }))
+        pad.rotation.x = -Math.PI / 2
+        pad.position.set(-0.35, 0.06, 0.05)
+        obj.add(pad)
+        if (game.marks.frog) {
+          const frog = makeFrog()
+          frog.position.set(-0.35, 0.06, 0.05)
+          obj.add(frog)
+        }
+      }
+      obj.position.set(HOME_X - 1.6, 0, 1.5)
+      obj.userData.s = 0.8
+      obj.scale.setScalar(0.8)
+      obj.userData.pond = true
+    } else return null
+    return obj
+  },
+  /** The stack of round stones that stomp chains build, one stone each (up to five). */
+  cairn(count) {
+    const obj = new THREE.Group()
+    let y = 0
+    for (let i = 0; i < count; i++) {
+      const stone = copy(this.templates.rock, { recolor: { stone: ['#a3adb9', '#8f99a6'][i % 2], moss: ['#a3adb9'] } })
+      const w = 0.5 - i * 0.07
+      stone.scale.set(w, 0.32, w)
+      stone.position.y = y
+      stone.rotation.y = i * 0.9
+      y += 0.62 * 0.32 + 0.02
+      obj.add(stone)
+    }
+    obj.position.set(HOME_X - 0.5, 0, 1.6)
+    obj.userData.s = 1
+    return obj
+  },
+  /** This trip's new things in the garden spring up out of the ground, each with a twinkle. */
+  grow(dt) {
+    for (const sp of this.sprouts) this.sprout(sp, dt)
+    this.sprouts = this.sprouts.filter((sp) => sp.t < 0.6)
+  },
+  sprout(sp, dt) {
+    const was = sp.t
+    sp.t += dt
+    // The ones skill earned get a 🌟 from the score or card before sprouting.
+    if (sp.star && was < -0.7 && sp.t >= -0.7) flyStar(sp.obj.position)
+    if (was < 0 && sp.t >= 0) {
+      sound.gold()
+      effects.sparkle(tmp.copy(sp.obj.position).setY(0.6), 16, ['#ffe066', '#ffffff', '#8ac926'], 3)
+    }
+    if (sp.t < 0) return
+    // overshoot a little and settle, like a spring
+    const k = Math.min(1, sp.t / 0.6)
+    const s = sp.obj.userData.s * (1 + Math.sin(k * Math.PI) * 0.35 * (1 - k * 0.5)) * Math.min(1, k * 2)
+    sp.obj.scale.setScalar(Math.max(0.001, s))
+    if (k >= 1) sp.obj.scale.setScalar(sp.obj.userData.s)
+  },
+  /** A little bunny tapped: it squeaks and hops. */
+  tickle(b) {
+    if (b.y > 0.01) return
+    b.vy = 7
+    sound.giggle()
+    effects.sparkle(tmp.set(b.root.position.x, 1, b.root.position.z), 8, ['#ff9fba', '#ffffff', '#ffd23f'], 2.5)
+  },
+  update(dt) {
+    this.grow(dt)
+    for (const d of this.decor) {
+      if (d.userData.bob) d.position.y = 0.5 + Math.sin(game.time * 1.6) * 0.1
+      if (d.userData.swing) d.userData.swing.rotation.x = Math.sin(game.time * 1.8) * 0.35
+    }
+    for (const b of this.babies) {
+      b.wait -= dt
+      if (b.y <= 0 && b.wait <= 0) {
+        b.vy = rand(5, 7)
+        b.wait = game.homeTime < 4 ? rand(0.5, 0.9) : rand(1.5, 3.5)
+      }
+      b.vy -= 30 * dt
+      b.y = Math.max(0, b.y + b.vy * dt)
+      if (b.y === 0) b.vy = Math.max(0, b.vy)
+      const stretch = b.y > 0 ? clamp(b.vy * 0.02, -0.1, 0.15) : 0
+      b.root.position.y = b.y
+      b.body.scale.set(b.s * (1 - stretch / 2), b.s * (1 + stretch), b.s * (1 - stretch / 2))
+    }
+    if (this.toDrop > 0 && (this.dropTimer -= dt) <= 0) {
+      this.dropTimer = 0.11
+      this.toDrop--
+      const n = this.pile.length
+      const obj = copy(this.templates.carrot, { shadow: true })
+      // a little heap: a wide bottom layer, narrower above
+      const layer = n < 12 ? 0 : n < 21 ? 1 : n < 27 ? 2 : 3
+      const across = [12, 9, 6, 3][layer]
+      const k = n - [0, 12, 21, 27][layer]
+      const rest = { x: HOME_X - 0.8 + (k - across / 2) * 0.14 + rand(-0.05, 0.05), y: 0.12 + layer * 0.17, z: -0.4 + rand(-0.25, 0.25) }
+      obj.position.set(rest.x, 2.0 + layer * 0.17, rest.z)
+      obj.rotation.set(rand(-0.3, 0.3), rand(0, 6), Math.PI / 2 + rand(-0.4, 0.4))
+      obj.scale.setScalar(0.85)
+      scene.add(obj)
+      this.pile.push({ obj, rest, vy: 0, landed: false, note: n })
+    }
+    for (const c of this.pile) {
+      if (c.landed) continue
+      c.vy -= 30 * dt
+      c.obj.position.y += c.vy * dt
+      if (c.obj.position.y <= c.rest.y) {
+        c.obj.position.y = c.rest.y
+        c.landed = true
+        sound.munch(c.note % 10)
+        effects.puff(tmp.set(c.rest.x, c.rest.y, c.rest.z), 3, '#f0dcb4', 0.5)
       }
     }
-    p.el.focus({ preventScroll: true })
-    return true
-  }
-  if (third) {
-    // two crates, then the 🎵 crate: add the first two, then count on the third
-    const c = third.row.got
-    const sum = a + b + c
-    title.textContent = `${a} + ${b} + ${c} = ?`
-    voice.say('How many carrots on this shelf?')
-    choices.replaceWith(numberChoices(panel, sum, () => {
-      voice.sayNow(`${a} and ${b} make ${a + b}. Count on ${c}.`)
-      panel.append(countOn(a + b, c))
-    }, (first) => {
-      voice.sayNow(`${first ? 'Yes! ' : ''}${a}, ${b} and ${c} make ${sum}.`)
-      pantryTotal()
-    }))
-    return true
-  }
-  const sum = a + b
-  title.textContent = `${a} + ${b} = ?`
-  voice.say('How many carrots in these two crates?')
-  // count on from the bigger crate: its number, then one more for each carrot in the other,
-  // with a line of carrots to tap through, one number each
-  const [big, small] = [Math.max(a, b), Math.min(a, b)]
-  choices.replaceWith(numberChoices(panel, sum, () => {
-    voice.sayNow(`Start at ${big}, and count on ${small}.`)
-    panel.append(countOn(big, small))
-  }, (first) => {
-    voice.sayNow(`${first ? 'Yes! ' : ''}${a} and ${b} make ${sum}.`)
-    pantryTotal()
-  }))
-  return true
-}
-
-/**
- * Three number buttons for a question at the burrow (the answer and two near it). A first miss
- * rests, faded, and `onHint` shows a way to work it out; then `onDone(first)` with whether the
- * first go was right.
- */
-function numberChoices(panel, answer, onHint, onDone) {
-  const row = document.createElement('div')
-  row.className = 'pantry-choices'
-  const options = new Set([answer])
-  while (options.size < 3) {
-    const n = answer + pick([-2, -1, 1, 2])
-    if (n > 0) options.add(n)
-  }
-  let tried = false
-  const buttons = [...options].sort(() => Math.random() - 0.5).map((n) => {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'ask-choice pantry-number'
-    button.textContent = String(n)
-    button.onclick = () => {
-      if (n !== answer && !tried) {
-        tried = true
-        button.disabled = true
-        game.homeAsk.choices = buttons.filter((el) => !el.disabled)
-        game.homeAsk.choices[0]?.focus({ preventScroll: true })
-        onHint()
-        return
-      }
-      for (const el of buttons) el.disabled = true
-      panel.hidden = true
-      sound.step(OBSTACLE_NOTES.snowman)
-      bunny.happyHop()
-      onDone(n === answer && !tried)
-    }
-    row.append(button)
-    return button
-  })
-  game.homeAsk = { choices: buttons }
-  requestAnimationFrame(() => buttons[0].focus({ preventScroll: true }))
-  return row
-}
-
-/**
- * For basket hoppers, after the total: how far is it from the winter goal? Spares when Pip has
- * more, or how many more he needs. A first miss brings the count-on line, from the smaller number
- * up to the bigger: the carrots tapped are the answer.
- */
-function askWinter(total, goal) {
-  const panel = $('pantry').querySelector('.pantry-ask')
-  const [lo, hi] = [Math.min(total, goal), Math.max(total, goal)]
-  const gap = hi - lo
-  const spare = total > goal
-  // the shelves fold into one line of place totals first: the question is about the total, and Pip stays in view
-  foldPantry($('pantry'), game.rows)
-  const title = document.createElement('p')
-  title.className = 'ask-title'
-  title.textContent = spare ? `🥕 ${total} − ❄️ ${goal} = ?` : `❄️ ${goal} − 🥕 ${total} = ?`
-  panel.replaceChildren(title)
-  panel.hidden = false
-  $('again').hidden = true
-  voice.say(spare ? 'How many carrots to spare?' : 'How many more does Pip need?')
-  panel.append(numberChoices(panel, gap, () => {
-    voice.sayNow(gap > 10 ? `Start at ${lo}. Ten more, then count on to ${hi}.` : `Start at ${lo}, and count on to ${hi}.`)
-    panel.append(countOn(lo, gap))
-  }, (first) => {
-    voice.sayNow(`${first ? 'Yes! ' : ''}${hi} is ${gap} more than ${lo}.`)
-    gardenSoon()
-  }))
-}
-
-/**
- * The count-on helper at the burrow: the bigger crate's number, then a carrot for each one in the
- * smaller crate. Each tap on the next carrot says and shows one more (8, 9, 10…).
- */
-function countOn(big, small) {
-  const line = document.createElement('div')
-  line.className = 'count-on'
-  const start = document.createElement('b')
-  start.textContent = String(big)
-  line.append(start)
-  // more than ten to count on: a whole crate of ten comes first (23, then 33), then one at a time
-  const sizes = small > 10 ? [10, ...Array(small - 10).fill(1)] : Array(small).fill(1)
-  let next = 0
-  let reached = big
-  const steps = sizes.map((size, i) => {
-    const step = document.createElement('button')
-    step.type = 'button'
-    step.className = `count-step${size > 1 ? ' ten' : ''}`
-    step.textContent = size > 1 ? '🥕×10' : '🥕'
-    step.setAttribute('aria-label', `count on${size > 1 ? ' ten' : ''}: ${big + sizes.slice(0, i + 1).reduce((a, b) => a + b, 0)}`)
-    step.onclick = () => {
-      // always the next step in the line, wherever the tap lands, so the count stays in order
-      const at = steps[next]
-      if (!at) return
-      reached += sizes[next++]
-      at.classList.add('counted')
-      at.textContent = String(reached)
-      sound.step(OBSTACLE_NOTES.carrot + Math.min(next, 7))
-      voice.sayNow(String(reached))
-    }
-    line.append(step)
-    return step
-  })
-  return line
-}
-
-// --- Counted rows and obstacle rhythms ------------------------------------------------
-
-function resetLessons() {
-  game.seg = null
-  game.segIndex = 0
-  game.cueHold = 0
-  game.asking = null
-  cue?.hide()
-}
-
-/** Each frame of play: cue the next row or rhythm, and pause to ask about a pattern. */
-function updateLessons(dt) {
-  const seg = game.seg
-  if (!seg) {
-    const next = course.segments[game.segIndex]
-    if (next && game.x >= next.x - CUE_LEAD) beginSegment(next)
-    return
-  }
-  if (seg.finished) {
-    game.cueHold -= dt
-    if (game.cueHold <= 0) {
-      cue.hide()
-      game.seg = null
-      game.segIndex++
-    }
-    return
-  }
-  // Nothing in a row or rhythm can be skipped, but just in case, never leave a cue hanging.
-  if (game.x > seg.end + 8) finishSegment(seg)
-  else if (seg.kind === 'rhythm' && !seg.asked && !game.asking && game.x >= seg.x + seg.ask * BEAT - ASK_AT) askNext(seg)
-}
-
-/**
- * A hint said once per trip, joined to the line it belongs with ("2 carrots! Hop up to catch
- * them!"), so the voice says one thing at a time. Returns '' once it has been said.
- */
-const told = new Set()
-const fresh = (text) => (told.has(text) ? '' : (told.add(text), ` ${text}`))
-
-/** A pattern's rule, said after a second miss: a growing one grows by one each time. */
-const ruleWords = (seg) => (seg.growing ? `One more ${OBSTACLE_NAMES[seg.growing]} each time.` : capital(`${patternWords(seg.unit)}.`))
-
-/** Hopped well: every carrot of a row caught (without hopping at everything), or a pattern with no bump and no carrot left. */
-const smoothPattern = (seg) => !seg.bumps && !seg.missed
-
-function beginSegment(seg) {
-  game.seg = seg
-  // a fork kept for a child still catching whole rows is an ordinary row
-  if (seg.fork && game.tier.row === 0) [seg.fork, seg.shaped] = [false, null]
-  // shaped again for the child's level right now, so a step up or down shows in this very row
-  course.reshape(seg, game.tier)
-  $('tap-hint').classList.add('gone')
-  const grass = seg.kind === 'row' ? seg.low.slice(0, seg.count).some(Boolean) : seg.carrots > 0
-  const grassWords = grass ? fresh('Carrots in the grass: stay down to munch them.') : ''
-  let words = ''
-  if (seg.fork) return askFork(seg)
-  if (seg.kind === 'row') {
-    cue.row(seg)
-    if (seg.basket) {
-      // the 🧺 number speaks for itself after the first two baskets, and a number is said once a trip
-      const how = fresh(seg.counting ? 'Count them in, then let the rest go by.' : 'Fill the basket, then let the others go by.')
-      const need = `Pip needs ${seg.n}.`
-      // (a new way of filling it is still said, even for a number already heard: the 🧺 shows it;
-      // and not just after "That's 6. Too heavy!", nor just before the fork asks for its own number,
-      // so two different numbers never come back to back)
-      const beforeFork = course.segments[course.segments.indexOf(seg) + 1]?.fork
-      const said = told.has(need) || game.time - game.spokeSpill < 8 || beforeFork
-      if (how || (++game.baskets <= 2 && !said)) words = `${said ? '' : need}${how}`.trim()
-      if (!said) told.add(need)
-    } else {
-      // the number is said where the carrots are counted aloud; later the tray shows it
-      const hop = fresh('Hop up to catch them!')
-      const many = `${carrotWords(seg.n)}!`
-      if ((seg.biome === 0 && !told.has(many)) || hop) words = `${many}${hop}`
-      told.add(many)
-    }
-  } else {
-    cue.rhythm(seg)
-    course.shapes.push(seg.shape)
-    // the music rests while a pattern is hopped, so its notes are the only tune
-    sound.hushMusic(true)
-    // hear the pattern's start once: each step's own note (a growing pattern's rule is for the child to find).
-    // Little hoppers hear it named too; older ones have the notes and the pictures.
-    seg.unit.forEach((name, i) => sound.step(OBSTACLE_NOTES[name], i * 0.45))
-    if (game.tier.pattern === 0) words = capital(`${patternWords(seg.unit)}.`)
-  }
-  if (words || grassWords) voice.say(`${words}${grassWords}`.trim())
-}
-
-/** Splits a patch of `t` carrots into two little groups of at most five, neither a lone carrot (7: 4 and 3, or 5 and 2). */
-function groupsOf(t) {
-  const a = randInt(Math.ceil(t / 2), Math.min(5, t - (t >= 4 ? 2 : 1)))
-  return [a, t - a]
-}
-
-/**
- * The fork: Pip stops where the path splits, and the child chooses one of two patches, each shown
- * as two little groups of carrots with no numbers. One makes Pip's number; the other has one more
- * or one less. The chosen patch is the row: too many, and the child stops hopping at full; too few,
- * and the basket can't be filled ("6 of 7"). Adding (or counting) the groups is how to choose well.
- */
-function askFork(seg) {
-  const n = seg.n
-  const other = n + (n + 1 > Math.min(10, seg.room) ? -1 : n - 1 < 2 ? 1 : pick([-1, 1]))
-  const patches = [groupsOf(n), groupsOf(other)].sort(() => Math.random() - 0.5)
-  game.asking = seg
-  cue.row(seg)
-  sound.wonder()
-  // (the number once a trip: after "Pip needs 3." earlier, just the question)
-  voice.say(`${told.has(`Pip needs ${n}.`) ? '' : `Pip needs ${n}. `}Which patch has ${n}?`, { interrupt: true })
-  told.add(`Pip needs ${n}.`)
-  cue.fork(n, patches, (i) => {
-    if (game.asking !== seg) return
-    game.asking = null
-    cue.closeAsk()
-    const [a, b] = patches[i]
-    const t = a + b
-    course.layPatch(seg, t)
-    cue.row(seg)
-    // the carrots grow up in the chosen patch, with a soft sparkle where it starts
-    effects.sparkle(tmp.set(seg.x + ROW_STEP, 1.2, 0), 8, ['#ffffff', '#ffd23f'], 2)
-    sound.step(OBSTACLE_NOTES.snowman)
-    if (t === n) voice.sayNow(`Yes! ${a} and ${b} make ${n}.`)
-    else voice.sayNow(`${a} and ${b} make ${t}.${t > n ? ` Stop at ${n}!` : ` Pip needs ${n}.`}`)
-  })
-}
-
-const flowerHint = () => voice.sayOnce('Flowers! Stay down to pick them for Pip’s door.')
-
-function finishSegment(seg) {
-  if (seg.finished) return
-  seg.finished = true
-  game.cueHold = 1
-  // the pantry keeps what Pip needed: spare carrots went back to the field, and an over-full basket
-  // lost two for every carrot past full (7 asked, 9 caught: 3 come home)
-  if (seg.kind === 'row') game.rows.push({ got: keptIn(seg), n: seg.n, biome: seg.biome })
-  else {
-    // the results picture a growing pattern by its first two groups (a b, a a b)
-    game.patterns.push({ unit: seg.growing ? seg.items.slice(0, seg.starts[2]) : seg.unit, biome: seg.biome })
-    if (seg.carrots) game.rows.push({ got: seg.got, n: seg.carrots, biome: seg.biome, pattern: true })
-    if (smoothPattern(seg)) adventure.event('pattern')
-    // a slip in the mist: the strip sings what was hidden, note by note (no words), so the bump or
-    // the carrot left behind is heard against the pattern
-    if (seg.mistSlips) {
-      cue.replay(seg.ask + 1, seg.items.length, (i, at) => sound.step(OBSTACLE_NOTES[seg.items[i]], at), 0.32)
-      game.cueHold = 0.5 + (seg.items.length - seg.ask - 1) * 0.32
-    }
-    sound.hushMusic(false)
-    if (game.flowerHint) {
-      game.flowerHint = false
-      flowerHint()
-    }
-  }
-  saveTier()
-}
-
-/** Pip stops before the hidden obstacle and asks, in pictures, which one comes next. */
-function askNext(seg) {
-  seg.asked = true
-  game.asking = seg
-  sound.wonder()
-  voice.sayOnce('What comes next?')
-  cue.ask(seg, (name) => answer(seg, name))
-}
-
-/**
- * A first answer that doesn't fit rests, faded: the strip plays the pattern again up to the "?",
- * note by note, and the child has another go (with only two pictures, a third joins, so it is still a
- * choice). Two right first answers in a row step up the ladder; a second miss shows the answer and
- * its rule and steps it down, and so do two patterns in a row that needed a second go. Only a right
- * first answer hears "Yes".
- */
-function answer(seg, name) {
-  if (game.asking !== seg) return
-  const real = seg.items[seg.ask]
-  const tier = game.tier
-  if (name !== real && !seg.tried) {
-    seg.tried = true
-    tier.right = 0
-    cue.rest(name)
-    if (seg.spare) cue.addChoice(seg.spare, randInt(0, cue.choiceRow.children.length))
-    // listen again from the start of the last two groups, so the repeat (or the growth) can be heard
-    const from = seg.starts[Math.max(0, seg.starts.findLastIndex((i) => i < seg.ask) - 1)]
-    cue.replay(from, seg.ask, (i, at) => sound.step(OBSTACLE_NOTES[seg.items[i]], at))
-    // little hoppers hear the steps named; older ones listen to the notes and watch the strip
-    // ("Listen." once a trip: after that the notes and the faded picture say it)
-    if (tier.pattern === 0) voice.sayNow(`Listen. ${capital(patternWords(seg.items.slice(from, seg.ask)))}…`)
-    else voice.sayOnce('Listen.', { interrupt: true })
-    return
-  }
-  game.asking = null
-  course.answers.push(real)
-  cue.closeAsk()
-  const at = course.reveal(seg)
-  cue.revealStep(seg)
-  sound.step(OBSTACLE_NOTES[real])
-  if (at) effects.sparkle(tmp.set(at.x, 1, 0), 10, ['#ffffff', '#ffd23f'], 2.5)
-  const said = OBSTACLE_NAMES[real]
-  if (name === real && !seg.tried) {
-    // two right first answers in a row step up (a lucky tap on two pictures is not enough), and
-    // each one after that while the run lasts, so a strong first trip meets a growing pattern
-    tier.wrong = 0
-    if (++tier.right >= 2) tier.pattern = Math.min(game.top.pattern, tier.pattern + 1)
-    // "Yes, a carrot!" once a trip; after that the rule the child just read
-    const yes = `Yes, a ${said}!`
-    voice.sayNow(told.has(yes) ? `Yes! ${ruleWords(seg)}` : (told.add(yes), yes))
-  } else if (name === real) {
-    // right on the second go: the ladder follows first answers, so two of these in a row step down
-    if (++tier.wrong >= 2) Object.assign(tier, { pattern: Math.max(0, tier.pattern - 1), wrong: 0 })
-    const a = `A ${said}.`
-    voice.sayNow(told.has(a) ? ruleWords(seg) : (told.add(a), a))
-  } else {
-    Object.assign(tier, { pattern: Math.max(0, tier.pattern - 1), wrong: 0 })
-    voice.sayNow(`Look, a ${said}! ${ruleWords(seg)}`)
-  }
-  // the rest of the pattern waits under mist: the pattern tells Pip when to hop and when to stay down
-  if (seg.ask < seg.items.length - 1) voice.sayOnce('The rest is in the mist: hop, or stay down?')
-}
-
-/**
- * A row carrot munched. Tier 0 counts it aloud in the meadow only (rows of 2–3); past
- * that the munch note, the number above Pip and the tray carry the count. On the basket tiers the
- * child counts: the voice stays quiet, and a carrot past a full basket goes back to the field.
- * Returns whether Pip keeps it.
- */
-/** Where a floating number sits: just above Pip's ears (a little higher in portrait, where the lens is wider). */
-const overPip = () => bunny.y + (innerWidth < innerHeight ? 2.45 : 1.9)
-
-function lessonCarrot(ev) {
-  const seg = ev.seg
-  seg.got++
-  cue.fill(seg.got)
-  const kept = !seg.basket || seg.got <= seg.n
-  if (kept) {
-    // the count floats above Pip in one spot (not on the counting tier: there the child keeps it)
-    if (!seg.counting) popups.show(String(seg.got), tmp.set(game.x + 0.4, overPip(), 0), '', true)
-    if (!seg.basket && seg.biome === 0) voice.count(seg.got, { interrupt: false })
-  } else {
-    seg.over++
-    effects.puff(ev.pos, 6, '#ffffff', 0.8)
-    popups.show('↩', tmp.set(game.x + 0.4, overPip(), 0), 'oops', true)
-    // too many: the basket is too heavy and, for every carrot past full, it wobbles and two that were
-    // in it roll back out, so the further over it goes the less comes home, and stopping when it is
-    // full wins (careful counting brings home more than hopping at everything)
-    const lost = keptIn({ ...seg, over: seg.over - 1 }) - keptIn(seg)
-    for (let i = 0; i < lost; i++) cue.spill()
-    if (lost) {
-      game.score = Math.max(0, game.score - lost)
-      bumpScore()
-    }
-    // said for the first two over-full baskets, each line once a trip
-    if (seg.over === 1 && ++game.spills <= 2) {
-      voice.sayNow(game.spills === 1 ? `That's ${seg.got}. Too heavy! ${lost === 1 ? 'One' : 'Two'} rolled out.` : 'Too heavy again! Stop when the basket is full.')
-      game.spokeSpill = game.time
-    }
-  }
-  rowDone(seg)
-  return kept
-}
-
-/** The carrots of a row that come home: up to the basket's number, less two for every carrot past full. */
-const keptIn = (seg) => Math.max(0, Math.min(seg.got, seg.n) - 2 * seg.over)
-
-/** A carrot growing in a pattern: munched (stayed down) or hopped over. Either way it is a step of the tune. */
-function patternCarrot(ev, got) {
-  const seg = ev.seg
-  if (got) seg.got++
-  else seg.missed++
-  if (!got && ev.index > seg.ask) seg.mistSlips = (seg.mistSlips ?? 0) + 1
-  sound.step(OBSTACLE_NOTES.carrot, got ? 0.05 : 0)
-  cue.passed(ev.index, !got)
-  if (++seg.passed >= seg.items.length) finishSegment(seg)
-}
-
-function lessonMiss(ev) {
-  const seg = ev.seg
-  seg.missed++
-  // a carrot let go before the basket was full doesn't count as stopping on time
-  if (seg.got < seg.n) seg.early++
-  if (!seg.basket) cue.miss()
-  rowDone(seg)
-}
-
-/**
- * Every carrot of the row is munched or gone by: say how it went (briefly) and follow the child's
- * level. A basket is "just right" only when Pip caught every carrot up to full and then let the
- * spares go by, which careful counting does and hopping at everything almost never does.
- */
-function rowDone(seg) {
-  if (seg.finished || seg.got + seg.missed < seg.count) return
-  const tier = game.tier
-  if (seg.basket) {
-    const clean = seg.got === seg.n && !seg.early
-    if (clean) {
-      if (++game.justRight <= 1) voice.say(`Just right, ${seg.n}!`)
-      else sound.step(OBSTACLE_NOTES.snowman, 0.1) // a soft bell does the job by now
-      adventure.event('row')
-      tier.slips = 0
-      if (++tier.streak >= 2 && tier.row < game.top.row) Object.assign(tier, { row: tier.row + 1, streak: 0 })
-    } else {
-      tier.streak = 0
-      // (the first two times, and never the same words twice in a trip)
-      if (seg.got < seg.n && game.aways < 2 && voice.sayOnce(`${seg.got} of ${seg.n}.`)) game.aways++
-    }
-    // too many twice: a step back down (the counting basket gets its empty places back, then whole rows)
-    if (seg.over && ++tier.slips >= 2) Object.assign(tier, { row: Math.max(0, tier.row - 1), slips: 0, streak: 0 })
-  } else {
-    // the tray shows what got away; Pip says it the first two times
-    if (seg.missed && game.aways < 2 && voice.sayOnce(`${seg.got} of ${seg.n}. ${seg.missed} got away.`)) game.aways++
-    // two whole rows of three or more, caught by looking (not by hopping at everything): next time
-    // Pip's basket is smaller than the row. Hopping for the high carrots and staying down for the
-    // ones in the grass takes about one hop per high carrot, and a row of only high ones doesn't count.
-    const whole = !seg.missed && seg.hops <= seg.count + 2
-    if (whole) adventure.event('row')
-    // only a row that asked for looking (with carrots in the grass) shows the child is ready
-    if (!whole) tier.streak = 0
-    else if (seg.n >= 3 && seg.low.slice(0, seg.count).some(Boolean)) tier.streak++
-    if (tier.streak >= 2) Object.assign(tier, { row: Math.max(tier.row, 1), streak: 0, slips: 0 })
-  }
-  finishSegment(seg)
-}
-
-function lessonObstacle(ev) {
-  const seg = ev.seg
-  sound.step(OBSTACLE_NOTES[ev.name])
-  cue.passed(ev.index)
-  if (++seg.passed >= seg.items.length) finishSegment(seg)
+  },
 }
 
 // --- Input: tap / click anywhere, or space, up arrow, W ---------------------------------
 
+// Holding a finger (or the key) down keeps Pip hopping each time he lands: for the littlest hoppers.
+const held = { pointers: new Set(), key: false }
+const holding = () => held.pointers.size > 0 || held.key
 addEventListener('pointerdown', (e) => {
   sound.unlock()
   if (e.target.closest('button')) return
-  if (game.state === 'play') hop()
+  if (game.state === 'play') {
+    held.pointers.add(e.pointerId)
+    hop()
+  }
   if (game.state !== 'loading') poke(e.clientX, e.clientY)
+})
+for (const type of ['pointerup', 'pointercancel']) addEventListener(type, (e) => held.pointers.delete(e.pointerId))
+addEventListener('blur', () => {
+  held.pointers.clear()
+  held.key = false
+})
+addEventListener('keyup', (e) => {
+  if (['Space', 'ArrowUp', 'KeyW', 'Enter'].includes(e.code)) held.key = false
 })
 
 // Kids tap everything: Pip giggles and hops, and the scenery boings, rustles and flutters.
@@ -1086,14 +906,16 @@ function colorOf(obj, fallback) {
   })
   return c ?? fallback
 }
+const nearOnScreen = (point, sx, sy, reach) => {
+  point.project(camera)
+  return Math.hypot(((point.x + 1) / 2) * innerWidth - sx, ((1 - point.y) / 2) * innerHeight - sy) < Math.min(innerWidth, innerHeight) * reach
+}
 function poke(sx, sy) {
   ndc.set((sx / innerWidth) * 2 - 1, -(sy / innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
   if (game.state !== 'play') {
     // Pip, on the menu and at home: the whole bunny counts, plus a little around him
-    tmp.set(game.x, bunny.y + 0.8, 0).project(camera)
-    const near = Math.hypot(((tmp.x + 1) / 2) * innerWidth - sx, ((1 - tmp.y) / 2) * innerHeight - sy) < Math.min(innerWidth, innerHeight) * 0.12
-    if (near || raycaster.intersectObject(bunny.root, true).length) {
+    if (nearOnScreen(tmp.set(game.x, bunny.y + 0.8, 0), sx, sy, 0.12) || raycaster.intersectObject(bunny.root, true).length) {
       const kind = bunny.tickle()
       if (kind) {
         sound.hop(kind === 'double')
@@ -1102,6 +924,9 @@ function poke(sx, sy) {
       }
       return
     }
+    // and the little bunnies at the burrow
+    const baby = home.babies.find((b) => nearOnScreen(tmp.copy(b.root.position).setY(b.y + 0.4), sx, sy, 0.08))
+    if (baby) return home.tickle(baby)
   }
   // While hopping along every tap is a hop, so scenery only wobbles when hit
   // squarely, and quietly: the hop makes the sound.
@@ -1115,34 +940,18 @@ function poke(sx, sy) {
   else if (kind === 'knock' && hit.kind === 'burrow') effects.puff(world.chimney(tmp2), 6, '#ffffff', 1)
   else effects.sparkle(hit.top, 8, [colorOf(hit.obj, '#ffd23f'), '#ffffff'], 2.5)
 }
-/** The buttons of the question waiting for an answer (on the path or at the burrow), or null. */
-function choiceList() {
-  if (game.asking) return cue.choices
-  if (game.state === 'results' && game.homeAsk) return game.homeAsk.choices.filter((b) => !b.disabled)
-  return null
-}
 addEventListener('keydown', (e) => {
   if (['Space', 'ArrowUp', 'KeyW', 'Enter'].includes(e.code)) {
+    if (document.activeElement?.matches?.('button') && e.code !== 'ArrowUp' && e.code !== 'KeyW') return // the focused button presses itself
     e.preventDefault()
     if (e.repeat) return
     sound.unlock()
-    const list = choiceList()
-    if (list) {
-      // the "What comes next?" pictures (or the pantry question): Space or Enter picks the one in focus
-      const pick = list.find((b) => b === document.activeElement) ?? list[0]
-      pick?.click()
-    } else if (game.state === 'results' && document.activeElement?.matches?.('#pantry button:not(:disabled)')) {
-      document.activeElement.click() // the garden's flowers and places
-    } else if (game.state === 'menu' || game.state === 'results') start()
-    else hop()
-  } else if (choiceList() && /^Digit[1-3]$/.test(e.code)) {
-    choiceList()[Number(e.code.slice(5)) - 1]?.click()
-  } else if (choiceList() && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
-    const list = choiceList()
-    const i = list.indexOf(document.activeElement)
-    list[(i + (e.code === 'ArrowLeft' ? list.length - 1 : 1)) % list.length]?.focus()
-  } else if (e.code === 'KeyM') toggleMute()
-  else if (e.code === 'Escape' && game.state !== 'menu' && game.state !== 'loading') $('home').click()
+    if (game.state === 'menu' || game.state === 'results') start()
+    else {
+      held.key = true
+      hop()
+    }
+  }
 })
 addEventListener('contextmenu', (e) => e.preventDefault())
 document.addEventListener('gesturestart', (e) => e.preventDefault())
@@ -1150,20 +959,140 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) sound.suspend()
 })
 $('play').onclick = start
-$('again').onclick = start
-// Home: back to the menu (and its mission choice) from a trip or from the burrow.
-$('home').onclick = () => {
-  sound.unlock()
-  sound.click()
-  toMenu()
+$('again').onclick = () => {
+  if ($('again').getAttribute('aria-disabled') === 'true') {
+    sound.unlock()
+    sound.click()
+    $('again').animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-12deg) scale(0.94)' }, { transform: 'rotate(10deg)' }, { transform: 'rotate(0)' }], { duration: 320 })
+    return
+  }
+  start()
 }
 function toggleMute() {
   sound.unlock()
   sound.setMuted(!sound.muted)
-  voice.setMuted(sound.muted)
   $('mute').textContent = sound.muted ? '🔇' : '🔊'
 }
-$('mute').onclick = toggleMute
+
+/** Every finger (or pointer) down anywhere on the page: a hold starts only with one alone. */
+const pointersDown = new Set()
+document.addEventListener('pointerdown', (e) => pointersDown.add(e.pointerId), true)
+for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, (e) => pointersDown.delete(e.pointerId), true)
+addEventListener('blur', () => pointersDown.clear())
+
+/**
+ * 🏠 and 🔊 need a press held for HOLD_MS while a ring fills, on every screen, so a stray or
+ * mashing tap (or a resting hand) never quits or mutes; while hopping, a tap on them is a hop.
+ * A hold starts only when its finger is the only one down; any other finger landing cancels it and
+ * spoils it until every finger has lifted. Keyboard focus requires a full hold and release too.
+ */
+function holdable(el, action, menuTap = false) {
+  let frame = 0
+  let pointer = null // the one finger holding
+  let spoiled = false
+  const keys = new Set()
+  let keyStart = null
+  let keySpoiled = false
+  const stop = () => {
+    cancelAnimationFrame(frame)
+    frame = 0
+    pointer = null
+    el.classList.remove('holding')
+    el.style.removeProperty('--p')
+  }
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (pointer !== null && e.pointerId !== pointer) {
+        spoiled = true
+        stop()
+      }
+    },
+    true,
+  )
+  for (const type of ['pointerup', 'pointercancel']) {
+    document.addEventListener(type, (e) => {
+      if (e.target === el || e.pointerId === pointer) el.blur()
+      if (e.pointerId === pointer) {
+        const tap = menuTap && game.state === 'menu' && type === 'pointerup' && !spoiled && pointersDown.size === 0
+        stop()
+        if (tap) action()
+      }
+      if (pointersDown.size === 0) spoiled = false
+    })
+  }
+  el.addEventListener('pointerdown', (e) => {
+    keyStart = null
+    keySpoiled = keys.size > 0
+    sound.unlock()
+    hop()
+    stop() // never two holds at once
+    if (spoiled || pointersDown.size !== 1) {
+      spoiled = true
+      return
+    }
+    pointer = e.pointerId
+    const t0 = performance.now()
+    el.classList.add('holding')
+    const step = () => {
+      if (pointer === null) return // cancelled meanwhile
+      const p = (performance.now() - t0) / HOLD_MS
+      el.style.setProperty('--p', Math.min(1, p))
+      if (p < 1) frame = requestAnimationFrame(step)
+      else {
+        stop()
+        const swallow = (e) => { e.preventDefault(); e.stopImmediatePropagation(); document.removeEventListener('click', swallow, true) }
+        document.addEventListener('click', swallow, true)
+        setTimeout(() => document.removeEventListener('click', swallow, true), 500)
+        action()
+      }
+    }
+    frame = requestAnimationFrame(step)
+  })
+  el.addEventListener('pointerleave', (e) => e.pointerId === pointer && stop())
+  // Native keyboard clicks have no duration and must never invoke a hold action.
+  el.addEventListener('click', (e) => {
+    e.preventDefault()
+    if (e.detail > 0) el.blur() // touch compatibility mouse events can focus after pointerup
+  })
+  document.addEventListener('keydown', (e) => {
+    if (!['Enter', 'Space'].includes(e.code)) return
+    const fresh = keys.size === 0
+    keys.add(e.code)
+    if (document.activeElement !== el || !el.matches(':focus-visible')) return
+    e.preventDefault()
+    if (e.repeat) return
+    if (!fresh) { keySpoiled = true; keyStart = null; return }
+    keySpoiled = false
+    keyStart = performance.now()
+    el.classList.add('holding')
+    const progress = () => {
+      if (keyStart === null) return
+      el.style.setProperty('--p', Math.min(1, (performance.now() - keyStart) / HOLD_MS))
+      frame = requestAnimationFrame(progress)
+    }
+    frame = requestAnimationFrame(progress)
+  })
+  document.addEventListener('keyup', (e) => {
+    if (!keys.delete(e.code)) return
+    const complete = !keySpoiled && keyStart !== null && keys.size === 0 &&
+      document.activeElement === el && el.matches(':focus-visible') && performance.now() - keyStart >= HOLD_MS
+    keyStart = null
+    cancelAnimationFrame(frame)
+    el.classList.remove('holding')
+    el.style.removeProperty('--p')
+    if (keys.size === 0) keySpoiled = false
+    if (complete) action()
+  })
+  el.addEventListener('blur', () => { keyStart = null; el.classList.remove('holding') })
+  addEventListener('blur', () => { keys.clear(); keyStart = null; keySpoiled = false; stop() })
+}
+holdable($('home'), () => {
+  sound.click()
+  toMenu()
+})
+holdable($('mute'), toggleMute)
+holdable($('pace'), togglePace, true)
 $('mute').textContent = sound.muted ? '🔇' : '🔊'
 
 // --- Main loop ----------------------------------------------------------------------
@@ -1171,54 +1100,91 @@ $('mute').textContent = sound.muted ? '🔇' : '🔊'
 function handleEvents(events) {
   for (const ev of events) {
     if (ev.type === 'carrot') {
-      bunny.munch()
-      if (ev.gold) {
-        game.golden++
-        sound.gold()
-        effects.sparkle(ev.pos, 10, ['#ffe066', '#ffffff', '#ffb000'], 2.5)
-        continue // a golden carrot is Pip's treat on the way, eaten there: not a pantry carrot, and not tallied at home
-      }
-      effects.crumbs(ev.pos)
-      if (ev.seg?.kind === 'rhythm') patternCarrot(ev, true)
-      else {
-        // the munch note walks up the scale with the row
-        sound.munch(ev.seg ? ev.seg.got % 5 : 0)
-        if (ev.seg && !lessonCarrot(ev)) continue
-      }
-      // one carrot is one carrot: the 🥕 count is the pantry's running total, towards the winter goal
+      game.combo = game.comboTimer > 0 ? game.combo + 1 : 0
+      game.comboTimer = 1.1
       game.score += 1
       bumpScore()
-    } else if (ev.type === 'missed') {
-      if (ev.seg.kind === 'rhythm') patternCarrot(ev, false)
-      else lessonMiss(ev)
-    } else if (ev.type === 'unmist') {
-      effects.puff(tmp.set(ev.pos.x, 0.9, 0.2), 6, '#ffffff', 0.9)
-      cue.unveil(ev.seg, ev.index)
-    } else if (ev.type === 'bump') {
-      // a soft tumble and a puff of dust: no words or stars, Pip just picks himself up
-      bunny.bonk()
-      game.slow = 0.35
-      game.shake = 0.15 // a real bump, so a small nudge (was 0.35)
-      sound.bonk()
-      effects.puff(ev.pos, 8, dustColor(), 1.3)
-      if (ev.seg) {
-        ev.seg.bumps++
-        if (ev.index > ev.seg.ask) ev.seg.mistSlips = (ev.seg.mistSlips ?? 0) + 1
+      bunny.munch()
+      if (ev.gold) {
+        // a golden carrot's surprise: a shower of carrots tumbles onto the path ahead
+        game.golden++
+        game.skill += ev.flip ? 2 : 1
+        sound.gold()
+        sound.shower()
+        effects.sparkle(ev.pos, ev.flip ? 40 : 24, ['#ffe066', '#ffffff', '#ffb000'], ev.flip ? 6 : 4.5)
+        // the very high one, that only a flip reaches, rains twice as many
+        course.shower(game.x, speedAt(game.x), ev.flip ? 14 : 8)
+      } else {
+        sound.munch(game.combo)
+        effects.crumbs(ev.pos)
+        effects.sparkle(ev.pos, 5, undefined, 2)
       }
-    } else if (ev.type === 'flower') {
-      // a wild flower for Pip's door: its own note, a little sparkle in its colour
-      game.flowers[ev.color]++
-      sound.step(FLOWERS[ev.color].note + 12)
-      effects.sparkle(tmp.set(ev.pos.x, 0.8, 0), 6, [FLOWERS[ev.color].hex, '#ffffff'], 2)
-      popups.show('✿', tmp.set(game.x + 0.4, overPip() - 0.3, 0), `flower ${ev.color}`)
-    } else if (ev.type === 'flowerAhead') {
-      // never over a pattern (its question, its answer, its mist): the hint waits for the pattern to end
-      if (game.seg?.kind === 'rhythm' && !game.seg.finished) game.flowerHint = true
-      else flowerHint()
+    } else if (ev.type === 'bump') {
+      // a soft tumble and a puff of dust: Pip just picks himself up
+      // (a short dizzy stop first, so careful hopping pays, then a slow start)
+      bunny.bonk()
+      game.dizzy = 0.6
+      game.slow = 0.25
+      game.shake = 0.15
+      game.stomps = 0
+      sound.bonk()
+      // two carrots tumble out of the basket onto the path ahead: stay down to munch them back
+      const spill = Math.min(2, game.score)
+      if (spill) {
+        game.score -= spill
+        $('score-num').textContent = game.score
+        course.scatter(game.x, spill)
+      }
+      effects.dizzy(tmp.set(game.x, 1.6, 0))
+      effects.puff(ev.pos, 8, dustColor(), 1.3)
+    } else if (ev.type === 'stomp') {
+      // dropping onto the top of a log, rock, snowman or hedgehog: a squishy bounce off it, each one
+      // a note higher; three in a row without touching the ground and carrots rain down
+      bunny.bounce(STOMP_BOUNCE)
+      sound.stomp(game.stomps++)
+      tmp.set(ev.pos.x, ev.h, 0)
+      if (ev.name === 'snowman') effects.puff(tmp, 10, '#ffffff', 1.2)
+      else effects.sparkle(tmp, 10, ['#ffffff', '#ffd23f', '#bfe6ff'], 3)
+      if (ev.name === 'hedgehog') sound.giggle()
+      if (game.stomps === 3 && bunny.tapHop) {
+        game.skill += 2
+        game.chains++
+        sound.shower()
+        effects.sparkle(tmp.set(game.x, bunny.y + 1, 0), 20, ['#ffe066', '#ffffff', '#ff8a1f'], 4)
+        course.shower(game.x, speedAt(game.x), 10)
+      }
+    } else if (ev.type === 'splash') {
+      // water: a splash of drops (a big one for hopping in)
+      sound.splash(ev.big)
+      effects.splash(ev.pos, ev.big ? 26 : 10, BIOMES[game.biome].weather === 'snow' ? '#e6f4ff' : '#8fd0ff')
+    } else if (ev.type === 'perfect') {
+      // every stepping stone and not a splash: a rising chime and a twinkle of every colour
+      game.skill += 3
+      game.perfects++
+      sound.gold()
+      effects.sparkle(tmp.set(game.x, bunny.y + 1.2, 0), 26, ['#ff6b9d', '#ffd23f', '#36a8ff', '#8ac926', '#ffffff'], 4)
+    } else if (ev.type === 'bubble') {
+      // a soap bubble popped: a pop and a note, climbing with each one in a row
+      sound.bubble(game.bubbles++)
+      effects.sparkle(ev.pos, 8, ['#ffffff', '#bfe6ff', '#ffc8f0'], 2.2)
+    } else if (ev.type === 'stone') {
+      // landing on a stepping stone: a plink, a note higher each stone
+      sound.stomp(ev.step + 2)
+      effects.splash(ev.pos, 6, '#bfe6ff')
+      effects.sparkle(ev.pos, 6, ['#ffffff', '#ffd23f'], 2)
+    } else if (ev.type === 'spring') {
+      // a springy mushroom: boiiing, sky high, with a flip
+      bunny.bounce(SPRING, true)
+      sound.spring()
+      effects.puff(tmp.set(ev.pos.x, 0.5, 0), 10, '#d9ccff', 1.3)
+      effects.sparkle(tmp.set(ev.pos.x, 0.8, 0), 12, ['#b28dff', '#ffffff', '#7ad3ff'], 3.5)
+    } else if (ev.type === 'balloon') {
+      // a balloon! Pip grabs the string and floats up over a line of carrots, then it pops
+      game.balloon = { obj: ev.obj, color: ev.color }
+      bunny.float(4.6, 2.55)
+      sound.float()
+      effects.sparkle(tmp.set(game.x, 1.6, 0), 12, [ev.color, '#ffffff'], 3)
     }
-    // Each obstacle of a rhythm rings its own note as Pip passes it, bumped or cleared, so the pattern is heard.
-    if ((ev.type === 'bump' || ev.type === 'cleared') && ev.seg) lessonObstacle(ev)
-    // Calm pass: clearing a log is its own reward; no random "Nice hop!" praise.
   }
 }
 
@@ -1231,21 +1197,26 @@ function updateCamera(dt) {
     py = 1.6
     pz = menuZ()
     lx = game.x + 0.1
-    // sideways tablets: Pip stands a little further off, so his ears clear the words
-    ly = portrait ? 1.45 : innerHeight > 480 ? 1.3 : 1.0
+    // sideways tablets: Pip stands a little further off, so his ears clear the title; sideways
+    // phones look up a little, so he stands low, under it
+    ly = portrait ? 1.45 : 1.3
   } else if (game.state === 'home' || game.state === 'results') {
+    // far enough back that the carrot heap (left), Pip, the burrow and the little bunnies all show
+    const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
     px = HOME_X + 0.8
-    py = 2.4
-    pz = Math.min(view.dist, 13)
+    py = 2.0
+    pz = innerWidth < innerHeight ? clamp(3.5 / (tan * camera.aspect), 8, 15) : Math.min(view.dist, 10.5)
     lx = HOME_X + 0.6
-    ly = 1.4
+    ly = innerWidth < innerHeight ? 1.6 : 1.3
   } else {
     const lead = view.halfW * view.lead
     px = game.x + lead
+    // a spring's bounce goes higher than any hop: the view rises a little more with it
     py = view.height + bunny.y * 0.25
     pz = view.dist
     lx = game.x + lead
-    ly = view.aim + bunny.y * view.follow
+    const short = clamp((560 - innerHeight) / 200, 0, 1)
+    ly = view.aim + bunny.y * view.follow + Math.max(0, bunny.y - 2.4) * (0.35 + short * 0.5)
   }
   if (game.state === 'play') {
     // move with the bunny first, so the easing below doesn't trail behind at speed
@@ -1276,7 +1247,7 @@ function showTrip(progress) {
   tripBunny.style.transform = `translateX(${p * 100}%)`
 }
 
-const probe = { x: 0, y: 0, grounded: true, tumbling: false } // where the bunny is, for the course's hit test
+const probe = { x: 0, y: 0, vy: 0, jumps: 0, grounded: true, tumbling: false } // where the bunny is, for the course's hit test
 let last = performance.now()
 let smokeTimer = 0
 function frame(now) {
@@ -1290,54 +1261,74 @@ function frame(now) {
   if (game.state === 'play') {
     mode = 'run'
     game.slow = Math.min(1, game.slow + dt * 0.7)
-    // the 🐢 pace and a mission's pace never stack: the gentler one wins
-    const pace = Math.min(adventure.pace, game.gentle ? GENTLE : 1)
-    const target = game.asking ? 0 : speedAt(game.x) * game.slow * pace
+    game.dizzy = Math.max(0, game.dizzy - dt)
+    const target = game.dizzy > 0 ? 0 : speedAt(game.x) * game.slow * (game.gentle ? GENTLE : 1)
     game.speed = THREE.MathUtils.damp(game.speed, target, 3, dt)
     game.x += game.speed * dt
+    game.comboTimer -= dt
+    if (bunny.grounded && bunny.tumbleT >= 1) game.stomps = 0
+    // no tap for a while with something to hop over coming: the hand comes back, quietly, until the next hop
+    game.idle += dt
+    if (game.idle > IDLE_HINT && course.items.some((it) => it.kind === 'obstacle' && it.x > game.x && it.x - game.x < 14)) $('tap-hint').classList.remove('gone')
 
     const idx = biomeIndexAt(game.x)
     if (idx !== game.biome) {
       game.biome = idx
       const b = BIOMES[idx]
-      banner(`${b.emoji} ${b.name}!`)
+      banner(b.emoji)
       sound.fanfare()
-      weather.setKind(b.weather)
+      weather.setKind(weatherOf(b))
     }
-    course.generate(game.x + view.halfW * 2 + 30, game.tier)
+    course.generate(game.x + view.halfW * 2 + 30)
+    // Holding repeats a calm wave; the third hop doubles at its apex.
+    if (!holding()) bunny.holdChain = 0
+    if (holding() && (bunny.grounded || (bunny.holdChain > 0 && bunny.holdChain % 3 === 0 && bunny.jumps === 1 && bunny.vy <= 0))) hop(true)
+    friend.update(dt)
+    if (game.balloon) {
+      game.balloon.obj.position.set(game.x + 0.15, bunny.y + 1.35, 0.1)
+      game.balloon.obj.rotation.z = Math.sin(game.time * 2) * 0.1
+      if (bunny.floatT === 0) dropBalloon(true)
+    }
     probe.x = game.x
     probe.y = bunny.y
+    probe.vy = bunny.vy
+    probe.jumps = bunny.jumps
     probe.grounded = bunny.grounded
     probe.tumbling = bunny.tumbleT < 1
+    probe.rapidFlip = bunny.rapidTap && bunny.jumps === 2
     handleEvents(course.update(dt, probe, game.time, game.x - view.halfW - 15))
-    updateLessons(dt)
     if (game.x >= HOME_X - 1.4) finish()
 
     showTrip(clamp(game.x / HOME_X, 0, 1))
   } else if (game.state === 'home' || game.state === 'results') {
-    mode = 'still'
+    mode = 'home'
     game.speed *= Math.pow(0.02, dt)
     game.x = Math.min(HOME_X, game.x + game.speed * dt)
     game.homeTime += dt
-    if (game.state === 'home' && game.homeTime > 3) showResults()
+    if (game.state === 'home' && game.homeTime > 2.5) showResults()
+    const growing = home.sprouts.length > 0 || home.toDrop > 0
+    $('again').setAttribute('aria-disabled', String(growing))
+    $('again').style.opacity = growing ? '0.55' : '1'
     smokeTimer -= dt
     if (world.home && smokeTimer <= 0) {
       smokeTimer = 0.35
       world.chimney(tmp)
       effects.dust.spawn(tmp, tmp2.set(0.3, 1.2, 0), { life: 1.6, size: 0.25, color: '#ffffff', spin: 0, shrink: true })
     }
+    home.update(dt)
     course.update(dt, null, game.time, game.x - view.halfW - 15)
   } else {
     course.update(dt, null, game.time, -1e9)
   }
 
-  // waiting for an answer, Pip stops and turns to look at the child (and stays still while the child thinks)
-  if (game.asking && game.speed < 0.6) mode = 'still'
   const landed = bunny.update(dt, game.state === 'play' ? game.speed : 0, mode)
   if (landed !== 0) {
     tmp.set(game.x, 0, 0)
     effects.puff(tmp, Math.abs(landed) > 9 ? 8 : 4, dustColor(), Math.min(1.3, Math.abs(landed) / 9))
     if (game.state === 'play' && landed > 4) sound.land()
+    // water underfoot: a plink on a stepping stone, or a big splash
+    const wet = game.state === 'play' && course.landing(game.x)
+    if (wet) handleEvents([wet])
     if (landed < 0) sound.hop(false) // landed and bounced straight into a buffered hop
   }
   bunny.root.position.x = game.x
@@ -1353,12 +1344,16 @@ function frame(now) {
   world.flutterSpan = game.state === 'menu' ? (upright ? [-2.4, 2.4] : [1.6, 4.8]) : null
   world.flutterHigh = game.state === 'play' ? 1 : game.state === 'menu' && upright ? 0.22 : 0
   // sideways, the title spans the top of the view: menu butterflies keep to Pip's height, under it
-  world.flutterCeil = game.state === 'menu' && !upright && innerHeight > 480 ? 0.12 : 0.55
+  world.flutterCeil = game.state === 'menu' && !upright ? 0.12 : 0.55
   world.update(dt, camera.position.x, game.x, game.time)
   weather.update(dt, camera.position, game.time)
-  // (on the way only: the home questions and the garden have the snow to themselves)
-  glints.update(dt, camera, weather.kind === 'snow' && game.state === 'play')
+  glints.update(dt, camera, weather.kind === 'snow' && game.state !== 'menu')
   effects.update(dt)
+  const atHome = game.state === 'home' || game.state === 'results'
+  for (const prop of world.items) {
+    const projected = tmp.copy(prop.position).project(camera)
+    prop.visible = !atHome || prop.userData.kind === 'burrow' || (prop.position.z < 1 && projected.y > -0.25)
+  }
   renderer.render(scene, camera)
 }
 
@@ -1366,5 +1361,3 @@ init().catch((err) => {
   console.error(err)
   $('load-bar').style.background = '#ff6b6b'
 })
-
-if (new URLSearchParams(location.search).has('debug')) window.__adventure = { mission: adventure, game }

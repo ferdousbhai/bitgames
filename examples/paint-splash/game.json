@@ -1,17 +1,17 @@
 {
   "id": "paint-splash",
   "title": "Paint Splash",
-  "tagline": "Roll giant paint rollers with up to 4 friends and paint a picture together!",
-  "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller. A dashed chalk shape asks for a colour (\"Paint the fish green!\"), but the pots only hold 🔴🟡🔵, so work out the mix and paint it like a painter, in coats: one paint all over inside the lines, then the other on top while it is still wet and shiny. Swapping pots back and forth still mixes, but careful coats are what move the puzzles on. Red and yellow make orange, yellow and blue make green, red and blue make purple, all three make brown. Painted shapes are inked and kept safe while robot friends paint a frame round the page. The recipe is pictured at first; as you paint carefully it hides behind ❓, two-part shapes (a tree's leaves and trunk) arrive, then puzzles with more than one answer (\"a mix of blue and one more paint\"), then puzzles on two-part shapes and with two conditions (\"a mix with blue but no red\"), and at the top a ⚪ white pot for light colours (\"Paint the heart pink!\": red and white) — but white spoils a colour that should not be light, so you decide when it belongs. At the very top come ratios: \"Paint the sun yellowish orange!\" means more yellow than red, so you lay yellow, then red, then yellow again on top while it shines. After each shape you pick the next one from the card, and every few shapes you choose the colour yourself. Stuck? A ring shows the pot to try, then a still picture of the mix, and if a shape is still too tricky the card offers 🔄 another, easier one. When the page is full, keep painting on a fresh page. There is no clock: tap 🖼️ Finished! when your picture is done, and it is kept in My pictures by itself. Choose ⏳ Quick for a sand timer of free painting with 🌈 rainbow and 💧 water puddles, or open Mix my colours for the colour studio, where older painters get mixing goals (a 🎯 on its button says so).",
+  "tagline": "Roll, throw and splat paint everywhere with up to 4 friends!",
+  "howToPlay": "Drag anywhere to roll your animal's paint roller, tap a pot (red, yellow, blue or rainbow) to change colour, and tap anywhere on the ground to throw a paint ball there. Each round hides surprises such as star, heart and paw stamps, a giant tipping bucket, rainbow and water puddles; tap 🖼️ when the picture is done, or pick ⏳ on the menu for a quick sand-timer round.",
   "emoji": "🎨",
   "color": "#9b5de5",
   "category": "pop",
   "together": true,
   "featured": false,
-  "url": "https://ae3cc8e4-bitgames-paint-splash.ferdousbd.workers.dev/",
+  "url": "https://cd2d8f94-bitgames-paint-splash.ferdousbd.workers.dev/",
   "ages": [
     2,
     8
   ],
-  "learning": "Colour mixing with primaries (secondary colours and brown), tints with white (pink, light blue), ratios (more yellow than red makes a yellowish orange, painted in play and mixed by drops in the colour studio), reasoning from a rule to a colour (including two conditions and elimination), planning in coats while the paint is wet, staying inside the lines, and cooperation"
+  "learning": "Colour mixing by discovery: two wet paints blend where they cross (red and yellow make orange, yellow and blue make green, red and blue make purple), plus playing together"
 }

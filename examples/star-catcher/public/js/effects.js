@@ -152,7 +152,7 @@ export class Particles {
   }
 }
 
-/** "+1" bubbles that float up from where a star was caught. */
+/** Little emoji bubbles (💫) that float up from where something happened. */
 export class Popups {
   constructor(el, camera) {
     this.el = el
@@ -172,38 +172,27 @@ export class Popups {
   }
 }
 
-const numberTextures = new Map()
-
-/**
- * A number (or "?") drawn once into a canvas: dark, round digits on a solid cream plate with a
- * soft gold rim, so 4, 10 and 31 read the same over a star, the night sky or the panel (and the
- * star's face never shows through). `aspect` is width ÷ height, for sizing sprites.
- */
-export function numberTexture(text) {
-  let tex = numberTextures.get(text)
-  if (tex) return tex
-  const h = 96
-  const w = text.length > 1 ? 136 : 96
+let bubbleTexture = null
+/** A soap bubble: a clear middle, a soft rainbow-tinted rim and a shine, drawn once and shared. */
+export function makeBubbleTexture() {
+  if (bubbleTexture) return bubbleTexture
+  const size = 128
   const c = document.createElement('canvas')
-  c.width = w
-  c.height = h
+  c.width = c.height = size
   const g = c.getContext('2d')
-  const r = 40
+  const r = size / 2
+  const rim = g.createRadialGradient(r, r, r * 0.55, r, r, r * 0.98)
+  rim.addColorStop(0, 'rgba(255,255,255,0)')
+  rim.addColorStop(0.7, 'rgba(190,240,255,0.35)')
+  rim.addColorStop(0.9, 'rgba(255,200,240,0.8)')
+  rim.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = rim
+  g.fillRect(0, 0, size, size)
+  g.fillStyle = 'rgba(255,255,255,0.85)'
   g.beginPath()
-  g.roundRect(6, 6, w - 12, h - 12, r)
-  g.fillStyle = '#fff6d8'
+  g.ellipse(r * 0.62, r * 0.55, r * 0.16, r * 0.09, -0.7, 0, Math.PI * 2)
   g.fill()
-  g.lineWidth = 5
-  g.strokeStyle = '#e0b54a'
-  g.stroke()
-  g.font = `900 ${text.length > 1 ? 62 : 66}px ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif`
-  g.textAlign = 'center'
-  g.textBaseline = 'middle'
-  g.fillStyle = '#2a1a5e'
-  g.fillText(text, w / 2, h / 2 + 4)
-  tex = new THREE.CanvasTexture(c)
-  tex.colorSpace = THREE.SRGBColorSpace
-  tex.userData.aspect = w / h
-  numberTextures.set(text, tex)
-  return tex
+  bubbleTexture = new THREE.CanvasTexture(c)
+  bubbleTexture.colorSpace = THREE.SRGBColorSpace
+  return bubbleTexture
 }

@@ -3,7 +3,7 @@ import { rand } from './util.js'
 
 /**
  * Juice: puffs of dust, carrot crumbs, sparkles, confetti, falling petals /
- * leaves / snow / fireflies, and "+1" pop-ups. Each kind of particle lives in
+ * leaves / snow / fireflies. Each kind of particle lives in
  * one pooled InstancedMesh, so nothing is allocated while playing.
  */
 const colorCache = new Map()
@@ -115,6 +115,15 @@ export class Effects {
       const b = rand(-1, 1)
       this.v.set(Math.cos(a) * speed * rand(0.5, 1), b * speed * 0.7 + 1, Math.sin(a) * speed * 0.5)
       this.sparks.spawn(at, this.v, { life: rand(0.4, 0.8), size: rand(0.08, 0.16), color: colors[i % colors.length], spin: 6 })
+    }
+  }
+
+  /** Drops of water thrown up and out of a puddle or a stream. */
+  splash(at, count, color) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2
+      this.v.set(Math.cos(a) * rand(0.8, 2.6), rand(2.5, 5.5), Math.sin(a) * rand(0.6, 1.8))
+      this.bits.spawn(at, this.v, { life: rand(0.4, 0.7), size: rand(0.06, 0.12), color: i % 3 ? color : '#ffffff', spin: 4 })
     }
   }
 
@@ -245,52 +254,6 @@ export class Weather {
       this.mesh.setMatrixAt(i, d.matrix)
     })
     this.mesh.instanceMatrix.needsUpdate = true
-  }
-}
-
-/** "+1", "Yum!" and friends float up from a point in the 3D world. */
-export class Popups {
-  constructor(layer, camera) {
-    this.layer = layer
-    this.camera = camera
-    this.v = new THREE.Vector3()
-    this.counter = null
-    this.minTop = 0 // px: words start below the score and trip bar, so they never hide behind them
-  }
-
-  /**
-   * `count`: a running tally ("+1", "+2", "+3"…) that reuses the last one while it's
-   * still showing, so a row of carrots counts up in one spot instead of piling up.
-   */
-  show(text, at, cls = '', count = false) {
-    this.v.copy(at).project(this.camera)
-    if (this.v.z > 1) return
-    let el = count && this.counter?.isConnected ? this.counter : null
-    if (el) {
-      clearTimeout(el.timer)
-      el.style.animation = 'none'
-      void el.offsetWidth
-      el.style.animation = ''
-    } else {
-      el = document.createElement('div')
-      this.layer.appendChild(el)
-    }
-    if (count) this.counter = el
-    el.className = `popup ${cls}`
-    el.textContent = text
-    // a little sideways jiggle, so quick words don't stack into one blob
-    el.style.left = `calc(${((this.v.x + 1) / 2) * 100}% + ${count ? 0 : Math.round(rand(-22, 22))}px)`
-    el.style.top = `${Math.max(this.minTop, ((1 - this.v.y) / 2) * innerHeight)}px`
-    // A word that would land on the carrot count (both pushed down under the HUD
-    // on a big hop) steps out to its right, so "+3" and "Yummy!" don't mash together.
-    const c = this.counter
-    if (!count && c?.isConnected && c !== el) {
-      const gap = ((c.offsetWidth + el.offsetWidth) / 2) * 1.2 + 6 // they swell to 1.2x as they pop
-      if (Math.abs(el.offsetLeft - c.offsetLeft) < gap && Math.abs(el.offsetTop - c.offsetTop) < (c.offsetHeight + el.offsetHeight) / 2) {
-        el.style.left = `${c.offsetLeft + gap}px`
-      }
-    }
-    el.timer = setTimeout(() => el.remove(), 1000)
   }
 }
 

@@ -1,7 +1,7 @@
 /**
  * Where the child wants to roll, as a vector on screen (x right, y down, length
  * 0..1). Touch or mouse: press anywhere on the playground and drag; a joystick
- * appears under the finger. Keyboard: arrows or WASD. Gamepads: left stick.
+ * appears under the finger. A quick tap without dragging emits 'tap' with where it was ({ x, y }, CSS pixels). Keyboard: arrows or WASD. Gamepads: left stick.
  */
 const MAX_PX = 64
 const DEAD_PX = 6
@@ -27,10 +27,15 @@ export class Input {
     })
     addEventListener('pointerdown', (e) => this.down(e), { passive: false })
     addEventListener('pointermove', (e) => this.move(e), { passive: false })
-    addEventListener('pointerup', (e) => e.pointerId === this.stick.id && this.release())
+    addEventListener('pointerup', (e) => {
+      if (e.pointerId !== this.stick.id) return
+      // A quick tap (no drag) is its own action: a splat.
+      if (performance.now() - this.stick.at < 260 && this.stick.far < 14) this.emit('tap', { x: e.clientX, y: e.clientY })
+      this.release()
+    })
     addEventListener('pointercancel', (e) => e.pointerId === this.stick.id && this.release())
     // iPad: a finger held still would otherwise bring up the magnifier or callout.
-    addEventListener('touchstart', (e) => this.enabled && !e.target.closest?.('button, .screen') && e.preventDefault(), { passive: false })
+    addEventListener('touchstart', (e) => this.enabled && e.cancelable && !e.target.closest?.('button, .screen') && e.preventDefault(), { passive: false })
   }
 
   on(event, fn) {
@@ -44,9 +49,9 @@ export class Input {
   down(e) {
     if (!this.enabled || this.stick.id !== null) return
     if (e.target.closest?.('button, .screen, .panel')) return
-    e.preventDefault()
+    if (e.cancelable) e.preventDefault()
     this.emit('touch')
-    Object.assign(this.stick, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0 })
+    Object.assign(this.stick, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0, at: performance.now(), far: 0 })
     this.stickEl.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`
     this.knobEl.style.transform = 'translate(0px, 0px)'
     this.stickEl.classList.remove('hidden')
@@ -54,10 +59,11 @@ export class Input {
 
   move(e) {
     if (e.pointerId !== this.stick.id) return
-    e.preventDefault()
+    if (e.cancelable) e.preventDefault()
     let dx = e.clientX - this.stick.ox
     let dy = e.clientY - this.stick.oy
     const d = Math.hypot(dx, dy)
+    this.stick.far = Math.max(this.stick.far, d)
     // Dragging past the edge pulls the stick along, so the finger never runs out of room.
     if (d > MAX_PX * 1.4) {
       const pull = (d - MAX_PX * 1.4) / d

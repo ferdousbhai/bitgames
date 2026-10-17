@@ -42,8 +42,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .city:hover, .city:focus-visible { transform: translateY(-4px) rotate(-1.5deg); }
 .city.selected { border-color: #ffbe0b; box-shadow: 0 0 0 6px rgba(255,190,11,0.6), 0 7px 0 rgba(0,0,0,0.3); }
 .city .emoji { font-size: 64px; line-height: 1.1; display: block; }
-.city .name { font-size: 26px; font-weight: 900; display: block; }
-.city .blurb { font-size: 15px; opacity: .95; display: block; }
+.city .more { font-size: 30px; line-height: 1; display: block; margin-top: -4px; }
 
 .options { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; font-size: 20px; font-weight: 800; }
 .laps button, .chip { background: rgba(255,255,255,0.2); border-radius: 999px; padding: 8px 16px; margin-left: 4px; font-weight: 800; font-size: 20px; }
@@ -68,7 +67,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* The real car, rendered from its Blender model (see portraits.js). */
 .pic { display: block; width: 100%; height: auto; aspect-ratio: 240 / 168; pointer-events: none; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
 .car-pick .pic { margin: -4px 0 -2px; }
-.car-pick .name { font-size: 15px; font-weight: 800; display: block; white-space: nowrap; }
 .car-pick.selected { background: #ffbe0b; color: #2b2d42; border-color: #fff; transform: scale(1.07); }
 .car-pick .taken { position: absolute; top: -10px; right: -8px; font-size: 22px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
@@ -155,7 +153,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @media (min-width: 900px) {
   .cities { flex-wrap: nowrap; }
   .city { width: min(18vw, 220px); }
-  .city .name { font-size: min(26px, 2.3vw); }
 }
 /* Tablets held sideways (4:3) and short desktop windows: a tighter menu, so the places sit clear of GO. */
 @media (min-width: 900px) and (max-height: 820px) {
@@ -165,7 +162,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .mode { padding: 8px 24px; }
   .city { padding: 8px 8px 10px; }
   .city .emoji { font-size: 46px; }
-  .city .blurb { font-size: 13px; }
 }
 /* Tablets: bigger in-race buttons and labels for small fingers and eyes. */
 @media (any-pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
@@ -188,7 +184,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .podium .place .who { min-width: 0; }
   .podium .podium-pic { width: 58px; margin: -6px -6px; }
   .car-pick { width: calc((100vw - 52px) / 3); max-width: 118px; padding: 6px 4px 8px; }
-  .car-pick .name { font-size: 14px; }
   /* Race and Bumpers share the top row. */
   .mode { font-size: 17px; padding: 6px 10px; gap: 4px; } .mode span { font-size: 22px; }
   #menu .modes { gap: 5px; }
@@ -199,8 +194,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .cities { gap: 8px; }
   .city { width: calc((100vw - 48px) / 3); padding: 8px 4px 10px; border-radius: 20px; border-width: 4px; }
   .city .emoji { font-size: 40px; }
-  .city .name { font-size: 16px; }
-  .city .blurb { display: none; }
+  .city .more { font-size: 22px; }
   /* Laps and Easy mode share one row, above GO rather than hidden under it. */
   .options { gap: 6px; font-size: 17px; flex-wrap: nowrap; }
   .laps button, .chip { font-size: 17px; padding: 6px 12px; margin-left: 2px; white-space: nowrap; }
@@ -231,8 +225,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   .screen h1 { font-size: 30px; }
   .cities, .car-row { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; justify-content: flex-start; padding: 10px 14px; }
   .city { flex: 0 0 auto; width: 142px; padding: 6px 6px 8px; border-radius: 18px; border-width: 4px; }
-  .city .emoji { font-size: 30px; } .city .name { font-size: 16px; } .city .blurb { display: none; }
-  .car-pick { flex: 0 0 auto; width: 104px; padding: 2px 4px 6px; } .car-pick .emoji { font-size: 30px; } .car-pick .name { font-size: 13px; }
+  .city .emoji { font-size: 30px; } .city .more { font-size: 20px; }
+  .car-pick { flex: 0 0 auto; width: 104px; padding: 2px 4px 6px; } .car-pick .emoji { font-size: 30px; }
   .car-pick .pic { width: 84px; margin: -4px auto -4px; }
   .podium .podium-pic { width: 60px; }
   .mode { font-size: 18px; padding: 6px 16px; } .mode span { font-size: 24px; }
@@ -280,47 +274,11 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* Easy cars are gentle and never dented, so 🔧 has nothing to do; the camera switch is one more button than the youngest need. */
 #hud.easy #fix-btn, #hud.easy [data-touch="camera"] { display: none; }
 #hud.smash #park-btn { display: block; }
-/* The gates' map step (gates.js `mapped`): a bigger minimap, as the houses are found on it. */
-#hud.mapped #minimap { width: min(200px, 40vw, 40vh); height: min(200px, 40vw, 40vh); border-radius: 16%; }
 
-
-/* --- Present gates (Race and Bumpers, 2026-10-11): the house of the gate coming up between its two presents --- */
-.gate-pick { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; pointer-events: auto; --gate: min(calc(var(--tb) * 0.9), 22vw); }
-@media (any-pointer: coarse) { .gate-pick { bottom: calc(var(--tb) + 40px + env(safe-area-inset-bottom)); } }
-.lane-pick { position: relative; width: var(--gate); height: var(--gate); border-radius: 22px; padding: 0; background: #fff; border: 5px solid #fff; box-shadow: 0 5px 0 rgba(0,0,0,.28); touch-action: manipulation; }
-.lane-pick .picture { display: grid; place-items: center; width: 100%; height: 100%; font-size: calc(var(--gate) * 0.5); line-height: 1; }
-.lane-pick .way { position: absolute; bottom: -8px; width: 28px; height: 28px; border-radius: 50%; background: #2b2d42; color: #fff; font-size: 14px; display: grid; place-items: center; }
-.lane-left .way { left: -8px; } .lane-right .way { right: -8px; }
-.lane-pick.chosen { border-color: #ffbe0b; box-shadow: 0 0 0 4px #fff, 0 5px 0 rgba(0,0,0,.28); }
-.gate-house { display: grid; place-items: center; width: calc(var(--gate) * 0.72); height: calc(var(--gate) * 0.72); border-radius: 50%; background: #fff; border: 5px solid var(--tint, #fff); box-shadow: 0 4px 0 rgba(0,0,0,.28); font-size: calc(var(--gate) * 0.38); line-height: 1; }
-.gate-recap { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: min(560px, 92vw); }
-.gate-recap .gate { display: flex; align-items: center; gap: 2px; padding: 4px 10px 4px 4px; border-radius: 999px; background: rgba(255,255,255,.18); font-size: 26px; line-height: 1; }
-.gate-recap .gate b { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 3px solid var(--tint, #fff); font-size: 22px; }
-.gate-recap .gate i { font-style: normal; }
-.gate-recap .gate.right { box-shadow: 0 0 0 3px #ffbe0b; }
-/* A miss: the present that house wanted, faint and small beside the one chosen. */
-.gate-recap .gate u { text-decoration: none; font-size: .7em; opacity: .55; margin-left: 4px; padding-left: 6px; border-left: 2px dashed rgba(255,255,255,.6); }
-@media (max-height: 500px) and (orientation: landscape) { .gate-pick { --gate: min(64px, 14vw); bottom: calc(70px + env(safe-area-inset-bottom)); } .gate-recap .gate { font-size: 20px; } .gate-recap .gate b { width: 30px; height: 30px; font-size: 17px; } }
 
 /* A small, quiet word at the top (a mystery box): never big, never over the gate buttons. */
 .note { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 4px 14px; border-radius: 999px; background: rgba(43,45,66,.45); font-size: 22px; line-height: 1.3; opacity: 0; transition: opacity .4s; pointer-events: none; }
 .note.show { opacity: 1; }
-/* Race results: the gates the child drove under come first, big enough to read. */
-.gate-recap { margin: 2px 0 10px; gap: 10px; }
-.gate-recap .gate { font-size: 34px; padding: 6px 14px 6px 6px; gap: 4px; background: rgba(255,255,255,.24); }
-.gate-recap .gate b { width: 52px; height: 52px; font-size: 30px; border-width: 4px; }
-.gate-recap .gate.right { box-shadow: 0 0 0 4px #ffbe0b; }
-@media (max-height: 500px) and (orientation: landscape) { .gate-recap { margin: 0 0 4px; } .gate-recap .gate { font-size: 22px; padding: 3px 10px 3px 3px; } .gate-recap .gate b { width: 34px; height: 34px; font-size: 19px; } }
-
-/* Polish round 2 (2026-10-11): three-lane gates, a cream map card in every race, quiet car chips on the results. */
-/* Three presents: the house sits above the middle one, as it does on the gantry. */
-.gate-pick.three .gate-house { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: calc(var(--gate) * 0.6); height: calc(var(--gate) * 0.6); font-size: calc(var(--gate) * 0.32); }
-.lane-middle .way { left: 50%; transform: translateX(-50%); }
-/* Held sideways: the presents sit up under the gantry, clear of the car and its splash. */
-@media (orientation: landscape) and (min-aspect-ratio: 5/4) {
-  .gate-pick, .gate-pick.three { top: calc(64px + env(safe-area-inset-top)); bottom: auto; }
-  .gate-pick.three { top: calc(64px + var(--gate) * 0.6 + 8px + env(safe-area-inset-top)); }
-}
 /* The race map is an opaque card, so the pins and dots read over any scenery. */
 #minimap { background: #f7efdc; border-radius: 16%; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
 /* The cars at the end: one row of small chips, in the order they lined up, with no place or colour picked out above the rest. */
@@ -332,34 +290,94 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* Real race first (2026-10-12): the child's place in the HUD, and a podium in finishing order. */
 .place-pill { gap: 8px; }
 .place-pill .rank { color: #ffd35a; }
-.place-pill .of { font-size: .7em; opacity: .9; margin-left: -4px; }
 .place-pill .order { display: flex; gap: 2px; margin-left: 4px; }
 .place-pill .order > span { display: block; width: 40px; border-radius: 10px; padding: 0 1px; }
 .place-pill .order > span.me { background: rgba(255,255,255,.28); box-shadow: 0 0 0 2px #fff; }
 .place-pill .order-pic { width: 100%; filter: none; }
 .place-pill .order .emoji { font-size: 20px; }
-.podium.ranked { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 6px; width: min(520px, 92vw); }
-.podium.ranked .place { border-radius: 20px; padding: 4px 16px 4px 8px; gap: 10px; font-size: 20px; animation: arrive .5s ease-out both; }
-.podium.ranked .place:nth-child(2) { animation-delay: .25s; } .podium.ranked .place:nth-child(3) { animation-delay: .5s; } .podium.ranked .place:nth-child(4) { animation-delay: .75s; }
-.podium.ranked.settled .place { animation: none; }
-.podium.ranked .medal { font-size: 30px; min-width: 40px; text-align: center; font-weight: 900; }
-.podium.ranked .podium-pic { width: 64px; }
-.podium.ranked .place.winner { background: linear-gradient(90deg, rgba(255,211,90,.55), rgba(255,190,11,.25)); font-size: 24px; padding: 8px 18px 8px 8px; }
-.podium.ranked .place.winner .podium-pic { width: 92px; }
-.podium.ranked .place.winner .medal { font-size: 40px; }
-.podium.ranked .place.me { box-shadow: 0 0 0 3px #fff; }
-.podium.ranked .place .extra { font-size: 24px; }
+/* Fun pass (2026-10-16): a real podium, the winner on the tall middle step. */
+.podium.ranked { flex-direction: row; flex-wrap: nowrap; align-items: flex-end; justify-content: center; gap: 6px; width: min(600px, 96vw); }
+.podium.ranked .step { flex: 1 1 0; max-width: 150px; display: flex; flex-direction: column; align-items: center; animation: drop .6s cubic-bezier(.3,1.5,.5,1) both; }
+.podium.ranked .step .who { font-size: 28px; line-height: 1; }
+.podium.ranked .step .podium-pic { width: 100%; margin: 0 0 -6px; }
+.podium.ranked .step .block { width: 100%; display: grid; place-items: start center; padding-top: 6px; border-radius: 14px 14px 0 0; font-size: 40px; font-weight: 900; color: #2b2d42;
+  background: linear-gradient(#fff, #e6e1f5); box-shadow: inset 0 -6px 0 rgba(0,0,0,.12), 0 0 0 4px var(--ring, #fff); }
+.podium.ranked .p1 .block { height: 150px; background: linear-gradient(#ffe68a, #ffbe0b); }
+.podium.ranked .p2 .block { height: 110px; background: linear-gradient(#f4f6fb, #c9cfdd); }
+.podium.ranked .p3 .block { height: 80px; background: linear-gradient(#ffd2a8, #e3965a); }
+.podium.ranked .p4 .block, .podium.ranked .step:nth-child(n+5) .block { height: 52px; font-size: 28px; }
+.podium.ranked .p1 .podium-pic { transform: scale(1.15); transform-origin: bottom; }
+.podium.ranked .step.me .who::after { content: '⭐'; font-size: .7em; vertical-align: top; }
+.podium.ranked .step.me .podium-pic { filter: drop-shadow(0 0 6px #fff) drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
+.podium.ranked .step.racing { opacity: .65; }
+.podium.ranked .step:nth-child(1) { animation-delay: .35s; } .podium.ranked .step:nth-child(2) { animation-delay: .7s; }
+.podium.ranked .step:nth-child(3) { animation-delay: .15s; } .podium.ranked .step:nth-child(4) { animation-delay: 0s; }
+.podium.ranked.settled .step { animation: none; }
+@keyframes drop { from { opacity: 0; transform: translateY(-60px); } to { opacity: 1; transform: none; } }
+.screen h1#results-title { font-size: clamp(56px, 12vw, 110px); line-height: 1; }
 .party { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 20; }
 .party i { position: absolute; top: -30px; width: 12px; height: 18px; border-radius: 6px 0; opacity: .9; animation: fall linear forwards; }
 @keyframes fall { to { transform: translate3d(var(--dx), 110vh, 0) rotate(var(--spin)); } }
 @media (max-width: 500px), (max-height: 500px) {
   .place-pill .order > span { width: 28px; }
-  .podium.ranked .place { font-size: 16px; padding: 2px 12px 2px 4px; }
-  .podium.ranked .place.winner { font-size: 18px; padding: 4px 12px 4px 4px; }
-  .podium.ranked .podium-pic { width: 48px; } .podium.ranked .place.winner .podium-pic { width: 64px; }
-  .podium.ranked .medal { font-size: 22px; min-width: 30px; } .podium.ranked .place.winner .medal { font-size: 28px; }
+  .podium.ranked .step .who { font-size: 20px; }
+  .podium.ranked .step .block { font-size: 28px; }
+  .podium.ranked .p1 .block { height: 96px; } .podium.ranked .p2 .block { height: 70px; } .podium.ranked .p3 .block { height: 50px; }
+  .podium.ranked .p4 .block, .podium.ranked .step:nth-child(n+5) .block { height: 36px; font-size: 22px; }
 }
-@media (prefers-reduced-motion: reduce) { .podium.ranked .place { animation: none; } }
+@media (max-height: 500px) and (orientation: landscape) { .screen h1#results-title { font-size: 44px; } }
+@media (prefers-reduced-motion: reduce) { .podium.ranked .step { animation: none; } }
 /* The quiet note (a mystery box) never sits on the place and lap pills: below them when upright, beside them when sideways. */
 @media (orientation: portrait) { .note { top: calc(66px + env(safe-area-inset-top)); } }
 @media (orientation: landscape) { .note { left: 64%; } }
+
+/* Fun pass (2026-10-16): the place badge, the ⚡ button and the menu as pictures. */
+.place-pill .rank { font-size: 1.25em; min-width: 1.2em; text-align: center; }
+.place-pill .rank.pop { animation: pop .5s cubic-bezier(.3,1.8,.5,1); }
+@keyframes pop { 40% { transform: scale(1.6); } }
+/* Easy mode: one big ⚡ on the rainbow's side of the road; a tap takes the car through it. */
+.gate-pick { position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); left: 50%; --gate: min(var(--tb), 24vw, 120px);
+  transform: translateX(calc(-100% - 6px)); display: flex; align-items: center; gap: 2px; padding: 0 10px; height: var(--gate); border-radius: 30px; pointer-events: auto; touch-action: manipulation;
+  background: linear-gradient(135deg, #ff5d6c, #ffb23f, #ffe45c, #7ed957, #5cc8ff, #a98bff); border: 5px solid #fff; box-shadow: 0 6px 0 rgba(0,0,0,.28); animation: shimmer 1.6s ease-in-out infinite; }
+.gate-pick.right { transform: translateX(6px); flex-direction: row-reverse; }
+.gate-pick .bolt { font-size: calc(var(--gate) * 0.6); line-height: 1; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
+.gate-pick .arrow::before { content: '◀'; font-size: calc(var(--gate) * 0.3); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+.gate-pick.right .arrow::before { content: '▶'; }
+.gate-pick.chosen { animation: none; box-shadow: 0 0 0 6px #ffd35a, 0 6px 0 rgba(0,0,0,.28); }
+@keyframes shimmer { 50% { box-shadow: 0 6px 0 rgba(0,0,0,.28), 0 0 22px 6px rgba(255,228,92,.75); } }
+@media (any-pointer: coarse) { .gate-pick { bottom: calc(var(--tb) + 36px + env(safe-area-inset-bottom)); } }
+@media (max-height: 500px) and (orientation: landscape) { .gate-pick { --gate: min(70px, 16vw); bottom: calc(72px + env(safe-area-inset-bottom)); } }
+@media (prefers-reduced-motion: reduce) { .gate-pick, .place-pill .rank.pop { animation: none; } }
+.mode { padding: 10px 22px; } .mode span { font-size: 40px; line-height: 1; }
+#go { font-size: clamp(44px, 8vw, 64px); padding: 6px 64px; line-height: 1.1; }
+.laps { display: flex; align-items: center; gap: 2px; } .laps > span { font-size: 26px; margin-right: 2px; }
+.laps button { letter-spacing: -2px; color: #fff; }
+.chip { font-size: 26px; padding: 4px 16px; }
+.loading-cars { font-size: 44px; min-height: 56px; letter-spacing: 6px; }
+#waiting-text { font-size: 60px; }
+.podium .place .who { font-size: 26px; }
+/* 🅿️ and the race's 🔊: hold while a ring fills; a quick tap only wiggles the button. */
+#park-btn, #sound-btn, #easy-gas, #menu-sound { position: relative; overflow: visible; touch-action: none; }
+#park-btn::before, #sound-btn::before, #easy-gas::before, #menu-sound::before { content: ''; position: absolute; inset: -5px; border-radius: 20px; opacity: 0; pointer-events: none;
+  background: conic-gradient(#ffd23f calc(var(--hold, 0) * 360deg), transparent 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; padding: 5px; }
+#park-btn.holding::before, #sound-btn.holding::before, #easy-gas.holding::before, #menu-sound.holding::before { opacity: 1; }
+#park-btn.holding, #sound-btn.holding, #easy-gas.holding, #menu-sound.holding { transform: scale(1.1); }
+#park-btn.nudge, #sound-btn.nudge, #easy-gas.nudge, #menu-sound.nudge { animation: nudge .4s; }
+@keyframes nudge { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+@media (prefers-reduced-motion: reduce) { #park-btn.nudge, #sound-btn.nudge, #easy-gas.nudge, #menu-sound.nudge { animation: none; } }
+#easy-gas::before, #menu-sound::before { border-radius: 999px; }
+.countdown.go { font-size: clamp(60px, 14vw, 120px); align-items: flex-start; padding-top: 18vh; }
+/* Tablets held sideways: with every button showing (Easy off), the column becomes two, clear of ◀. */
+@media (any-pointer: coarse) and (orientation: landscape) and (min-height: 501px) and (max-height: 900px) {
+  .hud-buttons { display: grid; grid-template-columns: repeat(2, auto); grid-auto-flow: row; }
+}
+/* Bumpers results: each car with its bumps as a row of 💥. */
+.podium:not(.ranked) { flex-direction: column; align-items: stretch; width: min(560px, 94vw); }
+.podium .place.bumper { border-radius: 20px; padding: 4px 14px 4px 6px; animation: drop .6s cubic-bezier(.3,1.5,.5,1) both; }
+.podium .place.bumper:nth-child(2) { animation-delay: .2s; } .podium .place.bumper:nth-child(3) { animation-delay: .4s; } .podium .place.bumper:nth-child(4) { animation-delay: .6s; }
+.podium .place.bumper .booms { margin-left: auto; font-size: 22px; letter-spacing: -6px; text-align: right; line-height: 1.1; }
+.podium .place.bumper .booms b { letter-spacing: 0; margin-left: 10px; font-size: 24px; }
+@media (max-width: 500px), (max-height: 500px) { .podium .place.bumper .booms { font-size: 15px; letter-spacing: -4px; } }
+@media (prefers-reduced-motion: reduce) { .podium .place.bumper { animation: none; } }
+.podium.settled .place.bumper { animation: none; }

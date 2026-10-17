@@ -145,6 +145,14 @@ export class Effects {
       gravity: 0.1,
       drag: 0.1,
     })
+    // Paper confetti for a giant balloon's burst
+    this.bits = new Pool(scene, {
+      count: 120,
+      geometry: new THREE.PlaneGeometry(0.16, 0.1),
+      material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+      gravity: 3.5,
+      drag: 1.4,
+    })
     // Curled scraps of balloon rubber
     const shred = new THREE.CircleGeometry(0.22, 5, 0, Math.PI * 0.9)
     this.shreds = new Pool(scene, {
@@ -225,8 +233,7 @@ export class Effects {
   }
 
   /**
-   * One soft moment for a finished level or mission: a few slow petals of colour drift down
-   * from the top of the screen (calm pass: replaces the 160-piece confetti shower).
+   * A new balloon friend on its way: a few slow petals of colour drift down from the top of the screen.
    */
   drift(halfWidth, top, amount = 18) {
     const p = this.tmp.clone()
@@ -235,6 +242,15 @@ export class Effects {
       p.set((Math.random() * 2 - 1) * halfWidth * 0.9, top + Math.random() * 1.5, Math.random() * 2 - 1)
       v.set((Math.random() - 0.5) * 0.6, -0.6 - Math.random() * 0.6, 0)
       this.petals.spawn(p, v, { life: 5 + Math.random() * 1.5, size: 1 + Math.random() * 0.4, color: pick(CONFETTI), spin: 1.5 })
+    }
+  }
+
+  /** A burst of paper confetti that flutters down: only for a giant balloon, so it stays a treat. */
+  confetti(pos, n = 30) {
+    const v = this.tmp.clone()
+    for (let i = 0; i < n; i++) {
+      v.set(Math.random() - 0.5, Math.random() * 0.8 - 0.1, Math.random() - 0.5).normalize().multiplyScalar(5 + Math.random() * 4)
+      this.bits.spawn(pos, v, { life: 1.8 + Math.random() * 0.8, size: 1.4 + Math.random() * 0.8, color: pick(CONFETTI), spin: 8 })
     }
   }
 
@@ -283,6 +299,7 @@ export class Effects {
   update(dt) {
     this.leafBits.update(dt, this.camera)
     this.petals.update(dt, this.camera)
+    this.bits.update(dt, this.camera)
     this.shreds.update(dt, this.camera)
     this.puffs.update(dt, this.camera)
     this.smokePuffs.update(dt, this.camera)

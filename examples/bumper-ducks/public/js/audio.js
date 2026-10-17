@@ -97,38 +97,39 @@ export class Audio {
     osc.stop(t + decay + 0.05)
   }
 
-  /** The rubber duck squeak: a soft whistle up and back down (a triangle wave: round, never buzzy). */
+  /** The rubber duck squeak: a squeezed, wobbly whistle up and back down. */
   squeak(pitch = 1, delay = 0) {
     if (!this.ready) return
     const ctx = this.ctx
     const t = ctx.currentTime + delay
     const osc = ctx.createOscillator()
-    osc.type = 'triangle'
+    osc.type = 'square'
     const f = 950 * pitch * (0.92 + Math.random() * 0.16)
     osc.frequency.setValueAtTime(f * 0.8, t)
     osc.frequency.exponentialRampToValueAtTime(f * 1.35, t + 0.07)
     osc.frequency.exponentialRampToValueAtTime(f * 0.9, t + 0.2)
     const bp = ctx.createBiquadFilter()
     bp.type = 'bandpass'
-    bp.frequency.value = f * 1.2
-    bp.Q.value = 1
+    bp.frequency.value = f * 1.4
+    bp.Q.value = 3
     const g = ctx.createGain()
     g.gain.setValueAtTime(0.0001, t)
-    g.gain.exponentialRampToValueAtTime(0.16, t + 0.02)
-    g.gain.setValueAtTime(0.13, t + 0.14)
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.02)
+    g.gain.setValueAtTime(0.21, t + 0.14)
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24)
     osc.connect(bp).connect(g).connect(this.master)
     osc.start(t)
     osc.stop(t + 0.3)
-    this.burst({ freq: f * 2, q: 4, gain: 0.03, decay: 0.15, delay })
+    this.burst({ freq: f * 2, q: 4, gain: 0.05, decay: 0.15, delay })
   }
 
-  /** BONK: a rubbery thump plus one soft squeak (bonks are frequent: kept low). */
+  /** BONK: a rubbery thump plus a squeak from each duck. */
   bonk(strength = 1) {
     const s = Math.min(1.5, strength)
     this.tone({ freq: 160, type: 'sine', gain: 0.35 * s, decay: 0.18, slide: -90 })
     this.tone({ freq: 320, type: 'triangle', gain: 0.15 * s, decay: 0.12, slide: 240 })
-    this.squeak(1 + Math.random() * 0.25, 0.02)
+    this.squeak(1, 0.02)
+    this.squeak(1.25, 0.12)
   }
 
   quack(pitch = 1) {
@@ -137,7 +138,7 @@ export class Audio {
       const ctx = this.ctx
       const t = ctx.currentTime + i * 0.17
       const osc = ctx.createOscillator()
-      osc.type = 'triangle'
+      osc.type = 'sawtooth'
       osc.frequency.setValueAtTime(330 * pitch, t)
       osc.frequency.exponentialRampToValueAtTime(220 * pitch, t + 0.13)
       const f = ctx.createBiquadFilter()
@@ -147,7 +148,7 @@ export class Audio {
       f.Q.value = 2
       const g = ctx.createGain()
       g.gain.setValueAtTime(0.0001, t)
-      g.gain.exponentialRampToValueAtTime(0.3, t + 0.015)
+      g.gain.exponentialRampToValueAtTime(0.4, t + 0.015)
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15)
       osc.connect(f).connect(g).connect(this.master)
       osc.start(t)
@@ -175,16 +176,11 @@ export class Audio {
   }
 
   /** A bubble pops: a quick rising plip on a note of the scale (`run` walks the scale). */
-  bubble(run = 0) {
-    this.tone({ freq: 600 + Math.random() * 80, type: 'sine', gain: 0.18, decay: 0.08, slide: 900 })
-    this.tone({ freq: note(Math.min(run, 12), 784), type: 'triangle', gain: 0.1, decay: 0.2, delay: 0.03 })
+  bubble(run = 0, delay = 0) {
+    this.tone({ freq: 600 + Math.random() * 80, type: 'sine', gain: 0.18, decay: 0.08, slide: 900, delay })
+    this.tone({ freq: note(Math.min(run, 12), 784), type: 'triangle', gain: 0.1, decay: 0.2, delay: delay + 0.03 })
   }
 
-  /** A bubble the jar can't take: a soft two-note "uh-uh" that says not this one, never a buzzer. */
-  nope() {
-    this.tone({ freq: 440, type: 'sine', gain: 0.1, decay: 0.16 })
-    this.tone({ freq: 370, type: 'sine', gain: 0.09, decay: 0.22, delay: 0.17 })
-  }
   star() {
     for (let i = 0; i < 6; i++) this.tone({ freq: note(5 + i * 2), type: 'triangle', gain: 0.12, decay: 0.3, delay: i * 0.05 })
   }
@@ -221,7 +217,24 @@ export class Audio {
     this.tone({ freq: 660, type: 'triangle', gain: 0.18, decay: 0.12, slide: 300 })
   }
 
+  beep(high = false) {
+    // Calm pass: a soft sine and triangle count-in (was a square-wave beep).
+    this.tone({ freq: high ? 784 : 523, type: 'sine', gain: 0.16, decay: high ? 0.6 : 0.3 })
+    this.tone({ freq: high ? 784 : 523, type: 'triangle', gain: 0.05, decay: high ? 0.5 : 0.25 })
+  }
+
   /** The round is over: a slow rising arpeggio that settles (calm pass: no square wave or crackle). */
+  /** The results: a short, bright fanfare that climbs and lands on a happy chord, with a squeak. */
+  fanfare() {
+    const tune = [0, 2, 4, 5, 7]
+    tune.forEach((s, i) => {
+      this.tone({ freq: note(s, 523.25), type: 'triangle', gain: 0.13, decay: i === 4 ? 0.9 : 0.16, delay: i * 0.1 })
+      this.tone({ freq: note(s, 1046.5), type: 'sine', gain: 0.05, decay: 0.12, delay: i * 0.1 })
+    })
+    this.chord(0.55)
+    this.squeak(1.25, 0.6)
+  }
+
   cheer() {
     const tune = [0, 2, 4, 7]
     tune.forEach((s, i) => this.tone({ freq: note(s, 392), type: 'triangle', gain: 0.1, decay: 0.7, delay: i * 0.18, attack: 0.02 }))
@@ -234,10 +247,11 @@ export class Audio {
   }
 
   /** The music loop, scheduled a little ahead each frame, at one steady, unhurried tempo. */
-  updateMusic(playing) {
+  /** The tune; in the bubble shower (`party`) it lifts a little and a soft shaker joins in. */
+  updateMusic(playing, party = false) {
     if (!this.ready || !playing || !this.musicOn) return
     const ctx = this.ctx
-    const step = this.tempo
+    const step = party ? 0.18 : this.tempo
     if (this.nextBeat < ctx.currentTime) this.nextBeat = ctx.currentTime + 0.05
     while (this.nextBeat < ctx.currentTime + 0.25) {
       const b = this.beat++
@@ -247,6 +261,7 @@ export class Audio {
       const bar = Math.floor(b / 8) % BASS.length
       if (b % 4 === 0) this.tone({ freq: note(BASS[bar], 130.8), type: 'sine', gain: 0.32, decay: 0.25, delay: t, out: this.musicBus })
       if (b % 4 === 2) this.tone({ freq: note(BASS[bar] + 2, 130.8), type: 'sine', gain: 0.2, decay: 0.18, delay: t, out: this.musicBus })
+      if (party) this.burst({ freq: 7000, q: 0.8, type: 'highpass', gain: b % 2 ? 0.06 : 0.1, decay: 0.05, delay: t, out: this.musicBus })
       this.nextBeat += step
     }
   }

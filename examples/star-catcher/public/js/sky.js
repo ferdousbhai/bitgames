@@ -1,260 +1,282 @@
 import * as THREE from 'three'
-import { makeGlowTexture, numberTexture } from './effects.js'
+import { makeGlowTexture } from './effects.js'
 
 /**
- * The real northern-sky constellations a trip draws from (five per trip, the first always a
- * five-star one). Star positions come from a gnomonic projection of each star's catalogue
- * RA/Dec (east to the left, as seen in the sky), normalised to a 0–1 box with y pointing down.
- * `turn` rotates a shape so it fits the panel (the sky turns over the night, so a turned
- * constellation is still true). Stars are numbered and lit in `stars` order, and a line appears
- * once both of its ends are lit. `riddle` is the question asked about it in the night sky at home.
- * All of them can be seen together from the northern half of the world (Orion sits on the
- * equator), so the night sky at home is one real sky.
+ * Star pictures that come alive. Each is drawn in a 0–1 box with y pointing down, facing right.
+ * `stars` light in order as they are caught, going round the animal's outline, so its shape grows
+ * star by star. `loops` are the outlines (star indices and a body colour): their edges are the
+ * lines, and once the picture wakes they fill in as a chunky, glowing body. `extra` lines are
+ * strands outside a loop (a cat's tail). `face` puts eyes, a smile and cheeks at [u, v], moving
+ * with star `follow`; `r` is the eye size. `pose(t, i, hop, [u, v], out)` writes star i's offset
+ * (box units, y down) at time t; `hop` (0–1) is the trick a tap sets off. `speed` is how fast it
+ * travels (picture widths a second); `voice` names its sound in audio.js.
  */
-export const CONSTELLATIONS = [
+export const CREATURES = [
   {
-    id: 'cassiopeia',
-    name: 'Cassiopeia',
-    spoken: 'Cassiopeia',
-    short: 'It looks like a W',
-    fact: 'Cassiopeia looks like the letter W.',
-    riddle: 'Find the W.',
-    // Segin, Ruchbah, Navi, Schedar, Caph (Navi lifted a touch so the W reads clearly)
-    stars: [[0, 0], [0.22, 0.31], [0.51, 0.2], [0.7, 0.62], [1, 0.37]],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
+    id: 'bear',
+    voice: 'bear',
+    speed: 0.22,
+    // rump, back, shoulder, ear, head, nose, chin, front paw ×2, belly, back paw ×2
+    stars: [[0.04, 0.36], [0.33, 0.17], [0.6, 0.14], [0.7, 0], [0.82, 0.08], [1, 0.32], [0.86, 0.5], [0.84, 0.95], [0.64, 0.95], [0.48, 0.66], [0.34, 0.95], [0.12, 0.95]],
+    loops: [[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], '#ffaa5e']],
+    face: { at: [0.83, 0.27], follow: 4, r: 0.042 },
+    pose(t, i, hop, uv, o) {
+      const w = t * 5
+      const jump = Math.sin(Math.PI * hop)
+      o[0] = 0
+      o[1] = -jump * 0.35
+      if (i === 7 || i === 8) {
+        o[0] = Math.sin(w) * 0.08
+        o[1] -= Math.max(0, Math.cos(w)) * 0.07 + jump * 0.08
+      } else if (i === 10 || i === 11) {
+        o[0] = -Math.sin(w) * 0.08
+        o[1] -= Math.max(0, -Math.cos(w)) * 0.07 + jump * 0.08
+      } else {
+        o[1] -= Math.abs(Math.sin(w)) * 0.03
+        if (i >= 3 && i <= 6) o[1] += Math.sin(w * 2) * 0.015 - jump * 0.06
+      }
+    },
   },
   {
-    id: 'cygnus',
-    name: 'Cygnus',
-    spoken: 'Cygnus the swan',
-    short: 'A swan, and a cross',
-    fact: 'Cygnus is a swan flying, and its stars make a big cross.',
-    riddle: 'Find the cross.',
-    // Deneb, Sadr, Albireo, Gienah, Delta Cygni
-    stars: [[0.11, 0], [0.3, 0.3], [0.96, 1], [0, 0.65], [0.69, 0.01]],
-    big: { 0: 1.25 }, // Deneb
-    lines: [[0, 1], [1, 2], [3, 1], [1, 4]],
+    id: 'fish',
+    voice: 'fish',
+    speed: 0.32,
+    // body: tail joint, back, fin tip, head top, nose, chin, belly, tail joint; tail fin: top, notch, bottom
+    stars: [[0.26, 0.42], [0.42, 0.2], [0.52, 0.02], [0.72, 0.16], [1, 0.5], [0.76, 0.84], [0.44, 0.84], [0.26, 0.6], [0, 0.12], [0.1, 0.5], [0, 0.88]],
+    loops: [[[0, 1, 2, 3, 4, 5, 6, 7], '#5fc2ff'], [[0, 8, 9, 10, 7], '#9fa8ff']],
+    face: { at: [0.76, 0.44], follow: 4, r: 0.045 },
+    pose(t, i, hop, [u], o) {
+      const amp = (1 - u) ** 2 * 0.2
+      o[0] = 0
+      o[1] = Math.sin(t * 6 - u * 3) * amp + Math.sin(t * 1.4) * 0.05 - Math.sin(Math.PI * hop) * 0.45
+    },
   },
   {
-    id: 'cepheus',
-    name: 'Cepheus',
-    spoken: 'Cepheus the king',
-    short: 'It looks like a little house',
-    fact: 'Cepheus looks like a little house with a pointy roof.',
-    riddle: 'Find the little house.',
-    // Alderamin, Alfirk, Errai (the roof's point), Iota, Zeta Cephei
-    stars: [[0.55, 0.74], [0.41, 0.37], [0, 0], [0.06, 0.59], [0.26, 1]],
-    turn: 0.45,
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [1, 3]],
+    id: 'bird',
+    voice: 'bird',
+    speed: 0.45,
+    // tail ×2, belly, chest, beak (low, tip, high), head top, back, wing tip, wing root
+    stars: [[0, 0.3], [0.06, 0.62], [0.42, 0.9], [0.72, 0.8], [0.86, 0.58], [1, 0.5], [0.86, 0.42], [0.72, 0.24], [0.5, 0.42], [0.34, 0], [0.22, 0.48]],
+    loops: [[[0, 1, 2, 3, 4, 6, 7, 8, 10], '#6fe3b0'], [[4, 5, 6], '#ffb347'], [[8, 9, 10], '#b8f5d8']],
+    colors: { 5: '#ffc27a' },
+    face: { at: [0.7, 0.46], follow: 7, r: 0.042 },
+    pose(t, i, hop, uv, o) {
+      const f = (1 - Math.cos(t * 7)) * 0.5
+      const loop = Math.PI * 2 * hop
+      o[0] = Math.sin(loop) * 0.3
+      o[1] = -Math.sin(t * 7) * 0.03 - (1 - Math.cos(loop)) * 0.25
+      // The wing beats from high above down to level with the back, never folding into the body
+      if (i === 9) o[1] += f * 0.3
+      if (i === 8 || i === 10) o[1] += f * 0.04
+    },
   },
   {
-    id: 'lyra',
-    name: 'Lyra',
-    spoken: 'Lyra the harp',
-    short: 'A little harp with bright Vega',
-    fact: 'Lyra is a little harp. Its star Vega is one of the brightest in the sky.',
-    riddle: 'Find the harp with the very bright star.',
-    // Vega, Epsilon, Zeta, Delta, Sulafat, Sheliak
-    stars: [[0.64, 0.12], [0.43, 0], [0.42, 0.3], [0.14, 0.4], [0, 1], [0.27, 0.91]],
-    big: { 0: 1.5 }, // Vega
-    colors: { 0: '#dfeaff' },
-    lines: [[0, 1], [0, 2], [2, 3], [3, 4], [4, 5], [5, 2]],
+    id: 'bunny',
+    voice: 'bunny',
+    speed: 0.3,
+    // tail, back, head back, ear tip, between the ears, ear tip, forehead, nose, chin, front paw, tummy, back paw
+    stars: [[0, 0.66], [0.18, 0.42], [0.5, 0.34], [0.44, 0], [0.6, 0.28], [0.74, 0], [0.76, 0.3], [0.96, 0.5], [0.82, 0.64], [0.82, 0.96], [0.52, 0.86], [0.14, 0.96]],
+    loops: [[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], '#ffc0e0']],
+    colors: { 0: '#ffffff' },
+    face: { at: [0.76, 0.46], follow: 6, r: 0.045 },
+    pose(t, i, hop, uv, o) {
+      const air = Math.max(0, Math.sin(t * 3.4))
+      o[0] = 0
+      o[1] = -air * 0.22 - Math.sin(Math.PI * hop) * 0.45
+      if (i === 3 || i === 5) o[0] -= air * 0.08 + hop * 0.05
+      if (i === 11) o[0] -= air * 0.08
+      if (i === 9) o[0] += air * 0.06
+    },
   },
   {
-    id: 'orion',
-    name: 'Orion',
-    spoken: 'Orion the hunter',
-    short: 'Three stars make his belt',
-    fact: 'Orion the hunter has three stars in a row for his belt.',
-    riddle: 'Find the hunter with a belt of three stars.',
-    // Betelgeuse (red), Bellatrix, Mintaka, Alnilam, Alnitak, Saiph, Rigel (blue-white)
-    // (the belt is spread a touch, so its three stars stay three dots even on a small card)
-    stars: [[0, 0], [0.44, 0.06], [0.37, 0.44], [0.28, 0.5], [0.19, 0.56], [0.11, 1], [0.59, 0.91]],
-    colors: { 0: '#ffb27a', 6: '#cfe3ff' },
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [2, 6]],
+    id: 'butterfly',
+    voice: 'butterfly',
+    speed: 0.28,
+    symmetric: true,
+    // head, tail, wing tips (upper, lower) left then right, antennae, the pinch between each pair of wings
+    stars: [[0.5, 0.2], [0.5, 0.82], [0, 0], [0.14, 1], [1, 0], [0.86, 1], [0.38, 0], [0.62, 0], [0.24, 0.56], [0.76, 0.56]],
+    loops: [[[0, 2, 8, 3, 1], '#ff8fc7'], [[0, 4, 9, 5, 1], '#7cc6fe']],
+    extra: [[0, 1], [0, 6], [0, 7]],
+    face: { at: [0.5, 0.3], follow: 0, r: 0.045 },
+    pose(t, i, hop, [u], o) {
+      const s = 0.78 + 0.22 * Math.cos(t * (6 + hop * 8))
+      o[0] = (i >= 2 && i <= 5) || i >= 8 ? (u - 0.5) * (s - 1) : 0
+      o[1] = Math.sin(t * 2.2) * 0.07 - Math.sin(Math.PI * hop) * 0.35
+    },
   },
   {
-    id: 'little-dipper',
-    name: 'Little Dipper',
-    spoken: 'the Little Dipper',
-    short: 'The North Star is on its handle',
-    fact: "The North Star is at the end of the Little Dipper's handle.",
-    riddle: 'Find the little spoon with the North Star.',
-    // Polaris, Yildun, Epsilon, Zeta, Eta, Pherkad, Kochab
-    stars: [[0.1, 0], [0.03, 0.2], [0, 0.45], [0.11, 0.69], [0.01, 0.79], [0.21, 1], [0.31, 0.86]],
-    big: { 0: 1.45 }, // the North Star
-    turn: -1.35,
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]],
-  },
-  {
-    id: 'big-dipper',
-    name: 'Big Dipper',
-    spoken: 'the Big Dipper',
-    short: 'A big spoon that points north',
-    fact: 'The Big Dipper is a big spoon, and it points to the North Star.',
-    riddle: 'Find the big spoon.',
-    // Dubhe, Merak, Phecda, Megrez, Alioth, Mizar, Alkaid
-    stars: [[0.93, 0], [1, 0.21], [0.73, 0.37], [0.59, 0.25], [0.38, 0.28], [0.2, 0.29], [0, 0.48]],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]],
+    id: 'cat',
+    voice: 'cat',
+    speed: 0.12,
+    // ear, head top, ear, cheek, back, haunch, front paw, chest, cheek, tail ×2
+    stars: [[0.06, 0], [0.29, 0.1], [0.52, 0], [0.56, 0.32], [0.72, 0.6], [0.8, 0.96], [0.2, 0.96], [0.16, 0.56], [0.02, 0.32], [0.96, 0.74], [1, 0.32]],
+    loops: [[[0, 1, 2, 3, 4, 5, 6, 7, 8], '#ffcf3f']],
+    extra: [[5, 9], [9, 10]],
+    face: { at: [0.29, 0.24], follow: 1, r: 0.05 },
+    pose(t, i, hop, uv, o) {
+      const jump = Math.sin(Math.PI * hop)
+      o[0] = 0
+      o[1] = -jump * 0.4
+      if (i <= 3 || i === 8) o[0] = Math.sin(t * 1.1) * 0.02
+      if (i === 10) {
+        o[0] = Math.sin(t * 2.4) * 0.12
+        o[1] += Math.cos(t * 2.4) * 0.08 - jump * 0.15
+      }
+      if (i === 9) o[0] = Math.sin(t * 2.4 - 0.8) * 0.04
+    },
   },
 ]
 
-/**
- * A trip starts with a five-star constellation (the gentle count-to-five mission), and the rest
- * wait in a shuffled pool: at each planet the child picks the next shape from two of them.
- */
-export function planTrip() {
-  const shuffle = (list) => list.map((c) => [Math.random(), c]).sort((a, b) => a[0] - b[0]).map(([, c]) => c)
-  const first = shuffle(CONSTELLATIONS.filter((c) => c.stars.length === 5))[0]
-  return { trip: [first], pool: shuffle(CONSTELLATIONS.filter((c) => c !== first)) }
-}
-
-// Rotate (if asked) and renormalise each shape once, keeping its true proportions.
-for (const c of CONSTELLATIONS) {
-  const a = c.turn || 0
-  const p = c.stars.map(([x, y]) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)])
-  const xs = p.map((q) => q[0])
-  const ys = p.map((q) => q[1])
+// Normalise each shape once (keeping its true proportions), list its lines and triangulate its body.
+for (const c of CREATURES) {
+  const xs = c.stars.map((q) => q[0])
+  const ys = c.stars.map((q) => q[1])
   const mx = Math.min(...xs)
   const my = Math.min(...ys)
   const s = Math.max(Math.max(...xs) - mx, Math.max(...ys) - my)
-  c.shape = p.map(([x, y]) => [(x - mx) / s, (y - my) / s])
+  c.shape = c.stars.map(([x, y]) => [(x - mx) / s, (y - my) / s])
   c.aspect = (Math.max(...xs) - mx) / (Math.max(...ys) - my)
+  const seen = new Set()
+  c.lines = []
+  const edge = (a, b) => {
+    const k = a < b ? `${a}-${b}` : `${b}-${a}`
+    if (seen.has(k)) return
+    seen.add(k)
+    c.lines.push([a, b])
+  }
+  for (const [loop] of c.loops) loop.forEach((a, k) => edge(a, loop[(k + 1) % loop.length]))
+  for (const [a, b] of c.extra || []) edge(a, b)
+  c.tris = c.loops.map(([loop]) => THREE.ShapeUtils.triangulateShape(loop.map((i) => new THREE.Vector2(c.shape[i][0], -c.shape[i][1])), []).flat())
+}
+
+/** Five pictures for a trip, one per planet, never starting with the same one twice in a row. */
+let lastFirst = null
+function planTrip() {
+  for (;;) {
+    const order = CREATURES.map((c) => [Math.random(), c]).sort((a, b) => a[0] - b[0]).map(([, c]) => c).slice(0, 5)
+    if (order[0] !== lastFirst) {
+      lastFirst = order[0]
+      return order
+    }
+  }
 }
 
 const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : 1 - (1 - t) ** 3)
+/** Overshoots a little and settles: a bouncy arrival. */
+const easeBack = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : 1 + 2.4 * (t - 1) ** 3 + 1.4 * (t - 1) ** 2)
 const LIT_COLOR = '#fff1b8'
 const LINE_COLOR = '#ffe4a0'
+const OUTLINE = '#fff6dc'
 const WHITE = new THREE.Color('#ffffff')
 
-function roundedRect(w, h, r) {
-  const s = new THREE.Shape()
-  s.moveTo(r, 0)
-  s.lineTo(w - r, 0)
-  s.quadraticCurveTo(w, 0, w, r)
-  s.lineTo(w, h - r)
-  s.quadraticCurveTo(w, h, w - r, h)
-  s.lineTo(r, h)
-  s.quadraticCurveTo(0, h, 0, h - r)
-  s.lineTo(0, r)
-  s.quadraticCurveTo(0, 0, r, 0)
-  return new THREE.ShapeGeometry(s, 6)
-}
-
-/** A calm rounded backdrop, rebuilt only when its box changes size. */
-class Backdrop {
-  constructor(parent, color, opacity, edge) {
-    this.fill = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false }))
-    this.edge = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: edge, transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false }))
-    this.edge.renderOrder = 0
-    this.fill.renderOrder = 1
-    parent.add(this.edge, this.fill)
-    this.key = ''
-  }
-
-  place(r) {
-    const key = `${r.w | 0}x${r.h | 0}`
-    if (key !== this.key) {
-      this.key = key
-      const rad = Math.min(r.w, r.h) * 0.16
-      this.fill.geometry.dispose()
-      this.edge.geometry.dispose()
-      this.fill.geometry = roundedRect(r.w, r.h, rad)
-      this.edge.geometry = roundedRect(r.w + 3, r.h + 3, rad + 1.5)
-    }
-    this.fill.position.set(r.x, r.y, 0)
-    this.edge.position.set(r.x - 1.5, r.y - 1.5, 0)
-  }
-
-  set visible(v) {
-    this.fill.visible = this.edge.visible = v
-  }
-
-  dispose() {
-    for (const mesh of [this.fill, this.edge]) {
-      mesh.parent?.remove(mesh)
-      mesh.geometry.dispose()
-      mesh.material.dispose()
-    }
-  }
-}
-
 const unitLine = new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0)
-const ringGeo = new THREE.RingGeometry(0.78, 1, 40)
+const unitCircle = new THREE.CircleGeometry(1, 24)
+const smileArc = new THREE.RingGeometry(0.72, 1, 20, 1, Math.PI * 1.15, Math.PI * 0.7)
+const popRing = new THREE.RingGeometry(0.8, 1, 32)
+const shapeGeo = (pts) => new THREE.ShapeGeometry(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))))
+const pom = new THREE.CircleGeometry(0.22, 16)
+/** Accessories for repeat friends, in units of the eye size (y up from the top of the head). */
+const WEAR = {
+  hat: [[shapeGeo([[-0.6, 0], [0.6, 0], [0.1, 1.5]]), '#ff6fae'], [shapeGeo([[-0.6, 0], [0.6, 0], [0.55, 0.2], [-0.55, 0.2]]), '#ffe066'], [pom.clone().translate(0.1, 1.55, 0), '#ffffff']],
+  bow: [[shapeGeo([[0, 0.3], [-0.85, 0.75], [-0.85, -0.15]]), '#ff5f8f'], [shapeGeo([[0, 0.3], [0.85, 0.75], [0.85, -0.15]]), '#ff5f8f'], [pom.clone().translate(0, 0.3, 0), '#ffd1e0']],
+  crown: [[shapeGeo([[-0.7, 0], [0.7, 0], [0.7, 0.9], [0.35, 0.45], [0, 1], [-0.35, 0.45], [-0.7, 0.9]]), '#ffd23f'], [pom.clone().scale(0.6, 0.6, 1).translate(0, 0.35, 0), '#ff6fae']],
+}
+const poseOut = [0, 0]
+const FIELD_FAINT = 0.42 // how strongly the picture waiting in the play field shows
+const basic = (color, opacity = 1, extra = {}) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false, ...extra })
 
 /**
- * One constellation drawn into a screen box: a faint ghost of the whole shape, dim places for
- * every star, lit stars and lines. With `values` (the number each star carries) the panel also
- * labels the star to catch next and the one lit last, pushed apart so close stars stay readable.
+ * One star picture drawn into a screen box. While it is being caught: faint places for every star,
+ * lit stars with soft halos, and thin lines growing between them. Awake (`amount` 0 → 1): a chunky
+ * filled body with a thick outline and a face, every star following the pose.
  */
-class ConstellationView {
-  constructor(def, parent, glow, values = null) {
+class PictureView {
+  constructor(def, parent, glow, look = null) {
     this.def = def
-    this.values = values
+    this.look = look
     this.group = new THREE.Group()
     parent.add(this.group)
+    this.base = def.shape.map(() => new THREE.Vector2())
     this.pts = def.shape.map(() => new THREE.Vector2())
     this.size = 10
+    this.span = 1
+    this.cx = 0
     this.litAt = def.stars.map(() => -1) // time each star was lit (-1: not yet)
     this.litCount = 0
-    // Joining the dots (see Sky.join): the time each star was joined, in the child's own order
-    this.joinedAt = def.stars.map(() => -1)
-    this.joinCount = 0
-    this.linesBy = 'lit' // 'lit': a line grows once both its stars are lit; 'joined': once both are joined
     this.near = def.shape.map(() => Infinity) // how far each star is from its closest neighbour, in pixels
+    this.alive = false
+    this.t = 0 // pose time
+    this.hop = 0 // the trick's progress (0: none)
+    this.amount = 0 // how awake it looks (body, outline and face ease in)
+    this.flip = 1 // -1 faces left (eased through 0 when it turns)
+    this.highlight = 0
+    this.opacity = 1
+    this.blink = 2 + Math.random() * 3
     this.stars = def.shape.map((_, i) => {
       const color = new THREE.Color(def.colors?.[i] || LIT_COLOR)
       const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }))
       const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: '#ffffff', transparent: true, opacity: 0.32, depthWrite: false, toneMapped: false }))
-      halo.renderOrder = 4
-      core.renderOrder = 5
-      this.group.add(halo, core)
-      return { halo, core, color }
+      // A round joint, so the thick awake outline has no gaps at its corners
+      const joint = new THREE.Mesh(unitCircle, basic(OUTLINE, 0))
+      halo.renderOrder = 5
+      core.renderOrder = 6
+      joint.renderOrder = 4
+      this.group.add(halo, core, joint)
+      return { halo, core, joint, color }
+    })
+    // The body: one mesh per loop, triangulated once, its corners following the stars
+    this.fills = def.loops.map(([loop, base], k) => {
+      const color = look?.colors?.[k] || base
+      const geo = new THREE.BufferGeometry()
+      const pos = new Float32Array(def.stars.length * 3)
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+      geo.setIndex(def.tris[k].map((j) => loop[j]))
+      const mesh = new THREE.Mesh(geo, basic(color, 0, { side: THREE.DoubleSide }))
+      // Later loops (a wing, a beak) sit over the body
+      mesh.renderOrder = 2 + k * 0.01
+      mesh.frustumCulled = false
+      mesh.visible = false
+      // A soft glow of the same colour around the body
+      const glowMesh = new THREE.Mesh(geo, basic(color, 0, { side: THREE.DoubleSide, blending: THREE.AdditiveBlending }))
+      glowMesh.renderOrder = 1
+      glowMesh.frustumCulled = false
+      glowMesh.visible = false
+      this.group.add(glowMesh, mesh)
+      return { mesh, glowMesh, pos }
     })
     this.lines = def.lines.map(([a, b]) => {
-      const mesh = new THREE.Mesh(unitLine, new THREE.MeshBasicMaterial({ color: LINE_COLOR, transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false }))
+      const mesh = new THREE.Mesh(unitLine, basic(LINE_COLOR, 0.75))
       mesh.renderOrder = 3
-      // The ghost: the whole shape drawn faintly from the start, so the child sees the picture being built
-      const ghost = new THREE.Mesh(unitLine, new THREE.MeshBasicMaterial({ color: '#c9bbff', transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false }))
+      // A faint ghost of the whole picture, so the child sees something is being drawn
+      const ghost = new THREE.Mesh(unitLine, basic('#c9bbff', 0.2))
       ghost.renderOrder = 2
       mesh.visible = false
       this.group.add(ghost, mesh)
       return { a, b, mesh, ghost }
     })
-    this.next = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false }))
-    this.next.renderOrder = 4
-    this.group.add(this.next)
-    // The keyboard's ring in the join card (arrow keys move it, Enter joins), dashed-looking gold
-    this.focusRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#ffd23f', transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false }))
-    this.focusRing.renderOrder = 4
-    this.focusRing.visible = false
-    this.group.add(this.focusRing)
-    this.focus = -1
-    this.hidden = [] // in 'join', the stars whose number shows "?" until the child picks it
-    this.picking = false // the child is choosing the hidden number of the next star
-    const label = () => {
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, toneMapped: false }))
-      sp.renderOrder = 7
-      sp.visible = false
-      this.group.add(sp)
-      return sp
+    // The face: two eyes with a shine, a smile and pink cheeks
+    const part = (geo, color, order) => {
+      const m = new THREE.Mesh(geo, basic(color, 0))
+      m.renderOrder = order
+      m.visible = false
+      this.group.add(m)
+      return m
     }
-    // One number for every star; which of them show depends on `labels`
-    this.starLabels = def.stars.map(() => label())
-    this.glow = glow
-    this.highlight = 0
-    this.call = 0 // the next star's ring brightens for a moment after a wrong catch, then settles
-    // 'all': the next star shows its number; 'ask': it shows "?" (the child works it out from the
-    // last one); 'ask2': "?" with the last two shown (find the pattern); 'join': every star numbered
-    this.labels = 'all'
-    this.ring = true // in 'join', the ring marks the star to tap next (always for the first one)
+    this.face = def.face && {
+      eyes: [part(unitCircle, '#2a1a5e', 7), part(unitCircle, '#2a1a5e', 7)],
+      shines: [part(unitCircle, '#ffffff', 8), part(unitCircle, '#ffffff', 8)],
+      cheeks: [part(unitCircle, '#ff7fb0', 7), part(unitCircle, '#ff7fb0', 7)],
+      smile: part(smileArc, '#2a1a5e', 7),
+      base: new THREE.Vector2(),
+      // A repeat friend's party hat, bow or crown
+      wear: look?.wear ? [...WEAR[look.wear].map(([geo, color]) => part(geo, color, 7.5))] : [],
+    }
   }
 
-  /** Fit the shape inside box `r` ({ x, y, w, h } in GL pixels, y up), keeping its proportions. */
+  /** Fit the picture inside box `r` ({ x, y, w, h } in GL pixels, y up), keeping its proportions. */
   place(r) {
-    this.size = Math.min(20, Math.max(9, Math.min(r.w, r.h) * 0.1))
-    // Room for the ring and the number of a star on the very edge of the shape
-    const pad = Math.max(Math.min(r.w, r.h) * 0.12, this.values ? this.size * 1.6 : 0)
+    this.size = Math.min(26, Math.max(9, Math.min(r.w, r.h) * 0.09))
+    const pad = Math.min(r.w, r.h) * 0.1
     const w = r.w - pad * 2
     const h = r.h - pad * 2
     const a = this.def.aspect
@@ -262,202 +284,171 @@ class ConstellationView {
     const fh = fw / a
     const ox = r.x + pad + (w - fw) / 2
     const oy = r.y + pad + (h - fh) / 2
-    const span = Math.max(fw, fh)
-    this.def.shape.forEach(([u, v], i) => this.pts[i].set(ox + u * span, oy + fh - v * span))
-    this.box = r
-    this.pts.forEach((p, i) => (this.near[i] = Math.min(...this.pts.map((q, j) => (j === i ? Infinity : p.distanceTo(q))))))
+    this.span = Math.max(fw, fh)
+    this.cx = ox + fw / 2
+    this.def.shape.forEach(([u, v], i) => this.base[i].set(ox + u * this.span, oy + fh - v * this.span))
+    if (this.face) this.face.base.set(ox + this.def.face.at[0] * this.span, oy + fh - this.def.face.at[1] * this.span)
+    this.base.forEach((p, i) => (this.near[i] = Math.min(...this.base.map((q, j) => (j === i ? Infinity : p.distanceTo(q))))))
   }
 
-  /** Stars lit so far, which is also the next star waiting to be lit. */
   get lit() {
     return this.litCount
   }
 
-  /** Light star `i` at time `at`. */
   light(i, at) {
     if (this.litAt[i] < 0) this.litCount++
     this.litAt[i] = at
   }
 
-  /**
-   * Numbers beside their stars: `list` is [{ i, text, opacity }]. Each takes the one of twelve
-   * spots around its star that stays inside the box and is clearest of every other star and of the
-   * numbers already placed, so close stars (Orion's belt) never share a number's spot. When the
-   * first number takes the only spot the next one had, the list is placed the other way round.
-   */
-  placeLabels(list) {
-    const shown = new Set()
-    // Kept a little inside the box, clear of its rounded corners
-    const m = Math.min(this.box.w, this.box.h) * 0.04
-    const b = { x: this.box.x + m, y: this.box.y + m, w: this.box.w - m * 2, h: this.box.h - m * 2 }
-    // Points along every line, so a number never sits on the shape's lines either
-    const along = []
-    for (const { a, b: e } of this.lines) for (let t = 0.2; t < 0.85; t += 0.15) along.push(new THREE.Vector2().lerpVectors(this.pts[a], this.pts[e], t))
-    // Digits about 24 px tall on a tablet panel (a little bigger in the join card)
-    const h = Math.min(46, Math.max(20, this.size * (this.labels === 'join' ? 2.9 : 2.5)))
-    const gap = h * 0.12 // numbers never touch one another
-    const items = list.map((item) => {
-      const tex = numberTexture(item.text)
-      const p = this.pts[item.i]
-      // The directions this star's own lines leave in: a number there would hide where the line starts
-      const leave = this.lines.filter((l) => l.a === item.i || l.b === item.i).map((l) => {
-        const q = this.pts[l.a === item.i ? l.b : l.a]
-        return Math.atan2(q.y - p.y, q.x - p.x)
-      })
-      return { ...item, tex, hw: (h * tex.userData.aspect) / 2, leave }
-    })
-    const place = (order) => {
-      const placed = []
-      let touching = 0
-      for (const it of order) {
-        const { i, hw, leave } = it
-        const p = this.pts[i]
-        const off = this.size * 1.1 + h * 0.42
-        let best = null
-        for (let k = 0; k < 12; k++) {
-          const a = (k / 12) * Math.PI * 2 + Math.PI / 2
-          const ax = p.x + Math.cos(a) * (off + Math.abs(Math.cos(a)) * (hw - h / 2))
-          const ay = p.y + Math.sin(a) * off
-          // A spot a little over the edge is nudged inside; one far over it is not a spot
-          const x = Math.min(Math.max(ax, b.x + hw), b.x + b.w - hw)
-          const y = Math.min(Math.max(ay, b.y + h / 2), b.y + b.h - h / 2)
-          const moved = Math.hypot(x - ax, y - ay)
-          let clear = Infinity
-          this.pts.forEach((q, j) => j !== i && (clear = Math.min(clear, Math.max(Math.abs(q.x - x) - hw, Math.abs(q.y - y) - h / 2))))
-          for (const q of along) clear = Math.min(clear, Math.max(Math.abs(q.x - x) - hw, Math.abs(q.y - y) - h / 2) + h * 0.35)
-          // Any overlap with a number already placed outweighs every other wish
-          let overlap = 0
-          for (const o of placed) overlap += Math.max(0, Math.min(x + hw, o.x + o.hw) - Math.max(x - hw, o.x - o.hw) + gap) * Math.max(0, Math.min(y + h / 2, o.y + h / 2) - Math.max(y - h / 2, o.y - h / 2) + gap)
-          let onLine = 0
-          for (const d of leave) onLine = Math.max(onLine, 1 - Math.abs(Math.atan2(Math.sin(a - d), Math.cos(a - d))))
-          const score = Math.min(clear, h) - (moved > h * 0.3 ? 1000 : moved * 4) - (overlap > 0 ? h * 3 : 0) - overlap * 0.2 + Math.sin(a) * 0.5 - onLine * h
-          if (!best || score > best.score) best = { x, y, score, overlap }
-        }
-        if (best.overlap > 0) touching++
-        placed.push({ it, x: best.x, y: best.y, hw })
-      }
-      return { placed, touching }
-    }
-    let result = place(items)
-    if (result.touching && items.length > 1) {
-      const other = place([...items].reverse())
-      if (other.touching < result.touching) result = other
-    }
-    for (const { it, x, y, hw } of result.placed) {
-      const sp = this.starLabels[it.i]
-      shown.add(sp)
-      if (sp.material.map !== it.tex) {
-        sp.material.map = it.tex
-        sp.material.needsUpdate = true
-      }
-      sp.scale.set(hw * 2, h, 1)
-      sp.position.set(x, y, 0)
-      sp.material.opacity = it.opacity
-      sp.visible = true
-    }
-    for (const sp of this.starLabels) if (!shown.has(sp)) sp.visible = false
+  /** Star i's pose offset in pixels (y up), scaled by how awake the picture is. */
+  offset(i, k) {
+    if (k <= 0) return poseOut.fill(0)
+    this.def.pose(this.t, i, this.hop, this.def.shape[i], poseOut)
+    poseOut[0] *= this.span * k
+    poseOut[1] *= -this.span * k
+    return poseOut
   }
 
-  /** Which numbers show: in 'join' every star's; otherwise the star to catch next and the last one or two lit. */
-  labelList(n) {
-    const v = this.values
-    if (this.labels === 'join') {
-      // Joined stars dim, so the numbers still to choose from stand out
-      return v.map((_, i) => ({ i, text: this.hidden.includes(i) && this.joinedAt[i] < 0 ? '?' : String(v[i]), opacity: this.joinedAt[i] < 0 ? 0.97 : 0.6 }))
-    }
-    const total = this.pts.length
-    if (n >= total) return []
-    const known = this.labels === 'ask2' ? 2 : this.labels === 'ask' ? 1 : total
-    const list = [{ i: n, text: n < known ? String(v[n]) : '?', opacity: 0.97 }]
-    if (n > 0) list.push({ i: n - 1, text: String(v[n - 1]), opacity: 0.88 })
-    if (this.labels === 'ask2' && n > 1) list.push({ i: n - 2, text: String(v[n - 2]), opacity: 0.8 })
-    return list
-  }
-
-  update(now, { showNext = true, still = false } = {}) {
+  update(now, still = false, dt = 0) {
+    const def = this.def
     const s = this.size
-    const glowBoost = 1 + this.highlight * 0.35
+    const awake = this.alive ? this.amount : 0
+    const fade = this.opacity
+    this.pts.forEach((p, i) => {
+      const b = this.base[i]
+      const o = this.offset(i, awake)
+      p.set(this.cx + this.flip * (b.x + o[0] - this.cx), b.y + o[1])
+    })
+    const glowBoost = 1 + this.highlight * 0.5
     this.stars.forEach((st, i) => {
       const p = this.pts[i]
-      const big = this.def.big?.[i] || 1
       const at = this.litAt[i]
       const k = at < 0 ? 0 : still ? 1 : ease((now - at) / 0.45)
-      const ja = this.joinedAt[i]
-      const joined = ja < 0 ? 0 : still ? 1 : ease((now - ja) / 0.35)
+      // A fresh star clicks in with a pop (bigger, then settling)
+      const pop = at < 0 || still ? 0 : Math.max(0, 1 - (now - at) / 0.5) * Math.sin(Math.min(1, (now - at) / 0.5) * Math.PI)
       st.core.position.set(p.x, p.y, 0)
       st.halo.position.set(p.x, p.y, 0)
-      // Unlit: a small dim dot showing where the star belongs. Lit: a warm star with a soft halo.
-      // Glows stay inside half the gap to the nearest star, so close stars (Orion's belt) read as separate dots.
       const gap = this.near[i]
-      st.core.scale.setScalar(Math.min(s * big * (0.95 + 0.75 * k + 0.25 * joined), Math.max(gap * 0.8, 8)))
-      st.core.material.opacity = 0.62 + 0.38 * k
+      st.core.scale.setScalar(Math.min(s * (0.95 + 0.75 * k + 1.2 * pop) * (1 - 0.3 * awake), Math.max(gap * 0.9, 8)))
+      st.core.material.opacity = (0.5 + 0.5 * k) * fade
       st.core.material.color.copy(st.color).lerp(WHITE, 0.4 + 0.6 * (1 - k))
-      st.halo.scale.setScalar(Math.min(s * big * 3 * k * (glowBoost + 0.3 * joined), Math.max(gap * 1.1, 6) * k))
-      st.halo.material.opacity = 0.75 * k
+      st.halo.scale.setScalar(Math.min(s * 3 * k * (glowBoost + pop) * (1 - 0.35 * awake), Math.max(gap * 1.3, 6) * k))
+      st.halo.material.opacity = 0.75 * k * fade
+    })
+    // The awake body: a strong fill, a soft glow and a thick outline
+    const thick = Math.max(1.6, s * 0.2) + awake * this.span * 0.035
+    for (const f of this.fills) {
+      const show = awake > 0.001
+      f.mesh.visible = f.glowMesh.visible = show
+      if (!show) continue
+      this.pts.forEach((p, i) => f.pos.set([p.x, p.y, 0], i * 3))
+      f.mesh.geometry.attributes.position.needsUpdate = true
+      f.mesh.material.opacity = Math.min(1, awake * 1.2) * 0.92 * fade
+      f.glowMesh.material.opacity = awake * (0.35 + 0.3 * this.highlight) * fade
+    }
+    this.stars.forEach((st, i) => {
+      st.joint.visible = awake > 0.001
+      if (!st.joint.visible) return
+      st.joint.position.set(this.pts[i].x, this.pts[i].y, 0)
+      st.joint.scale.setScalar(thick / 2)
+      st.joint.material.opacity = awake * fade
     })
     const total = this.pts.length
-    // The ghost is brightest while the shape is still empty, so the child sees the picture to build
-    const ghost = this.linesBy === 'joined' ? 0.32 - 0.12 * (this.joinCount / total) : 0.34 - 0.16 * (this.litCount / total)
+    const ghost = (0.22 - 0.12 * (this.litCount / total)) * fade * (1 - awake)
     for (const line of this.lines) {
       line.ghost.material.opacity = ghost
       const a = this.pts[line.a]
       const b = this.pts[line.b]
-      // Lines stop a little short of their stars, so close stars (Orion's belt) stay separate dots
       const d = a.distanceTo(b)
-      const gap = Math.min(d * 0.22, s * 0.32)
+      const gap = Math.min(d * 0.22, s * 0.32) * (1 - awake)
       const ang = Math.atan2(b.y - a.y, b.x - a.x)
-      const cos = Math.cos(ang)
-      const sin = Math.sin(ang)
-      line.ghost.position.set(a.x + cos * gap, a.y + sin * gap, 0)
+      line.ghost.position.set(a.x + Math.cos(ang) * gap, a.y + Math.sin(ang) * gap, 0)
       line.ghost.rotation.z = ang
       line.ghost.scale.set(Math.max(0.001, d - gap * 2), Math.max(1.2, s * 0.14), 1)
-      const when = this.linesBy === 'joined' ? this.joinedAt : this.litAt
-      const ta = when[line.a]
-      const tb = when[line.b]
+      const ta = this.litAt[line.a]
+      const tb = this.litAt[line.b]
       if (ta < 0 || tb < 0) {
         line.mesh.visible = false
         continue
       }
       // The line grows out from the star lit first toward the one just lit
       const [from, to] = ta <= tb ? [line.a, line.b] : [line.b, line.a]
-      const start = Math.max(ta, tb)
-      const k = still ? 1 : ease((now - start) / 0.55)
+      const k = still ? 1 : ease((now - Math.max(ta, tb)) / 0.55)
       const f = this.pts[from]
-      const dir = from === line.a ? 1 : -1
+      const t = this.pts[to]
+      const an = Math.atan2(t.y - f.y, t.x - f.x)
       line.mesh.visible = k > 0
-      line.mesh.position.set(f.x + cos * gap * dir, f.y + sin * gap * dir, 0)
-      line.mesh.rotation.z = dir > 0 ? ang : ang + Math.PI
-      line.mesh.scale.set(Math.max(0.001, (d - gap * 2) * k), Math.max(1.6, s * 0.2), 1)
-      line.mesh.material.opacity = 0.7 + 0.3 * this.highlight
+      line.mesh.position.set(f.x + Math.cos(an) * gap, f.y + Math.sin(an) * gap, 0)
+      line.mesh.rotation.z = an
+      line.mesh.scale.set(Math.max(0.001, (f.distanceTo(t) - gap * 2) * k), thick, 1)
+      line.mesh.material.color.set(awake > 0.5 ? OUTLINE : LINE_COLOR)
+      line.mesh.material.opacity = (0.7 + 0.3 * Math.max(this.highlight, awake)) * fade
     }
-    const joining = this.labels === 'join'
-    const n = joining ? this.joinCount : this.lit
-    this.next.visible = showNext && n < total && (!joining || this.ring || n === 0 || this.call > 0 || this.picking)
-    if (this.next.visible) {
-      const p = this.pts[n]
-      this.next.position.set(p.x, p.y, 0)
-      this.next.scale.setScalar(s * (1.25 + 0.25 * this.call))
-      this.next.material.opacity = 0.35 + 0.5 * this.call
+    this.updateFace(awake, fade, dt)
+  }
+
+  updateFace(awake, fade, dt) {
+    const face = this.face
+    if (!face) return
+    const show = awake > 0.05
+    for (const m of [...face.eyes, ...face.shines, ...face.cheeks, face.smile, ...face.wear]) m.visible = show
+    if (!show) return
+    const { follow, r } = this.def.face
+    const o = this.offset(follow, awake)
+    const cx = this.cx + this.flip * (face.base.x + o[0] - this.cx)
+    const cy = face.base.y + o[1]
+    const er = this.span * r * Math.min(1, awake * 1.4)
+    // A blink now and then (a quick squeeze, never a flash); wide eyes during a trick
+    this.blink -= dt
+    if (this.blink < -0.15) this.blink = 2.5 + Math.random() * 3
+    const lid = this.blink < 0 ? 0.15 : 1
+    const wide = 1 + 0.25 * Math.sin(Math.PI * this.hop)
+    const gap = er * 1.7
+    const look = this.flip * er * 0.35 // eyes glance the way it faces
+    face.eyes.forEach((m, k) => {
+      m.position.set(cx + (k ? gap : -gap) + look, cy, 0)
+      m.scale.set(er * wide, er * lid * wide, 1)
+      m.material.opacity = fade
+    })
+    face.shines.forEach((m, k) => {
+      m.position.set(cx + (k ? gap : -gap) + look - er * 0.3, cy + er * 0.35, 0)
+      m.scale.setScalar(er * 0.38 * (lid < 1 ? 0 : 1))
+      m.material.opacity = fade
+    })
+    face.cheeks.forEach((m, k) => {
+      m.position.set(cx + (k ? gap * 1.9 : -gap * 1.9) + look, cy - er * 1.5, 0)
+      m.scale.set(er * 0.75, er * 0.5, 1)
+      m.material.opacity = 0.55 * fade
+    })
+    // The accessory sits on top of the head, tipped the way it faces
+    for (const m of face.wear) {
+      m.visible = show
+      m.position.set(cx + look * 1.5, cy + er * 2.6, 0)
+      m.scale.set(er * 3.4 * this.flip, er * 3.4, 1)
+      m.material.opacity = fade
     }
-    this.focusRing.visible = joining && this.focus >= 0 && !this.picking
-    if (this.focusRing.visible) {
-      const p = this.pts[this.focus]
-      this.focusRing.position.set(p.x, p.y, 0)
-      this.focusRing.scale.setScalar(s * 1.7)
-    }
-    this.placeLabels(this.values && showNext ? this.labelList(n) : [])
+    face.smile.position.set(cx + look, cy - er * 0.9, 0)
+    face.smile.scale.setScalar(er * (1.1 + 0.4 * Math.sin(Math.PI * this.hop)))
+    face.smile.material.opacity = fade
   }
 
   dispose() {
     this.group.parent?.remove(this.group)
     this.group.traverse((o) => o.material?.dispose())
+    for (const f of this.fills) f.mesh.geometry.dispose()
   }
 }
 
+/** Colours for repeat friends (the second bear of a session is not the same bear). */
+const REPEAT_COLORS = ['#b79bff', '#7fd8ff', '#ffd84a', '#8fe8a0', '#ff9fb0', '#ffb36b', '#9fb4ff']
+const ACCESSORIES = ['hat', 'bow', 'crown']
+const MAX_ZOO = 12 // the sky zoo keeps this many friends from the session
+
 /**
- * The calm sky panel (the constellation being built on this leg) and the night sky at home
- * (every constellation the child built). Drawn as a second, flat pass over the game in screen
- * pixels; its boxes follow DOM placeholders so CSS owns the layout in every orientation.
+ * The picture being caught on this leg (waiting faintly in the middle of the play field), the
+ * picture that wakes up there and then joins the parade behind Kitty's rocket, and the sky zoo at
+ * home where every friend of the session plays. Drawn as a second, flat pass over the game in
+ * screen pixels; boxes follow DOM placeholders, so CSS owns the layout in every orientation.
  */
 export class Sky {
   constructor({ reducedMotion = false, onLit, onComplete } = {}) {
@@ -468,31 +459,26 @@ export class Sky {
     this.onLit = onLit
     this.onComplete = onComplete
     this.time = 0
-    this.panelRoot = new THREE.Group()
-    this.finaleRoot = new THREE.Group()
-    this.choiceRoot = new THREE.Group()
-    this.scene.add(this.panelRoot, this.finaleRoot, this.choiceRoot)
-    // A soft dimming of the whole scene behind the cards at a planet (joining the dots, choosing the next shape)
-    this.dim = new Backdrop(this.scene, '#070424', 0.62, '#070424')
-    this.dim.fill.renderOrder = -2
-    this.dim.edge.renderOrder = -3
-    this.dim.edge.material.opacity = 0
-    this.dim.visible = false
-    this.backdrop = new Backdrop(this.panelRoot, '#0d0833', 0.8, '#b9a8ff')
+    this.actorRoot = new THREE.Group()
+    this.scene.add(this.actorRoot)
     this.view = null
+    this.look = null // the colours and accessory the picture being caught will wake up with
     this.index = -1
-    this.claimed = 0 // stars promised to the panel, including those still flying up
+    this.claimed = 0 // stars promised to the picture, including those still flying up
     this.flights = []
-    this.done = [] // { def, litAt } for each finished constellation
-    Object.assign(this, planTrip()) // trip: the constellations chosen so far, in order; pool: the ones still to choose from
-    this.choice = null // the two shapes offered at a planet
-    this.joining = false // the finished shape is in the big card, waiting for its dots to be joined
-    this.panelEl = null
-    this.finale = null
-    this.panelRoot.visible = false
+    this.pops = [] // rings that spread where a star clicks into the picture
+    this.actors = [] // awake pictures: on the stage, in the parade, or in the zoo at home
+    this.collection = [] // every friend made this session (kept across trips): { def, look }
+    this.trip = planTrip()
+    this.leader = new THREE.Vector2(-100, -100) // the rocket's middle, GL pixels: the parade follows its path
+    this.leaderR = 60 // how far friends keep from the rocket, pixels
+    this.leaderDir = -1 // which way the rocket last flew (-1 left, 1 right)
+    this.path = [] // the rocket's recent path, newest first, a point every few pixels
+    this.hazards = [] // catchable stars (GL pixels): parade friends fade and shrink out of their way
+    this.treats = [] // sparkles fed to the zoo friends at home
+    this.onEat = null
     this.w = 1
     this.h = 1
-    this.tmp = new THREE.Vector2()
   }
 
   get def() {
@@ -503,7 +489,6 @@ export class Sky {
     return this.def ? this.def.stars.length : 0
   }
 
-  /** Stars lit so far on this leg (landed, not flying). */
   get lit() {
     return this.view ? this.view.lit : 0
   }
@@ -527,236 +512,221 @@ export class Sky {
   }
 
   layout() {
-    this.dim.place({ x: -400, y: -400, w: this.w + 800, h: this.h + 800 })
-    if (this.view && this.panelEl) {
-      const r = this.rectOf(this.panelEl)
-      this.backdrop.place(r)
-      // The bottom strip is kept for the constellation's name (or, in the big card, the words)
-      const strip = this.joining ? 0.13 : 0.2
-      this.view.place({ x: r.x, y: r.y + r.h * strip, w: r.w, h: r.h * (1 - strip) })
-    }
-    if (this.finale) {
-      this.finale.backdrop.place({ x: -400, y: -400, w: this.w + 800, h: this.h + 800 }) // corners well off screen
-      this.finale.views.forEach((v, i) => {
-        const r = this.rectOf(this.finale.cells[i])
-        v.place({ x: r.x, y: r.y + r.h * 0.22, w: r.w, h: r.h * 0.78 })
-      })
-    }
-    this.choice?.forEach(({ view, backdrop, cell }) => {
-      const r = this.rectOf(cell)
-      backdrop.place(r)
-      view.place({ x: r.x, y: r.y + r.h * 0.24, w: r.w, h: r.h * 0.76 })
-    })
-  }
-
-  /** Two shapes from the pool for the child to choose between at a planet. */
-  offer() {
-    return this.pool.slice(0, 2)
-  }
-
-  /** The child chose `def` as the next constellation of the trip. */
-  pick(def) {
-    this.pool = this.pool.filter((c) => c !== def)
-    this.trip.push(def)
-    this.closeChoice()
-  }
-
-  /** Draws each offered shape (all its stars and lines, so it can be compared) into its card. */
-  showChoice(defs, cells) {
-    this.closeChoice()
-    this.choice = defs.map((def, i) => {
-      const backdrop = new Backdrop(this.choiceRoot, '#0d0833', 0.96, '#b9a8ff')
-      const view = new ConstellationView(def, this.choiceRoot, this.glow)
-      def.stars.forEach((_, k) => view.light(k, this.time + 0.2 + i * 0.3 + k * 0.08))
-      return { view, backdrop, cell: cells[i] }
-    })
-    this.dim.visible = true
-    this.layout()
-  }
-
-  closeChoice() {
-    if (!this.joining) this.dim.visible = false
-    if (!this.choice) return
-    this.choice.forEach(({ view, backdrop }) => {
-      view.dispose()
-      backdrop.dispose()
-    })
-    this.choiceRoot.clear()
-    this.choice = null
+    if (this.view && this.fieldEl) this.view.place(this.fieldRect())
+    for (const a of this.actors) if (a.el) a.bounds = this.rectOf(a.el)
   }
 
   /**
-   * The finished shape moves into the big card `el` with every star numbered and no lines yet:
-   * the child joins the dots by tapping the stars in counting order, and each line appears once
-   * both its stars are joined.
+   * Start catching picture `index` of the trip. It waits faintly in the middle of the play field
+   * (`field`, the stage box): caught stars swoop into it, right where the child is looking, and
+   * that is where it wakes up. A friend made before this session wakes in new colours with a hat,
+   * a bow or a crown.
    */
-  join(el, ring, hidden = []) {
-    if (!this.view) return
-    this.joining = true
-    this.panelEl = el
-    Object.assign(this.view, { labels: 'join', linesBy: 'joined', ring, call: 0, hidden, focus: -1, picking: false })
-    this.dim.visible = true
-    this.backdrop.fill.material.opacity = 1 // the planet behind never shows through the card
-    this.layout()
-  }
-
-  /** The next star to join hides its number. */
-  hiddenNext() {
-    const v = this.view
-    return Boolean(v && this.joining && v.hidden.includes(v.joinCount))
-  }
-
-  /** The child is picking the hidden number (taps on the stars wait meanwhile). */
-  get picking() {
-    return Boolean(this.view?.picking)
-  }
-
-  set picking(on) {
-    if (this.view) this.view.picking = on
-  }
-
-  /** Moves the keyboard ring to the next (or previous) star still to join, from left to right. */
-  moveFocus(step) {
-    const v = this.view
-    if (!v || !this.joining) return
-    const open = v.pts.map((p, i) => i).filter((i) => v.joinedAt[i] < 0).sort((a, b) => v.pts[a].x - v.pts[b].x || v.pts[b].y - v.pts[a].y)
-    if (!open.length) return
-    const at = open.indexOf(v.focus)
-    v.focus = open[at < 0 ? (step > 0 ? 0 : open.length - 1) : (at + step + open.length) % open.length]
-  }
-
-  /** The star of the card nearest to screen point (x, y, CSS pixels), or -1. A tap on a star's number counts as a tap on the star. */
-  starAt(x, y) {
-    const v = this.view
-    if (!v || !this.joining) return -1
-    const gx = x
-    const gy = this.h - y
-    const need = v.joinCount
-    const reach = Math.max(34, v.size * 2.2)
-    let best = -1
-    let bestD = Infinity
-    v.pts.forEach((p, i) => {
-      const lab = v.starLabels[i].position
-      const d = Math.min(Math.hypot(p.x - gx, p.y - gy), Math.hypot(lab.x - gx, lab.y - gy) + 4)
-      if (d < bestD) [best, bestD] = [i, d]
-    })
-    if (best < 0 || bestD > reach) return -1
-    // Close stars are kind to small fingers: a tap almost as near the wanted star counts as that star
-    const p = v.pts[need]
-    if (p && best !== need && Math.hypot(p.x - gx, p.y - gy) < bestD + 12) return need
-    return best
-  }
-
-  /** Join star `i` (the next in order). Returns true once every star is joined. */
-  joinStar(i) {
-    const v = this.view
-    if (v.joinedAt[i] < 0) v.joinCount++
-    v.joinedAt[i] = this.time
-    if (v.focus === i) v.focus = -1
-    return v.joinCount === v.pts.length
-  }
-
-  /** The joined shape goes back to its place in the corner panel. */
-  unjoin(el) {
-    this.joining = false
-    this.dim.visible = false
-    this.backdrop.fill.material.opacity = 0.8
-    this.panelEl = el
-    if (this.view) Object.assign(this.view, { labels: 'done', focus: -1, picking: false })
-    this.layout()
-  }
-
-  /** Start building constellation `index` of the trip in the panel box `el`; `values` are the numbers its stars carry. */
-  begin(index, el, values) {
-    this.clearPanel()
+  begin(index, field) {
+    this.clearPicture()
     this.index = index
-    this.panelEl = el
+    this.fieldEl = field
     this.claimed = 0
-    this.view = new ConstellationView(this.def, this.panelRoot, this.glow, values)
-    // Lines are drawn by the child at the planet, joining the dots
-    this.view.linesBy = 'joined'
-    this.panelRoot.visible = true
+    const seen = this.collection.filter((e) => e.def === this.def).length
+    this.look = seen ? { colors: this.def.loops.map((_, k) => REPEAT_COLORS[(seen - 1 + k * 3 + CREATURES.indexOf(this.def)) % REPEAT_COLORS.length]), wear: ACCESSORIES[(seen - 1 + CREATURES.indexOf(this.def)) % ACCESSORIES.length] } : null
+    this.view = new PictureView(this.def, this.actorRoot, this.glow, this.look)
+    this.view.opacity = FIELD_FAINT
     this.layout()
   }
 
-  clearPanel() {
+  /** The play-field picture's box: centred in the stage, as big as the picture will be awake. */
+  fieldRect() {
+    const b = this.rectOf(this.fieldEl)
+    // Fits the stage with room left for hops and leaps
+    const w = Math.min(b.w * 0.66, b.h * 0.85 * this.def.aspect)
+    const h = w / this.def.aspect
+    return { x: b.x + (b.w - w) / 2, y: b.y + (b.h - h) / 2, w, h }
+  }
+
+  clearPicture() {
     this.view?.dispose()
     this.view = null
-    for (const f of this.flights) this.dropFlight(f)
+    for (const f of this.flights) this.drop(f.sprite)
     this.flights = []
   }
 
-  dropFlight(f) {
-    this.scene.remove(f.sprite)
-    f.sprite.material.dispose()
+  drop(obj) {
+    this.scene.remove(obj)
+    obj.material.dispose()
   }
 
-  /** Everything back to the start of a trip. */
+  /** Everything back to the start of a trip (the session's collection of friends stays). */
   reset() {
-    this.joining = false
-    this.dim.visible = false
-    this.backdrop.fill.material.opacity = 0.8
-    this.clearPanel()
-    this.closeFinale()
-    this.closeChoice()
-    this.done = []
-    Object.assign(this, planTrip())
+    this.clearPicture()
+    this.clearActors()
+    for (const t of this.treats) this.drop(t.sprite)
+    this.treats = []
+    this.path = []
+    for (const p of this.pops) this.drop(p.mesh)
+    this.pops = []
+    this.trip = planTrip()
     this.index = -1
     this.claimed = 0
-    this.panelRoot.visible = false
   }
 
-  /** A caught star at screen point (x, y, CSS pixels) flies up to light the next star. */
-  claim(x, y, data) {
+  clearActors() {
+    for (const a of this.actors) a.view.dispose()
+    this.actors = []
+  }
+
+  /** A caught star at screen point (x, y, CSS pixels) swoops up to light the next star; `delay` in seconds. */
+  claim(x, y, color, delay = 0) {
     if (!this.view || this.full) return false
     const i = this.claimed++
-    this.fly(x, y, this.view.stars[i].color, (out) => out.copy(this.view.pts[i]), () => this.land(i, data))
+    if (this.reducedMotion) {
+      this.land(i)
+      return true
+    }
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glow, color: color || this.view.stars[i].color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }))
+    sprite.renderOrder = 9
+    sprite.visible = false
+    this.scene.add(sprite)
+    this.flights.push({ sprite, i, from: new THREE.Vector2(x, this.h - y), t: -delay / 0.55, view: this.view })
     return true
   }
 
-  /** The first `k` stars start lit (given, not caught: no bell), so the first catch is already a step of the rule. */
-  prelight(k) {
-    const v = this.view
-    if (!v) return
-    for (let i = 0; i < Math.min(k, this.total - 1); i++) v.light(i, this.time - 1)
-    this.claimed = v.lit
-  }
-
-  /** How the panel numbers the stars: 'all' shows the next number, 'ask' shows "?" there. */
-  set labels(mode) {
-    if (this.view) this.view.labels = mode
-  }
-
-  /** After a wrong catch the next star's ring brightens for a moment: "this is the one we need". */
-  call() {
-    if (this.view) this.view.call = 1
-  }
-
-  fly(x, y, color, target, land) {
-    if (this.reducedMotion) {
-      target(this.tmp)
-      land()
-      return
-    }
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glow, color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }))
-    sprite.renderOrder = 6
-    this.scene.add(sprite)
-    this.flights.push({ sprite, from: new THREE.Vector2(x, this.h - y), target, land, t: 0, view: this.view })
-  }
-
-  land(i, data) {
+  land(i) {
     const view = this.view
     view.light(i, this.time)
-    this.onLit?.(i + 1, this.total, data)
-    if (view.lit === this.total) {
-      // Let the last line finish drawing before the name is spoken
-      const def = this.def
-      setTimeout(() => {
-        if (this.view !== view) return
-        this.done.push({ def, litAt: [...view.litAt] })
-        this.onComplete?.(def, this.index)
-      }, this.reducedMotion ? 300 : 900)
+    // A ring spreads where it clicks in
+    if (!this.reducedMotion) {
+      const mesh = new THREE.Mesh(popRing, basic('#fff3c4', 0.9))
+      mesh.renderOrder = 9
+      mesh.position.set(view.pts[i].x, view.pts[i].y, 0)
+      this.scene.add(mesh)
+      this.pops.push({ mesh, t: 0, size: view.size })
     }
+    this.onLit?.(view.lit, this.total)
+    if (view.lit === this.total) {
+      // Let the last line finish growing before the picture wakes
+      const def = this.def
+      setTimeout(() => this.view === view && this.onComplete?.(def), this.reducedMotion ? 300 : 650)
+    }
+  }
+
+  /** The finished picture wakes up where it was drawn, on the stage box `el`. */
+  wake(el) {
+    const view = this.view
+    if (!view) return null
+    const r = this.fieldRect()
+    this.view = null
+    for (const f of this.flights) this.drop(f.sprite)
+    this.flights = []
+    view.alive = true
+    const entry = { def: this.def, look: this.look }
+    this.collection.push(entry)
+    if (this.collection.length > MAX_ZOO) this.collection.shift()
+    // A squash, then a bounce up to full size and colour
+    const from = { x: r.x + r.w * 0.1, y: r.y, w: r.w * 0.8, h: r.h * 0.8 }
+    const bounds = this.rectOf(el)
+    const actor = this.actor(view, { mode: 'stage', el, bounds, w: r.w, h: r.h, x: r.x + r.w / 2, y: r.y + r.h / 2, from, grow: 0, entry })
+    this.actors.push(actor)
+    return actor
+  }
+
+  actor(view, extra) {
+    return { view, def: view.def, el: null, bounds: null, w: 100, h: 100, x: 0, y: 0, vx: 1, vy: 0, from: null, grow: 1, hopT: -1, turn: 1, mode: 'zoo', near: 0, playIn: 3 + Math.random() * 4, ...extra }
+  }
+
+  /** Box size for a picture `width` px across (tall pictures are limited by their height instead). */
+  sizeFor(def, width) {
+    return def.aspect >= 1 ? { w: width, h: width / def.aspect } : { w: width * def.aspect, h: width }
+  }
+
+  /** The stage picture shrinks and joins the parade of friends following Kitty's rocket. */
+  toParade() {
+    const width = Math.min(130, Math.max(64, Math.min(this.w, this.h) * 0.13))
+    for (const a of this.actors) {
+      if (a.mode !== 'stage') continue
+      a.mode = 'parade'
+      a.el = null
+      a.grow = 1
+      const size = this.sizeFor(a.def, width)
+      a.tw = size.w
+      a.th = size.h
+    }
+  }
+
+  /**
+   * Home: every friend of the session (the newest MAX_ZOO) glides to its own spot
+   * in the night sky inside `area` (above `kittyTop`), then plays. This trip's parade flies in; earlier friends are
+   * already waiting there.
+   */
+  showZoo(area, kittyTop = null) {
+    this.clearPicture()
+    const box = this.rectOf(area)
+    // Keep clear of Kitty resting in the corner (`kittyTop` is her rocket's top, CSS pixels)
+    if (kittyTop != null && box.y < this.h - kittyTop) {
+      const lift = this.h - kittyTop - box.y
+      box.y += lift
+      box.h = Math.max(box.h * 0.5, box.h - lift)
+    }
+    const parade = new Map(this.actors.map((a) => [a.entry, a]))
+    this.actors = []
+    const n = this.collection.length
+    const cols = Math.min(n, box.w < box.h ? (n > 6 ? 3 : 2) : n > 6 ? 4 : 3)
+    const rows = Math.ceil(n / cols)
+    const width = Math.min(box.w / cols, (box.h / rows) * 1.2, 320) * 0.66
+    this.collection.forEach((entry, i) => {
+      const { def, look } = entry
+      let a = parade.get(entry)
+      if (!a) {
+        const view = new PictureView(def, this.actorRoot, this.glow, look)
+        def.stars.forEach((_, k) => view.light(k, this.time - 1))
+        Object.assign(view, { alive: true, amount: 1, t: Math.random() * 10 })
+        a = this.actor(view, { entry })
+        const size = this.sizeFor(def, width * 0.3)
+        Object.assign(a, size)
+      }
+      parade.delete(entry)
+      const size = this.sizeFor(def, width * (0.9 + Math.random() * 0.2))
+      const row = Math.floor(i / cols)
+      const inRow = Math.min(cols, n - row * cols)
+      const flyer = def.id === 'bird' || def.id === 'butterfly' || def.id === 'fish'
+      // A loose grid (each row centred): every friend plays in its own cell, so nobody bumps into another
+      const cw = box.w / inRow
+      const ch = box.h / rows
+      const cell = { x: box.x + (i % cols) * cw, y: box.y + box.h - (row + 1) * ch, w: cw, h: ch }
+      if (!a.x && !a.y) Object.assign(a, { x: cell.x + cw / 2, y: cell.y + ch / 2 })
+      Object.assign(a, {
+        mode: 'zoo', el: null, bounds: cell, tw: size.w, th: size.h,
+        home: { x: cell.x + cw / 2, y: cell.y + ch / 2 },
+        settle: 1.2, vx: Math.random() < 0.5 ? -1 : 1, vy: flyer ? (Math.random() < 0.5 ? -0.25 : 0.25) : 0, turn: 1,
+      })
+      this.actors.push(a)
+    })
+    for (const a of parade.values()) a.view.dispose()
+  }
+
+  /** The awake picture under screen point (x, y, CSS pixels), or null. */
+  actorAt(x, y) {
+    const gy = this.h - y
+    let best = null
+    let bestD = Infinity
+    for (const a of this.actors) {
+      if (a.mode === 'parade') continue
+      const d = Math.max(Math.abs(x - a.x) - a.w / 2, Math.abs(gy - a.y) - a.h / 2)
+      if (d < 30 && d < bestD) [best, bestD] = [a, d]
+    }
+    return best
+  }
+
+  /** The picture on the stage, if one is awake there. */
+  get star() {
+    return this.actors.find((a) => a.mode === 'stage') || null
+  }
+
+  /** A tap sets off the picture's happy trick (a hop, a loop, a leap). Returns false while one is still playing. */
+  trick(a) {
+    a.view.highlight = 1
+    if (a.hopT >= 0) return false
+    a.hopT = 0
+    return true
   }
 
   update(dt) {
@@ -764,74 +734,315 @@ export class Sky {
     for (let k = this.flights.length - 1; k >= 0; k--) {
       const f = this.flights[k]
       if (f.view !== this.view) {
-        this.dropFlight(f)
+        this.drop(f.sprite)
         this.flights.splice(k, 1)
         continue
       }
-      f.t += dt / 0.8
-      const to = f.target(this.tmp)
+      f.t += dt / 0.7
+      if (f.t < 0) continue
+      f.sprite.visible = true
+      const to = this.view.pts[f.i]
       const e = ease(f.t)
-      // A soft arc up to its place in the panel
-      const cx = (f.from.x + to.x) / 2 + (f.from.x < to.x ? -1 : 1) * 60
-      const cy = Math.max(f.from.y, to.y) + 40
+      // A swooping arc up to its place in the picture, shrinking as it arrives
+      const cx = (f.from.x + to.x) / 2 + (f.from.x < to.x ? -1 : 1) * 80
+      const cy = Math.max(f.from.y, to.y) + 50
       const u = 1 - e
       f.sprite.position.set(u * u * f.from.x + 2 * u * e * cx + e * e * to.x, u * u * f.from.y + 2 * u * e * cy + e * e * to.y, 1)
-      const s = (this.view?.size || 10) * (2.6 - e)
-      f.sprite.scale.setScalar(s)
+      f.sprite.scale.setScalar((this.view?.size || 10) * (4.2 - e * 2.4))
       if (f.t >= 1) {
-        this.dropFlight(f)
+        this.drop(f.sprite)
         this.flights.splice(k, 1)
-        f.land()
+        this.land(f.i)
       }
     }
-    if (this.view) this.view.call = Math.max(0, this.view.call - dt * 0.8)
-    this.view?.update(this.time, { still: this.reducedMotion })
-    this.choice?.forEach(({ view }) => view.update(this.time, { showNext: false, still: this.reducedMotion }))
-    if (this.finale) {
-      const k = this.reducedMotion ? 1 : ease((this.time - this.finale.at) / 1.2)
-      this.finale.backdrop.fill.material.opacity = 0.55 * k
-      this.finale.views.forEach((v) => {
-        v.highlight = Math.max(0, v.highlight - dt * 0.5)
-        v.update(this.time, { showNext: false, still: this.reducedMotion })
-      })
+    for (let k = this.pops.length - 1; k >= 0; k--) {
+      const p = this.pops[k]
+      p.t += dt / 0.45
+      p.mesh.scale.setScalar(p.size * (0.6 + 2.6 * ease(p.t)))
+      p.mesh.material.opacity = 0.9 * (1 - p.t)
+      if (p.t >= 1) {
+        this.drop(p.mesh)
+        this.pops.splice(k, 1)
+      }
+    }
+    this.view?.update(this.time, this.reducedMotion, dt)
+    this.updateTreats(dt)
+    this.updateActors(dt)
+  }
+
+  /** Turns `a` to face `dir` unless it turned a moment ago (so nobody flickers back and forth). */
+  face(a, dir) {
+    if (dir === a.vx || a.turn > 0) return
+    a.vx = dir
+    a.turn = 1.2
+  }
+
+  updateActors(dt) {
+    // Remember the rocket's path by distance, so the parade keeps even gaps however fast Kitty flies
+    const head = this.path[0]
+    if (!head || Math.hypot(head.x - this.leader.x, head.y - this.leader.y) > 4) {
+      this.path.unshift({ x: this.leader.x, y: this.leader.y })
+      if (this.path.length > 600) this.path.pop()
+    }
+    let paraded = 0
+    for (let k = 0; k < this.actors.length; k++) {
+      const a = this.actors[k]
+      const v = a.view
+      v.t += dt
+      a.turn -= dt
+      v.highlight = Math.max(0, v.highlight - dt * 0.8)
+      if (a.hopT >= 0) {
+        a.hopT += dt / 1.1
+        if (a.hopT >= 1) a.hopT = -1
+      }
+      v.hop = a.hopT < 0 ? 0 : a.hopT
+      if (a.tw) {
+        // Growing or shrinking toward its size for the parade or the zoo
+        const g = 1 - Math.exp(-dt * 4)
+        a.w += (a.tw - a.w) * g
+        a.h += (a.th - a.h) * g
+      }
+      a.growRect = null
+      if (a.mode === 'stage' && a.grow < 1) {
+        // Waking: a squash, then a bounce up to its full size
+        a.grow = Math.min(1, a.grow + dt / (this.reducedMotion ? 0.2 : 0.85))
+        const e = easeBack(a.grow)
+        const tx = a.x - a.w / 2
+        const ty = a.y - a.h / 2
+        const lift = Math.sin(ease(a.grow) * Math.PI) * 80
+        a.growRect = { x: a.from.x + (tx - a.from.x) * e, y: a.from.y + (ty - a.from.y) * e + lift, w: a.from.w + (a.w - a.from.w) * e, h: a.from.h + (a.h - a.from.h) * e }
+        // The body pops in at once (a bare outline never shows), then the pose eases in
+        v.amount = Math.max(0.7, ease(a.grow))
+      } else {
+        v.amount = Math.min(1, v.amount + dt * 1.5)
+        if (a.mode === 'parade') {
+          this.follow(a, paraded++, dt)
+        } else {
+          this.wander(a, dt)
+        }
+      }
+    }
+    this.spaceParade(dt)
+    for (const a of this.actors) {
+      const v = a.view
+      let rect = a.growRect || { x: a.x - a.w / 2, y: a.y - a.h / 2, w: a.w, h: a.h }
+      // A happy, springy breath: a little wider, then a little taller
+      if (!this.reducedMotion && a.grow >= 1) {
+        const b = Math.sin(v.t * 3.2) * 0.035
+        rect = { x: rect.x - rect.w * b * 0.5, y: rect.y, w: rect.w * (1 + b), h: rect.h * (1 - b) }
+      }
+      // Turning is an instant flip with a little squash, so it never shows as a thin sliver
+      if (!a.def.symmetric && v.flip !== a.vx) {
+        v.flip = a.vx
+        a.squash = 1
+      }
+      if (a.squash > 0) {
+        a.squash = Math.max(0, a.squash - dt * 4)
+        const q = Math.sin(a.squash * Math.PI) * 0.12
+        rect = { x: rect.x + rect.w * q * 0.5, y: rect.y, w: rect.w * (1 - q), h: rect.h * (1 + q) }
+      }
+      // Parade friends fade and shrink while a star passes them; everyone else shows fully
+      const show = a.mode === 'parade' ? 0.95 - 0.65 * a.near : 1
+      v.opacity += (show - v.opacity) * Math.min(1, dt * 6)
+      if (a.near > 0.01) {
+        const q = 0.25 * a.near
+        rect = { x: rect.x + rect.w * q * 0.5, y: rect.y + rect.h * q * 0.5, w: rect.w * (1 - q), h: rect.h * (1 - q) }
+      }
+      v.place(rect)
+      v.update(this.time, this.reducedMotion, dt)
     }
   }
 
-  /** Home: every constellation the child built, each drawn into its own cell. */
-  showFinale(cells) {
-    this.clearPanel()
-    this.panelRoot.visible = false
-    this.closeFinale()
-    const backdrop = new Backdrop(this.finaleRoot, '#070424', 0, '#070424')
-    backdrop.edge.visible = false
-    const views = this.done.map((d, i) => {
-      const v = new ConstellationView(d.def, this.finaleRoot, this.glow)
-      // The stars light again one constellation after another, in the order they were made
-      d.def.stars.forEach((_, k) => v.light(k, this.time + 0.4 + i * 0.5 + k * 0.08))
-      return v
-    })
-    this.finale = { backdrop, views, cells, at: this.time }
-    this.layout()
+  /**
+   * Keeps the whole parade apart: every pair of friends at least a body apart, everyone clear of
+   * Kitty, and each friend sidestepping the stars falling past it, all settled together.
+   */
+  spaceParade(dt) {
+    const parade = this.actors.filter((a) => a.mode === 'parade')
+    if (!parade.length) return
+    const size = (a) => Math.max(a.w, a.h)
+    const apart = (a, x, y, min, share) => {
+      const dx = a.x - x
+      const dy = a.y - y
+      const d = Math.hypot(dx, dy) || 0.01
+      if (d >= min) return
+      a.x += (dx / d) * (min - d) * share
+      a.y += (dy / d) * (min - d) * share
+    }
+    // Sidestep stars passing by (first, so the spacing below has the last word)
+    for (const a of parade) {
+      for (const h of this.hazards) {
+        const min = size(a) * 0.9
+        const dx = a.x - h.x
+        const dy = a.y - h.y
+        const d = Math.hypot(dx, dy) || 0.01
+        if (d >= min) continue
+        const step = Math.min(min - d, 1500 * dt)
+        a.x += (dx / d) * step
+        a.y += (dy / d) * step
+      }
+    }
+    for (let pass = 0; pass < 4; pass++) {
+      for (let i = 0; i < parade.length; i++) {
+        for (let j = i + 1; j < parade.length; j++) {
+          const a = parade[i]
+          const b = parade[j]
+          const min = (size(a) + size(b)) * 0.5
+          const d = Math.hypot(a.x - b.x, a.y - b.y)
+          if (d >= min) continue
+          const mx = (a.x + b.x) / 2
+          const my = (a.y + b.y) / 2
+          // Each steps back half the overlap, away from the middle between them
+          const dir = d > 0.01 ? [(a.x - b.x) / d, (a.y - b.y) / d] : [1, 0]
+          a.x = mx + (dir[0] * min) / 2
+          a.y = my + (dir[1] * min) / 2
+          b.x = mx - (dir[0] * min) / 2
+          b.y = my - (dir[1] * min) / 2
+        }
+        apart(parade[i], this.leader.x, this.leader.y, this.leaderR + size(parade[i]) * 0.5, 1)
+      }
+      for (const a of parade) {
+        a.x = Math.min(Math.max(a.x, a.w / 2), this.w - a.w / 2)
+        a.y = Math.min(Math.max(a.y, a.h / 2), this.h - a.h / 2)
+      }
+    }
   }
 
-  /** Brighten one constellation at home when its card is tapped. */
-  highlight(i) {
-    const v = this.finale?.views[i]
-    if (v) v.highlight = 1
+  /** The point `d` pixels back along the rocket's path (straight down past its end). */
+  pathAt(d) {
+    let prev = this.leader
+    for (const p of this.path) {
+      const step = Math.hypot(p.x - prev.x, p.y - prev.y)
+      if (step >= d) return { x: prev.x + ((p.x - prev.x) * d) / step, y: prev.y + ((p.y - prev.y) * d) / step }
+      d -= step
+      prev = p
+    }
+    return { x: prev.x, y: prev.y - d }
   }
 
-  closeFinale() {
-    if (!this.finale) return
-    this.finale.views.forEach((v) => v.dispose())
-    this.finale.backdrop.dispose()
-    this.finaleRoot.clear()
-    this.finale = null
+  /**
+   * Friend `n` of the parade rides the rocket's path at an even gap behind the one ahead, always
+   * below Kitty (or beside her, behind the way she last flew, when she is low in the sky).
+   */
+  follow(a, n, dt) {
+    const size = Math.max(a.w, a.h)
+    const gap = size * 0.95
+    const p = this.pathAt(this.leaderR + size * 0.5 + n * gap)
+    let tx = p.x
+    let ty = Math.min(p.y, this.leader.y - this.leaderR - a.h * 0.35 - n * gap * 0.25)
+    if (ty < a.h * 0.55) {
+      const back = this.leaderDir || -1
+      tx = this.leader.x - back * (this.leaderR + size * 0.6 + n * gap)
+      ty = Math.max(a.h * 0.55, this.leader.y - this.leaderR * 0.4)
+      // No room on that side: the other side then
+      if (tx < a.w / 2 || tx > this.w - a.w / 2) tx = this.leader.x + back * (this.leaderR + size * 0.6 + n * gap)
+    }
+    tx = Math.min(Math.max(tx, a.w / 2), this.w - a.w / 2)
+    ty = Math.min(Math.max(ty, a.h / 2), this.h - a.h / 2)
+    const g = 1 - Math.exp(-dt * 6)
+    const mx = (tx - a.x) * g
+    a.x += mx
+    a.y += (ty - a.y) * g
+    if (Math.abs(mx) > 40 * dt) this.face(a, Math.sign(mx))
+    // (spaceParade then keeps every friend apart, clear of Kitty and of passing stars)
+    // A star coming near: the friend fades and shrinks out of its way, so the catch stays clear
+    const reach = size * 1.1
+    const near = this.hazards.some((h) => Math.abs(h.x - a.x) < reach && Math.abs(h.y - a.y) < reach)
+    a.near += ((near ? 1 : 0) - a.near) * Math.min(1, dt * 8)
+  }
+
+  /** At home: a tap on empty sky drops a sparkle; the nearest friend hurries over and gobbles it. */
+  feed(x, y) {
+    const zoo = this.actors.filter((a) => a.mode === 'zoo')
+    if (!zoo.length) return
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glow, color: '#fff3a0', transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }))
+    sprite.renderOrder = 9
+    sprite.scale.setScalar(44)
+    this.scene.add(sprite)
+    const t = { sprite, x, y: this.h - y, t: 0 }
+    this.treats.push(t)
+    let best = null
+    for (const a of zoo) if (!a.chase && (!best || Math.hypot(a.x - t.x, a.y - t.y) < Math.hypot(best.x - t.x, best.y - t.y))) best = a
+    if (best) best.chase = t
+  }
+
+  updateTreats(dt) {
+    for (let k = this.treats.length - 1; k >= 0; k--) {
+      const t = this.treats[k]
+      t.t += dt
+      t.y -= 30 * dt
+      t.sprite.position.set(t.x + Math.sin(t.t * 3) * 6, t.y, 1)
+      t.sprite.material.rotation = t.t
+      t.sprite.scale.setScalar(44 * (1 + Math.sin(t.t * 5) * 0.08))
+      if (t.eaten || t.t > 8) {
+        this.drop(t.sprite)
+        this.treats.splice(k, 1)
+        for (const a of this.actors) if (a.chase === t) a.chase = null
+      }
+    }
+  }
+
+  /** Walking (swimming, flying) around its space on the stage or in the zoo, turning at the edges. */
+  wander(a, dt) {
+    if (a.chase) {
+      // Off to gobble a sparkle
+      const t = a.chase
+      const dx = t.x - a.x
+      const dy = t.y - a.y
+      const d = Math.hypot(dx, dy)
+      if (d < Math.max(a.w, a.h) * 0.35) {
+        t.eaten = true
+        a.chase = null
+        a.settle = 1.6
+        this.trick(a)
+        this.onEat?.(a)
+        return
+      }
+      const step = Math.min(d, Math.max(a.w, a.h) * 1.6 * dt)
+      a.x += (dx / d) * step
+      a.y += (dy / d) * step
+      if (Math.abs(dx) > 8) this.face(a, Math.sign(dx))
+      return
+    }
+    if (a.mode === 'zoo') {
+      // Every now and then a friend does its trick all by itself
+      a.playIn -= dt
+      if (a.playIn <= 0) {
+        a.playIn = 4 + Math.random() * 5
+        this.trick(a)
+      }
+    }
+    if (a.settle > 0) {
+      // Gliding to its own spot in the zoo first
+      a.settle -= dt
+      const g = 1 - Math.exp(-dt * 3)
+      a.x += (a.home.x - a.x) * g
+      a.y += (a.home.y - a.y) * g
+      return
+    }
+    a.x += a.vx * a.def.speed * a.w * dt * (a.mode === 'zoo' ? 0.5 : 1)
+    a.y += a.vy * a.h * dt
+    const b = a.bounds
+    const minX = b.x + a.w / 2
+    const maxX = Math.max(minX, b.x + b.w - a.w / 2)
+    if (a.x < minX) {
+      a.x = minX
+      a.vx = 1
+      a.turn = 1.2
+    }
+    if (a.x > maxX) {
+      a.x = maxX
+      a.vx = -1
+      a.turn = 1.2
+    }
+    const minY = b.y + a.h / 2
+    const maxY = Math.max(minY, b.y + b.h - a.h / 2)
+    if (a.y < minY) [a.y, a.vy] = [minY, Math.abs(a.vy)]
+    if (a.y > maxY) [a.y, a.vy] = [maxY, -Math.abs(a.vy)]
   }
 
   render(renderer) {
-    if (!this.view && !this.finale && !this.choice && !this.flights.length) return
-    // The big card can move with the page (a rotated tablet): it follows its box every frame
-    if (this.joining) this.layout()
+    if (!this.view && !this.actors.length && !this.flights.length && !this.pops.length) return
     renderer.clearDepth()
     renderer.render(this.scene, this.camera)
   }

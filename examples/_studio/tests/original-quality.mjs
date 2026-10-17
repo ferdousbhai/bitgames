@@ -1,179 +1,50 @@
-// Original-game learning additions: actual input, counting outcomes, and modal isolation.
+// The originals play without reading or a voice: no instruction words on screen and no speech, from title into play.
 import assert from 'node:assert/strict'
-import { engineFromArgs, origin, originalStartButton, runChecks, startBrowser, touch } from './harness.mjs'
+import { originalIds } from '../catalogue.mjs'
+import { engineFromArgs, origin, originalStartButton, runChecks, startBrowser, tapCentre } from './harness.mjs'
 
 const engine = engineFromArgs()
 const session = await startBrowser({ engine, out: `${engine}-original-quality`, context: { deviceScaleFactor: 1 } })
-const { page } = session
+const { page, out } = session
 
-async function open(id, ready) {
-  await page.goto(`${origin}/${id}/?debug`)
-  await page.waitForFunction(ready, null, { timeout: 40000 })
-}
-const tap = (selector) => touch(page, selector)
-const mission = () => page.evaluate(() => {
-  const { option, progress, complete } = window.__adventure.mission
-  return { ...option, progress, complete }
+await page.addInitScript(() => {
+  window.__spoken = []
+  if ('speechSynthesis' in window) speechSynthesis.speak = (words) => window.__spoken.push(words.text)
 })
 
-/** Every visible button in a dialog is at least 44px and inside the portrait viewport. */
-async function assertTouchableInViewport(selector) {
-  const boxes = await page.locator(selector).evaluateAll((nodes) => nodes
-    .filter((n) => n.getBoundingClientRect().width)
-    .map((n) => {
-      const { width, height, x, y, right, bottom } = n.getBoundingClientRect()
-      return { text: n.textContent, width, height, x, y, right, bottom }
-    }))
-  for (const box of boxes) {
-    assert.ok(box.width >= 44 && box.height >= 44, JSON.stringify(box))
-    assert.ok(box.x >= 0 && box.y >= 0 && box.right <= 768 && box.bottom <= 1024, JSON.stringify(box))
+/** Visible words of two or more letters, outside a game's logo. */
+const visibleWords = () => page.evaluate(() => {
+  const words = []
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+  for (let node; (node = walker.nextNode());) {
+    const el = node.parentElement
+    if (!el || el.closest('[data-logo], .logo, h1, script, style, noscript')) continue
+    const r = el.getBoundingClientRect()
+    const style = getComputedStyle(el)
+    if (!r.width || !r.height || style.visibility === 'hidden' || Number(style.opacity) === 0) continue
+    if (r.bottom < 0 || r.right < 0 || r.top > innerHeight || r.left > innerWidth) continue
+    words.push(...(node.textContent.match(/\p{L}{2,}/gu) || []))
   }
-}
-
-const menuReady = () => window.__adventure && document.getElementById('adventure-choice')
-const choiceReady = () => document.getElementById('adventure-choice')?.getBoundingClientRect().width > 0
-async function openMissions(id) {
-  await open(id, menuReady)
-  await page.waitForFunction(choiceReady, null, { timeout: 40000 })
-}
+  return words
+})
 
 await runChecks(session, async (pass) => {
-  for (const id of ['bunny-hop', 'cake-stack', 'dragon-glide', 'fish-pond', 'star-catcher']) {
-    await openMissions(id)
-    await page.evaluate(() => localStorage.removeItem(`${location.pathname.split('/')[1]}:adventure`))
-    // Advance to the first mission through the real native control.
-    for (let attempt = 0; !(await mission()).goal; attempt++) {
-      assert.ok(attempt < 4, `${id}: mission control must respond to touch`)
-      await tap('#adventure-choice')
-      await page.waitForTimeout(100)
+  const ids = process.env.EXAMPLES_IDS?.split(",") || originalIds
+  for (const id of ids) {
+    await page.goto(`${origin}/${id}/?debug`)
+    const start = page.locator(originalStartButton(id))
+    await start.waitFor({ state: 'visible', timeout: 40000 })
+    await page.waitForTimeout(800)
+    assert.deepEqual(await visibleWords(), [], `${id}: title screen shows words`)
+    await tapCentre(page, start)
+    await page.waitForTimeout(2500)
+    for (const [x, y] of [[384, 512], [200, 700], [560, 400]]) {
+      await page.touchscreen.tap(x, y)
+      await page.waitForTimeout(400)
     }
-    const selected = (await mission()).label
-    await openMissions(id) // a fresh load must remember the choice
-    assert.equal((await mission()).label, selected)
-    await tap(originalStartButton(id))
-    await page.waitForFunction(() => !document.getElementById('hud').classList.contains('hidden'), null, { timeout: 40000 })
-    assert.equal((await mission()).progress, 0)
-    // Dragon Glide's first world counts numbered rings itself, so the counting mission rests there.
-    if (id === 'dragon-glide') {
-      assert.equal(await page.locator('#adventure-goal').isVisible(), false)
-      pass(`${id}: native mission choice persists and rests in the numbered-ring world.`)
-      continue
-    }
-    assert.equal(await page.locator('#adventure-goal').isVisible(), true)
-    // A tally reads "0 / N"; a pictured row of steps starts with none lit.
-    const goal = page.locator('#adventure-goal')
-    assert.ok((await goal.textContent()).includes('0 /') || (await goal.locator('.adventure-step').count() > 0 && await goal.locator('.adventure-got').count() === 0))
-    pass(`${id}: native mission choice persists and starts at zero.`)
+    await page.screenshot({ path: `${out}/${id}-play.png` })
+    assert.deepEqual(await visibleWords(), [], `${id}: play shows words`)
+    assert.deepEqual(await page.evaluate(() => window.__spoken), [], `${id}: the game speaks`)
+    pass(`${id}: title and play have no words and no voice.`)
   }
-
-  await open('balloon-pop', () => window.__adventure?.game.state === 'title')
-  while ((await mission()).label !== 'Three for friends') await tap('#adventure-choice')
-  await tap('#play')
-  await page.waitForFunction(() => window.__adventure.game.sky?.req)
-  for (let i = 0; i < 3; i++) {
-    // Wait for a live balloon the friend wants near the middle of the screen and return its screen point.
-    const found = await page.waitForFunction(() => {
-      const { balloons, camera, game } = window.__adventure
-      for (const b of balloons.list) {
-        if (!b.alive || b.leaving || !game.sky.req.accept(b)) continue
-        const p = b.group.position.clone()
-        const shape = balloons.shapes[b.kind.model]
-        if (shape) {
-          p.x += shape.x * b.scale
-          p.y += shape.y * b.scale
-        }
-        p.project(camera)
-        if (Math.abs(p.x) < 0.85 && Math.abs(p.y) < 0.7) return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2 }
-      }
-      return null
-    }, null, { timeout: 30000 })
-    const point = await found.jsonValue()
-    await page.touchscreen.tap(point.x, point.y)
-    await page.waitForFunction((n) => window.__adventure.game.sky.count === n, i + 1)
-  }
-  // Stopping at three is the child's decision: the basket is handed over with Give.
-  await tap('#give')
-  await page.waitForFunction(() => window.__adventure.game.sky.done && window.__adventure.game.skies === 1)
-  pass('Three directly touched balloons and Give complete a friend\'s basket.')
-
-  await open('cake-stack', () => window.cakeStack?.game.state === 'title')
-  while ((await mission()).target !== 3) await tap('#adventure-choice')
-  await tap('#play')
-  for (let i = 0; i < 3; i++) {
-    await page.waitForFunction(() => window.cakeStack.mover?.appear >= 0.6 && !window.cakeStack.mover.dropping)
-    await page.touchscreen.tap(380, 500)
-    await page.waitForFunction((n) => window.cakeStack.cake.layers.length === n, i + 1)
-  }
-  // Layers are counted together when the child lights the candles.
-  await page.waitForFunction(() => document.getElementById('done').getBoundingClientRect().width > 0)
-  await tap('#done')
-  await page.waitForFunction(() => window.__adventure.mission.progress === 3, null, { timeout: 20000 })
-  assert.equal((await mission()).complete, true)
-  pass('Actual cake drops count three placed layers.')
-
-  await open('memory-match', () => window.__memory?.game.state === 'menu')
-  await tap('#play')
-  await page.waitForFunction(() => window.__memory.game.state === 'play')
-  await tap('#peek')
-  await page.waitForFunction(() => window.__memory.game.cards.filter((c) => c.state === 'open').length === 2)
-  assert.deepEqual(await page.evaluate(() => [window.__memory.game.turns, window.__memory.game.matched]), [0, 0])
-  await page.waitForFunction(() => !window.__memory.game.busy)
-  assert.equal(await page.evaluate(() => window.__memory.game.cards.every((c) => c.state === 'down')), true)
-  pass('The pair hint reveals two matching cards, returns them, and consumes no turn.')
-
-  await open('paint-splash', () => window.__paint?.game.state === 'menu')
-  await tap('#go')
-  await page.waitForFunction(() => window.__paint.game.state === 'play')
-  // Save four pictures; the gallery keeps the latest three.
-  for (let i = 0; i < 4; i++) {
-    await tap('#gallery-save')
-    if (i < 3) await tap('#gallery-close')
-  }
-  await assertTouchableInViewport('#art-gallery button')
-  assert.equal(await page.locator('#gallery-pictures img').count(), 3)
-  assert.equal(await page.evaluate(() => window.__paint.gallery.count), 3)
-  const colourCount = await page.locator('#gallery-pictures img').first().evaluate(async (img) => {
-    await img.decode()
-    const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = 48
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(img, 0, 0, 48, 48)
-    return new Set(ctx.getImageData(0, 0, 48, 48).data).size
-  })
-  assert.ok(colourCount > 40, 'Saved artwork must contain rendered scene pixels.')
-  const painterPosition = () => page.evaluate(() => ({ x: window.__paint.game.me.x, z: window.__paint.game.me.z }))
-  const before = await painterPosition()
-  await page.keyboard.press('ArrowRight')
-  await page.keyboard.press('Escape')
-  assert.equal(await page.evaluate(() => window.__paint.game.state), 'play')
-  assert.equal(await page.locator('#art-gallery').isVisible(), false)
-  const after = await painterPosition()
-  assert.ok(Math.hypot(after.x - before.x, after.z - before.z) < 0.1)
-  pass('The gallery keeps three nonblank scene pictures and isolates painting controls.')
-
-  await open('penguin-bowling', () => window.__pb?.game.state === 'title')
-  await tap('#play')
-  await tap('#predict-pins')
-  await assertTouchableInViewport('#pin-prediction button')
-  const initial = Number(await page.locator('#pin-value').textContent())
-  await tap('#pin-more')
-  assert.equal(Number(await page.locator('#pin-value').textContent()), initial + 1)
-  await tap('#pin-confirm')
-  const guess = await page.evaluate(() => window.__pb.prediction.guess)
-  await tap('#go')
-  await page.waitForFunction(() => window.__pb.game.outcome, null, { timeout: 30000 })
-  const result = await page.evaluate(() => ({
-    before: window.__pb.game.standingBefore,
-    knocked: window.__pb.game.outcome.knocked,
-    standing: window.__pb.pins.countStanding(),
-  }))
-  assert.equal(result.knocked + result.standing, result.before)
-  assert.ok((await page.locator('#pin-discovery').textContent()).includes(`I predicted ${guess}`))
-  pass('The pin prediction compares with the actual physics outcome and conserves the pin count.')
-
-  await page.waitForFunction(() => window.__pb.game.state === 'aim')
-  await tap('#predict-pins')
-  await page.keyboard.press('Escape')
-  assert.equal(await page.evaluate(() => window.__pb.game.state), 'aim')
-  pass('Escape closes the pin prediction while keeping the bowling game open.')
 })

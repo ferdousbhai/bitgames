@@ -13,61 +13,49 @@
 </script>
 <link rel="stylesheet" href="./style.css" />
 <link rel="stylesheet" href="./ipad.css" />
-<link rel="stylesheet" href="./gallery.css" />
-<link rel="stylesheet" href="./studio-dialog.css" />
-<link rel="stylesheet" href="./colour-studio.css" />
 </head>
 <body>
 <canvas id="view"></canvas>
 
 <div id="loading" class="screen">
-  <div class="logo"><span>P</span><span>A</span><span>I</span><span>N</span><span>T</span> <span>S</span><span>P</span><span>L</span><span>A</span><span>S</span><span>H</span></div>
-  <div class="spinner">🎨</div>
-  <div id="loading-text">Opening the paint pots…</div>
-  <div id="load-error" class="hint hidden">😕 The paint got stuck. Try again?</div>
-  <button id="retry" class="big-go hidden">🔁 Try again</button>
+  <div class="logo" aria-label="Paint Splash"><span>P</span><span>A</span><span>I</span><span>N</span><span>T</span> <span>S</span><span>P</span><span>L</span><span>A</span><span>S</span><span>H</span></div>
+  <div class="spinner" aria-hidden="true">🎨</div>
+  <div id="load-error" class="big-emoji hidden" aria-hidden="true">😕</div>
+  <button id="retry" class="big-go hidden" aria-label="Try again">🔁</button>
 </div>
 
 <div id="menu" class="screen hidden">
-  <div class="logo small"><span>P</span><span>A</span><span>I</span><span>N</span><span>T</span> <span>S</span><span>P</span><span>L</span><span>A</span><span>S</span><span>H</span></div>
+  <div class="logo small" aria-label="Paint Splash"><span>P</span><span>A</span><span>I</span><span>N</span><span>T</span> <span>S</span><span>P</span><span>L</span><span>A</span><span>S</span><span>H</span></div>
   <div id="players" class="players"></div>
   <div class="picks">
-    <div class="pick-row"><span class="pick-label">🙋</span><div id="animals" class="animal-row"></div></div>
-    <div class="pick-row"><span class="pick-label">🗺️</span><div id="places" class="places"></div></div>
+    <div class="pick-row"><div id="animals" class="animal-row" role="group" aria-label="Pick your animal"></div></div>
+    <div class="pick-row"><div id="places" class="places" role="group" aria-label="Pick a place"></div></div>
   </div>
   <div class="go-row">
-    <button id="go" class="big-go">🎨 Let's paint!</button>
-    <button id="mode" class="mode-btn" aria-pressed="false" aria-label="Quick free painting with a sand timer" title="Quick free painting with a sand timer"><span class="ico">⏳</span><span class="lbl">Quick</span></button>
-  </div>
-  <div class="menu-extras">
-    <button id="colour-open" class="extra-btn" aria-label="Mix my colours"><span class="ico">🔴🟡🔵</span><span class="lbl">Mix my colours</span></button>
-    <button id="gallery-open" class="extra-btn" aria-label="My pictures"><span class="ico">🖼️</span><span class="lbl">My pictures</span></button>
+    <button id="gallery-open" class="side-btn" aria-label="My pictures">🖼️</button>
+    <button id="go" class="big-go play" aria-label="Paint!"><span class="tri" aria-hidden="true"></span></button>
+    <button id="mode" class="side-btn mode-btn" aria-pressed="false" aria-label="Quick round with a sand timer">⏳</button>
   </div>
 </div>
 
 <div id="waiting" class="screen hidden">
-  <div class="spinner">🖌️</div>
-  <h2 id="waiting-text">Waiting for friends…</h2>
+  <div class="spinner" aria-hidden="true">🖌️</div>
+  <div class="busy-sign" aria-hidden="true">🎨<span>⏳</span></div>
   <div id="players-waiting" class="players"></div>
-  <div class="pick-row"><span class="pick-label">🙋</span><div id="animals-waiting" class="animal-row"></div></div>
-  <p class="hint">⏳ The friend who started the game picks the place.</p>
+  <div class="pick-row"><div id="animals-waiting" class="animal-row" role="group" aria-label="Pick your animal"></div></div>
 </div>
 
 <div id="hud" class="hidden">
   <div class="hud-left">
-    <button id="home" class="round-btn" title="Home">🏠</button>
-    <button id="music" class="round-btn" title="Music">🎵</button>
-    <button id="sound" class="round-btn" title="Sound">🔊</button>
-    <button id="gallery-save" class="round-btn" title="Keep a picture" aria-label="Keep a picture in your gallery">📷</button>
+    <button id="home" class="round-btn" aria-label="Home">🏠</button>
+    <button id="music" class="round-btn" aria-label="Music">🎵</button>
+    <button id="sound" class="round-btn" aria-label="Sound">🔊</button>
   </div>
   <div class="hud-top">
     <div id="timer" class="pill timer hidden" aria-label="Sand timer"><span aria-hidden="true">⏳</span><i class="sand"><b id="sand"></b></i></div>
-    <div class="together-bar" aria-hidden="true"><span class="hands">🤝</span><div id="bar" class="cover-bar"><i></i></div><span class="goal">🖼️</span></div>
-    <div id="found-row" class="found-row"></div>
-    <button id="job" class="job-card hidden" aria-live="polite"></button>
     <div id="mix-note" class="mix-note hidden" aria-live="polite"></div>
   </div>
-  <button id="finish" class="finish-btn hidden" aria-label="Finished!" title="Finished!"><span class="ico">🖼️</span><span class="lbl">Finished!</span></button>
+  <button id="finish" class="finish-btn" aria-label="Finished"><canvas id="finish-thumb" width="100" height="69" aria-hidden="true"></canvas></button>
   <div id="finish-ask" class="finish-ask hidden" role="dialog" aria-label="Is your picture finished?">
     <button id="finish-yes" class="ask-btn yes" aria-label="Yes, finished">✅</button>
     <button id="finish-no" class="ask-btn no" aria-label="Keep painting">🖌️</button>
@@ -76,31 +64,28 @@
     <button class="pot" data-pot="1" aria-label="Red paint" style="--c:#eb5063"></button>
     <button class="pot" data-pot="2" aria-label="Yellow paint" style="--c:#f8d64e"></button>
     <button class="pot" data-pot="4" aria-label="Blue paint" style="--c:#4e8ad5"></button>
-    <button class="pot white" id="pot-white" data-pot="8" aria-label="White paint" style="--c:#fbfaf6" hidden></button>
+    <button class="pot rainbow" data-pot="16" aria-label="Rainbow paint"></button>
   </div>
-  <button id="voice" class="voice-btn" title="Say hello! (Space)">📣</button>
-  <div id="job-arrow" class="job-arrow" aria-hidden="true"><span class="tip">➜</span><span class="shape"></span></div>
-  <div id="hint" class="drag-hint hidden"><span class="finger">👆</span></div>
+  <button id="splat" class="splat-btn" aria-label="Splat!"><span class="blob" aria-hidden="true"></span></button>
+  <div id="hint" class="drag-hint hidden" aria-hidden="true"><span class="finger">👆</span></div>
 </div>
 
 <div id="stick" class="stick hidden"><div id="knob" class="knob"></div></div>
 <div id="countdown" class="countdown hidden"></div>
+<div id="outline-pop" class="outline-pop hidden" aria-hidden="true"></div>
 
 <div id="results" class="results hidden">
   <div class="results-top">
-    <h1 id="results-title">🎨 Look what we painted!</h1>
-    <div id="together" class="together"></div>
-    <button id="results-save" class="round-btn keep-btn" title="My pictures" aria-label="See this picture in My pictures">🖼️</button>
+    <button id="results-save" class="round-btn keep-btn" aria-label="My pictures">🖼️</button>
   </div>
-  <img id="results-page" class="results-page hidden" alt="Our full page of painted shapes">
   <div class="panel">
     <div id="found" class="found"></div>
     <div id="cards" class="cards"></div>
     <div class="row">
-      <button id="again" class="big-go">🔁 Paint again</button>
-      <button id="change" class="big-go alt">🗺️ New place</button>
+      <button id="again" class="big-go play" aria-label="Paint again"><span class="tri" aria-hidden="true"></span></button>
+      <button id="change" class="big-go alt" aria-label="New place">🗺️</button>
     </div>
-    <p id="results-wait" class="hint hidden">⏳ Waiting for your friend to start the next picture…</p>
+    <div id="results-wait" class="big-emoji wait hidden" aria-hidden="true">⏳</div>
   </div>
 </div>
 

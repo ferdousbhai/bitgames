@@ -25,9 +25,14 @@ export class Input {
       const k = e.key.toLowerCase()
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault()
       if ((k === ' ' || k === 'shift' || k === 'enter') && !e.repeat) this.dash()
+      if (k.startsWith('arrow') && !e.repeat) this.quickPress()
       this.keys.add(k)
     })
-    addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()))
+    addEventListener('keyup', (e) => {
+      const k = e.key.toLowerCase()
+      if (k.startsWith('arrow')) this.lastRelease = performance.now()
+      this.keys.delete(k)
+    })
     addEventListener('blur', () => {
       this.keys.clear()
       this.endJoy()
@@ -97,7 +102,22 @@ export class Input {
     return d
   }
 
+  /**
+   * True once after a quick new press: a finger back down (or an arrow key pressed) within 0.3 s of
+   * letting go, which is how a mashing little hand plays.
+   */
+  takeMash() {
+    const m = this.mashed
+    this.mashed = false
+    return m
+  }
+
+  quickPress() {
+    if (performance.now() - (this.lastRelease ?? -1e9) < 300) this.mashed = true
+  }
+
   startJoy(id, x, y) {
+    this.quickPress()
     this.radius = Math.max(44, Math.min(70, Math.min(innerWidth, innerHeight) * 0.11))
     this.joy = { id, x0: x, y0: y, x, y }
     this.stick.style.transform = `translate(${x}px, ${y}px)`
@@ -128,6 +148,7 @@ export class Input {
   }
 
   endJoy() {
+    if (this.joy) this.lastRelease = performance.now()
     this.joy = null
     this.stick.classList.remove('on')
   }

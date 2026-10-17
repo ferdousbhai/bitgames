@@ -14,53 +14,34 @@
 </script>
 <link rel="stylesheet" href="./style.css" />
 <link rel="stylesheet" href="./ipad.css" />
-<link rel="stylesheet" href="./adventure.css" />
 </head>
 <body>
 <canvas id="view"></canvas>
 <div id="safe" aria-hidden="true"></div>
 
 <div id="hud" class="hidden">
-  <div class="hud-top">
-    <!-- The constellation being built: drawn by three.js (js/sky.js) inside this box -->
-    <div id="sky-panel" aria-live="polite"><span id="sky-name" class="sky-name"></span><span id="sky-rule" class="sky-rule"></span></div>
-  </div>
   <div id="journey" class="journey"></div>
   <div class="hud-right">
-    <button id="home" class="round" title="Home (Esc)" aria-label="Home">🏠</button>
-    <button id="music" class="round" title="Music (N)" aria-label="Music" aria-pressed="true">🎵</button>
-    <button id="sound" class="round" title="Sound (M)" aria-label="Sound on or off">🔊</button>
+    <button id="home" class="round" title="Home (hold)" aria-label="Home">🏠</button>
+    <button id="sound" class="round" title="Sound (hold)" aria-label="Sound on or off">🔊</button>
   </div>
-  <!-- At each planet: the child picks the next constellation (shapes drawn by js/sky.js inside each card) -->
-  <div id="choose" class="choose hidden">
-    <button class="choose-cell"><span></span><b></b></button>
-    <button class="choose-cell"><span></span><b></b></button>
-  </div>
-  <!-- At each planet: the finished shape, every star numbered; the child joins the dots in order (drawn by js/sky.js) -->
-  <div id="join" class="join hidden">
-    <div id="join-card" class="join-card" aria-label="Join the dots: tap the stars in order, or use the arrow keys and Enter"><span id="join-cap"></span><div id="join-pick" class="join-pick hidden"></div></div>
-  </div>
-  <div id="banner" class="banner"></div>
+  <!-- Where the picture being caught waits faintly, and where it wakes up and plays (drawn by js/sky.js) -->
+  <div id="stage" class="stage"></div>
   <div id="nudge"><span>👆</span></div>
   <div id="popups"></div>
 </div>
 
 <div id="start" class="screen">
-  <div class="logo"><span>S</span><span>T</span><span>A</span><span>R</span> <span>C</span><span>A</span><span>T</span><span>C</span><span>H</span><span>E</span><span>R</span></div>
-  <p class="tag">Pick the star with the right number to light up the sky ✨</p>
-  <button id="go" class="big-go" disabled>Loading…</button>
-  <p class="hint small">Drag your finger or mouse, or use the arrow keys.</p>
+  <button id="go" class="big-go" aria-label="Play" disabled>▶</button>
 </div>
 
-<!-- Home at the end of the trip: the night sky of every constellation the child built -->
-<div id="finale" class="screen hidden" aria-live="polite">
-  <p class="finale-title">🏠 Home! Your night sky</p>
-  <p id="finale-count" class="finale-count"></p>
-  <div id="finale-sky" class="finale-sky"></div>
+<!-- Home at the end of the trip: every star creature of the trip plays in the night sky -->
+<div id="finale" class="screen hidden">
+  <div id="zoo" class="zoo"></div>
   <div class="finale-actions">
-    <button id="again" class="big-go small-go">🚀 Fly again</button>
     <button id="finale-home" class="round" aria-label="Home">🏠</button>
-    <button id="finale-music" class="round" aria-label="Music" aria-pressed="true">🎵</button>
+    <button id="again" class="big-go small-go" aria-label="Fly again">▶</button>
+    <button id="finale-sound" class="round" aria-label="Sound on or off">🔊</button>
   </div>
 </div>
 

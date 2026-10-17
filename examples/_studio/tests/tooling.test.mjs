@@ -29,7 +29,7 @@ process.exit(process.env.ASSET_TEST_FAIL ? 1 : 0);
     assert.ok(scripts.some(path => path.endsWith('/crash-racers/blender/cars.py')));
     assert.ok(scripts.some(path => path.endsWith('/crash-racers/blender/props.py')));
     assert.ok(!scripts.some(path => path.endsWith('/crash-racers/blender/models.py')));
-    for (const name of ['colour_kit.py', 'tablecloth.py', 'nest_blanket.py', 'mat_texture.py']) {
+    for (const name of ['nest_blanket.py', 'mat_texture.py']) {
       assert.ok(scripts.some(path => basename(path) === name), `Missing auxiliary builder: ${name}`);
     }
     assert.equal(new Set(scripts).size, scripts.length, 'Duplicate game IDs must not cause duplicate rebuilds');

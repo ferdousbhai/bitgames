@@ -1,17 +1,17 @@
 {
   "id": "fish-pond",
   "title": "Fish Pond",
-  "tagline": "Go fishing with Bear and fill your book with fish, a puffer, a whale and treasure!",
-  "howToPlay": "Pick a place: sunny lake, sunset river, starry night, icy sea or coral reef. Bear asks a riddle (\"something with a hard shell\"): tap the animal that fits, and it comes to your line. When the bobber dips and a ! pops up, tap to reel it in. An animal that fits goes in your 📖 book; one that doesn't is put back gently, with the reason why. Can you find all 20? Older players get trickier riddles (is it a real fish? does it breathe air?), two clues at once, then two different animals that fit both, and Bear's list: animals to find in other waters, so you choose where to fish. Each trip, sort your catches in the book: fresh water, the sea, or not a real animal.",
+  "tagline": "Feel the tug, see the splash, find out what you caught!",
+  "howToPlay": "Tap the water near a fish to cast, tap again when the bobber dips and the ! pops up, and tickle your catch before it flies into the picture book. Five places, 23 creatures, and surprises to find: big ones, sparkly shiny ones, a golden fish, a whale and treasure.",
   "emoji": "🎣",
   "color": "#3fa7e0",
   "category": "animals",
   "together": false,
   "featured": false,
-  "url": "https://a242ad8c-bitgames-fish-pond.ferdousbd.workers.dev/",
+  "url": "https://788017d0-bitgames-fish-pond.ferdousbd.workers.dev/",
   "ages": [
     2,
     8
   ],
-  "learning": "Observation, animal habitats (fresh water and sea), real or pretend, and counting"
+  "learning": "Fun first: watching for the bite and tapping at just the right moment, and noticing who lives in which water"
 }

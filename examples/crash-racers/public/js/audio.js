@@ -198,18 +198,46 @@ export class Audio {
     ;[392, 494, 587, 784].forEach((f, i) => this.tone({ freq: f, type: 'triangle', gain: 0.07, decay: 0.2, delay: i * 0.07 }))
   }
 
-  /** Easy mode: a soft rubbery boing for a friendly bump (no crunch). */
+  /** Easy mode: a springy cartoon boing for a friendly bump (no crunch), a little different every time. */
   bump(strength = 1) {
     const now = performance.now()
     if (now - this.lastCrash < 250) return
     this.lastCrash = now
-    this.tone({ freq: 220, type: 'sine', gain: 0.09 * strength, decay: 0.32, slide: 140 })
+    const f = 180 + Math.random() * 120
+    this.tone({ freq: f, type: 'sine', gain: 0.14 * strength, decay: 0.35, slide: f * 0.9 })
+    this.tone({ freq: f * 2, type: 'triangle', gain: 0.04 * strength, decay: 0.2, slide: -f })
   }
 
-  /** A doorbell, ding-dong: the right present at a gate. */
-  doorbell() {
-    this.tone({ freq: 659, type: 'sine', gain: 0.08, decay: 0.7 })
-    this.tone({ freq: 523, type: 'sine', gain: 0.08, decay: 0.9, delay: 0.42 })
+  /** Through a rainbow: a rushing whoosh under a quick sparkly run up the scale. */
+  zoom() {
+    this.burst({ freq: 700, q: 0.6, gain: 0.32, decay: 0.9, type: 'lowpass' })
+    this.tone({ freq: 330, type: 'triangle', gain: 0.08, decay: 0.6, slide: 500 })
+    ;[784, 988, 1175, 1568].forEach((f, i) => this.tone({ freq: f, type: 'sine', gain: 0.06, decay: 0.3, delay: 0.05 + i * 0.06 }))
+  }
+
+  /** A tap on the ⚡ button: a bright little blip. */
+  tap() {
+    this.tone({ freq: 880, type: 'sine', gain: 0.09, decay: 0.15, slide: 400 })
+  }
+
+  /** The child passed a car: a cheeky rising zip. */
+  overtake() {
+    this.tone({ freq: 440, type: 'triangle', gain: 0.08, decay: 0.22, slide: 440 })
+    this.tone({ freq: 660, type: 'sine', gain: 0.06, decay: 0.25, delay: 0.12, slide: 330 })
+  }
+
+  /** The child dropped a place: a soft "aww" slide down, nothing harsh. */
+  overtaken() {
+    this.tone({ freq: 420, type: 'sine', gain: 0.05, decay: 0.35, slide: -160 })
+  }
+
+  /** A win: a little brass-ish fanfare (triangles), da-da-da-daaa. */
+  fanfare() {
+    const notes = [[523, 0], [523, 0.14], [523, 0.28], [698, 0.44], [880, 0.78], [784, 0.96], [1047, 1.14]]
+    for (const [f, at] of notes) {
+      this.tone({ freq: f, type: 'triangle', gain: 0.1, decay: at > 1 ? 1.2 : 0.22, delay: at })
+      this.tone({ freq: f / 2, type: 'sine', gain: 0.06, decay: at > 1 ? 1.2 : 0.22, delay: at })
+    }
   }
 
   /** The horn shockwave: a big honk and a whoomp. */

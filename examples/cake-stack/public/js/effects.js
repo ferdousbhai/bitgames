@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
 /**
- * Party juice: paper petals, icing splats, puffs of smoke and flour, sparkles,
- * shock rings and floating labels. Particles live in pooled InstancedMeshes so
+ * Party juice: paper petals and confetti, icing splats, puffs of smoke and flour,
+ * sparkles and shock rings. Particles live in pooled InstancedMeshes so
  * they stay smooth on a tablet.
  */
 /** A texture painted once by `draw(ctx, width, height)`. */
@@ -113,6 +113,7 @@ class Pool {
 
 // Soft bakery pastels for the party petals
 const PETALS = ['#ffc2d6', '#ffe8a3', '#c9f0e1', '#d9ccff', '#ffffff']
+const CONFETTI = ['#ff6fae', '#ffd23f', '#4fd1b5', '#9b7cf7', '#7bc8ff', '#ffb347', '#ffffff']
 const pick = (a) => a[(Math.random() * a.length) | 0]
 
 export class Effects {
@@ -126,6 +127,14 @@ export class Effects {
       material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
       gravity: 0.25,
       drag: 0.6,
+    })
+    // Party-popper confetti: shot up, then flutters down a little faster than the petals
+    this.confettiPool = new Pool(scene, {
+      count: 120,
+      geometry: new THREE.PlaneGeometry(0.12, 0.07),
+      material: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+      gravity: 2.2,
+      drag: 1.6,
     })
     // Squishy blobs of icing
     const blob = new THREE.IcosahedronGeometry(0.08, 1)
@@ -153,6 +162,15 @@ export class Effects {
       drag: 1.5,
       billboard: true,
     })
+    // Firework stars: normal blending, so their colours stay rich instead of washing out to white
+    this.glints = new Pool(scene, {
+      count: 420,
+      geometry: new THREE.PlaneGeometry(1, 1),
+      material: new THREE.MeshBasicMaterial({ map: starTex, transparent: true, depthWrite: false, toneMapped: false }),
+      gravity: 0.5,
+      drag: 1.1,
+      billboard: true,
+    })
     this.rings = []
     const ringGeo = new THREE.RingGeometry(0.8, 1, 40)
     for (let i = 0; i < 12; i++) {
@@ -163,8 +181,6 @@ export class Effects {
       this.rings.push(m)
     }
     this.ringNext = 0
-    this.labels = document.getElementById('labels')
-    this.shake = 0
     this.tmp = new THREE.Vector3()
   }
 
@@ -236,6 +252,25 @@ export class Effects {
     }
   }
 
+  /** A party popper: a fan of paper confetti shot up and inward from one side (dir +1 shoots right). */
+  confetti(pos, dir = 1, amount = 40) {
+    const v = new THREE.Vector3()
+    for (let i = 0; i < amount; i++) {
+      v.set(dir * (1 + Math.random() * 2.5), 5 + Math.random() * 3, (Math.random() - 0.5) * 1.2)
+      this.confettiPool.spawn(pos, v, { life: 3 + Math.random() * 1.5, size: 0.7 + Math.random() * 0.5, color: pick(CONFETTI), spin: 4 })
+    }
+  }
+
+  /** A firework bloom: a big ring of coloured stars drifting out and fading slowly (no flash). */
+  bloom(pos, color, n = 40) {
+    const v = this.tmp
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2
+      v.set(Math.cos(a), Math.sin(a), (Math.random() - 0.5) * 0.5).multiplyScalar(2 + Math.random() * 0.6)
+      this.glints.spawn(pos, v, { life: 1.6 + Math.random() * 0.5, size: 0.32 + Math.random() * 0.14, color })
+    }
+  }
+
   sparkleAt(pos, color = '#ffffff', n = 3) {
     const v = this.tmp
     for (let i = 0; i < n; i++) {
@@ -244,24 +279,13 @@ export class Effects {
     }
   }
 
-  /** A word or emoji floating up from a point in the scene. */
-  label(text, pos, color, big = false) {
-    const p = this.tmp.copy(pos).project(this.camera)
-    const el = document.createElement('div')
-    el.className = 'float' + (big ? ' big' : '')
-    el.textContent = text
-    el.style.left = `${((p.x + 1) / 2) * 100}%`
-    el.style.top = `${((1 - p.y) / 2) * 100}%`
-    el.style.color = color
-    this.labels.appendChild(el)
-    el.addEventListener('animationend', () => el.remove())
-  }
-
   update(dt) {
     this.petals.update(dt, this.camera)
+    this.confettiPool.update(dt, this.camera)
     this.blobs.update(dt, this.camera)
     this.puffs.update(dt, this.camera)
     this.sparkles.update(dt, this.camera)
+    this.glints.update(dt, this.camera)
     for (const r of this.rings) {
       if (!r.visible) continue
       const u = r.userData
@@ -274,6 +298,5 @@ export class Effects {
       r.scale.setScalar(0.3 + u.size * (1 - (1 - t) ** 3))
       r.material.opacity = 1 - t
     }
-    this.shake = Math.max(0, this.shake - dt * 2.5)
   }
 }

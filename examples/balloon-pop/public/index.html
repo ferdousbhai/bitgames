@@ -13,57 +13,37 @@
 </script>
 <link rel="stylesheet" href="./style.css" />
 <link rel="stylesheet" href="./ipad.css" />
-<link rel="stylesheet" href="./adventure.css" />
 </head>
 <body>
 <canvas id="view"></canvas>
-<div id="labels"></div>
 
 <div id="loading" class="screen">
   <div class="logo"><span>B</span><span>A</span><span>L</span><span>L</span><span>O</span><span>O</span><span>N</span> <span>P</span><span>O</span><span>P</span></div>
   <div class="spinner">🎈</div>
-  <div id="loading-text">Blowing up balloons…</div>
 </div>
 
 <div id="title" class="screen card-screen hidden">
   <div class="card">
     <div class="logo"><span>B</span><span>A</span><span>L</span><span>L</span><span>O</span><span>O</span><span>N</span> <span>P</span><span>O</span><span>P</span></div>
-    <p class="tag">Look, count and pop!</p>
-    <div class="friends"><span>🎈</span><span>💖</span><span>👑</span><span>🐰</span><span>⭐</span><span>🌈</span></div>
-    <button id="play" class="big-go">▶ Play</button>
-    <button id="easy" class="easy-go hidden" title="Start with numbered slots again">🌱 Start easy</button>
-    <div class="scores"><span id="last" class="hidden"></span></div>
-    <div id="title-picnic" class="picnic-row hidden" aria-label="The friends you helped, with their balloons"></div>
+    <div class="friends" aria-hidden="true"><span>🎈</span><span>💖</span><span>👑</span><span class="giant-pic">🎈</span><span>🐰</span><span>⭐</span><span>🌈</span></div>
+    <button id="play" class="big-go" aria-label="Play">▶</button>
   </div>
 </div>
 
 <div id="hud" class="hidden">
   <div class="hud-left">
-    <button id="home" class="round-btn" title="Home (Esc)">🏠</button>
+    <button id="home" class="round-btn" aria-label="Home">🏠</button>
   </div>
   <div class="hud-right">
-    <button id="music" class="round-btn" title="Music">🎵</button>
-    <button id="sound" class="round-btn" title="Sound">🔊</button>
+    <button id="music" class="round-btn" aria-label="Music">🎵</button>
+    <button id="sound" class="round-btn" aria-label="Sound">🔊</button>
   </div>
-  <div class="level-wrap"><div id="met" class="met" aria-label="The balloon friends you have met"></div></div>
-  <div id="sky" class="sky" hidden role="status" aria-live="polite">
-    <div class="sky-who">
-      <div id="sky-friend" class="sky-friend" aria-hidden="true"></div>
-      <div id="sky-step" class="sky-step" aria-hidden="true"></div>
-    </div>
-    <div class="sky-body">
-      <div id="sky-caption" class="sky-caption"></div>
-      <div id="sky-slots" class="sky-slots"></div>
-    </div>
-    <button id="give" class="sky-give" title="Give the basket (G)"><span aria-hidden="true">🧺</span>Give</button>
-  </div>
-  <div id="picnic" class="picnic picnic-row" hidden aria-label="The friends you helped"></div>
-  <div id="wish" class="wish" hidden role="status" aria-live="polite"><span id="wish-friend" class="wish-friend" aria-hidden="true"></span><span id="wish-pic" class="wish-pic"></span></div>
-  <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div><div id="intro-sub"></div></div>
+  <div class="level-wrap"><div id="met" class="met" aria-label="Balloon friends"></div></div>
+  <div id="intro" class="intro" aria-hidden="true"></div>
 </div>
 
-<div id="hint" class="hint-finger hidden">👆</div>
-<div id="reticle" class="reticle hidden">📍</div>
+<div id="hint" class="hint-finger hidden" aria-hidden="true">👆</div>
+<div id="reticle" class="reticle hidden" aria-hidden="true">📍</div>
 
 <script type="module" src="./js/main.js"></script>
 </body>

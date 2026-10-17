@@ -19,8 +19,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 /* The menus let Ember show through in the middle */
 .screen.clear { background: linear-gradient(180deg, rgba(40,110,220,0.45), transparent 30%, transparent 60%, rgba(60,40,140,0.4)); justify-content: space-between; padding-top: calc(28px + env(safe-area-inset-top)); }
 .spacer { flex: 1; }
-.menu-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.row { display: flex; gap: 12px; align-items: center; }
+.menu-bottom { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.row { display: flex; gap: 14px; align-items: center; }
 
 .logo { font-size: clamp(44px, 11vw, 100px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1.05; }
 .logo span { display: inline-block; text-shadow: 0 5px 0 rgba(0,0,0,0.22), 0 10px 18px rgba(0,0,0,0.15); -webkit-text-stroke: 2px rgba(255,255,255,0.9); }
@@ -29,23 +29,22 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .logo span:nth-child(5n+3) { color: #ff6b9d; }
 .logo span:nth-child(5n+4) { color: #9b5de5; }
 .logo span:nth-child(5n) { color: #36a8ff; }
-.sub { margin: 0; font-size: clamp(20px, 4vw, 28px); font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.3); }
-.hint { margin: 0; font-size: 18px; font-weight: 700; opacity: 0.95; text-shadow: 0 2px 4px rgba(0,0,0,0.35); }
 .flyer { font-size: 72px; animation: fly 1.2s ease-in-out infinite; }
 @keyframes fly { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-24px) rotate(6deg); } }
 .bar { width: min(260px, 70vw); height: 16px; border-radius: 99px; background: rgba(255,255,255,0.4); overflow: hidden; }
 #load-bar { height: 100%; width: 5%; background: #ffcf1a; border-radius: 99px; transition: width .3s; }
 
 .big-go {
-  background: #ffcf1a; color: #6b3d00; font-size: clamp(30px, 6vw, 44px); font-weight: 900; padding: 14px 46px; border-radius: 999px;
-  box-shadow: 0 7px 0 #c98f00, 0 14px 24px rgba(0,0,0,0.2); transition: transform .1s;
+  background: #ffcf1a; color: #6b3d00; font-size: clamp(34px, 7vw, 52px); font-weight: 900; padding: 14px 46px; border-radius: 999px; line-height: 1.1;
+  box-shadow: 0 7px 0 #c98f00, 0 14px 24px rgba(0,0,0,0.2); transition: transform .1s; white-space: nowrap;
 }
 .big-go:active { transform: translateY(5px); box-shadow: 0 2px 0 #c98f00; }
-.big-go.alt { background: #ffffff; color: #36a8ff; box-shadow: 0 7px 0 #a9c9e8, 0 14px 24px rgba(0,0,0,0.2); padding: 14px 26px; }
-.best { font-size: 22px; font-weight: 900; background: rgba(0,0,0,0.25); padding: 6px 16px; border-radius: 99px; }
+.big-go.alt { background: #ffffff; color: #36a8ff; box-shadow: 0 7px 0 #a9c9e8, 0 14px 24px rgba(0,0,0,0.2); padding: 14px 30px; }
+/* the title's play button: one big round ▶ */
+.big-go.play { width: clamp(110px, 22vw, 150px); height: clamp(110px, 22vw, 150px); padding: 0 0 0 0.12em; border-radius: 50%; font-size: clamp(52px, 11vw, 76px); }
 
 /* Pick a world to start from */
-.worlds { display: flex; gap: 10px; }
+.worlds { display: flex; gap: 12px; }
 .worlds button {
   width: 64px; height: 64px; border-radius: 50%; font-size: 34px; background: rgba(255,255,255,0.85);
   box-shadow: 0 5px 0 rgba(40,70,140,0.35); transition: transform .1s; position: relative;
@@ -53,9 +52,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .worlds button:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(40,70,140,0.35); }
 .worlds button.done::after { content: '⭐'; position: absolute; right: -6px; top: -8px; font-size: 22px; }
 
-.screen h1 { margin: 0; font-size: clamp(36px, 8vw, 66px); text-shadow: 0 4px 0 #3fcf8c, 0 8px 18px rgba(0,0,0,0.2); }
-@keyframes pop { from { transform: scale(0) rotate(-40deg); } to { transform: scale(1) rotate(0); } }
-.results-top { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* The end card: each world with the treasures Ember found there */
+.learned { display: flex; flex-direction: column; align-items: center; gap: 8px; --s: clamp(26px, 4.8vw, 38px); }
+.learn { display: flex; align-items: center; flex-wrap: nowrap; justify-content: center; gap: 8px; background: rgba(0,0,0,0.22); border-radius: 99px; padding: 4px 16px 4px 8px; max-width: 92vw; }
+.learn .w { font-size: calc(var(--s) * 1.25); line-height: 1; }
+.learn .kind { display: inline-flex; gap: 2px; }
+svg.tre { width: var(--s); height: var(--s); display: block; overflow: visible; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.25)); }
 
 /* --- In play ----------------------------------------------------------------------- */
 #hud { position: fixed; inset: 0; pointer-events: none; }
@@ -63,433 +65,140 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .round { pointer-events: auto; width: 52px; height: 52px; border-radius: 50%; background: rgba(0,0,0,0.28); font-size: 26px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); }
 .round:active { transform: translateY(2px); }
 .round.off { opacity: 0.5; }
-/* On the menus the buttons wait at the side, out of the way of the title */
-body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38%; }
+/* 🏠 during a trip: hold it and a ring fills round it, then home */
+#home, #to-title { position: relative; }
+#home::after {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: conic-gradient(#ffcf1a calc(var(--fill, 0) * 1turn), transparent 0);
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%); mask: radial-gradient(circle, transparent 58%, #000 60%);
+}
+#home.holding::after, #to-title.holding::after { opacity: 1; animation: fill-home .7s linear forwards; }
+/* the end card's 🏠 is a pill: a gold pill behind it fills from left to right */
+#to-title::after {
+  content: ''; position: absolute; inset: -6px; border-radius: 999px; pointer-events: none; opacity: 0; z-index: -1;
+  background: linear-gradient(90deg, #ffcf1a calc(var(--fill, 0) * 100%), rgba(255,255,255,0.35) 0);
+}
+@property --fill { syntax: '<number>'; inherits: false; initial-value: 0; }
+@keyframes fill-home { from { --fill: 0; } to { --fill: 1; } }
 /* Below the top-right corner, which BitGames keeps for its ✕ button */
 .corner { position: fixed; top: calc(70px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 8px; z-index: 5; }
+/* On the menus the buttons wait at the side, out of the way of the title */
+body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38%; }
 
 .trip { position: absolute; top: calc(76px + env(safe-area-inset-top)); left: 50%; translate: -50% 0; width: min(440px, 64vw); height: 40px; }
 .trip-track { position: absolute; left: 4%; right: 4%; top: 15px; height: 10px; border-radius: 99px; background: rgba(255,255,255,0.45); overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
 .trip-fill { height: 100%; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, #3fcf8c, #ffcf1a, #ff9f1c, #9b5de5); transition: transform .2s linear; }
 .trip-stops { position: absolute; inset: 0; display: flex; justify-content: space-between; font-size: 22px; line-height: 40px; }
 .trip-stops span { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); }
-.trip-dragon { position: absolute; top: -14px; left: 4%; width: 92%; font-size: 28px; transition: transform .2s linear; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35)); }
+.trip-dragon { position: absolute; top: -34px; left: 4%; width: 92%; font-size: 40px; transition: transform .2s linear; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35)); }
 .trip-dragon span { display: inline-block; translate: -50% 0; transform: scaleX(-1); }
 
-
-
+/* The new world's picture pops in big, then floats away */
 .banner {
-  position: absolute; top: 24%; left: 0; right: 0; text-align: center; font-size: clamp(36px, 8vw, 76px); font-weight: 900;
-  color: #fff; opacity: 0;
-  /* a thick green outline so the big line reads on the sun's glow and pale pink skies */
-  --o: #24a56b; text-shadow: 3px 3px 0 var(--o), -3px 3px 0 var(--o), 3px -3px 0 var(--o), -3px -3px 0 var(--o), 0 3px 0 var(--o), 0 -3px 0 var(--o), 3px 0 0 var(--o), -3px 0 0 var(--o), 0 7px 0 var(--o), 0 12px 26px rgba(0,0,0,0.3); transform: scale(0.5); transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1);
-  padding: 0 16px;
-}
-.banner .line { display: inline-block; white-space: nowrap; }
-.banner small {
-  display: block; font-size: 0.46em; margin-top: 6px;
-  /* a thick dark outline so the line stays readable on pale skies */
-  text-shadow: 2px 2px 0 #2a5a8a, -2px 2px 0 #2a5a8a, 2px -2px 0 #2a5a8a, -2px -2px 0 #2a5a8a, 0 2px 0 #2a5a8a, 0 -2px 0 #2a5a8a, 2px 0 0 #2a5a8a, -2px 0 0 #2a5a8a, 0 4px 0 #2a5a8a;
+  position: absolute; top: 22%; left: 0; right: 0; text-align: center; font-size: clamp(80px, 18vw, 150px); line-height: 1;
+  opacity: 0; transform: scale(0.4); transition: opacity .3s, transform .45s cubic-bezier(.2,1.6,.4,1);
+  filter: drop-shadow(0 6px 0 rgba(0,0,0,0.18)) drop-shadow(0 12px 22px rgba(0,0,0,0.2));
 }
 .banner.show { opacity: 1; transform: scale(1); }
-.tip {
-  position: absolute; bottom: calc(26px + env(safe-area-inset-bottom)); left: 50%; translate: -50% 0; white-space: nowrap; font-size: clamp(22px, 4.5vw, 34px); font-weight: 900;
-  background: rgba(0,0,0,0.28); padding: 6px 24px; border-radius: 99px; text-shadow: 0 3px 0 rgba(0,0,0,0.25); transition: opacity .4s; opacity: 0;
+
+/* The bag: the treasures caught in this world, bottom left, clear of 🔥 */
+.bag {
+  position: absolute; left: calc(12px + env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom));
+  display: flex; gap: 4px; align-items: center; padding: 8px 12px; min-height: 52px; border-radius: 999px;
+  background: rgba(0,0,0,0.22); --s: 34px; transition: opacity .3s;
 }
-.tip.show { opacity: 1; }
+.bag.empty { opacity: 0; }
+/* at the nest the treasures pour out of the bag, and the bag itself fades */
+.bag.pouring { background: none; }
+
+/* The drawn hand that shows how, only when the child seems stuck */
+.hand { position: absolute; opacity: 0; transition: opacity .4s; font-size: 64px; line-height: 1; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3)); }
+.hand.show { opacity: 1; }
+.hand span { display: inline-block; }
+.hand[data-kind="drag"] { left: 50%; bottom: 22%; translate: -50% 0; }
+.hand[data-kind="drag"] span { animation: drag 2.6s ease-in-out infinite; }
+@keyframes drag { 0%, 100% { transform: translate(-70px, 10px) rotate(-12deg); } 50% { transform: translate(70px, -30px) rotate(12deg); } }
+.hand[data-kind="fire"] { right: calc(40px + env(safe-area-inset-right)); bottom: calc(96px + env(safe-area-inset-bottom)); }
+.hand[data-kind="fire"] span { transform: rotate(180deg); animation: tap 1.1s ease-in-out infinite; }
+@keyframes tap { 0%, 100% { transform: rotate(180deg) translateY(0); } 50% { transform: rotate(180deg) translateY(-18px); } }
 
 .fire {
   pointer-events: auto; position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom));
   width: 96px; height: 96px; border-radius: 50%; font-size: 52px; background: radial-gradient(circle at 40% 35%, #fff3a0, #ff9f43 60%, #ff6b4a);
   box-shadow: 0 6px 0 #c94a2a, 0 10px 22px rgba(0,0,0,0.25); transition: transform .08s, opacity .4s, scale .4s;
 }
+.fire:active, .fire.press { transform: translateY(4px) scale(0.95); box-shadow: 0 2px 0 #c94a2a; }
 /* at the nest there is nothing to puff at, so 🔥 steps aside until the next world */
 #hud.resting .fire { opacity: 0; scale: 0.6; pointer-events: none; }
-#hud.resting .tip { opacity: 0; }
-.fire:active, .fire.press { transform: translateY(4px) scale(0.95); box-shadow: 0 2px 0 #c94a2a; }
+
+/* At the nest the family waits for the child: one tap flies on */
+.fly-on {
+  pointer-events: auto; position: absolute; left: 50%; translate: -50% 0; bottom: calc(26px + env(safe-area-inset-bottom));
+  padding: 10px 44px; animation: arrive .45s cubic-bezier(.2,1.6,.4,1);
+}
+.fly-on .next {
+  display: inline-grid; place-items: center; width: 1.45em; height: 1.45em; margin-left: .15em; vertical-align: middle;
+  border-radius: 50%; background: #3b4a86; box-shadow: inset 0 0 0 3px rgba(255,255,255,.85);
+}
+@keyframes arrive { from { scale: 0.3; opacity: 0; } to { scale: 1; opacity: 1; } }
 
 #popups { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-.pop { position: absolute; translate: -50% -50%; font-size: 30px; font-weight: 900; color: #fff; --o: #2a7fd0; text-shadow: 2px 2px 0 var(--o), -2px 2px 0 var(--o), 2px -2px 0 var(--o), -2px -2px 0 var(--o), 0px 2px 0 var(--o), 0px -2px 0 var(--o), 2px 0px 0 var(--o), -2px 0px 0 var(--o), 0 5px 0 var(--o); animation: float 1s ease-out forwards; white-space: nowrap; }
-/* thick outlines so the numbers read on pale day skies and stay bright as they float off at night */
-.pop.big { font-size: 42px; --o: #c98f00; }
-.pop.oops { font-size: 38px; --o: #e0457f; }
-.pop.hoop { font-size: 40px; --o: #7b3fc8; }
-.pop.hush { visibility: hidden; }
+.pop { position: absolute; translate: -50% -50%; font-size: 44px; animation: float 1s ease-out forwards; white-space: nowrap; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.3)); }
 @keyframes float { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 15% { transform: translateY(-10px) scale(1.2); opacity: 1; } 75% { transform: translateY(-62px) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.7); opacity: 0; } }
 
+/* --- Smaller screens --------------------------------------------------------------- */
 @media (max-width: 520px) {
-  .trip { width: auto; translate: none; left: calc(16px + env(safe-area-inset-left)); right: calc(76px + env(safe-area-inset-right)); top: calc(74px + env(safe-area-inset-top)); }
-  .tip { bottom: calc(118px + env(safe-area-inset-bottom)); font-size: 20px; padding: 6px 16px; }
+  .trip { width: auto; translate: none; left: calc(72px + env(safe-area-inset-left)); right: calc(76px + env(safe-area-inset-right)); top: calc(74px + env(safe-area-inset-top)); }
   .worlds button { width: 54px; height: 54px; font-size: 28px; }
   .fire { width: 84px; height: 84px; font-size: 44px; }
-  .pop { animation-name: float-short; }
+  .bag { --s: 26px; padding: 6px 10px; min-height: 44px; gap: 3px; }
+  .hand[data-kind="fire"] { bottom: calc(86px + env(safe-area-inset-bottom)); }
+  .learned { --s: 22px; }
 }
-
+/* Upright phones: the world's picture waits below the sound buttons and above Ember */
+@media (max-width: 520px) and (orientation: portrait) {
+  .banner { top: max(24%, calc(196px + env(safe-area-inset-top))); }
+  /* the end card's rows stay clear of the sound buttons on the right */
+  #results .learned { --s: 17px; gap: 5px; max-width: calc(100vw - 140px); }
+  #results .learn { gap: 5px; padding: 2px 10px 2px 4px; }
+}
 /* Phones held sideways: shrink the screens so the big button stays on screen */
 @media (max-height: 480px) {
   .screen { gap: 8px; }
   .screen.clear { padding-top: calc(10px + env(safe-area-inset-top)); }
   .logo { font-size: 44px; }
-  .menu-bottom { gap: 6px; }
-  .screen h1 { font-size: 34px; }
-  .best { font-size: 18px; padding: 4px 14px; }
-  .big-go { font-size: 26px; padding: 10px 36px; }
+  .menu-bottom { gap: 8px; }
+  .big-go { font-size: 30px; padding: 10px 36px; }
+  .big-go.play { width: 92px; height: 92px; font-size: 46px; }
   .worlds button { width: 48px; height: 48px; font-size: 26px; }
-  .hint { display: none; }
   .trip { top: calc(10px + env(safe-area-inset-top)); width: 40vw; }
-  .corner { top: calc(62px + env(safe-area-inset-top)); flex-direction: column; }
+  .corner { top: calc(62px + env(safe-area-inset-top)); }
   .round { width: 46px; height: 46px; font-size: 22px; }
   .fire { width: 80px; height: 80px; font-size: 42px; }
-  /* floating numbers rise less on short screens, so they stay below 'N rings in a row!' */
-  .pop { animation-name: float-short; }
-}
-@keyframes float-short { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 15% { transform: translateY(-6px) scale(1.15); opacity: 1; } 75% { transform: translateY(-30px) scale(1); opacity: 1; } 100% { transform: translateY(-38px) scale(0.7); opacity: 0; } }
-
-body[data-screen="title"] .corner, body[data-screen="results"] .corner { top: 38%; }
-/* upright, the end card's family fills the middle, so the sound buttons go back up to their corner */
-@media (orientation: portrait) { body[data-screen="results"] .corner { top: calc(70px + env(safe-area-inset-top)); } }
-
-/* --- Counting mission ------------------------------------------------------------ */
-/* The choice on the title: a chunky toy button that says itself out loud when tapped */
-#title .adventure-choice {
-  margin: 0; min-height: 52px; padding: 6px 22px; border-radius: 999px; border: 3px solid #fff; white-space: nowrap;
-  font: 900 20px/1.1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
-  background: linear-gradient(#ffffff, #d9efff); color: #2c5fa8; box-shadow: 0 5px 0 rgba(40, 70, 140, 0.35);
-}
-#title .adventure-choice:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(40, 70, 140, 0.35); }
-/* The goal: four rings that fill in as Ember flies through them, bottom left, clear of 🔥 */
-#hud .adventure-goal {
-  left: calc(12px + env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom)); transform: none; max-width: none;
-  display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 10px; border-radius: 999px;
-  background: rgba(0, 0, 0, 0.28); border: 3px solid rgba(255, 255, 255, 0.85); color: #fff;
-  font: 900 22px/1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
-}
-#hud .adventure-goal.adventure-done { background: linear-gradient(#fff3a0, #ffcf1a); color: #6b3d00; text-shadow: none; }
-/* the done star gets a dark outline so it stands out on the gold chip */
-#hud .adventure-goal.adventure-done b { font-size: 1.2em; filter: drop-shadow(1px 0 0 #b35400) drop-shadow(-1px 0 0 #b35400) drop-shadow(0 1px 0 #b35400) drop-shadow(0 -1px 0 #b35400); }
-/* the rings show "not yet" with their pale border, so the shared grey-out stays off */
-#hud .adventure-steps { gap: 5px; }
-#hud .adventure-step { filter: none; opacity: 1; }
-.adventure-step i { display: block; width: 26px; height: 26px; border-radius: 50%; border: 5px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; }
-.adventure-step.adventure-got i { border-color: #fff; background: radial-gradient(circle, transparent 42%, rgba(255, 207, 26, 0.9) 45%); box-shadow: 0 0 8px #fff3a0; }
-.adventure-done .adventure-step.adventure-got i { border-color: #ff9f1c; background: none; box-shadow: none; }
-/* the hints go up a little so they never sit on the rings */
-body:has(#adventure-goal:not([hidden])) .tip { bottom: calc(84px + env(safe-area-inset-bottom)); }
-@media (max-width: 520px) {
-  .big-go { white-space: nowrap; }
-  #results .big-go { font-size: 28px; padding: 12px 28px; }
-  #hud .adventure-goal { font-size: 18px; gap: 6px; padding: 4px 12px 4px 8px; }
-  #hud .adventure-steps { gap: 4px; }
-  .adventure-step i { width: 22px; height: 22px; border-width: 4px; }
-  body:has(#adventure-goal:not([hidden])) .tip { bottom: calc(118px + env(safe-area-inset-bottom)); }
-}
-/* Upright phones: the place name waits below the sound buttons and above Ember */
-@media (max-width: 520px) and (orientation: portrait) {
-  .banner { top: max(24%, calc(196px + env(safe-area-inset-top))); font-size: clamp(30px, 10vw, 44px); }
-}
-/* Big screens: a bigger mission chip */
-@media (min-width: 760px) and (min-height: 640px) {
-  #hud .adventure-goal { font-size: 28px; padding: 8px 18px 8px 12px; gap: 10px; }
-  .adventure-step i { width: 34px; height: 34px; border-width: 6px; }
-  #title .adventure-choice { font-size: 24px; min-height: 60px; }
-  .worlds { gap: 14px; }
-  .worlds button { width: 78px; height: 78px; font-size: 42px; }
-}
-@media (max-width: 360px) {
-  .sub { font-size: 17px; }
-  /* the smallest phones: the end card's title stays on one line and its buttons stay off the edges */
-  #results h1 { font-size: 30px; white-space: nowrap; }
-  #results .row { gap: 10px; }
-  #results .big-go { font-size: 24px; padding: 10px 20px; }
-  #results .big-go.alt { padding: 10px 16px; }
-}
-
-/* Phones held sideways: the worlds stand in a column at the side and the title buttons sit in
-   one row, so Ember shows in the middle and Let's fly never falls off the bottom */
-@media (max-height: 480px) and (orientation: landscape) {
-  #title .worlds { position: fixed; left: calc(14px + env(safe-area-inset-left)); top: 50%; translate: 0 -50%; flex-direction: column; gap: 8px; }
-  #title .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px 14px; }
-  #title .best { display: none; }
-  #title .adventure-choice { font-size: 17px; min-height: 48px; padding: 4px 16px; }
-  .banner { top: calc(54px + env(safe-area-inset-top)); font-size: clamp(30px, 7vw, 48px); }
-  .banner small { margin-top: 2px; }
-  #hud .adventure-goal { bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 17px; padding: 3px 10px 3px 6px; gap: 5px; border-width: 2px; }
-  #hud .adventure-steps { gap: 3px; }
-  .adventure-step i { width: 20px; height: 20px; border-width: 4px; }
-  /* hints sit low, between the rings and 🔥, so they never cover Ember */
-  .tip, body:has(#adventure-goal:not([hidden])) .tip { bottom: calc(10px + env(safe-area-inset-bottom)); left: calc(50% + 30px); font-size: 20px; padding: 5px 16px; }
-  /* the end card stands in a column on the left so the family in the nest shows on the right */
-  #results { align-items: flex-start; padding-left: calc(14px + env(safe-area-inset-left)); }
-  #results .results-top, #results .menu-bottom { width: min(300px, 50vw); }
-  #results h1 { font-size: 28px; white-space: nowrap; }
-  #results .best { font-size: 15px; padding: 3px 12px; }
-  #results .row { gap: 10px; }
-  #results .big-go { font-size: 22px; padding: 9px 22px; white-space: nowrap; }
-  #results .big-go.alt { padding: 9px 16px; }
-}
-@media (max-height: 340px) and (orientation: landscape) {
-  #title .sub { display: none; }
-  #title .worlds button { width: 44px; height: 44px; font-size: 24px; }
-  #title .worlds { gap: 6px; }
-  #title .big-go { font-size: 24px; padding: 8px 30px; }
-  .banner small { display: none; }
-}
-
-/* --- Calm pass (2026-10-09): no endless pulses or nudges (gone at their source) --- */
-/* At the nest the family waits for the child: one tap flies on */
-.fly-on {
-  pointer-events: auto; position: absolute; left: 50%; translate: -50% 0; bottom: calc(26px + env(safe-area-inset-bottom));
-  padding: 10px 40px; font-size: clamp(30px, 6vw, 42px);
-}
-.fly-on.hidden { display: none; }
-@media (prefers-reduced-motion: reduce) {
-  .flyer { animation: none; }
-  .banner { transition: opacity .25s; transform: none; }
-}
-
-/* --- Phase 2: each world's goal (numbered rings in order, or treasures gathered and sorted) --- */
-/* The goal chip: numbers that light up in order, or a row of slots per treasure asked for */
-.goal {
-  position: absolute; top: calc(124px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
-  display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 22px; background: rgba(0,0,0,0.28);
-  --s: 30px;
-}
-.nums { display: inline-grid; grid-auto-flow: column; gap: 5px; }
-/* six to ten numbers stand in two even rows (3 + 3 ... 5 + 5, the ten-frame); main.js sets --cols */
-.nums.ten { grid-auto-flow: row; grid-template-columns: repeat(var(--cols, 5), auto); }
-.nums i {
-  display: grid; place-items: center; width: var(--s); height: var(--s); border-radius: 50%; font-style: normal; font-weight: 900;
-  font-size: calc(var(--s) * 0.55); line-height: 1; color: rgba(255,255,255,0.75); border: 3px solid rgba(255,255,255,0.45); box-sizing: border-box;
-}
-.nums i.got { background: #ffcf1a; border-color: #fff; color: #6b3d00; }
-/* the number to fly through next glows steadily (no pulsing) */
-.nums i.next { border-color: #ffcf1a; color: #fff; box-shadow: 0 0 0 3px rgba(255,207,26,0.45), 0 0 12px #fff3a0; }
-svg.tre { width: var(--s); height: var(--s); display: block; overflow: visible; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.25)); }
-svg.tre.empty { filter: none; }
-.want { display: inline-flex; gap: 4px; }
-.want + .want { margin-left: 2px; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.5); }
-
-/* the world's goal pictured under its name as it begins */
-.banner .goal-pic { display: flex; justify-content: center; margin-top: 10px; --s: clamp(34px, 7vw, 56px); text-shadow: none; letter-spacing: 0; }
-.banner .goal-pic .nums i.got { box-shadow: 0 3px 0 #c98f00; }
-
-/* at the nest the family sorts the basket into rows, just above ▶ */
-.sort {
-  position: absolute; left: 50%; translate: -50% 0; bottom: calc(118px + env(safe-area-inset-bottom));
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 16px; border-radius: 22px;
-  background: rgba(40,30,90,0.5); border: 3px solid rgba(255,255,255,0.85); box-shadow: 0 6px 18px rgba(0,0,0,0.18); --s: clamp(32px, 6vw, 48px);
-}
-.sort-row { display: flex; gap: 6px; min-height: var(--s); align-items: center; }
-
-/* the end card: each world with what Ember brought home */
-.learned { display: flex; flex-direction: column; align-items: center; gap: 6px; --s: clamp(24px, 4.6vw, 36px); }
-.learn { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.22); border-radius: 99px; padding: 3px 14px 3px 6px; }
-.learn .w { font-size: calc(var(--s) * 1.25); line-height: 1; }
-.learn .kind { display: inline-flex; gap: 2px; }
-.learn .kind + .kind { margin-left: 8px; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.5); }
-.learn .nums { gap: 3px; }
-.learn .nums.ten { grid-auto-flow: column; grid-template-columns: none; }
-
-@media (max-width: 520px) {
-  .goal { top: calc(124px + env(safe-area-inset-top)); --s: 24px; gap: 8px; padding: 4px 10px; }
-  .learned { --s: 20px; }
-  .learn .nums { gap: 2px; }
-}
-@media (min-width: 760px) and (min-height: 640px) {
-  .goal { --s: 36px; }
-}
-@media (max-height: 480px) {
-  .goal { top: calc(66px + env(safe-area-inset-top)); --s: 22px; gap: 6px; padding: 3px 8px; }
-  /* the banner pictures the same goal, so on short screens the chip steps aside while it shows */
-  .goal { transition: opacity .3s; }
-  #hud.bannering .goal { opacity: 0; }
-  .nums.ten { gap: 3px; }
-  .banner .goal-pic { margin-top: 4px; --s: 30px; }
-  .sort { bottom: calc(84px + env(safe-area-inset-bottom)); --s: 26px; padding: 6px 12px; gap: 4px; }
+  .bag { bottom: calc(10px + env(safe-area-inset-bottom)); --s: 24px; min-height: 40px; }
+  .banner { top: calc(54px + env(safe-area-inset-top)); font-size: 80px; }
+  .hand { font-size: 52px; }
   .learned { --s: 18px; gap: 3px; }
   .learn { padding: 1px 10px 1px 4px; gap: 6px; }
 }
-/* upright phones: the sorted rows stand side by side in one low strip, under the family's faces */
-@media (max-width: 520px) and (orientation: portrait) {
-  .sort { flex-direction: row; align-items: center; gap: 0; bottom: calc(112px + env(safe-area-inset-bottom)); padding: 6px 10px; --s: 26px; }
-  .sort-row { gap: 3px; }
-  .sort-row + .sort-row { margin-left: 8px; padding-left: 8px; border-left: 2px solid rgba(255,255,255,0.55); }
+@media (max-height: 480px) and (orientation: landscape) {
+  /* the worlds stand in a column at the side, so Ember shows in the middle */
+  #title .worlds { position: fixed; left: calc(14px + env(safe-area-inset-left)); top: 50%; translate: 0 -50%; flex-direction: column; gap: 8px; }
+  /* the end card stands in a column on the left so the family in the nest shows on the right */
+  #results { align-items: flex-start; padding-left: calc(14px + env(safe-area-inset-left)); }
+  #results .learned, #results .menu-bottom { width: min(300px, 50vw); }
+  /* a smaller ▶ low on the right, under the family */
+  .fly-on { left: auto; right: calc(20px + env(safe-area-inset-right)); translate: none; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 28px; padding: 6px 28px; }
 }
-/* held sideways, the tray waits at the left so the family and Ember stay in view */
-@media (orientation: landscape) {
-  .sort { left: calc(20px + env(safe-area-inset-left)); translate: 0 -50%; top: 55%; bottom: auto; max-width: calc(50vw - 150px); }
-  .sort-row { flex-wrap: wrap; }
+@media (min-width: 760px) and (min-height: 640px) {
+  .worlds { gap: 16px; }
+  .worlds button { width: 78px; height: 78px; font-size: 42px; }
+  .bag { --s: 40px; }
 }
+/* upright, the end card's family fills the middle, so the sound buttons go back up to their corner */
+@media (orientation: portrait) { body[data-screen="results"] .corner { top: calc(70px + env(safe-area-inset-top)); } }
+
 @media (prefers-reduced-motion: reduce) {
-  .learn, .sort-row span { animation: none; }
+  .flyer, .hand span, .fly-on { animation: none !important; }
+  .banner { transition: opacity .25s; transform: none; }
 }
-.sort-row .more { font-size: calc(var(--s) * 0.6); font-weight: 900; color: #fff; margin-left: 4px; text-shadow: 0 2px 0 rgba(0,0,0,0.3); }
-.learn .more { font-size: calc(var(--s) * 0.7); font-weight: 900; margin-left: 3px; }
-/* short sideways phones: five treasures and their +N fit on one line of the tray */
-@media (max-height: 480px) and (orientation: landscape) {
-  .sort { --s: 22px; }
-  .sort-row { gap: 4px; }
-}
-
-/* --- 2026-10-11: "more pink than blue" in the chip, and the nest puzzles --- */
-.goal .rule { display: inline-flex; align-items: center; gap: 2px; padding-right: 8px; border-right: 2px solid rgba(255,255,255,0.5); }
-.goal .rule svg.tre { width: calc(var(--s) * 0.8); height: calc(var(--s) * 0.8); }
-.goal .rule b, .goal-pic .rule b { color: #fff; font-size: calc(var(--s) * 0.9); line-height: 1; }
-.goal-pic .rule { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
-.slot { display: block; width: var(--s); height: var(--s); border-radius: 50%; border: 3px dashed rgba(255,255,255,0.7); background: rgba(40,30,90,0.14); box-sizing: border-box; scale: 0.8; }
-
-/* the tray becomes the child's puzzle: one tap at a time, big targets, no timer */
-.sort.puzzle { pointer-events: auto; flex-direction: column; align-items: center; gap: 10px; --s: clamp(34px, 5.4vw, 50px); }
-.sort.puzzle .sort-row { gap: 6px; }
-.sort.puzzle .nums { display: flex; gap: 6px; }
-.sort.puzzle .nums i { width: var(--s); height: var(--s); font-size: calc(var(--s) * 0.5); }
-.sort.puzzle .nums.wide i { --s: clamp(30px, 4.6vw, 44px); }
-.nums i.gap { border: 3px dashed #ffcf1a; color: #ffcf1a; background: rgba(255,207,26,0.12); }
-.tiles { display: flex; gap: 14px; justify-content: center; }
-.tile {
-  min-width: 64px; height: 64px; padding: 0 12px; border-radius: 20px; background: #fff; color: #7a3fc0; font-size: 34px; font-weight: 900;
-  box-shadow: 0 5px 0 #b9a6e0; transition: transform .1s, opacity .3s;
-}
-.tile:active { transform: translateY(3px); box-shadow: 0 2px 0 #b9a6e0; }
-.tile.no { opacity: 0.3; box-shadow: none; }
-.tile.yes { background: #ffcf1a; color: #6b3d00; box-shadow: 0 5px 0 #c98f00; }
-.tiles[data-done] .tile:not(.yes) { opacity: 0.3; box-shadow: none; }
-.sort.puzzle .item { position: relative; display: block; padding: 0; background: none; border-radius: 50%; }
-.count .item { padding: 4px; }
-.count .item.counted svg { filter: drop-shadow(0 0 6px #fff3a0); }
-.count .item b {
-  position: absolute; right: -6px; bottom: -6px; min-width: 22px; height: 22px; border-radius: 11px; background: #fff; color: #7a3fc0;
-  font-size: 15px; font-weight: 900; line-height: 22px; text-align: center;
-}
-/* the treasure to put away next sits lifted at the front of the basket */
-.hand { min-height: calc(var(--s) * 1.3); }
-.hand .item { --s: calc(var(--s-tray, 44px) * 0.7); opacity: 0.75; }
-.hand .item.lifted { --s: calc(var(--s-tray, 44px) * 1.25); opacity: 1; margin-right: 8px; filter: drop-shadow(0 0 8px #fff); }
-.sort.puzzle { --s-tray: var(--s); }
-.shelf {
-  display: flex; align-items: center; gap: 8px; width: 100%; min-width: min(360px, 70vw); min-height: calc(var(--s) + 18px); padding: 6px 12px;
-  border-radius: 18px; background: rgba(255,255,255,0.16); border: 3px solid rgba(255,255,255,0.7); color: #fff;
-}
-.shelf:not(:disabled):active { background: rgba(255,255,255,0.3); }
-.shelf .label { padding-right: 8px; border-right: 2px solid rgba(255,255,255,0.5); }
-/* one slot per treasure, the same width on both shelves, so "how many more" can be seen one to one */
-.shelf .slots { display: flex; gap: 6px; }
-/* a shelf has room for seven treasures (the most a basket holds), so both shelves line up */
-.sort.puzzle .shelf { min-width: calc(var(--s) * 8 + 40px); }
-@media (orientation: landscape) {
-  .sort.puzzle { max-width: none; }
-}
-@media (max-height: 480px) {
-  .sort.puzzle { --s: 24px; gap: 6px; padding: 6px 10px; }
-  .tile { min-width: 48px; height: 48px; font-size: 26px; border-radius: 14px; }
-  .shelf { min-height: calc(var(--s) + 10px); padding: 3px 10px; }
-}
-@media (max-width: 520px) and (orientation: portrait) {
-  /* upright phones: the puzzle sits low, under the family, until ▶ needs the space */
-  .sort.puzzle { flex-direction: column; gap: 8px; padding: 8px 12px; --s: 30px; bottom: calc(14px + env(safe-area-inset-bottom)); }
-  .sort.puzzle.solved { bottom: calc(100px + env(safe-area-inset-bottom)); }
-  .sort.puzzle.solved .tile:not(.yes) { display: none; }
-}
-
-/* --- 2026-10-11 round 3: the ten-frame, a read-along after a wrong tile, swapping to keep a rule --- */
-.frame { display: grid; grid-template-columns: repeat(5, var(--s)); gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,0.12); }
-.frame .cell { display: grid; place-items: center; width: var(--s); height: var(--s); border-radius: 8px; border: 2px dashed rgba(255,255,255,0.6); box-sizing: border-box; }
-.frame .cell.full { border-style: solid; border-color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.14); }
-.frame .cell svg.tre { width: calc(var(--s) * 0.8); height: calc(var(--s) * 0.8); }
-.count .item.counted { opacity: 0.25; }
-/* the gap being filled now (two gaps are filled one after the other) */
-.nums i.gap.now { background: rgba(255,207,26,0.3); }
-/* a steady highlight walks along the row as it is read aloud once (no pulsing) */
-.read { outline: 3px solid #fff3a0; outline-offset: 2px; border-radius: 10px; transition: outline-color .2s; }
-.nums i.read { box-shadow: 0 0 0 3px #fff3a0; outline: none; }
-.sort.puzzle.fixing .shelf:not(:disabled) { border-color: #ffcf1a; cursor: pointer; }
-@media (max-width: 520px) and (orientation: portrait) {
-  .frame { --s: 26px; gap: 3px; }
-  /* once solved, the tray moves up above ▶: it keeps the child's rows but drops the tiles, so the family stays in view */
-  .sort.puzzle.solved .tiles { display: none; }
-  .sort.puzzle.solved .shelf { min-height: calc(var(--s) + 6px); padding: 2px 10px; }
-}
-
-/* --- 2026-10-11 round 4: the oops corner, giving back, the count chooser --- */
-/* anything picked up by mistake rides in its own dashed corner of the chip, to be given back at the nest */
-.goal .oops { display: inline-flex; gap: 2px; padding: 2px 6px; margin-left: 2px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.7); }
-.goal .oops svg.tre { width: calc(var(--s) * 0.75); height: calc(var(--s) * 0.75); opacity: 0.85; }
-/* a shelf's dashed places, one per treasure asked for, so a full shelf can be seen */
-.shelf .slots .item.place svg.tre { opacity: 0.75; }
-/* the cloud that takes things back to the sky */
-.shelf.cloud { width: auto; min-width: 0; align-self: center; justify-content: center; gap: 4px; padding: 4px 22px; font-size: calc(var(--s) * 0.8); line-height: 1; }
-.sort.puzzle .shelf.cloud { min-width: 0; }
-.shelf.cloud .label { border-right: none; padding-right: 0; }
-.shelf.cloud .up { font-size: 0.7em; color: #fff; font-weight: 900; }
-.shelf.cloud .item { position: absolute; }
-.shelf.cloud { position: relative; }
-/* after a wrong tile the tiles rest while the row is counted along, then come back as a fresh set */
-.tiles.resting .tile { opacity: 0.35; box-shadow: none; }
-/* before a numbered-ring world: how shall we count there? */
-.next-pick { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; justify-content: center; padding-top: 8px; border-top: 2px solid rgba(255,255,255,0.4); }
-.next-pick .w { font-size: calc(var(--s) * 0.8); line-height: 1; }
-.next-pick button {
-  display: inline-flex; gap: 0.4em; padding: 5px 9px; border-radius: 16px; white-space: nowrap; background: rgba(255,255,255,0.16); border: 3px solid rgba(255,255,255,0.6);
-  color: #fff; font-weight: 900; font-size: calc(var(--s) * 0.42); line-height: 1;
-}
-.next-pick button i { font-style: normal; text-align: center; }
-/* once solved, only the chosen tile stays: the tray keeps the child's work and stays low */
-.sort.puzzle.solved .tiles .tile:not(.yes) { display: none; }
-.next-pick button[aria-checked="true"] { background: #ffcf1a; border-color: #fff; color: #6b3d00; }
-@media (max-width: 520px) and (orientation: portrait) {
-  .next-pick { gap: 5px; padding-top: 4px; }
-  .next-pick button { padding: 4px 7px; }
-}
-
-/* --- 2026-10-11 round 5: the gap being filled, shelf badges, the cloud home --- */
-/* the gap to fill now: a solid gold ring and a steady arrow under it (the other gap stays dashed and faint) */
-.sort.puzzle .nums i.gap { position: relative; }
-.nums i.gap:not(.now) { opacity: 0.55; }
-.nums i.gap.now { border-style: solid; border-color: #ffcf1a; background: rgba(255,207,26,0.3); color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.7); }
-.nums i.gap.now::after {
-  content: ''; position: absolute; left: 50%; top: calc(100% + 4px); translate: -50% 0;
-  border: 8px solid transparent; border-bottom-color: #ffcf1a; border-top: 0;
-}
-/* a shelf's label: one small solid treasure in a round badge, unlike the dashed places to fill */
-.shelf .label.badge {
-  display: grid; place-items: center; flex: none; width: calc(var(--s) * 0.9); height: calc(var(--s) * 0.9); padding: 0; margin-right: 4px;
-  border: none; border-radius: 50%; background: rgba(255,255,255,0.85); box-shadow: 0 0 0 2px rgba(40,30,90,0.35);
-}
-.shelf .label.badge svg.tre { width: calc(var(--s) * 0.6); height: calc(var(--s) * 0.6); filter: none; }
-/* after the goal is met a soft cloud drifts over the view and Ember is carried most of the way home */
-.veil {
-  position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity .7s ease-in-out;
-  background: radial-gradient(ellipse at 50% 55%, rgba(255,255,255,0.97), rgba(255,255,255,0.88) 60%, rgba(240,246,255,0.8));
-}
-.veil.show { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .veil { transition-duration: .35s; } }
-
-/* --- 2026-10-11 round 6: numbers flown by mistake ride along, and are taken out of the row at the nest --- */
-.goal .oops.nums i { width: calc(var(--s) * 0.8); height: calc(var(--s) * 0.8); font-size: calc(var(--s) * 0.45); color: #fff; background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.75); }
-.sort.puzzle .takeout { display: flex; gap: 6px; }
-.takeout .num {
-  display: grid; place-items: center; width: var(--s); height: var(--s); padding: 0; border-radius: 50%; box-sizing: border-box;
-  font-size: calc(var(--s) * 0.5); font-weight: 900; line-height: 1; background: #ffcf1a; border: 3px solid #fff; color: #6b3d00; cursor: pointer;
-}
-.sort.puzzle .takeout.wide .num { --s: clamp(30px, 4.6vw, 44px); }
-.takeout .num.read { box-shadow: 0 0 0 3px #fff3a0; outline: none; }
-
-/* --- 2026-10-11 round 7: the chooser marks the way that fits, and rests the big stretches --- */
-.next-pick button { position: relative; }
-.next-pick button.fit::after {
-  content: '🐉'; position: absolute; top: -0.85em; right: -0.35em; font-size: 0.8em; line-height: 1;
-}
-.next-pick button.far:not([aria-checked="true"]) { opacity: 0.45; border-style: dashed; }
-
-/* --- Round 8 (2026-10-11): the next world's emoji on a small sky chip, readable on the yellow button --- */
-.fly-on .next {
-  display: inline-grid; place-items: center; width: 1.45em; height: 1.45em; margin-left: .15em; vertical-align: middle;
-  border-radius: 50%; background: #3b4a86; box-shadow: inset 0 0 0 3px rgba(255,255,255,.85);
-}
-
-/* --- 2026-10-11 round 9: the end card's quiet "next time" line, for a grown-up --- */
-/* phones held sideways: a smaller ▶ low on the right, under the family, clear of the puzzle tray on the left */
-@media (max-height: 480px) and (orientation: landscape) {
-  .fly-on { left: auto; right: calc(20px + env(safe-area-inset-right)); translate: none; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 26px; padding: 6px 26px; }
-}
-.next-time { margin: 2px 0 0; font-size: calc(var(--s) * 0.62); font-weight: 700; color: rgba(255,255,255,0.92); letter-spacing: .02em; }

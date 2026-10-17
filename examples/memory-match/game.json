@@ -1,17 +1,17 @@
 {
   "id": "memory-match",
   "title": "Memory Match",
-  "tagline": "Flip the cards and find the matching animal twins!",
-  "howToPlay": "Tap two cards to turn them over and hear each animal's name. Find all the matching pairs! Choose how they match: 🐶🐶 twins (on the big boards some twins wear a 🎀 bow or a 🧢 hat, so look closely), 🐮🔊 an animal and its sound (the speaker card says \"Moo!\": who says that?), 🐮 and its baby (a cow's baby is a calf; on the bigger boards the babies sleep in baskets and you only hear and see their name, so find whose baby it is), or 🐮🐷🐥 Homes for older children: keep turning over the animals that live together on the farm, at home, wild on land or in the water. Tap 👀 once a round to peek. Boards grow from 2 pairs to 10, and the next board follows how carefully you remembered. 📖 My animals keeps what you found out about each animal: its sound, its baby and its home.",
+  "tagline": "Flip the cards and wake up the animal twins!",
+  "howToPlay": "Tap a card to flip it and meet the animal hiding underneath, then find its twin: matched animals turn to each other, call out together and do their own trick, and a full board ends in a party (a conga, a ring dance or a musical wave). Every board is a new place (garden, farm, sea, night, snow, savanna, autumn wood) and may hide a surprise: a golden crowned pair, babies whose parents pop up, party hats or a peekaboo. Pick a board size by its picture of cards, from 4 up to 16; hold 🏠 to leave a board and hold 🔊 to mute (a tap turns the sound back on).",
   "emoji": "🧩",
   "color": "#2ec4b6",
   "category": "puzzle",
   "together": false,
   "featured": false,
-  "url": "https://daad1bae-bitgames-memory-match.ferdousbd.workers.dev/",
+  "url": "https://12d333c2-bitgames-memory-match.ferdousbd.workers.dev/",
   "ages": [
     2,
     8
   ],
-  "learning": "Visual and auditory memory, looking closely, animal names and the sounds they make, baby animal words (and which parent each belongs to), and sorting animals by where they live (including that some fit more than one home)"
+  "learning": "Mostly giggles: flipping, finding and watching animals do their tricks. Remembering where things are comes along with the play"
 }

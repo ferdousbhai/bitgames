@@ -1,17 +1,17 @@
 {
   "id": "balloon-pop",
   "title": "Balloon Pop",
-  "tagline": "Pop smiley, heart, bunny and star balloons over a sunny countryside!",
-  "howToPlay": "A friend asks for balloons: pop the ones they want (4 blue ones, the hearts, 2 more for a friend who has 3, 3 red and 2 blue, or 3 balloons with 5 dots) and tap 🧺 Give when the basket is just right. Too many? Tap a balloon in the basket to let it go. Then choose a treat for the picnic. When all eight friends are at the picnic, everyone waves. Stuck? The friend helps with numbered slots and a hint. The first visit stays on numbered slots; after that, confident counters move on to plain slots and treat plates with one treat for each balloon, then ten-frames, the teens (10 and 3 more), one more / one less, making two bunches the same, finding which colour a friend has most of, and mixing purple, orange or green from two colours (the new balloon blends before your eyes). A small plant under the friend (🌱 🌿 🌳) shows the step the game has settled on. 🌱 Start easy goes back to the beginning. Three for friends asks every friend for exactly three; Hearts for friends grows from counting hearts to one more heart than Fox. Free popping, for the youngest, just meets the balloon friends with no tally and no levels to chase; now and then a friend would like one balloon (a heart, a bunny or a red one) to find among the others, with all the time in the world.",
+  "tagline": "Tap, swipe and pop a sky full of silly balloons!",
+  "howToPlay": "Tap or swipe balloons to pop them, or hold on the sky to blow up your own. Keep popping to meet new balloon friends and surprises.",
   "emoji": "🎈",
   "color": "#ff6b9d",
   "category": "pop",
   "together": false,
   "featured": true,
-  "url": "https://1a0b44d7-bitgames-balloon-pop.ferdousbd.workers.dev/",
+  "url": "https://f21ced6c-bitgames-balloon-pop.ferdousbd.workers.dev/",
   "ages": [
     3,
     8
   ],
-  "learning": "Counting to 10 and into the teens, stopping at a number, one more and one less, making two bunches the same, adding on from ten, comparing which colour has most, colours and colour mixing, and matching dots to quantities"
+  "learning": "Hand–eye coordination, colours and shapes, and cause and effect"
 }

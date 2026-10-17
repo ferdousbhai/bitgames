@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { BIOMES, FLOWERS, HOME_X, OBSTACLES, biomeIndexAt } from './biomes.js'
+import { BIOMES, HOME_X, biomeIndexAt } from './biomes.js'
 import { copy } from './models.js'
 import { keepWhere, pick, rand } from './util.js'
 
@@ -17,7 +17,7 @@ const LAYERS = [
   { key: 'back', z: [-15, -25], gap: [3.5, 7], shadow: false },
 ]
 
-export function canvasTexture(w, h, draw) {
+function canvasTexture(w, h, draw) {
   const c = document.createElement('canvas')
   c.width = w
   c.height = h
@@ -71,6 +71,22 @@ const flyTmp = new THREE.Vector3()
 
 const BUTTERFLY_SOFT = { wing_rim: ['#a8755e'], butterfly_body: ['#7a5866'] }
 
+/**
+ * The time of day of a trip, laid over every place's own colours: [colour, how much] for each part
+ * of the palette, and a factor for the sunlight. Night stays bright enough to see every carrot.
+ */
+export const MOODS = {
+  day: null,
+  sunset: {
+    skyTop: ['#ff8fa3', 0.65], skyBottom: ['#ffc98a', 0.7], fog: ['#ffd2a6', 0.6], ground: ['#ffb070', 0.12], path: ['#ffb070', 0.12],
+    hemiSky: ['#ffd2c0', 0.5], sun: ['#ffae6b', 0.6], sunI: 0.85,
+  },
+  night: {
+    skyTop: ['#0a1238', 1], skyBottom: ['#283070', 0.95], fog: ['#262c68', 0.92], ground: ['#1e2652', 0.55], path: ['#2a3262', 0.45],
+    hemiSky: ['#7484e8', 0.75], hemiGround: ['#1c2446', 0.7], sun: ['#c9d2ff', 0.85], sunI: 0.38, hemiI: 0.7,
+  },
+}
+
 export class World {
   constructor(scene, templates) {
     this.scene = scene
@@ -91,6 +107,26 @@ export class World {
     )
     this.sky.renderOrder = -1
     scene.add(this.sky)
+    // stars and a moon for a night trip: they ride with the sky, far away
+    const stars = []
+    for (let i = 0; i < 260; i++) {
+      const a = Math.random() * Math.PI * 2
+      const up = 0.12 + Math.random() * 0.85
+      const r = Math.sqrt(1 - up * up)
+      stars.push(Math.cos(a) * r * 280, up * 280, Math.sin(a) * r * 280)
+    }
+    const starGeo = new THREE.BufferGeometry()
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(stars, 3))
+    this.stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: '#fff8d8', size: 2.2, sizeAttenuation: false, fog: false, depthWrite: false }))
+    // low in the sky and a little ahead of Pip, so it shows in every view (and above the hills)
+    const moon = new THREE.Mesh(new THREE.CircleGeometry(9, 32), new THREE.MeshBasicMaterial({ color: '#fff3c4', fog: false, depthWrite: false }))
+    moon.position.set(40, 40, -265)
+    moon.lookAt(0, 0, 0)
+    this.stars.add(moon)
+    this.stars.renderOrder = -1
+    this.stars.visible = false
+    this.sky.add(this.stars)
+    this.mood = 'day'
     scene.fog = new THREE.Fog('#ffffff', 40, 105)
 
     this.hemi = new THREE.HemisphereLight('#ffffff', '#6aa84f', 1.15)
@@ -127,10 +163,6 @@ export class World {
     this.palette = this.paletteOf(BIOMES[0])
     this.target = this.paletteOf(BIOMES[0])
     this.items = []
-    // (x) => true where a pattern is hopped: no scenery logs, pumpkins or snowmen there to mix up with it
-    this.quiet = () => false
-    // (x) => true near a flower to pick on the path: no scenery flowers in the near grass there
-    this.flowerQuiet = () => false
     this.butterflies = []
     this.flutterSpan = null // on the menu, [from, to] beside Pip where butterflies drift (in play: ahead of him)
     this.flutterHigh = 0 // 1 while Pip hops: butterflies keep high and back, clear of the carrots (0.5 on the upright menu, in its sky)
@@ -153,10 +185,28 @@ export class World {
 
   paletteOf(b) {
     const C = (c) => new THREE.Color(c)
-    return {
+    const p = {
       skyTop: C(b.sky[0]), skyBottom: C(b.sky[1]), fog: C(b.fog), ground: C(b.ground), path: C(b.path),
-      hemiSky: C(b.hemi[0]), hemiGround: C(b.hemi[1]), sun: C(b.sun[0]), sunI: b.sun[1],
+      hemiSky: C(b.hemi[0]), hemiGround: C(b.hemi[1]), sun: C(b.sun[0]), sunI: b.sun[1], hemiI: 1,
     }
+    const mood = MOODS[this.mood]
+    if (mood) {
+      for (const [key, value] of Object.entries(mood)) {
+        if (key === 'sunI' || key === 'hemiI') p[key] *= value
+        else p[key].lerp(C(value[0]), value[1])
+      }
+    }
+    return p
+  }
+
+  /** A trip's time of day: 'day', 'sunset' or 'night' (with stars and a moon). */
+  setMood(mood) {
+    this.mood = mood
+    this.stars.visible = mood === 'night'
+    // moonlit clouds, and hills in the shade of the evening
+    const cloud = { day: '#ffffff', sunset: '#ffe2d6', night: '#7f88c4' }[mood]
+    for (const c of this.clouds) c.traverse((o) => o.isMesh && o.material.color.set(cloud))
+    this.hillMats.clear()
   }
 
   reset(x = 0) {
@@ -166,7 +216,6 @@ export class World {
     this.resetX = x
     this.hillX = [x - 80, x - 90]
     this.home = null
-    this.planted = []
     for (const f of this.butterflies) this.scene.remove(f)
     this.butterflies = []
     this.butterflyBiome = -1
@@ -178,7 +227,12 @@ export class World {
 
   hillMaterial(color) {
     let m = this.hillMats.get(color)
-    if (!m) this.hillMats.set(color, (m = new THREE.MeshLambertMaterial({ color })))
+    if (!m) {
+      m = new THREE.MeshLambertMaterial({ color })
+      if (this.mood === 'night') m.color.lerp(new THREE.Color('#1e2652'), 0.55)
+      else if (this.mood === 'sunset') m.color.lerp(new THREE.Color('#ff9a6b'), 0.18)
+      this.hillMats.set(color, m)
+    }
     return m
   }
 
@@ -190,22 +244,14 @@ export class World {
 
   spawnLayer(layer, x) {
     // Keep the menu close-up clear: a flower right in front of the camera looked like a big dark
-    // blur behind the mission chip and the Play button.
+    // blur behind the Play button.
     if (layer.key === 'near' && Math.abs(x - this.resetX) < 5) return 0
     const b = BIOMES[biomeIndexAt(x)]
     const choices = b[layer.key]
     let total = 0
     for (const c of choices) total += c[1]
     let r = Math.random() * total
-    let [name, , s0, s1] = choices.find((c) => (r -= c[1]) < 0) ?? choices[0]
-    // beside a pattern, a scenery pumpkin could pass for the hidden obstacle: grow something else
-    // and beside a flower to pick on the path, a scenery flower could pass for it
-    const clash = (n) => (n in OBSTACLES && this.quiet(x)) || (n === 'flower' && this.flowerQuiet(x))
-    if (layer.key !== 'mid' && layer.key !== 'back' && clash(name)) {
-      const other = choices.find((c) => !clash(c[0]))
-      if (!other) return 0
-      ;[name, , s0, s1] = other
-    }
+    const [name, , s0, s1] = choices.find((c) => (r -= c[1]) < 0) ?? choices[0]
     const obj = copy(this.templates[name], { recolor: b.recolor, shadow: layer.shadow })
     obj.scale.setScalar(rand(s0, s1))
     obj.position.set(x, 0, rand(layer.z[0], layer.z[1]))
@@ -258,42 +304,15 @@ export class World {
     home.position.set(HOME_X + 1.6, 0, -2.7)
     this.tag(home, 'burrow')
     this.add(home)
-    // a few wild flowers on the lawn, which make way for the row the child plants
-    this.homeFlowers = []
+    // a few wild flowers on the lawn
     for (let k = 0; k < 8; k++) {
       const f = copy(this.templates.flower, { recolor: BIOMES[0].recolor })
-      this.homeFlowers.push(f)
       f.position.set(HOME_X - 3 + k * 0.9 + rand(-0.2, 0.2), 0, rand(-1.2, -1.6))
       f.userData.sway = rand(0, 6)
       this.tag(f, 'flower')
       this.add(f)
     }
     this.home = home
-  }
-
-  /**
-   * The flowers the child plants at home, in a row from Pip's side along the front of the burrow
-   * (petal colours from FLOWERS), clear of Pip, the mound and the pantry panel on the left (closer
-   * together on an upright screen, where there is less room beside Pip). Called again with the whole
-   * row each time one is planted or taken back.
-   */
-  plantRow(colors, upright = false) {
-    const step = upright ? 0.48 : 0.6
-    for (const f of this.planted ?? []) {
-      this.scene.remove(f)
-      const i = this.items.indexOf(f)
-      if (i >= 0) this.items.splice(i, 1)
-    }
-    for (const f of this.homeFlowers ?? []) f.visible = !colors.length
-    this.planted = colors.map((color, k) => {
-      const f = copy(this.templates.flower, { recolor: { petal: [FLOWERS[color].hex] }, shadow: true })
-      f.position.set(HOME_X + 0.8 + k * step, 0, 0.35)
-      f.scale.setScalar(upright ? 1 : 1.15)
-      f.rotation.y = rand(-0.4, 0.4)
-      f.userData.sway = k
-      this.tag(f, 'flower')
-      return this.add(f)
-    })
   }
 
   /** Scenery a tap can poke: it remembers what it is and its size, for the wobble. */
@@ -350,6 +369,7 @@ export class World {
     const t = this.target
     for (const key of ['skyTop', 'skyBottom', 'fog', 'ground', 'path', 'hemiSky', 'hemiGround', 'sun']) p[key].lerp(t[key], k)
     p.sunI += (t.sunI - p.sunI) * k
+    p.hemiI += (t.hemiI - p.hemiI) * k
     this.skyUniforms.top.value.copy(p.skyTop)
     this.skyUniforms.bottom.value.copy(p.skyBottom)
     this.scene.fog.color.copy(p.fog)
@@ -357,6 +377,7 @@ export class World {
     this.path.material.color.copy(p.path)
     this.hemi.color.copy(p.hemiSky)
     this.hemi.groundColor.copy(p.hemiGround)
+    this.hemi.intensity = 1.15 * p.hemiI
     this.sun.color.copy(p.sun)
     this.sun.intensity = p.sunI
   }
@@ -423,13 +444,14 @@ export class World {
         const ceil = half * this.flutterCeil
         if (depth > 0 && p.y > ceil) f.position.y -= p.y - ceil
       }
-      // flying along the path, rolled a little towards the camera, so the wings
-      // show their colours and spots (seen head-on they'd look like a fly)
-      f.rotation.set(0.5, Math.sin(time * 0.9 + u.phase) * 0.45, 0)
-      // wings beat between flat-ish and raised high, so they show from the side
+      // Keep the broad wing faces toward the camera, including on short screens.
+      if (this.camera) f.quaternion.copy(this.camera.quaternion)
+      f.rotateX(Math.PI / 2) // Blender's horizontal wing plane becomes camera-facing.
+      f.rotateZ(Math.sin(time * 0.9 + u.phase) * 0.18)
+      // A wide, shallow flap keeps both coloured wings visible.
       // a slow, soft beat (about one and a half a second), quicker only for a moment when poked
       u.beat = (u.beat ?? 0) + dt * (9 + u.scare * 30)
-      const flap = 0.9 + Math.sin(u.beat + u.phase) * 0.65
+      const flap = 0.35 + Math.sin(u.beat + u.phase) * 0.3
       u.wings[0].rotation.x = flap
       u.wings[1].rotation.x = -flap
       if (u.leaving && f.position.y > 12) {

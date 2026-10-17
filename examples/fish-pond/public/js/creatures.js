@@ -12,80 +12,65 @@ import * as THREE from 'three'
  *   whale    a big shadow glides in from far away
  *
  * Habitats (Phase 2, 2026-10-09): every real animal is caught only where it really lives.
- *   lake, river, night  fresh water: goldfish, trout, turtle, frog, crayfish, pond snail
+ *   lake, river, night  fresh water. Each has its own: the sunfish (and the turtle and pond snail) at the
+ *                       lake, the salmon (and the trout and crayfish) at the river, the catfish (and the
+ *                       frog) at night. Goldfish, trout, turtle, frog and crayfish turn up in more than one.
  *   ice (Icy Sea)       cold sea: whale, narwhal, ringed seal, Arctic cod, snow crabs, jellyfish, octopus
  *   reef (Coral Reef)   warm sea: clownfish, pufferfish, octopus, crabs, jellyfish
  * Jellyfish live in every ocean, from warm reefs to icy seas, and many make their own light,
  * so the glow jellyfish lives in both seas (not in the fresh night pond).
  * Blue Fish, Golden Fish, the toy duck, the boot and the treasure are pretend or rubbish, so
- * they can turn up anywhere (their field notes say so). Every creature has at least one place.
+ * they can turn up anywhere. Every creature has at least one place.
  *
- * Round 2 (2026-10-11): the frog and the crayfish join the fresh-water places, so Bear's idea riddles
- * there are a real sort (not a fish: turtle, frog, crayfish; breathes air: turtle, frog; no bones:
- * crayfish), and the reef's swimmers include its crab.
- *
- * Round 3 (2026-10-11): a ramshorn pond snail joins the fresh water. It keeps close under a lily pad
- * (main.js spawnAmbient), so knowing where snails live tells you where to cast. It widens the sort:
- * a shell but no claws, breathes air but no bones.
- *
- * Round 6 (2026-10-11): the Icy Sea was thin (two Blue Fish, a narwhal, a jellyfish, a crab), so "a fish"
- * and "no bones" were hardly a choice there. The Arctic cod, the real small fish of the icy sea, joins it,
- * and so does the octopus (octopuses live in every ocean, the Arctic too).
- *   Arctic cod   https://en.wikipedia.org/wiki/Polar_cod (Arctic seas; brown back with dark dots; a chin barbel;
- *                three dorsal fins as in all cods; food for narwhals, seals and seabirds)
- *   Arctic octopus https://en.wikipedia.org/wiki/Bathypolypus_arcticus (North Atlantic and Arctic seas)
- *
- * Round 8 (2026-10-11): in the Icy Sea "a fish" was only ever the cod and "breathes air" only ever the
- * narwhal, so the idea riddles there had one answer and two clues could hardly be made. The ringed seal,
- * the small seal of the Arctic sea (already resting on the ice shore), joins the water: grey with ringed
- * spots, not a fish, breathes air. Now "breathes air" is narwhal or seal, and two clues can tell them
- * apart ("breathes air and has no tusk", "breathes air and is blue").
- *   ringed seal  https://www.fisheries.noaa.gov/species/ringed-seal (Arctic; dark spots in light rings; keeps
- *                breathing holes open in the ice with the strong claws on its front flippers)
+ * Later rounds (2026-10-11) added the frog, crayfish and pond snail to the fresh water, and the Arctic
+ * cod, octopus and ringed seal to the Icy Sea, so every place has a lively mix to choose from.
+ *   Arctic cod   https://en.wikipedia.org/wiki/Polar_cod
+ *   Arctic octopus https://en.wikipedia.org/wiki/Bathypolypus_arcticus
+ *   ringed seal  https://www.fisheries.noaa.gov/species/ringed-seal
  */
 export const CREATURES = [
-  { id: 'goldfish', name: 'Goldfish', stars: 1, size: 0.9, how: 'swim', places: { lake: 10, river: 5, night: 5 } },
+  { id: 'goldfish', name: 'Goldfish', stars: 1, size: 0.9, how: 'swim', places: { lake: 6, night: 4 } },
   { id: 'bluefish', name: 'Blue Fish', stars: 1, size: 0.95, how: 'swim', places: { lake: 8, river: 5, night: 6, ice: 5 } },
   { id: 'clownfish', name: 'Clownfish', stars: 1, size: 0.85, how: 'swim', places: { reef: 10 } },
-  { id: 'trout', name: 'Rainbow Trout', stars: 1, size: 1.1, how: 'swim', places: { river: 10, lake: 1.5, night: 3 } },
+  { id: 'trout', name: 'Rainbow Trout', stars: 1, size: 1.1, how: 'swim', places: { river: 9, night: 1 } },
   { id: 'duck', name: 'Rubber Duck', stars: 1, size: 0.75, how: 'surface', places: { lake: 2.5, river: 3, night: 2, ice: 1.5, reef: 1.5 } },
   { id: 'boot', name: 'Old Boot', stars: 1, size: 0.8, how: 'deep', places: { lake: 2.5, river: 3, night: 2.5, ice: 2, reef: 2 } },
   { id: 'pufferfish', name: 'Pufferfish', stars: 2, size: 0.85, how: 'swim', places: { reef: 5 } },
   { id: 'crab', name: 'Crab', stars: 2, size: 0.85, how: 'swim', places: { reef: 4, ice: 3 } },
-  { id: 'turtle', name: 'Turtle', stars: 2, size: 1.0, how: 'swim', places: { lake: 3, river: 3.5, night: 3 } },
+  { id: 'turtle', name: 'Turtle', stars: 2, size: 1.0, how: 'swim', places: { lake: 4, river: 1.5, night: 1 } },
   { id: 'octopus', name: 'Octopus', stars: 2, size: 0.9, how: 'swim', places: { reef: 4, ice: 2.5 } },
   { id: 'jellyfish', name: 'Glow Jellyfish', stars: 2, size: 0.9, how: 'swim', places: { reef: 4, ice: 3 } },
   { id: 'narwhal', name: 'Baby Narwhal', stars: 2, size: 1.2, how: 'swim', places: { ice: 7 } },
   { id: 'goldenfish', name: 'Golden Fish', stars: 3, size: 0.95, how: 'swim', places: { lake: 0.8, river: 0.8, night: 0.8, ice: 0.8, reef: 0.8 } },
   { id: 'chest', name: 'Treasure Chest', stars: 3, size: 0.8, how: 'deep', places: { lake: 0.8, river: 0.8, night: 0.9, ice: 0.8, reef: 0.9 } },
   { id: 'whale', name: 'Friendly Whale', stars: 3, size: 2.4, how: 'whale', places: { ice: 1.2 } },
-  { id: 'frog', name: 'Frog', stars: 2, size: 0.8, how: 'swim', places: { lake: 3, river: 2.5, night: 4 } },
-  { id: 'crayfish', name: 'Crayfish', stars: 2, size: 1.05, how: 'swim', places: { lake: 2.5, river: 3.5, night: 2.5 } },
-  { id: 'snail', name: 'Pond Snail', stars: 2, size: 0.75, how: 'swim', places: { lake: 2.5, river: 2, night: 2.5 } },
+  { id: 'frog', name: 'Frog', stars: 2, size: 0.8, how: 'swim', places: { lake: 3, river: 1, night: 5 } },
+  { id: 'crayfish', name: 'Crayfish', stars: 2, size: 1.05, how: 'swim', places: { lake: 1, river: 5, night: 2 } },
+  { id: 'snail', name: 'Pond Snail', stars: 2, size: 0.75, how: 'swim', places: { lake: 3, night: 1 } },
   { id: 'cod', name: 'Arctic Cod', stars: 1, size: 0.95, how: 'swim', places: { ice: 8 } },
   { id: 'seal', name: 'Ringed Seal', stars: 2, size: 1.1, how: 'swim', places: { ice: 4 } },
+  { id: 'sunfish', name: 'Sunfish', stars: 1, size: 0.85, how: 'swim', places: { lake: 9 } },
+  { id: 'salmon', name: 'Salmon', stars: 2, size: 1.2, how: 'swim', places: { river: 8 } },
+  { id: 'catfish', name: 'Catfish', stars: 2, size: 1.1, how: 'swim', places: { night: 8 } },
 ]
 export const BY_ID = Object.fromEntries(CREATURES.map((c) => [c.id, c]))
 
 /** The common fish that swim about in each place while you wait. */
 export const AMBIENT = {
-  lake: ['goldfish', 'bluefish', 'trout', 'turtle', 'frog', 'crayfish', 'snail'],
-  river: ['trout', 'goldfish', 'bluefish', 'turtle', 'crayfish', 'frog', 'snail'],
-  night: ['goldfish', 'bluefish', 'trout', 'turtle', 'frog', 'crayfish', 'snail'],
+  lake: ['sunfish', 'goldfish', 'bluefish', 'turtle', 'frog', 'snail', 'sunfish'],
+  river: ['salmon', 'trout', 'bluefish', 'crayfish', 'salmon', 'trout', 'turtle'],
+  night: ['catfish', 'frog', 'goldfish', 'bluefish', 'catfish', 'crayfish', 'trout'],
   ice: ['cod', 'bluefish', 'narwhal', 'seal', 'jellyfish', 'crab', 'octopus'],
   reef: ['clownfish', 'pufferfish', 'clownfish', 'octopus', 'jellyfish', 'crab'],
 }
 
 const MAX_LUCK = 8
 
-/**
- * Rarity roll: brand-new creatures and long waits for a rare one both tip the odds. `boost` lets the
- * open water lean toward what Bear's riddle asks for (main.js sendBiter).
- */
-export function roll(place, book, luck, boost = () => 1) {
+/** Rarity roll: brand-new creatures and long waits for a rare one both tip the odds. */
+export function roll(place, book, luck) {
   const options = CREATURES.filter((c) => c.places[place])
   const weights = options.map((c) => {
-    let w = c.places[place] * boost(c)
+    let w = c.places[place]
     if (!book[c.id]) w *= 2.2
     // The wait for a rare one helps a little, but never more than double (no ever-growing pity)
     if (c.stars === 3) w *= 1 + Math.min(luck, MAX_LUCK) * 0.12
@@ -140,16 +125,6 @@ export class Creatures {
     }
   }
 
-  /**
-   * A point on the model, given in builder (Blender) coordinates [x, y, z], as a point in the
-   * group returned by make(). Blender x stays x, z becomes up and -y faces the camera.
-   */
-  featurePoint(id, at, out = new THREE.Vector3()) {
-    out.set(at[0], at[2], -at[1])
-    if (this.centers[id]) out.sub(this.centers[id])
-    return out
-  }
-
   /** A fresh creature group, scaled so `size` is its length. */
   make(id, size = BY_ID[id].size) {
     const t = this.templates[id]
@@ -169,7 +144,7 @@ export class Creatures {
 
   /**
    * Seen through the tinted water, colours wash out: under the lake's cyan an orange goldfish reads
-   * as tan, and a colour riddle must match what the child sees. So swimmers are drawn just after the
+   * as tan, and the child should see the colours they will catch. So swimmers are drawn just after the
    * water (and before the ice sheet) in a copy of their materials with only a light watery tint.
    * On the stage they wear the real ones again.
    */

@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { makeGlowTexture } from './effects.js'
 
 const restAt = new THREE.Vector3()
-const PLANET_QUIET = 0.15 // how much of a planet shows while numbers fall in front of it
+const PLANET_QUIET = 0.15 // how much of a planet shows while a star picture wakes up in front of it
 
 /** Gives a cloned model its own materials, so it can fade without fading the others. */
 function ownMaterials(obj) {
@@ -58,13 +58,16 @@ const STAR_VERT = /* glsl */ `
 `
 const STAR_FRAG = /* glsl */ `
   uniform sampler2D map;
+  uniform float uDim;
   varying float vTwinkle;
   varying float vHue;
   void main() {
     vec4 tex = texture2D(map, gl_PointCoord);
     vec3 tint = mix(vec3(1.0, 0.95, 0.8), vec3(0.75, 0.85, 1.0), step(0.5, vHue));
     if (vHue > 0.9) tint = vec3(1.0, 0.75, 0.9);
-    gl_FragColor = vec4(tint * tex.rgb * tex.a * vTwinkle * 0.75, 1.0);
+    // Dimmed twinkles also turn a cool blue, so warm catchable stars never hide among them
+    tint = mix(vec3(0.55, 0.68, 1.0), tint, uDim);
+    gl_FragColor = vec4(tint * tex.rgb * tex.a * vTwinkle * 0.75 * uDim, 1.0);
     #include <colorspace_fragment>
   }
 `
@@ -128,7 +131,7 @@ export class World {
       geo.setAttribute('phase', new THREE.BufferAttribute(phase, 1))
       geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
       const mat = new THREE.ShaderMaterial({
-        uniforms: { map: { value: tex }, uTime: { value: 0 }, uScroll: { value: 0 }, uRange: { value: range }, uScale: { value: 400 } },
+        uniforms: { map: { value: tex }, uTime: { value: 0 }, uScroll: { value: 0 }, uRange: { value: range }, uScale: { value: 400 }, uDim: { value: 1 } },
         vertexShader: STAR_VERT,
         fragmentShader: STAR_FRAG,
         blending: THREE.AdditiveBlending,
@@ -173,8 +176,11 @@ export class World {
     // Little things drifting far behind: a sense of speed and depth
     this.drifters = []
     this.drifterTimer = 2
-    // While a row of numbers falls (quiet), the planets fade back, so the numbers sit on clean sky
+    // While a star picture wakes (quiet), the planets fade back, so it plays on clean sky
     this.quiet = false
+    // How bright the background twinkles are: they dim while stars are being caught, so the catchable ones stand out
+    this.dim = 1
+    this.twinkle = 1
     this.fade = 1
     this.setStop(0, true)
   }
@@ -226,8 +232,10 @@ export class World {
     const reach = (new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3()).x / 2) * size
     // It fades in (grows from nothing) just below the HUD band, never drifting behind the buttons or the panel
     o.scale.setScalar(0.001)
-    // Toward the sides, never down the middle where the numbers fall
-    const side = Math.random() < 0.5 ? -1 : 1
+    // Toward the sides, never down the middle where the stars fall
+    // On the other side from the planet ahead, so the two never overlap
+    const ahead = this.current()
+    const side = ahead ? -ahead.userData.side : Math.random() < 0.5 ? -1 : 1
     o.position.set(side * (0.55 + Math.random() * 0.3) * view.w * depthScale, view.hudY * depthScale - reach * 1.2, z)
     o.userData = { size, grow: 0, speed: 0.5 + Math.random() * 0.4, spin: (Math.random() - 0.5) * 0.6, limit: -view.h * depthScale - 4 }
     this.scene.add(o)
@@ -251,9 +259,11 @@ export class World {
   /** `cruise` is how fast the rocket is flying; `progress` 0..1 toward the next planet. */
   update(dt, cruise, progress, view) {
     this.time += dt
+    this.twinkle += (this.dim - this.twinkle) * (1 - Math.exp(-dt * 2))
     this.scroll += dt * cruise
     for (const l of this.layers) {
       l.mat.uniforms.uTime.value = this.time
+      l.mat.uniforms.uDim.value = this.twinkle
       l.mat.uniforms.uScroll.value = this.scroll * l.speed
     }
     const k = 1 - Math.exp(-dt * 1.2)
@@ -298,7 +308,7 @@ export class World {
         p.position.set(x, rest - t * t * 4 - t * 3, z - 3)
         if (p.position.y < -view.h * depth - scale * 2) p.visible = false
       } else if (i === this.stop % STOPS.length) {
-        // The next planet waits in its place and comes closer (grows) as the constellation is lit
+        // The next planet waits in its place and comes closer (grows) as the star picture is lit
         const e = this.shown
         const grow = 0.3 + 0.7 * e
         p.scale.multiplyScalar(grow)

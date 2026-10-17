@@ -68,7 +68,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   background: linear-gradient(#ffe066, #ffc21a); color: #5b3a00; font-size: clamp(30px, 6vw, 46px); font-weight: 900; padding: 12px 52px;
   border-radius: 999px; box-shadow: 0 8px 0 #c78a00; transition: transform .1s;
 }
-.big-go.alt { background: linear-gradient(#5ee0d0, #2ec4b6); box-shadow: 0 8px 0 #1b8178; color: #fff; animation: none; }
+.big-go.alt { background: linear-gradient(#5ee0d0, #2ec4b6); box-shadow: 0 8px 0 #1b8178; color: #fff; }
 .big-go:active { transform: translateY(6px); box-shadow: 0 2px 0 #c78a00; }
 #go { position: sticky; bottom: calc(6px + env(safe-area-inset-bottom)); z-index: 3; box-shadow: 0 8px 0 #c78a00, 0 10px 30px rgba(0,0,0,.3); }
 .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
@@ -81,13 +81,21 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 #hud { position: fixed; inset: 0; pointer-events: none; }
 .hud-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.pill { background: rgba(20,40,110,0.5); border-radius: 999px; padding: 4px 16px; font-size: 26px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); white-space: nowrap; }
 .scores { display: flex; gap: 6px; }
 .score { display: flex; align-items: center; gap: 3px; border-radius: 999px; padding: 2px 10px 2px 4px; font-size: 22px; font-weight: 900; background: rgba(20,40,110,0.62); border: 3px solid var(--c); transition: transform .15s; }
 .score .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--c); display: flex; align-items: center; justify-content: center; font-size: 17px; }
 .score.me { background: rgba(255,210,63,0.85); color: #5b3a00; }
 .score.bump { animation: score-bump .3s; }
 @keyframes score-bump { 50% { transform: scale(1.3); } }
+
+/* The round's clock: the place's picture in a ring that slowly empties. */
+.clock { position: relative; width: 58px; height: 58px; display: flex; align-items: center; justify-content: center; font-size: 30px;
+  background: rgba(255,255,255,0.8); border-radius: 50%; box-shadow: 0 4px 0 rgba(40,60,140,.3); }
+.clock svg { position: absolute; inset: -5px; width: calc(100% + 10px); height: calc(100% + 10px); transform: rotate(-90deg); }
+.clock circle { fill: none; stroke-width: 4.5; stroke-linecap: round; }
+.clock .track { stroke: rgba(20,40,110,0.25); }
+#clock-ring { stroke: #5ee0ff; stroke-dasharray: 100 100; transition: stroke-dashoffset .3s linear; }
+@media (max-height: 500px) and (orientation: landscape) { .clock { width: 46px; height: 46px; font-size: 24px; } }
 
 /* My power sits just above the dash button (bottom centre is where the store shows the room code). */
 #hud { --dash: min(26vw, 22vh, 124px); --pw: 76px; }
@@ -97,12 +105,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .power svg { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); transform: rotate(-90deg); }
 .power circle { fill: none; stroke: #ffd23f; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 100 100; }
 
-/* The counting mission: bubbles that fill in, bottom left (clear of the dash button and the store's room code). */
-#hud .adventure-goal { left: calc(12px + env(safe-area-inset-left)); transform: none; max-width: calc(100vw - 24px - var(--dash)); display: flex; align-items: center; gap: 2px; padding: 4px 14px 4px 8px; border-radius: 999px; background: rgba(255,255,255,0.88);
-  border: 3px solid #fff; box-shadow: 0 4px 0 rgba(40,60,140,.3); color: #24306e; font: 900 20px/1 ui-rounded, system-ui, sans-serif; bottom: calc(16px + env(safe-area-inset-bottom)); }
-#hud .adventure-goal b { margin-left: 6px; white-space: nowrap; }
-#hud .adventure-steps { font-size: 30px; }
-#menu .adventure-choice { font-size: 18px; border: 3px solid #fff; }
 
 /* The dash button, bottom right, with a fill that drains as it recharges. */
 .dash {
@@ -122,25 +124,26 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .stick { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity .15s; }
 .stick.on { opacity: 1; }
 .stick::before { content: ''; position: absolute; left: calc(var(--r, 60px) * -1); top: calc(var(--r, 60px) * -1); width: calc(var(--r, 60px) * 2); height: calc(var(--r, 60px) * 2);
-  border-radius: 50%; background: rgba(255,255,255,0.08); border: 3px solid rgba(255,255,255,0.55); }
-/* (See-through enough that a frog's number under the finger can still be read.) */
-.knob { position: absolute; left: -30px; top: -30px; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff6c2, #ffd23f); box-shadow: 0 4px 10px rgba(0,0,0,.25); opacity: .75; }
+  border-radius: 50%; background: rgba(255,255,255,0.22); border: 4px solid rgba(255,255,255,0.7); }
+.knob { position: absolute; left: -30px; top: -30px; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff6c2, #ffd23f); box-shadow: 0 4px 10px rgba(0,0,0,.25); }
 
 .banner {
   position: absolute; top: 26%; left: 0; right: 0; text-align: center; font-size: clamp(40px, 9vw, 84px); font-weight: 900;
   color: #ffd23f; paint-order: stroke fill; -webkit-text-stroke: 0.16em #c2185b; text-shadow: 0 0.1em 0 #c2185b, 0 10px 30px rgba(0,0,0,.3); opacity: 0; transition: opacity .4s, transform .4s ease-out; transform: scale(.9);
 }
 .banner.show { opacity: 1; transform: scale(1); }
-/* The counting mission's celebration: big enough to see across the room on a phone. */
 .banner.big { font-size: clamp(64px, min(17vw, 30vh), 130px); }
 
 .countdown {
-  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5;
-  font-size: clamp(80px, min(28vw, 42vh), 240px); font-weight: 900; color: #fff; white-space: nowrap; text-shadow: 0 10px 0 #ff6b9d, 0 20px 40px rgba(0,0,0,.3);
+  position: fixed; top: max(12px, env(safe-area-inset-top)); left: 0; right: 0; height: 88px; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5;
+  font-size: clamp(32px, min(7vw, 10vh), 64px); font-weight: 900; color: #fff; white-space: nowrap; text-shadow: 0 3px 0 #ff6b9d, 0 6px 12px rgba(0,0,0,.2);
 }
 .countdown.tick { animation: tick .9s ease-out; }
 @keyframes tick { 0% { transform: scale(1.3); opacity: 0; } 25% { transform: scale(1); opacity: 1; } 100% { transform: scale(.8); opacity: .9; } }
 .countdown.waiting { font-size: 90px; }
+/* The surprise on the last beat: smaller, and gone in a blink. */
+.countdown.go { font-size: clamp(32px, min(7vw, 10vh), 64px); animation: go-pop .32s ease-out forwards; }
+@keyframes go-pop { 0% { transform: scale(.6); opacity: 0; } 40% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
 
 #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .float {
@@ -162,44 +165,21 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   background: rgba(20,40,110,0.55); border-radius: 22px; padding: 8px 16px; font-size: 32px; white-space: nowrap; }
 .keys-hint .space { background: rgba(255,255,255,.85); color: #24306e; border-radius: 10px; padding: 0 12px; font-size: 26px; font-weight: 900; }
 
-.podium { display: flex; flex-direction: column; gap: 8px; width: min(560px, 94vw); }
-.place { display: flex; align-items: center; gap: 10px; background: rgba(20,40,110,0.42); border-radius: 22px; padding: 6px 14px; font-size: 24px; font-weight: 800;
-  animation: slide-in .5s cubic-bezier(.2, 1.4, .4, 1) backwards; }
-.place:nth-child(2) { animation-delay: .15s; } .place:nth-child(3) { animation-delay: .3s; } .place:nth-child(4) { animation-delay: .45s; }
+.podium { display: flex; flex-direction: column; align-items: center; gap: 18px; width: min(560px, 94vw); margin-top: 20px; }
 @keyframes slide-in { from { transform: translateX(-60px) scale(.8); opacity: 0; } }
-.place.me { background: #fff1a8; color: #5b3a00; }
-.place .medal { font-size: 40px; }
-.place img { width: 58px; height: 58px; }
-.place .who { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; }
-.place .award { font-size: 17px; font-weight: 800; background: rgba(0,0,0,0.15); border-radius: 999px; padding: 2px 10px; }
-.place .pts { margin-left: auto; font-size: 30px; font-weight: 900; white-space: nowrap; }
 
 @media (max-width: 560px) {
   .duck-pick { width: 92px; height: 92px; border-radius: 22px; } .duck-pick img { width: 86px; height: 86px; }
   .arena { width: 28vw; padding: 6px 4px 8px; }
   .score { font-size: 18px; padding: 1px 7px 1px 3px; } .score .dot { width: 22px; height: 22px; font-size: 14px; }
-  .pill { font-size: 22px; }
   .round-btn { width: 44px; height: 44px; font-size: 22px; }
-  .place { font-size: 19px; padding: 4px 10px; gap: 6px; } .place .medal { font-size: 30px; } .place img { width: 44px; height: 44px; }
-  .place .award { font-size: 14px; } .place .pts { font-size: 24px; }
 }
 /* Narrow phone, upright: the scores move under the corner buttons so the timer fits. */
 @media (max-width: 420px) {
   .hud-top { top: calc(66px + env(safe-area-inset-top)); }
   #results { padding-top: calc(66px + env(safe-area-inset-top)); }
   #results h1 { font-size: 26px; white-space: nowrap; }
-  .place .award { white-space: nowrap; }
   #results .big-go { white-space: nowrap; padding: 10px 30px; }
-}
-/* Upright tablets: Bumper play's team pill (up to 7 rafts and both numbers, about 540 px) would run under
-   the corner buttons, so it sits just below them. */
-@media (orientation: portrait) and (max-width: 919px) {
-  body:not(.calm-round) .hud-top { top: calc(66px + env(safe-area-inset-top)); }
-}
-/* Upright phones: smaller counting bubbles, lifted over the store's room code. */
-@media (max-width: 560px) and (orientation: portrait) {
-  #hud .adventure-goal { padding: 3px 10px 3px 6px; font-size: 17px; bottom: calc(66px + env(safe-area-inset-bottom)); }
-  #hud .adventure-steps { font-size: 24px; }
 }
 /* Phones held sideways: a compact menu with rows that scroll sideways and GO pinned in the corner. */
 @media (max-height: 500px) and (orientation: landscape) {
@@ -210,37 +190,23 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .duck-row, .arenas { flex-wrap: nowrap; max-width: 100%; padding: 6px; }
   .duck-pick { width: 76px; height: 76px; border-radius: 18px; flex: 0 0 auto; } .duck-pick img { width: 70px; height: 70px; }
   .arena { width: 120px; padding: 2px 4px 4px; border-width: 4px; flex: 0 0 auto; } .arena .emoji { font-size: 38px; }
-  #menu { padding-right: calc(170px + env(safe-area-inset-right)); }
-  #go { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); font-size: 30px; padding: 10px 28px; margin: 0; }
-  .place { padding: 2px 12px; font-size: 18px; } .place .medal { font-size: 26px; } .place img { width: 38px; height: 38px; }
-  .podium { gap: 4px; }
+  /* ▶ sits centred under the places (the rows scroll sideways if they ever run out of room). */
+  #go { position: static; font-size: 30px; padding: 6px 44px; margin: 0; }
   .big-go { font-size: 26px; padding: 8px 30px; }
-  .pill { font-size: 20px; } .score { font-size: 17px; }
+  .score { font-size: 17px; }
   #hud { --pw: 60px; } .power { font-size: 32px; }
   .hud-top { left: calc(10px + env(safe-area-inset-left)); top: calc(66px + env(safe-area-inset-top)); transform: none; align-items: flex-start; }
   .scores { flex-direction: column; align-items: flex-start; }
   #menu .logo.small { margin-left: 120px; }
-  #hud .adventure-goal { padding: 2px 10px 2px 6px; font-size: 16px; bottom: calc(8px + env(safe-area-inset-bottom)); }
-  #hud .adventure-steps { font-size: 22px; }
-  #menu .adventure-choice { font-size: 15px; }
-  /* The counting choice sits in the right-hand column just above GO, so it never needs a scroll. */
-  #menu .adventure-choice { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(92px + env(safe-area-inset-bottom)); width: 150px; margin: 0; padding: 6px 10px; z-index: 3; }
 }
 /* Very short sideways phones: smaller pills so all four scores fit down the side. */
 @media (max-height: 330px) and (orientation: landscape) {
   .hud-top { gap: 4px; top: calc(62px + env(safe-area-inset-top)); }
-  .pill { font-size: 17px; padding: 2px 12px; }
   .scores { gap: 3px; }
   .score { font-size: 15px; border-width: 2px; padding: 1px 7px 1px 2px; } .score .dot { width: 20px; height: 20px; font-size: 13px; }
   .duck-row { gap: 6px; } .duck-pick { width: 54px; height: 54px; border-radius: 14px; border-width: 3px; } .duck-pick img { width: 50px; height: 50px; }
-  #menu { padding-right: calc(160px + env(safe-area-inset-right)); }
-  /* The pictures say it: the two headings make way so the places fit without a scroll. */
-  #menu h2 { display: none; }
   .arena { width: 96px; } .arena .emoji { font-size: 30px; }
   #results h1 { display: none; }
-  .podium { gap: 3px; margin-top: auto; width: auto; align-self: stretch; margin-left: 168px; }
-  .place { padding: 1px 10px; gap: 6px; } .place .medal { font-size: 22px; } .place img { width: 32px; height: 32px; }
-  .place .who { flex-direction: row; align-items: center; gap: 6px; } .place .award { font-size: 13px; } .place .pts { font-size: 20px; }
 }
 /* 320px-wide phones: three ducks to a row, so the places and GO come into view sooner. */
 @media (max-width: 360px) {
@@ -251,281 +217,69 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 @media (max-width: 420px) and (orientation: portrait) {
   #menu { gap: 8px; padding-top: calc(60px + env(safe-area-inset-top)); }
   #menu .logo.small { font-size: 36px; }
-  #menu .adventure-choice { margin: 2px auto; }
 }
-/* Short upright phones (320×568): the pictures say it, so the headings make way and GO never covers the counting choice. */
 @media (max-width: 420px) and (max-height: 600px) and (orientation: portrait) {
-  #menu h2 { display: none; }
   #menu { gap: 9px; }
 }
-@media (max-width: 420px) and (orientation: portrait) { #hud .adventure-steps { font-size: 19px; } #hud .adventure-goal { font-size: 15px; gap: 0; } #hud .adventure-goal b { margin-left: 3px; } }
 
-/* --- Phase 2: Pond helpers (calm default) and Bumper race (lively) ------------------------------ */
-:root { --cell: 26px; }
-/* Two pictured ways to play. Pond helpers shows its goal as little ten-frames or coloured bubbles. */
-.modes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: safe center; }
-.mode {
-  width: min(40vw, 230px); min-height: 92px; padding: 8px 8px 10px; border-radius: 24px; border: 5px solid rgba(255,255,255,0.65);
-  box-shadow: 0 7px 0 rgba(0,0,0,0.22); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  color: #24306e; transition: transform .12s;
-}
-.mode.calm { background: linear-gradient(#bff3e6, #7fd3c4); }
-.mode.lively { background: linear-gradient(#ffd0b0, #ff9a6b); }
-.mode.selected { border-color: #ffd23f; transform: scale(1.05); box-shadow: 0 0 0 6px rgba(255,210,63,0.6), 0 7px 0 rgba(0,0,0,0.22); }
-.mode .pic { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; min-height: 30px; align-items: center; }
-.mode .pic.big { font-size: 34px; line-height: 1; }
-.mode .name { font-size: 20px; font-weight: 900; }
-.mini-frame { display: inline-grid; grid-template-columns: repeat(5, 9px); gap: 2px; padding: 3px; border: 2px solid #fff; border-radius: 6px; background: rgba(36,48,110,0.2); }
-.mini-frame i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(36,48,110,0.35); }
-/* A ten raft in pictures: an orange-rimmed board holding two rows of five; ones are loose bubbles. */
-.mini-raft { display: inline-block; width: 40px; height: 18px; border-radius: 5px; border: 2px solid #ffb04d;
-  background: radial-gradient(circle, #fff 0 2.6px, transparent 3.2px) 0 0 / 20% 50%, #fff4d6; }
-.mini-ones { display: inline-flex; flex-wrap: wrap; gap: 2px; max-width: 46px; }
-.mini-ones i { width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px rgba(36,48,110,0.35); }
-.mini-num { font-size: 22px; font-weight: 900; line-height: 1; margin-left: 2px; }
-/* ▶ another goal: a round button on Pond helpers' top corner, so a new goal is one visible tap away. */
-.mode-wrap { position: relative; display: flex; }
-.mode-wrap { margin-right: 18px; }
-.next-goal { position: absolute; right: -30px; top: 50%; margin-top: -24px; width: 48px; height: 48px; border-radius: 50%;
-  border: 4px solid #fff; background: #2fb2a0; color: #fff; font-size: 20px; font-weight: 900; line-height: 1; padding: 0 0 0 3px;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.22); z-index: 1; }
-.next-goal[hidden] { display: none; }
-.next-goal:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.22); }
+/* A bubble jar per duck instead of a number: it fills as the duck catches. */
+.jar { position: relative; display: inline-block; width: 22px; height: 28px; margin-left: 3px; border-radius: 6px 6px 9px 9px; overflow: hidden;
+  background: rgba(225,244,255,0.8); border: 2px solid #fff; box-shadow: inset 0 0 0 1px rgba(40,120,200,.35), 0 2px 0 rgba(20,40,110,.25); }
+.jar i { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--fill, 0) * 100%); transition: height .35s ease-out;
+  background: radial-gradient(circle at 30% 30%, #fff 0 2px, transparent 2.6px) 0 0 / 8px 8px, radial-gradient(circle, rgba(255,255,255,.75) 0 2.6px, transparent 3.2px) 4px 4px / 8px 8px, linear-gradient(#5fe3ff, #1fa8f0); }
+.score.me .jar { border-color: #fff; }
+.jar.big { width: 64px; height: 84px; border-width: 4px; border-radius: 14px 14px 22px 22px; margin: 4px 0 0; }
+.jar.big i { background-size: 16px 16px; }
+.chip .jar { width: 24px; height: 32px; margin-left: 6px; }
 
-/* The shared jar replaces the clock and the score pills in Pond helpers. */
-#jar { display: none; }
-body.calm-round #jar { display: flex; }
-body.calm-round #timer, body.calm-round #scores { display: none; }
-.jar { align-items: center; gap: 8px; padding: 6px 10px; border-radius: 18px; background: rgba(20,40,110,0.5); }
-.jar-goal:empty, .jar-tens:empty, .jar-frame:empty { display: none; }
-.jar-num { display: block; font-size: calc(var(--cell) * 1.3); font-weight: 900; line-height: 1; padding: 0 2px; text-shadow: 0 2px 0 rgba(0,0,0,.25); }
-/* After a bubble that didn't fit, the open spaces glow softly once (no flashing). */
-.cell, .ten { transition: box-shadow .4s; }
-.jar.look .cell:not(.full):not(.spare), .jar.look .ten:not(.full) { box-shadow: 0 0 0 3px rgba(255,255,255,0.75), 0 0 12px rgba(255,255,255,0.6); }
-.jar-frame {
-  display: grid; grid-template-columns: repeat(5, var(--cell)); gap: 4px; padding: 4px; border-radius: 10px;
-  background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.8);
-}
-.cell { width: var(--cell); height: var(--cell); border-radius: 50%; border: 2px solid var(--ring, #fff); background: var(--c); }
-/* An empty space is a soft solid tint of what it wants, so a bond's colours read at a glance. */
-.cell:not(.full):not(.spare) { background: color-mix(in srgb, var(--ring, #fff) 42%, rgba(20,40,110,0.3)); }
-/* Tens first: the ones frame rests, dimmed, until every raft is in. */
-.jar-frame { transition: opacity .4s; }
-.jar-frame.waiting { opacity: .45; }
-/* A trip's goals: one small dot each, the finished ones filled. */
-.trip-dots { display: inline-flex; gap: 4px; align-items: center; }
-.trip-dots i { width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; }
-.trip-dots i.done { background: #fff; }
-.trip-dots i.now { background: #ffd23f; }
-.jar-goal { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.mode .trip-dots { flex-basis: 100%; justify-content: center; } .mode .trip-dots i { border-color: #24306e; width: 8px; height: 8px; }
-.next-pic .trip-dots i { border-color: #fff; }
-.team-trip { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 30px; font-weight: 900; text-shadow: 0 3px 0 rgba(0,0,0,.2); }
-.team-trip .way { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 14px; background: rgba(20,40,110,0.3); }
-.team-trip .arrow { opacity: .8; font-size: 24px; }
-.cell.full { border: 2px solid #fff; opacity: 1; background: radial-gradient(circle at 35% 30%, #fff 0 16%, var(--c) 42%); }
-.cell.spare { opacity: .16; border-style: dotted; border-color: #fff; background: transparent; }
-.jar-tens { display: flex; gap: 4px; }
-.ten {
-  display: grid; grid-template-rows: repeat(10, 1fr); gap: 1px; width: 15px; height: calc(var(--cell) * 2 + 12px); padding: 2px;
-  border-radius: 8px; border: 2px dashed rgba(255,255,255,0.7);
-}
-.ten.full { border: 2px solid #fff; background: rgba(255,255,255,0.22); }
-.ten.arriving { visibility: hidden; }
-.ten i { border-radius: 50%; background: var(--c); }
-.ten.raft { border-color: #ffb04d; }
-.ten.raft.full { background: #fff4d6; }
-.ten.raft i { background: #fff; box-shadow: inset 0 0 0 1px rgba(255,150,40,0.6); }
-.jar-fly.raft { width: calc(var(--cell) * 2.2); height: var(--cell); border-radius: 7px; border-color: #ffb04d;
-  margin: calc(var(--cell) / -2) 0 0 calc(var(--cell) * -1.1); background: radial-gradient(circle, #fff 0 28%, transparent 34%) 0 0 / 20% 50%, #fff4d6; }
-.swatch { display: block; width: calc(var(--cell) * 1.7); height: calc(var(--cell) * 1.7); border-radius: 50%; border: 3px solid #fff;
-  background: radial-gradient(circle at 35% 30%, #fff 0 14%, var(--c) 42%); }
-.jar-fly { position: fixed; left: 0; top: 0; width: var(--cell); height: var(--cell); margin: calc(var(--cell) / -2) 0 0 calc(var(--cell) / -2);
-  border-radius: 50%; border: 2px solid #fff; background: radial-gradient(circle at 35% 30%, #fff 0 16%, var(--c) 42%); z-index: 30; pointer-events: none; }
-.jar-ghost { position: fixed; z-index: 29; pointer-events: none; margin: 0; box-sizing: border-box; }
-
-/* The team's ending: groups of ten (or the sorted bubbles) counted up, then every duck's kind note. */
-.team { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(560px, 94vw); }
-.team-jar { display: flex; gap: 16px; justify-content: center; align-items: flex-end; }
-.team-ten { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.team-ten .ten { width: 24px; height: 128px; gap: 2px; padding: 3px; opacity: .35; transition: opacity .5s, transform .5s; }
-.team-ten b { font-size: 26px; visibility: hidden; text-shadow: 0 3px 0 rgba(0,0,0,.2); }
-.team-ten.lit .ten { opacity: 1; transform: translateY(-4px); }
-.team-ten.lit b { visibility: visible; }
-.team-jar.colour .jar-frame { --cell: 38px; }
-.team .cell.full { opacity: .3; transition: opacity .4s; display: grid; place-items: center; }
-.team .cell.full.lit { opacity: 1; }
-.team .cell.full.lit::after { content: attr(data-n); color: #24306e; font-size: 13px; font-weight: 900; }
-.team-jar .jar-frame { align-self: center; }
-.next-pic { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
-.next-pic .mini-num { color: #fff; }
-.team-total { font-size: 34px; font-weight: 900; min-height: 1.2em; text-shadow: 0 3px 0 rgba(0,0,0,.2); }
-.pond { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 10px; border-radius: 28px; border: 4px solid rgba(255,255,255,0.6);
-  background: linear-gradient(170deg, var(--pond), var(--deep)); }
-.helper { display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 18px; background: rgba(20,40,110,0.32); font-size: 20px; font-weight: 800; text-align: left; }
-.helper.me { background: #fff1a8; color: #5b3a00; }
-.helper img { width: 50px; height: 50px; }
-.helper .tag { font-size: 24px; }
-.helper .note { flex: 1; }
-.helper .helps { white-space: nowrap; font-size: 22px; font-weight: 900; }
-
-/* Tablets: the jar is the lesson, so it is drawn larger. */
-@media (min-width: 768px) and (min-height: 700px) { :root { --cell: 36px; } .jar { gap: 10px; padding: 8px 14px; border-radius: 22px; } .ten { width: 20px; } .trip-dots i { width: 12px; height: 12px; } }
-@media (max-width: 560px) {
-  :root { --cell: 22px; }
-  .mode { min-height: 80px; } .mode .name { font-size: 17px; }
-  .helper { font-size: 16px; padding: 3px 8px; } .helper img { width: 40px; height: 40px; }
-  .team-ten .ten { height: 100px; }
-}
+/* Results: your duck big with its award, the others smaller below (in play order, not ranked). */
+.hero { position: relative; display: flex; flex-direction: column; align-items: center; padding: 10px 30px 12px; border-radius: 32px;
+  background: #fff1a8; color: #5b3a00; box-shadow: 0 8px 0 rgba(150,100,0,.35); animation: hero-in .6s cubic-bezier(.2, 1.5, .4, 1) backwards; }
+.hero img { width: min(200px, 30vh); height: min(200px, 30vh); }
+.hero .fallback { font-size: 120px; }
+.hero-award { position: absolute; top: -26px; right: -22px; font-size: 64px; filter: drop-shadow(0 4px 3px rgba(0,0,0,.25)); animation: award-in .7s .35s cubic-bezier(.2, 1.8, .4, 1) backwards; }
+@keyframes hero-in { from { transform: scale(.5); opacity: 0; } }
+/* Your duck hops for joy (three happy hops, then it rests). */
+.hero img { animation: hero-hop .7s .7s ease-out 3; transform-origin: 50% 90%; }
+@keyframes hero-hop { 0%, 100% { transform: translateY(0) scale(1); } 15% { transform: translateY(0) scale(1.12, .88); }
+  45% { transform: translateY(-34px) scale(.94, 1.08) rotate(-6deg); } 75% { transform: translateY(0) scale(1.1, .9) rotate(4deg); } }
+/* Your catches fly up into your score pill. */
+.fly-pick { position: absolute; transform: translate(-50%, -50%); font-size: 34px; line-height: 1; padding: 6px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,255,255,.95) 0 45%, rgba(255,255,255,.55) 60%, transparent 72%); filter: drop-shadow(0 0 6px #fff) drop-shadow(0 3px 3px rgba(0,0,0,.25)); }
+@keyframes award-in { from { transform: scale(0) rotate(-40deg); } }
+.chips { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.chip { display: flex; align-items: center; gap: 2px; padding: 4px 12px 4px 4px; border-radius: 999px; background: rgba(20,40,110,0.42); font-size: 20px; font-weight: 900;
+  animation: slide-in .5s .5s cubic-bezier(.2, 1.4, .4, 1) backwards; }
+.chip img { width: 64px; height: 64px; }
 @media (max-height: 500px) and (orientation: landscape) {
-  :root { --cell: 20px; }
-  .jar { padding: 4px 8px; gap: 6px; }
-  /* The ways to play join GO and the counting choice in the right-hand column. */
-  #menu .modes { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(146px + env(safe-area-inset-bottom)); width: 150px;
-    flex-direction: column; flex-wrap: nowrap; gap: 6px; z-index: 3; }
-  #menu .mode { width: 150px; min-height: 0; padding: 4px; border-width: 4px; gap: 2px; border-radius: 18px; }
-  #menu .mode.selected { transform: none; }
-  #menu .mode { min-height: 46px; }
-  /* The duck row shrinks to fit beside the right-hand column instead of running underneath it. */
-  #menu .duck-row { gap: 8px; }
-  #menu .duck-pick { width: min(76px, calc((100vw - 236px) / 6 - 8px)); height: min(76px, calc((100vw - 236px) / 6 - 8px)); }
-  #menu .duck-pick img { width: 92%; height: 92%; }
-  .mode .name { font-size: 15px; } .mode .pic.big { font-size: 24px; } .mode .pic { min-height: 22px; }
-  .team { flex-direction: row; flex-wrap: wrap; justify-content: center; width: min(760px, 96vw); gap: 6px 14px; }
-  .team-ten .ten { height: 84px; width: 20px; } .team-ten b { font-size: 18px; }
-  .team-jar.colour .jar-frame { --cell: 26px; }
-  .team-total { font-size: 24px; order: 3; width: 100%; }
-  .pond { width: auto; flex: 1 1 300px; padding: 6px; gap: 3px; border-radius: 20px; }
-  .helper { font-size: 14px; padding: 1px 8px; } .helper img { width: 30px; height: 30px; } .helper .tag { font-size: 18px; } .helper .helps { font-size: 16px; }
+  .podium { flex-direction: row; align-items: center; justify-content: center; gap: 16px; width: auto; }
+  .hero { padding: 6px 20px 8px; } .hero img { width: 110px; height: 110px; } .jar.big { width: 42px; height: 54px; border-width: 3px; } .hero-award { font-size: 46px; top: -16px; right: -14px; }
+  .chips { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .chip { font-size: 16px; } .chip img { width: 44px; height: 44px; }
+  #results h1 { display: none; }
 }
-/* Upright phones up to 700px tall: the pictures say it, so the headings make way for the ways to play. */
-@media (max-width: 420px) and (max-height: 700px) and (orientation: portrait) {
-  #menu h2 { display: none; }
-  .mode { min-height: 70px; padding: 4px 6px 6px; gap: 3px; } .mode .pic.big { font-size: 28px; }
+/* Short sideways phones (740x360): smaller score pills down the side. */
+@media (max-height: 400px) and (orientation: landscape) {
+  .score { font-size: 14px; border-width: 2px; padding: 0 6px 0 2px; } .score .dot { width: 18px; height: 18px; font-size: 12px; }
+  .score .jar { width: 15px; height: 19px; border-width: 1.5px; }
+  .scores { gap: 3px; } .hud-top { gap: 4px; top: calc(60px + env(safe-area-inset-top)); }
+  .clock { width: 40px; height: 40px; font-size: 20px; }
 }
-@media (max-width: 420px) and (max-height: 600px) and (orientation: portrait) {
-  #menu .mode .name { display: none; }
-  #menu .mode { min-height: 52px; }
-  .duck-pick { width: 68px; height: 68px; border-radius: 18px; } .duck-pick img { width: 62px; height: 62px; }
-  .arena { padding: 2px 4px 4px; } .arena .emoji { font-size: 38px; }
-  #menu { gap: 6px; }
-}
-@media (max-height: 330px) and (orientation: landscape) {
-  #menu .logo.small { font-size: 28px; margin-left: 100px; }
-  /* The pictures say it: the words make way so the column clears the store's corner button. */
-  #menu .mode .name { display: none; }
-}
+
+/* 🏠, 🎵 and 🔊: hold while a ring fills; a quick tap just wiggles them. */
+.round-btn { position: relative; }
+.round-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; opacity: 0; pointer-events: none;
+  background: conic-gradient(#ffd23f calc(var(--hold, 0) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%); mask: radial-gradient(circle, transparent 62%, #000 64%); }
+.round-btn.holding::after { opacity: 1; }
+.round-btn.holding { transform: scale(1.1); }
+.round-btn.nudge { animation: nudge .4s; }
+@keyframes nudge { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
 
 /* Calm pass: honour reduced motion for the animations that remain. */
 @media (prefers-reduced-motion: reduce) {
-  .spinner, .hint-finger .finger, .score.bump, .dash.ready, .countdown.tick, .place { animation: none; }
-  .team-ten .ten, .team .cell.full, .mode { transition: none; }
+  .spinner, .hint-finger .finger, .score.bump, .dash.ready, .countdown.tick, .countdown.go, .hero, .hero img, .hero-award, .chip, .round-btn.nudge { animation: none; }
   .float { animation: float-fade 1.1s linear forwards; }
   @keyframes float-fade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
   .banner, .banner.show { transform: none; transition: opacity .4s; }
 }
-/* Small screens: the place-value picture shrinks so rafts, ones and the number fit beside the ▶. */
-@media (max-height: 500px) and (orientation: landscape), (max-width: 420px) and (orientation: portrait) {
-  .mini-raft { width: 26px; height: 12px; border-width: 1.5px; }
-  .mini-ones { max-width: 34px; gap: 1px; } .mini-ones i { width: 7px; height: 7px; }
-  .mini-num { font-size: 18px; }
-  .next-goal { width: 44px; height: 44px; font-size: 18px; margin-top: -22px; right: -26px; }
-}
-/* Short landscape: the ways to play sit in the right-hand column, so ▶ waits on the column's open left side. */
-@media (max-height: 500px) and (orientation: landscape) {
-  .mode-wrap { margin-right: 0; }
-  .next-goal { right: auto; left: -26px; top: 50%; margin-top: -22px; }
-}
-/* Upright phones: ▶ sits in room kept for it on Together's right edge, clear of the goal picture and of Race. */
-@media (max-width: 420px) and (orientation: portrait) {
-  .mode-wrap { margin-right: 0; }
-  #menu .mode { width: min(44vw, 230px); }
-  #menu .mode.calm { padding-right: 30px; }
-  .next-goal { top: 50%; margin-top: -22px; right: -8px; }
-}
-
-/* 2026-10-11: what the jar makes so far, the ways a free bond already made, and Race counts as tens and ones. */
-/* How far the jar has come: a small filling bar with its number, never "35 = 30". */
-.jar-now { position: relative; display: grid; place-items: center; width: calc(var(--cell) * 2.1); height: calc(var(--cell) * 0.72);
-  border-radius: 999px; overflow: hidden; background: rgba(20,30,80,.55); box-shadow: inset 0 0 0 2px rgba(255,255,255,.55); }
-.jar-now i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,210,63,.55); transition: width .5s ease; }
-.jar-now b { position: relative; font-size: calc(var(--cell) * 0.5); font-weight: 900; line-height: 1; text-shadow: 0 1px 0 rgba(0,0,0,.45); }
-/* A free bond: a faint dashed line where a way already made splits the frame. */
-.cell.cut { position: relative; }
-.cell.cut::after { content: ''; position: absolute; right: -6px; top: -4px; bottom: -4px; border-right: 3px dashed rgba(255,255,255,.9); }
-/* Race results read each catch as tens and ones; the next-goal button shows the number big, without trip dots. */
-.tens-words { font-size: 15px; font-weight: 800; opacity: .9; }
-.next-pic .trip-dots { display: none; }
-.next-pic .mini-num { font-size: 28px; }
-.jar-ways { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.jar-ways:empty { display: none; }
-.way-sum { font-size: calc(var(--cell) * 0.55); font-weight: 900; line-height: 1.1; padding: 1px 6px; border-radius: 8px; background: rgba(20,30,80,.55); white-space: nowrap; }
-.way-sum b { text-shadow: 0 1px 0 rgba(0,0,0,.45); }
-.float.small { font-size: 20px; -webkit-text-stroke: 5px #24306e; text-shadow: 0 2px 0 #24306e; }
-.tally { display: inline-flex; align-items: center; gap: 2px; min-height: 22px; }
-.tally .t-raft { width: 7px; height: 20px; border-radius: 3px; background: #ffb04d; box-shadow: inset 0 0 0 1.5px #fff; }
-.tally .t-ones { display: inline-grid; grid-template-columns: repeat(5, 6px); gap: 2px; }
-.tally .t-ones i { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
-.score.me .tally .t-ones i { background: #5b3a00; }
-.place .tally .t-raft { width: 10px; height: 28px; }
-.place .tally .t-ones { grid-template-columns: repeat(5, 9px); gap: 3px; }
-.place .tally .t-ones i { width: 9px; height: 9px; }
-.place.me .tally .t-ones i { background: #5b3a00; }
-
-/* 2026-10-11 (round 5): bumper play gathers five tens together (no clock), and the frogs hold numbers. */
-/* The team's tens: a raft per ten, two rows of five dots that fill in. The same picture is on the menu. */
-.team-tally { display: inline-flex; gap: 4px; align-items: center; }
-.tr { display: inline-grid; grid-template-columns: repeat(5, 7px); gap: 2px; padding: 3px; border-radius: 6px; border: 2px solid rgba(255,176,77,.75); background: rgba(255,244,214,.18); }
-.tr i { width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
-.tr i.on { background: #fff; box-shadow: none; }
-.tr.full { border-color: #ffb04d; background: #ffb04d; }
-#timer { display: flex; align-items: center; padding: 6px 12px; }
-#timer .tr { grid-template-columns: repeat(5, 9px); }
-#timer .tr i { width: 9px; height: 9px; }
-/* The number now (white) and the goal (gold, labelled "make", as on the jar) either side of the rafts. */
-#timer .tt-now, #timer .tt-goal { font-weight: 900; font-size: 20px; line-height: 1; }
-#timer .tt-now { color: #fff; min-width: 1.4em; text-align: right; margin-right: 8px; }
-#timer .tt-goal { color: #ffd23f; margin-left: 8px; text-align: center; }
-#timer .tt-goal small { display: block; font-size: 10px; font-weight: 800; color: #fff; }
-/* A phone held upright: smaller dots, so seven rafts and both numbers still fit across. */
-@media (max-width: 430px) {
-  #timer { padding: 4px 8px; max-width: calc(100vw - 16px); box-sizing: border-box; }
-  #timer .tr { grid-template-columns: repeat(5, 5px); gap: 1px; padding: 2px; }
-  #timer .tr i { width: 5px; height: 5px; }
-  #timer .tt-now, #timer .tt-goal { font-size: 16px; }
-  #timer .tt-now { margin-right: 4px; }
-  #timer .tt-goal { margin-left: 4px; }
-}
-body:not(.calm-round) #scores { display: none; }
-.mode .pic .big { font-size: 30px; line-height: 1; }
-.team-sum { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 6px 12px; border-radius: 18px; background: rgba(20,40,110,0.32); font-size: 22px; font-weight: 900; }
-.team-sum .tr { grid-template-columns: repeat(5, 10px); }
-.team-sum .tr i { width: 10px; height: 10px; }
-@media (max-height: 500px) { .team-sum { font-size: 16px; padding: 2px 8px; } .team-sum .tr { grid-template-columns: repeat(5, 6px); } .team-sum .tr i { width: 6px; height: 6px; } }
-.mode.lively .pic { flex-wrap: nowrap; }
-/* The menu's bumper-play picture is its goal: a raft for each ten and a dot for each one (47: four rafts, seven dots). */
-.mode .pic .tally { gap: 3px; }
-.mode .pic .tally .t-raft { width: 8px; height: 24px; box-shadow: inset 0 0 0 1.5px #fff, 0 0 0 1px rgba(36,48,110,.25); }
-.mode .pic .tally .t-ones { grid-template-columns: repeat(5, 7px); }
-.mode .pic .tally .t-ones:empty { display: none; }
-.mode .pic .tally .t-ones i { width: 7px; height: 7px; box-shadow: 0 0 0 1px rgba(36,48,110,.35); }
-/* Bumper play: the team's tally is the one count on screen (no per-duck tallies to compare). */
-#scores { display: none; }
-/* Bumper play's results: the child's own catch as rafts and dots, beside their note. */
-.helper .tally { display: inline-flex; align-items: center; gap: 3px; }
-.helper .tally .t-raft { width: 9px; height: 24px; }
-.helper .tally .t-ones { grid-template-columns: repeat(5, 8px); gap: 2px; }
-.helper .tally .t-ones i { width: 8px; height: 8px; }
-.podium .pond { width: 100%; }
-/* Level 1's "one more than" step: the colour before, as a row of dots beside the frame. */
-.jar-compare { display: inline-grid; grid-template-columns: repeat(5, 14px); gap: 3px; align-self: center; padding: 4px 6px; border-radius: 10px; background: rgba(255,255,255,0.25); }
-.jar-compare i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.7); }
-
-/* 2026-10-11 (round 3): bumper play's goal grows (a goal with ones ends on a short dashed frame), the
-   youngest jars are larger on tablets, and place value's goal reads "make 28" in gold beside the white
-   progress number. */
-.tr.ones { border-style: dashed; }
-.mode .pic .goal-n { font-size: 26px; font-weight: 900; line-height: 1; }
-.jar-num.make { color: #ffd23f; text-align: center; }
-.jar-num.make small { display: block; font-size: calc(var(--cell) * 0.36); font-weight: 800; color: #fff; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
-@media (min-width: 768px) and (min-height: 700px) { body.young-jar { --cell: 46px; } body.young-jar .jar { gap: 12px; padding: 10px 16px; } }

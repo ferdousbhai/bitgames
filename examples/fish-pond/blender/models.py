@@ -19,7 +19,8 @@ Names the game relies on
 ------------------------
 creatures.glb top-level nodes (each faces +X, its "nose", and sits on its origin):
   goldfish, bluefish, clownfish, pufferfish, crab, octopus, turtle, trout,
-  jellyfish, narwhal, boot, duck, chest, goldenfish, whale, frog, crayfish, snail, cod, seal
+  jellyfish, narwhal, boot, duck, chest, goldenfish, whale, frog, crayfish, snail, cod, seal,
+  sunfish (lake), salmon (river), catfish (night)
   <id>_tail        tail pivot (fish, whale, narwhal, turtle, crayfish, seal): the game wags it
   pufferfish_spikes the spikes, scaled up when the puffer puffs
   chest_lid        lid pivot on the back hinge: rotate about Z to open
@@ -1122,12 +1123,121 @@ def creature_chest(m):
     return rt
 
 
+def belly_paint(body, below, index=1):
+    """Paint the underside of a lathed body with its second material (a belly that follows the skin)."""
+    for p in body.data.polygons:
+        if p.center.z < below:
+            p.material_index = index
+
+
+def creature_sunfish(m):
+    """Pumpkinseed sunfish, the bright little fish of lakes and ponds: a round, flat body, olive green with
+    orange freckles, an orange belly, blue squiggles on its cheeks and a black ear flap with a red tip."""
+    rt = root("sunfish")
+    olive = material("sunfish_olive", "#5fa37a", roughness=0.4)
+    belly = material("sunfish_belly", "#ffa02e", roughness=0.4)
+    spot = material("sunfish_spot", "#ffb347", roughness=0.4)
+    blue = material("sunfish_blue", "#3fc6ff", roughness=0.3)
+    ear = material("sunfish_ear", "#1d2433", roughness=0.4)
+    red = material("sunfish_red", "#ff3b3b", roughness=0.4)
+    fin = material("sunfish_fin", "#a8d48f", roughness=0.4)
+    L, H = 0.8, 0.42
+    body, prof = fish_body(rt, "sunfish", L, H, 0.45, [olive, belly], bias=1.1, round_=0.5)
+    belly_paint(body, -H * 0.3)
+    f = Face(body, m, rt)
+    rnd = random.Random(21)
+    for s in (-1, 1):
+        for k in range(10):
+            x = -0.26 + (k % 5) * 0.1 + rnd.uniform(-0.02, 0.02)
+            z = 0.0 + (k // 5) * 0.12 + rnd.uniform(-0.02, 0.02)
+            if x > 0.05 and k // 5 == 0:
+                continue  # the cheek has its squiggles
+            loc, n = f.hit((x, s * 3, z), (0, -s, 0))
+            sphere(f"sunfish_spot{s}_{k}", 0.026, loc, spot, rt, scale=(1, 0.3, 1), segs=8, rings=5, rot=n.to_track_quat("-Y", "Z"))
+        # Blue squiggles across the cheek
+        for j in range(2):
+            pts = []
+            for i in range(7):
+                u = i / 6
+                loc, n = f.hit((0.3 - u * 0.17, s * 3, -0.1 - j * 0.055 + math.sin(u * TAU) * 0.015), (0, -s, 0))
+                pts.append(loc + n * 0.006)
+            tube(f"sunfish_squiggle{s}_{j}", pts, 0.012, blue, rt, sides=6)
+        # The ear flap behind the eye, black with a bright red tip
+        loc, n = f.hit((0.09, s * 3, 0.0), (0, -s, 0))
+        q = n.to_track_quat("-Y", "Z")
+        sphere(f"sunfish_ear{s}", 0.05, loc, ear, rt, scale=(1.2, 0.35, 0.9), segs=10, rings=6, rot=q)
+        sphere(f"sunfish_eartip{s}", 0.022, loc + n * 0.012 + q @ Vector((-0.04, 0, 0)), red, rt, scale=(1, 0.4, 1), segs=8, rings=5, rot=q)
+    fish_face(rt, body, m, L, H, eye_x=0.22, eye_z=0.12, eye=0.1)
+    tail_fin(rt, "sunfish", (-L / 2 + 0.04, 0, 0.0), fin, size=0.95, forked=False)
+    dorsal(rt, "sunfish", -0.02, H * 0.85, fin, 1.25, sweep=1.2)
+    slab("sunfish_anal", [(0.08, 0), (-0.02, -0.13), (-0.16, -0.1), (-0.16, 0)], 0.012, 0.03, fin, rt,
+         xf=T((0, 0, -H * 0.75)))
+    side_fins(rt, "sunfish", 0.08, -0.1, 0.17, fin)
+    return rt
+
+
+def creature_salmon(m):
+    """Sockeye salmon swimming home up the river: a bright red body, a green head and a hooked jaw.
+    Salmon leap up waterfalls on their way, so this one jumps the highest."""
+    rt = root("salmon")
+    red = material("salmon_red", "#e8473a", roughness=0.35)
+    green = material("salmon_green", "#5f9a5c", roughness=0.4)
+    belly = material("salmon_belly", "#ffd9c9", roughness=0.4)
+    fin = material("salmon_fin", "#c2463c", roughness=0.4)
+    L, H = 1.25, 0.33
+    body, prof = fish_body(rt, "salmon", L, H, 0.58, [red, green, belly], mats_by_ring=lambda i: 1 if i >= 15 else 0, bias=1.25)
+    for p in body.data.polygons:
+        if p.center.z < -H * 0.45 and p.material_index == 0:
+            p.material_index = 2
+    fish_face(rt, body, m, L, H, eye_x=0.37, eye_z=0.1, gill=material("salmon_gill", "#2f5e35", roughness=0.4))
+    # The hooked jaw of a salmon heading home
+    tube("salmon_hook", [(L / 2 - 0.04, 0, 0.02), (L / 2 + 0.03, 0, -0.04), (L / 2 + 0.0, 0, -0.1), (L / 2 - 0.05, 0, -0.11)],
+         0.035, green, rt, sides=8, radii=[0.04, 0.038, 0.03, 0.015])
+    tail_fin(rt, "salmon", (-L / 2 + 0.04, 0, 0.0), fin, size=1.1, forked=True)
+    dorsal(rt, "salmon", 0.02, H * 0.9, fin, 1.05)
+    dorsal(rt, "salmon_fat", -0.33, H * 0.55, fin, 0.35)
+    side_fins(rt, "salmon", 0.22, -0.1, 0.16, fin)
+    return rt
+
+
+def creature_catfish(m):
+    """Channel catfish, who comes out at night: a smooth slate-blue body (no scales), a wide smiley mouth
+    and long whiskers to feel for food in the dark."""
+    rt = root("catfish")
+    slate = material("catfish_slate", "#6f7fa8", roughness=0.35)
+    belly = material("catfish_belly", "#e9ecf5", roughness=0.4)
+    spot = material("catfish_spot", "#3a4466", roughness=0.5)
+    whisker = material("catfish_whisker", "#3a4466", roughness=0.5)
+    fin = material("catfish_fin", "#8da0cc", roughness=0.4)
+    L, H = 1.15, 0.3
+    body, prof = fish_body(rt, "catfish", L, H, 0.82, [slate, belly], bias=0.85, round_=0.55)
+    belly_paint(body, -H * 0.35)
+    f = Face(body, m, rt)
+    rnd = random.Random(31)
+    for s in (-1, 1):
+        for k in range(7):
+            loc, n = f.hit((rnd.uniform(-0.35, 0.15), s * 3, rnd.uniform(0.04, 0.16)), (0, -s, 0))
+            sphere(f"catfish_spot{s}_{k}", 0.02, loc, spot, rt, scale=(1, 0.3, 1), segs=8, rings=5, rot=n.to_track_quat("-Y", "Z"))
+        # Long whiskers: a big pair from the top lip and a short pair from the chin
+        tip = L / 2 - 0.03
+        tube(f"catfish_whisker{s}", [(tip, s * 0.08, 0.02), (tip + 0.1, s * 0.2, 0.05), (tip + 0.12, s * 0.36, -0.02), (tip + 0.06, s * 0.48, -0.12)],
+             0.014, whisker, rt, sides=6, radii=[0.018, 0.015, 0.011, 0.006])
+        tube(f"catfish_chin{s}", [(tip - 0.02, s * 0.05, -0.1), (tip + 0.04, s * 0.1, -0.18), (tip + 0.03, s * 0.14, -0.26)],
+             0.01, whisker, rt, sides=6, radii=[0.012, 0.009, 0.005])
+    fish_face(rt, body, m, L, H, eye_x=0.36, eye_z=0.12, eye=0.08, smile_w=0.1)
+    tail_fin(rt, "catfish", (-L / 2 + 0.04, 0, 0.0), fin, size=1.0, forked=True)
+    dorsal(rt, "catfish", 0.12, H * 0.9, fin, 0.8, sweep=1.3)
+    side_fins(rt, "catfish", 0.25, -0.12, 0.2, fin, 1.1)
+    return rt
+
+
 def build_creatures():
     m = face_mats()
     return [creature_goldfish(m), creature_bluefish(m), creature_clownfish(m), creature_pufferfish(m), creature_crab(m),
             creature_octopus(m), creature_turtle(m), creature_trout(m), creature_jellyfish(m), creature_narwhal(m),
             creature_boot(m), creature_duck(m), creature_chest(m), creature_goldenfish(m), creature_whale(m),
-            creature_frog(m), creature_crayfish(m), creature_snail(m), creature_cod(m), creature_seal(m)]
+            creature_frog(m), creature_crayfish(m), creature_snail(m), creature_cod(m), creature_seal(m),
+            creature_sunfish(m), creature_salmon(m), creature_catfish(m)]
 
 
 # --- Bear, boat, rod ------------------------------------------------------------------
@@ -1992,9 +2102,9 @@ def main():
     if PREVIEW:
         os.makedirs(PREVIEW, exist_ok=True)
         for i, rt in enumerate(creatures):
-            rt.location = ((i % 5 - 2) * 1.9, 0, -(i // 5) * 1.6)
+            rt.location = ((i % 6 - 2.5) * 1.9, 0, -(i // 6) * 1.6)
             rt.rotation_euler = (0, 0, -0.5)
-        render(os.path.join(PREVIEW, "creatures.png"), (0, -14, -1.6), (0, 0, -1.6), ortho=11, res=(1400, 900))
+        render(os.path.join(PREVIEW, "creatures.png"), (0, -14, -2.4), (0, 0, -2.4), ortho=12.5, res=(1400, 1000))
     for rt in creatures:
         for o in [rt, *rt.children_recursive]:
             bpy.data.objects.remove(o)

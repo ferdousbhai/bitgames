@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { makeGlowTexture } from './effects.js'
 import { Dragon, LOOKS } from './dragon.js'
-import { TREASURES, treasureMesh } from './goals.js'
+import { TREASURES, treasureMesh } from './treasures.js'
 import { copy } from './models.js'
 import { WORLDS, WORLD_LENGTH, worldAt } from './worlds.js'
 
@@ -305,7 +305,8 @@ export class World {
     // trees around the edge so the nest sits in a little garden
     const garden = []
     for (const a of [2.4, 3.6, 0.6]) {
-      const kind = w.decor[0][0] === 'castle' ? 'tree' : w.decor[0][0]
+      // (tall lollipops would stand over the family's heads, so the candy nest has gumdrops)
+      const kind = { castle: 'tree', lollipop: 'gumdrop' }[w.decor[0][0]] ?? w.decor[0][0]
       const d = copy(this.t[kind], decorRecolor(kind))
       d.position.set(Math.cos(a) * 3.2, 0.5, -Math.abs(Math.sin(a)) * 2.6)
       d.scale.setScalar(kind === 'windmill' ? 0.8 : 1.1)
@@ -321,9 +322,9 @@ export class World {
   }
 
   /**
-   * The family keeps what Ember brought home on the last trip: a little row per kind on the front of the
-   * island (`got`, e.g. { pink: 4, blue: 3 }), the way the child sorted it. Nothing is counted or scored;
-   * it is just still there next time, and after the nest puzzle the new basket takes its place.
+   * The family keeps what Ember brought home: a little row per kind on the front of the island (`got`,
+   * e.g. { pink: 4, blue: 3 }). Nothing is counted or scored; it is just still there next time, until the
+   * next bag of treasures lands in its place.
    */
   keepsakes(nest, got) {
     nest.kept?.removeFromParent()
@@ -333,7 +334,9 @@ export class World {
     const shelf = new THREE.Group()
     // one line on the grass in front of the nest: each kind together, a small gap between kinds
     const step = 0.52
-    const shown = rows.map(([kind, n]) => [kind, Math.min(n, 7)])
+    // a dozen at most, shared between the kinds, so the row always fits on the island
+    const each = Math.max(2, Math.floor(12 / rows.length))
+    const shown = rows.map(([kind, n]) => [kind, Math.min(n, each)])
     const width = shown.reduce((w, [, n]) => w + n * step, 0) + (shown.length - 1) * 0.5 - step
     let x = -width / 2
     for (const [kind, n] of shown) {

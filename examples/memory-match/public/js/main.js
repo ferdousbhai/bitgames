@@ -3,140 +3,65 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { Sound, VOICE_LENGTH } from './audio.js'
-import { Talk } from './talk.js'
-import { createVoice, listWords } from './speech.js'
 import { Effects } from './effects.js'
 import { tween, wait, clearTweens, updateTweens, ease } from './tween.js'
 
 // --- Game data ------------------------------------------------------------------------
 
-/** Every animal in models/animals.glb, with the colour of its card spot. */
+/**
+ * Every animal in models/animals.glb, with the colour of its card spot: thirteen colours spread
+ * round the colour wheel, so a face-up pair also reads as a pair of colours. trick: what the animal
+ * does when it is extra happy (see TRICKS).
+ */
 const ANIMALS = {
-  dog: { emoji: '🐶', color: '#ffbf7a' },
-  cat: { emoji: '🐱', color: '#ffe08a' },
-  frog: { emoji: '🐸', color: '#a8ec7a' },
-  lion: { emoji: '🦁', color: '#ffcf5c' },
-  panda: { emoji: '🐼', color: '#cfe0ee' },
-  pig: { emoji: '🐷', color: '#ffb0d0' },
-  bunny: { emoji: '🐰', color: '#d4c6ff' },
-  chick: { emoji: '🐥', color: '#fff38f' },
-  elephant: { emoji: '🐘', color: '#a8dcff' },
-  fox: { emoji: '🦊', color: '#ffad85' },
-  penguin: { emoji: '🐧', color: '#8fd3ff' },
-  cow: { emoji: '🐮', color: '#bff2cf' },
-  fish: { emoji: '🐠', color: '#9fe3ff' },
+  fox: { emoji: '🦊', color: '#ff8a6b', trick: 'chase' },
+  dog: { emoji: '🐶', color: '#ffb35c', trick: 'chase' },
+  lion: { emoji: '🦁', color: '#ffd84a', trick: 'stomp' },
+  chick: { emoji: '🐥', color: '#eef56a', trick: 'flap' },
+  frog: { emoji: '🐸', color: '#8fdc5f', trick: 'leap' },
+  cow: { emoji: '🐮', color: '#6fdcae', trick: 'stomp' },
+  fish: { emoji: '🐠', color: '#6fd8ea', trick: 'flip' },
+  penguin: { emoji: '🐧', color: '#a9d8ff', trick: 'flip' },
+  elephant: { emoji: '🐘', color: '#8c9cff', trick: 'stomp' },
+  bunny: { emoji: '🐰', color: '#c9a3ff', trick: 'leap' },
+  cat: { emoji: '🐱', color: '#f59ce6', trick: 'chase' },
+  pig: { emoji: '🐷', color: '#ffb8cc', trick: 'stomp' },
+  panda: { emoji: '🐼', color: '#d6d9e0', trick: 'flip' },
 }
 const NAMES = Object.keys(ANIMALS)
 
+/** Pairs on each board: two pairs for a 3-year-old, eight for a real puzzle, in gentle steps. */
+const LEVELS = [2, 3, 4, 5, 6, 8]
+/** How each board looks as a picture on the menu: [columns, rows] of little face-down cards. */
+const LEVEL_PICTURES = [[2, 2], [3, 2], [4, 2], [5, 2], [4, 3], [4, 4]]
 /**
- * Words for each animal: the plural, what its call is called, the call itself as children say it
- * (the sound card says it after the animal's voice and shows it written, so the sound is a real
- * word to know, "Moo!", and still works with the sound off), and its baby.
+ * Each new board brings a new look, starting anywhere in the list: the mat's blanket, the card
+ * backs and their stars change colour. Some looks are places, and bring their own animals first
+ * (farm animals on the farm) and their own weather (snow falling, bubbles rising).
  */
-const WORDS = {
-  dog: { many: 'dogs', says: 'barks', call: 'Woof woof!', baby: 'puppy' },
-  cat: { many: 'cats', says: 'meows', call: 'Meow!', baby: 'kitten' },
-  frog: { many: 'frogs', says: 'croaks', call: 'Ribbit!' }, // a tadpole looks nothing like a small frog
-  lion: { many: 'lions', says: 'roars', call: 'Roar!', baby: 'cub' },
-  panda: { many: 'pandas', baby: 'cub' }, // no call a child knows: left out of Sounds
-  pig: { many: 'pigs', says: 'oinks', call: 'Oink oink!', baby: 'piglet' },
-  bunny: { many: 'bunnies', baby: 'kit' }, // a bunny is nearly silent: left out of Sounds
-  chick: { many: 'chicks', says: 'cheeps', call: 'Cheep cheep!' }, // already a baby
-  elephant: { many: 'elephants', says: 'trumpets', call: 'Toot toot!', baby: 'calf' },
-  fox: { many: 'foxes', says: 'yips', call: 'Yip yip!', baby: 'kit' },
-  penguin: { many: 'penguins', says: 'honks', call: 'Honk honk!', baby: 'chick' },
-  cow: { many: 'cows', says: 'moos', call: 'Moo!', baby: 'calf' },
-  fish: { many: 'fish' }, // no call to learn (it blows bubbles), and its baby (a fry) is not a word for 3–8
-}
-const WITH_BABIES = NAMES.filter((name) => WORDS[name].baby)
-const WITH_CALLS = NAMES.filter((name) => WORDS[name].call)
-/** "A calf is a cow's or an elephant's baby." */
-const orWords = new Intl.ListFormat('en-GB', { type: 'disjunction' })
-const cap = (word) => word[0].toUpperCase() + word.slice(1)
-const an = (word) => (/^[aeiou]/.test(word) ? 'An' : 'A')
-
+const THEMES = [
+  { mat: '#9ee5ca', back: '#ff6fa8', star: '#ffffff', animals: ['bunny', 'frog', 'chick', 'cat'], weather: 'petals', prop: 'flower', table: '#d6f0c4' }, // the garden
+  { mat: '#8fdc5f', back: '#e8434f', star: '#ffffff', animals: ['cow', 'pig', 'chick', 'dog', 'cat', 'bunny'], prop: 'hay', table: '#ffe0a8' }, // the farm
+  { mat: '#5fb8ff', back: '#1fb59f', star: '#fff27a', animals: ['fish', 'penguin', 'frog'], weather: 'bubbles', prop: 'starfish', table: '#bcdcff' }, // the sea
+  { mat: '#5a4fcf', back: '#2a2f6b', panel: '#7950b5', star: '#ffe14d', animals: ['fox', 'cat', 'frog', 'panda'], weather: 'fireflies', night: true, prop: 'lantern', table: '#5a5f8f' }, // the night
+  { mat: '#cfe6ff', back: '#3a7bd5', star: '#ffffff', animals: ['penguin', 'panda', 'fox', 'bunny'], weather: 'snow', prop: 'snowman', table: '#e6f0ff' }, // the snow
+  { mat: '#ffd36b', back: '#c2541a', star: '#ffffff', animals: ['lion', 'elephant', 'fox', 'frog'], prop: 'palm', table: '#ffd38a' }, // the savanna
+  { mat: '#f0a04b', back: '#7a2416', panel: '#a9472d', star: '#ffd23f', animals: ['fox', 'bunny', 'dog', 'pig', 'panda'], weather: 'leaves', prop: 'pumpkin', table: '#e3a77f' }, // the autumn wood
+]
+/** The menu's own look: the teal blanket, no place. */
+const MENU_LOOK = { mat: '#3fd6c4', back: '#7d6bff', star: '#ffd23f' }
 /**
- * Homes mode (for 6–8): no two cards are the same. The child sorts by knowledge, flipping the
- * animals that live together: every card of a turn must belong with the first, so careful
- * thinking ("a pig is a farm animal, the dog is a pet") is what keeps a turn going.
- * The homes do not overlap: wild means wild on land, and the frog, the penguin and the fish go
- * with the water animals. Where a child's own knowledge is right too (a penguin is wild, a fish can
- * be a pet) the game says so (see ALSO) instead of correcting them.
+ * A pair can be special: golden (gold all over, with crowns, and a flip when found), babies, or
+ * twins in party hats, sleepy yawners or confetti sneezers. The golden pair is a treat that comes at least every few boards.
  */
-const GROUPS = {
-  farm: { icon: '🌾', members: ['cow', 'pig', 'chick'], word: 'farm animals', is: 'lives on a farm', together: 'live on the farm' },
-  pets: { icon: '🏡', members: ['dog', 'cat', 'bunny'], word: 'pets', is: 'is a pet', together: 'are pets at home' },
-  wild: { icon: '🌳', members: ['lion', 'elephant', 'fox', 'panda'], word: 'wild animals on land', is: 'is a wild animal on land', together: 'are wild animals on land' },
-  water: { icon: '🌊', members: ['frog', 'penguin', 'fish'], word: 'water animals', is: 'lives in the water', together: 'live in the water' },
-}
-const GROUP_OF = Object.fromEntries(Object.entries(GROUPS).flatMap(([id, g]) => g.members.map((name) => [name, id])))
-/** Where an animal is said to live, when that says more than its group's line. */
-const LIVES = { penguin: 'swims in the cold sea', frog: 'lives in a pond' }
-/** True outside the game too: a second home an animal also fits, and how to say it kindly. */
-const ALSO = {
-  penguin: { home: 'wild', line: 'is wild too' },
-  frog: { home: 'wild', line: 'is wild too' },
-  fish: { home: 'pets', line: 'can be a pet too' },
-  bunny: { home: 'wild', line: 'can live in the wild too' },
-}
-
-/**
- * What a pair is. twins: two of the same animal (the default). sound: an animal and a card that
- * only plays its call. baby: an animal and its baby, the same model made small and round.
- * groups: the animals that live together (farm, home or wild), three or four at a time.
- */
-const MODES = {
-  twins: { word: 'Twins!', goal: 'Find the animal twins!', banner: 'Find the twins!', hint: 'Find the animal twins! Tap an animal to say hello.' },
-  sound: { word: 'Sounds! Who says that?', goal: 'Listen! Find the animal that makes each sound.', banner: 'Who says that?', hint: 'Listen, then find the animal that makes the sound!' },
-  baby: { word: 'Babies!', goal: 'Find each animal’s baby!', banner: 'Find the babies!', hint: 'Find each animal’s baby!' },
-  groups: { word: 'Homes! Who lives together?', goal: 'Find the animals that live together! Keep turning cards that belong with the first one.', banner: 'Who lives together?', hint: 'Farm, home, wild or water? Find who lives together.' },
-}
-/** The bigger boards change the rule a little, so they have their own goal instead of the mode's. */
-const LEVEL_GOALS = {
-  cradle: 'Sleeping babies! Listen to the baby’s name, then find its mum or dad.',
-  looks: 'Look closely! Some twins wear a bow, and some wear a hat.',
-}
-/**
- * Twins from this level on (12 cards and up) have look-alikes: the same animal twice over, one
- * pair with a bow and one with a hat, so the child must look closely, not just remember "dog".
- * One look-alike animal at 12 cards, two at 16, three at 20.
- */
-const LOOK_LEVEL = 3
-const LOOKS = {
-  bow: { icon: '🎀', a: 'a bow', many: 'bows', color: '#ff5c8a' },
-  hat: { icon: '🧢', a: 'a hat', many: 'hats', color: '#4d8cff' },
-}
-/** Phrases said when a pair (or a group) is found. */
-const MATCH_WORDS = {
-  twins: (name, look) => `Two ${WORDS[name].many}${look ? ` with ${LOOKS[look].many}` : ''}!`,
-  sound: (name) => `The ${name} ${WORDS[name].says}!`,
-  baby: (name) => `${an(name)} ${name}’s baby is a ${WORDS[name].baby}!`,
-  groups: (id, names) => `${cap(listWords.format(names))} ${GROUPS[id].together}!`,
-}
-/** Pairs per level: gentle for 3-year-olds, a real puzzle by the end. */
-const LEVELS = [2, 3, 4, 6, 8, 10]
-/**
- * Homes levels: cards in each group (a 4 is the wild group with all four of its animals). The top
- * two boards use all four homes, so the child keeps four groups in mind at once.
- */
-const GROUP_LEVELS = [[3, 3], [3, 3, 3], [3, 3, 4], [3, 3, 3, 3], [3, 3, 4, 3]]
-/**
- * Babies from this level on (12 cards and up) sleep in a basket under a blanket: the card only
- * says the baby's word ("Kitten!"), so the child must know whose baby a kitten is. Any parent with
- * that word matches ("cub" is a lion's or a panda's baby), and the baby that wakes up is theirs.
- */
-const CRADLE_LEVEL = 3
-/** Clue words ("Moo!", "Kit!") said across a board: at most this many in this many seconds. */
-const CLUE_BURST = 3
-const CLUE_WINDOW = 5
-/**
- * Cards on each level a mode offers. Sounds stops at 8 pairs: ten identical loudspeakers is too
- * much to hold in mind for a young child. (An old Sounds save marking level 6 done is simply ignored.)
- */
-const levelsFor = (mode) =>
-  mode === 'groups' ? GROUP_LEVELS.map((g) => g.reduce((a, b) => a + b)) : (mode === 'sound' ? LEVELS.slice(0, 5) : LEVELS).map((p) => p * 2)
-/** Seconds between each animal's hello when a board is finished, so only one voice plays at a time. */
-const WIN_CALL_GAP = 0.9
+const GOLDEN_CHANCE = 0.1
+const GOLDEN_EVERY = 5
+/** Seconds between each animal's hello at the finale, so every voice is heard. */
+const WIN_CALL_GAP = 0.55
+/** Seconds without a tap before a drawn hand shows what to do: soon on a first board, later once the child knows. */
+const HAND_FIRST = 5
+const HAND_LATER = 14
+const HAND_MENU = 7
 
 const CARD_W = 1.0
 const CARD_D = 1.3
@@ -145,7 +70,7 @@ const GAP_Z = 0.3
 const MAT_TOP = 0.03
 const REST_Y = MAT_TOP + 0.05 // card centre when lying on the mat
 const FACE_TOP = 0.05 // top of the face-up spot above the card centre
-const ANIMAL_SIZE = 0.8
+const ANIMAL_SIZE = 0.88
 const ANIMAL_H = 0.85 * ANIMAL_SIZE
 const PARADE_GAP = 1.05
 
@@ -158,31 +83,22 @@ const shuffle = (list) => {
   return list
 }
 
-// --- Saved progress (finished levels per mode) ---------------------------------------
+// --- Saved progress (finished boards) ---------------------------------------------------
 
-const SAVE_KEY = 'memory-match:v2'
-// next: the level each mode suggests after the last win (see adaptNext), so Play moves on
-// book: what the child has found out about each animal (see the animal book), e.g. { cow: { met: 1, call: 1, baby: 1, home: 1 } }
-const progress = { muted: false, mode: 'twins', modeDone: {}, next: {}, book: {} }
+const SAVE_KEY = 'memory-match:v3'
+// done: boards finished (a paw on the menu). next: the board ▶ starts.
+const progress = { muted: false, done: {}, next: null }
+// Sound always starts on: a mute is for this visit only (it is never saved)
 try {
   Object.assign(progress, JSON.parse(localStorage.getItem(SAVE_KEY)) ?? {})
 } catch {}
-if (!MODES[progress.mode]) progress.mode = 'twins'
-progress.modeDone = { twins: {}, sound: {}, baby: {}, groups: {}, ...progress.modeDone }
-progress.next = { ...progress.next }
-progress.book = { ...progress.book }
-// Older saves kept twins' finished levels in `stars` (and an unused `best`): move them over once
-Object.assign(progress.modeDone.twins, progress.stars)
-delete progress.stars
-delete progress.best
-/** Finished levels for the chosen kind of matching. */
-const doneLevels = () => progress.modeDone[progress.mode]
+progress.muted = false
+progress.done = { ...progress.done }
 function save() {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(progress))
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ done: progress.done, next: progress.next }))
   } catch {}
 }
-
 // --- Scene ---------------------------------------------------------------------------
 
 const canvas = $('view')
@@ -202,7 +118,8 @@ const pmrem = new THREE.PMREMGenerator(renderer)
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
 scene.environmentIntensity = 0.45
 
-scene.add(new THREE.HemisphereLight('#fff8ec', '#d9a874', 1.5))
+const sky = new THREE.HemisphereLight('#fff8ec', '#d9a874', 1.5)
+scene.add(sky)
 const sun = new THREE.DirectionalLight('#fff3dc', 2.3)
 sun.position.set(-3.5, 10, 5)
 sun.castShadow = true
@@ -216,9 +133,8 @@ scene.add(sun, sun.target)
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 120)
 const fitCam = camera.clone()
 const sound = new Sound()
+sound.load()
 sound.setMuted(progress.muted)
-const voice = createVoice({ muted: progress.muted, rate: 0.85, pitch: 1.1 })
-const talk = new Talk(sound, voice)
 const effects = new Effects(scene)
 
 const assets = { animals: {}, card: null, setting: {}, felt: null }
@@ -235,22 +151,23 @@ const game = {
   cards: [],
   open: [],
   matched: 0,
-  turns: 0,
-  peekUsed: false,
+  turns: 0, // pairs of cards turned this board
+  finale: -1, // last party; random selection never repeats it
+  peekabooAt: Infinity, // after this many turns an animal may play peekaboo (once, on most boards)
   round: 0,
-  mode: 'twins', // twins | sound | baby | groups (see MODES)
-  sets: [], // what each match is: an animal, or (Homes) a group id, in HUD order
-  setSize: {}, // cards in each set: 2 for a pair, 3 or 4 for a group
-  slips: 0, // turns missed although a match for the first card had already been seen
-  named: new Set(), // words already said on a reveal this round (each name is said once)
-  clueTimes: [], // when clue words were last said (see sayClue): a quick tapper hears at most a few
-  goalSaid: null, // the mode whose goal was last spoken, so it is never said twice in a row
+  pairs: 0,
+  boards: (Math.random() * 7) | 0, // which look comes next (see THEMES): a visit starts anywhere
+  sinceGold: 1, // boards since the last golden pair
+  theme: null,
+  friends: [], // the animals found on the last board: they come back to the menu
+  found: [], // the animals found this board, in order (the circles at the top)
+  hands: 0, // times the drawn hand has shown on this screen
   busy: false,
   mismatch: null,
   layout: null,
   paradeAnimals: [],
   time: 0,
-  idle: 0, // seconds since the last tap while playing
+  idle: 0, // seconds since the last tap
   cam: { pos: new THREE.Vector3(0, 9, 9), offset: new THREE.Vector2() }, // always looks at the origin
 }
 
@@ -311,13 +228,14 @@ async function loadAssets() {
   const bytes = {}
   const report = () => {
     const pct = Math.round((Object.values(bytes).reduce((a, b) => a + b, 0) / 1.1e6) * 100)
-    $('loading-text').textContent = `Waking up the animals… ${Math.min(99, pct)}%`
+    $('loading-bar').style.width = `${Math.min(99, pct)}%`
   }
   const felt = new THREE.TextureLoader().loadAsync('./models/mat_felt.jpg').then((tex) => {
     tex.colorSpace = THREE.SRGBColorSpace
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping
     tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy())
     assets.felt = tex
+    assets.feltImage = tex.image
   })
   await Promise.all([
     felt,
@@ -335,15 +253,41 @@ async function loadAssets() {
     assets.animals[name] = root
   }
   assets.card = loaded.card.scene.getObjectByName('card')
-  for (const part of [...assets.card.children]) bake(part, ['card_spot'])
+  for (const part of [...assets.card.children]) bake(part, ['card_spot', 'card_back', 'card_panel', 'card_star'])
   assets.card.traverse((o) => {
     if (o.isMesh) o.castShadow = o.receiveShadow = true
   })
   for (const child of [...loaded.setting.scene.children]) assets.setting[child.name] = child
 }
 
+/** The table's own colours, kept so a night board can dim the wood and bring it back by day. */
+const tableColours = new Map()
+/** The lantern's warm glow on a night board: a soft light and a halo (always in the scene, so no shader rebuild). */
+const lanternLight = new THREE.PointLight('#ffcf6b', 0, 3.2, 1.6)
+scene.add(lanternLight)
+const haloTexture = (() => {
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')
+  const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64)
+  grad.addColorStop(0, 'rgba(255, 230, 150, 0.9)')
+  grad.addColorStop(0.35, 'rgba(255, 205, 100, 0.35)')
+  grad.addColorStop(1, 'rgba(255, 190, 80, 0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 128, 128)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+})()
+const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTexture, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }))
+halo.scale.setScalar(1.3)
+halo.visible = false
+
 function buildRoom() {
   const { table, mat } = assets.setting
+  table.traverse((o) => {
+    if (o.isMesh) for (const m of [o.material].flat()) tableColours.set(m, m.color.clone())
+  })
   table.traverse((o) => (o.receiveShadow = true))
   mat.traverse((o) => (o.receiveShadow = true))
   scene.add(table, mat)
@@ -376,6 +320,96 @@ function buildRoom() {
   }
 }
 
+const propMat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...extra })
+/**
+ * Each place has one toy of its own beside the mat, made here from simple shapes: a flower pot,
+ * a hay bale, a starfish, a glowing lantern, a snowman, a palm tree or a pumpkin. Tapping it makes
+ * it wobble like the other toys.
+ */
+function makeThemeProp(kind) {
+  const g = new THREE.Group()
+  const inner = new THREE.Group() // a touch bigger than the other toys: it is the place's sign
+  inner.scale.setScalar(1.25)
+  g.add(inner)
+  const add = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
+    const m = new THREE.Mesh(geo, mat)
+    m.position.set(x, y, z)
+    m.rotation.set(rx, ry, rz)
+    inner.add(m)
+    return m
+  }
+  if (kind === 'flower') {
+    add(new THREE.CylinderGeometry(0.2, 0.15, 0.28, 20), propMat('#d9703c'), 0, 0.14)
+    add(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 20), propMat('#e8854f'), 0, 0.29)
+    add(new THREE.CylinderGeometry(0.025, 0.025, 0.42, 8), propMat('#4caf50'), 0, 0.5)
+    add(new THREE.SphereGeometry(0.08, 10, 8).scale(1.6, 0.4, 1), propMat('#4caf50'), 0.1, 0.42, 0, 0, 0, 0.5)
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * Math.PI * 2
+      add(new THREE.SphereGeometry(0.075, 12, 8).scale(1, 1, 0.4), propMat('#ff8fc0'), Math.cos(ang) * 0.11, 0.74 + Math.sin(ang) * 0.11, 0.02)
+    }
+    add(new THREE.SphereGeometry(0.07, 12, 8), propMat('#ffd23f'), 0, 0.74, 0.05)
+  } else if (kind === 'hay') {
+    add(new THREE.CylinderGeometry(0.28, 0.28, 0.5, 24), propMat('#f2c14e', { roughness: 0.95 }), 0, 0.28, 0, 0, 0, Math.PI / 2)
+    for (const x of [-0.13, 0.13]) add(new THREE.TorusGeometry(0.285, 0.018, 6, 28), propMat('#b5651d'), x, 0.28, 0, 0, Math.PI / 2)
+    add(new THREE.CircleGeometry(0.27, 24), propMat('#e0a93a', { roughness: 1 }), 0.251, 0.28, 0, 0, Math.PI / 2)
+  } else if (kind === 'starfish') {
+    for (let i = 0; i < 5; i++) {
+      const ang = (i / 5) * Math.PI * 2
+      add(new THREE.ConeGeometry(0.09, 0.32, 10).scale(1, 1, 0.45), propMat('#ff7a59'), Math.sin(ang) * 0.14, 0.04, Math.cos(ang) * 0.14, Math.PI / 2, 0, 0).rotation.set(Math.PI / 2, ang, 0, 'YXZ')
+    }
+    add(new THREE.SphereGeometry(0.1, 14, 8).scale(1, 0.4, 1), propMat('#ff7a59'), 0, 0.04, 0)
+    add(new THREE.SphereGeometry(0.11, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.7, 1.1), propMat('#fff1d6'), 0.42, 0, 0.12)
+  } else if (kind === 'lantern') {
+    add(new THREE.CylinderGeometry(0.16, 0.18, 0.06, 16), propMat('#3b3a5a', { metalness: 0.4 }), 0, 0.03)
+    add(new THREE.SphereGeometry(0.15, 18, 12), new THREE.MeshStandardMaterial({ color: '#fff3a8', emissive: '#ffd23f', emissiveIntensity: 1.4, roughness: 0.3 }), 0, 0.22)
+    add(new THREE.ConeGeometry(0.19, 0.14, 16), propMat('#3b3a5a', { metalness: 0.4 }), 0, 0.43)
+    add(new THREE.TorusGeometry(0.06, 0.015, 6, 16), propMat('#3b3a5a', { metalness: 0.4 }), 0, 0.53)
+    halo.position.set(0, 0.22, 0)
+    inner.add(halo)
+  } else if (kind === 'snowman') {
+    const snow = propMat('#ffffff', { roughness: 0.9 })
+    add(new THREE.SphereGeometry(0.24, 20, 14), snow, 0, 0.22)
+    add(new THREE.SphereGeometry(0.17, 20, 14), snow, 0, 0.55)
+    add(new THREE.ConeGeometry(0.035, 0.14, 10), propMat('#ff8c2e'), 0, 0.56, 0.2, Math.PI / 2)
+    for (const x of [-0.06, 0.06]) add(new THREE.SphereGeometry(0.022, 8, 6), propMat('#2c2c3a'), x, 0.62, 0.15)
+    add(new THREE.TorusGeometry(0.15, 0.04, 8, 20), propMat('#e8434f'), 0, 0.42, 0, Math.PI / 2)
+    add(new THREE.CylinderGeometry(0.11, 0.11, 0.14, 16), propMat('#2c2c3a'), 0, 0.77)
+    add(new THREE.CylinderGeometry(0.17, 0.17, 0.02, 16), propMat('#2c2c3a'), 0, 0.7)
+  } else if (kind === 'palm') {
+    for (let i = 0; i < 5; i++) add(new THREE.CylinderGeometry(0.06 - i * 0.005, 0.07 - i * 0.005, 0.18, 10), propMat(i % 2 ? '#a0703c' : '#8a5a2b'), i * 0.02, 0.09 + i * 0.17, 0, 0, 0, -0.06)
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * Math.PI * 2
+      const leaf = add(new THREE.SphereGeometry(0.22, 12, 6).scale(1, 0.12, 0.38), propMat('#3fae49'), 0.1 + Math.cos(ang) * 0.16, 0.92, Math.sin(ang) * 0.16)
+      leaf.rotation.set(0, -ang, -0.45)
+    }
+    add(new THREE.SphereGeometry(0.05, 10, 8), propMat('#6b4423'), 0.12, 0.86, 0.06)
+  } else {
+    // a pumpkin
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2
+      add(new THREE.SphereGeometry(0.15, 14, 10).scale(0.75, 1, 1.2), propMat('#f28a1e'), Math.cos(ang) * 0.12, 0.2, Math.sin(ang) * 0.12, 0, -ang)
+    }
+    add(new THREE.CylinderGeometry(0.03, 0.04, 0.12, 8), propMat('#5a7d2a'), 0, 0.4, 0, 0, 0, 0.2)
+    add(new THREE.SphereGeometry(0.07, 10, 6).scale(1.5, 0.3, 1), propMat('#6fae3a'), 0.08, 0.38, 0, 0, 0, -0.3)
+  }
+  g.traverse((o) => {
+    if (o.isMesh) o.castShadow = o.receiveShadow = true
+  })
+  g.name = 'prop_theme'
+  g.userData.toy = { name: 'prop_theme', prop: g, busy: false, size: new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3()) }
+  return g
+}
+const themeProps = {}
+/** Puts this place's own toy beside the mat (none on the menu). */
+function setThemeProp(kind) {
+  room.props = room.props.filter((p) => p.name !== 'prop_theme')
+  for (const p of Object.values(themeProps)) p.removeFromParent()
+  if (!kind) return
+  const prop = (themeProps[kind] ??= makeThemeProp(kind))
+  scene.add(prop)
+  room.props.push(prop)
+}
+
 /** Stretches the play mat around the area and sets the toys just outside it. */
 function placeRoom(hw, hd) {
   const w = hw + 0.45
@@ -396,6 +430,7 @@ function placeRoom(hw, hd) {
         prop_ball: [w * 0.25, -d - 0.75 - back, 0],
         prop_rings: [w - 0.4, -d - 0.7 - back, 0],
         prop_blocks: [0, -d - 1.7 - back * 0.5, 0.5],
+        prop_theme: [0, -d - 0.75 - back, 0.3],
       }
     : {
         prop_blocks: [-w - 0.75, d - 0.1, 0.5],
@@ -403,6 +438,7 @@ function placeRoom(hw, hd) {
         prop_rings: [w + 0.7, -d + 0.3, 0],
         prop_crayons: [-w - 0.8, -d + 0.4, 0.3],
         prop_bear: [-w - 0.8, 0.2, 0.5],
+        prop_theme: [w * 0.5, -d - 0.8, -0.4], // behind the mat, where a wide screen has room
       }
   for (const prop of room.props) {
     const [x, z, yaw] = at[prop.name]
@@ -443,19 +479,15 @@ function settleProps(view, w, d) {
   fitCam.updateProjectionMatrix()
   fitCam.updateMatrixWorld()
   // The HTML on top of the scene, in NDC: a toy may not hide behind it.
-  const range = document.createRange()
   const blockers = []
-  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) .logo, #menu:not(.hidden) .hint, #menu:not(.hidden) .book-btn, #menu:not(.hidden) #play, #menu:not(.hidden) .level, #menu:not(.hidden) .mode, #win:not(.hidden) .win-card')) {
-    range.selectNodeContents(el) // the text itself, not the full-width paragraph around it
-    const r = el.matches('.hint, .logo')
-      ? range.getBoundingClientRect()
-      : el.matches('.win-card') // its layout box: it is still scaled small by the pop-in
-        ? { left: el.offsetLeft, right: el.offsetLeft + el.offsetWidth, top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight }
-        : el.getBoundingClientRect()
-    // The HUD buttons get a margin, so a toy never crowds the home or sound button.
-    const m = el.matches('.hud-left, .book-btn') ? 18 : 0
-    // A toy peeking out from under the win card looks lost, so that one must be fully clear.
-    const tol = el.matches('.win-card') ? 0.01 : 0.15
+  for (const el of document.querySelectorAll('#hud:not(.hidden) .hud-left, #hud:not(.hidden) .hud-center, #menu:not(.hidden) #menu-mute, #menu:not(.hidden) #play, #menu:not(.hidden) .level, #win:not(.hidden) .win-card')) {
+    const r = el.matches('.win-card') // its layout box: it is still scaled small by the pop-in
+      ? { left: el.offsetLeft, right: el.offsetLeft + el.offsetWidth, top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight }
+      : el.getBoundingClientRect()
+    // The corner buttons get a margin, so a toy never crowds the home or sound button.
+    const m = el.matches('.hud-left, #menu-mute') ? 18 : 0
+    // A toy peeking out from under the win card or the pair circles looks lost: those must be fully clear.
+    const tol = el.matches('.win-card, .hud-center') ? 0.01 : 0.15
     blockers.push([((r.left - m) / innerWidth) * 2 - 1, ((r.right + m) / innerWidth) * 2 - 1, 1 - ((r.bottom + m) / innerHeight) * 2, 1 - ((r.top - m) / innerHeight) * 2, tol])
   }
   // The menu's animals too, with a little headroom, so no toy seems to sit on an animal's head
@@ -467,15 +499,19 @@ function settleProps(view, w, d) {
     animals.push(ndcBox(_box))
   }
   const shown = (lo, hi, min, max) => Math.max(0, Math.min(hi, max) - Math.max(lo, min)) / (hi - lo)
-  // Most of the toy (85%) must be on screen and clear of the HTML: enough to see what it is and tap it.
+  // The whole toy (bar a sliver) must be on screen and clear of the HTML: a toy cut off at the edge looks broken.
   const onScreen = (prop) => {
     prop.updateMatrixWorld(true)
     const [x0, x1, y0, y1] = ndcBox(_box.setFromObject(prop))
-    if (shown(x0, x1, -1, 1) * shown(y0, y1, -1, 1) < 0.85) return false
+    if (shown(x0, x1, -1, 1) * shown(y0, y1, -1, 1) < 0.97) return false
     if (!animals.every(([l, r, b, t]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < 0.02)) return false
+    // nor hidden behind (or in front of) a toy already placed
+    if (!placed.every(([l, r, b, t]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < 0.12)) return false
     return blockers.every(([l, r, b, t, tol]) => shown(x0, x1, l, r) * shown(y0, y1, b, t) < tol)
   }
-  for (const prop of room.props) {
+  const placed = []
+  // The place's own toy is placed first, so it is the one that stays when space is short
+  for (const prop of [...room.props].sort((a, b) => (b.name === 'prop_theme') - (a.name === 'prop_theme'))) {
     const { size } = prop.userData.toy
     const side = Math.abs(prop.position.x) > w // beside the mat, so it can slide in sideways
     const inner = w + 0.08 + Math.max(size.x, size.z) / 2
@@ -484,18 +520,49 @@ function settleProps(view, w, d) {
       prop.position.x -= Math.sign(prop.position.x) * 0.1
       ok = onScreen(prop)
     }
-    // Behind the mat: step further back until it is clear of the animals in front.
+    // Behind the mat: step back until it is clear of the animals in front, or (cut off at the top
+    // of the screen) forward towards the mat's edge.
     const z = prop.position.z
-    while (!ok && !side && prop.position.z > z - 2) {
-      prop.position.z -= 0.1
-      ok = onScreen(prop)
+    const front = -d - 0.05 - size.z / 2
+    for (let k = 1; !ok && !side && k <= 20; k++) {
+      for (const dz of [-0.1 * k, 0.1 * k]) {
+        if (z + dz > front) continue
+        prop.position.z = z + dz
+        if ((ok = onScreen(prop))) break
+      }
     }
     if (!ok) prop.position.z = z
+    // The place's own toy always gets a spot: if its own does not fit, it takes another toy's
+    // (that toy then finds somewhere else, or sits this board out)
+    // (or, on a crowded screen, a smaller version of itself)
+    if (!ok && prop.name === 'prop_theme') {
+      const home = prop.position.clone()
+      const spots = [home, ...room.props.filter((o) => o !== prop).map((o) => new THREE.Vector3(o.position.x, 0, o.position.z))]
+      for (const scale of [1, 0.8, 0.62]) {
+        prop.scale.setScalar(scale)
+        for (const spot of spots) {
+          prop.position.copy(spot)
+          if ((ok = onScreen(prop))) break
+          // behind the mat it may also step back or forward a little
+          for (const dz of [-0.3, -0.6, 0.3]) {
+            prop.position.z = spot.z + dz
+            if (!side && prop.position.z > front) continue
+            if ((ok = onScreen(prop))) break
+          }
+          if (ok) break
+        }
+        if (ok) break
+      }
+      if (!ok) {
+        prop.position.copy(home)
+        prop.scale.setScalar(1)
+      }
+    }
     prop.visible = ok
+    if (ok) placed.push(ndcBox(_box.setFromObject(prop)))
   }
   fitCam.clearViewOffset()
 }
-
 // --- Animals -------------------------------------------------------------------------------
 
 function makeAnimal(name) {
@@ -507,161 +574,56 @@ function makeAnimal(name) {
     name, holder, head,
     phase: Math.random() * 10,
     pop: 1, hop: 0, spin: 0, yaw: 0, squash: 0, nod: 0, shake: 0, tilt: 0, excited: false, baseY: 0, size: ANIMAL_SIZE,
-    wide: 1, // a baby is a little rounder
-    baby: false,
+    chat: 0, // bobs while the animal calls (see chatter)
+    roll: 0, rock: 0, // a forward flip and a side-to-side rock of the whole body (see TRICKS)
     busy: false,
   }
   holder.userData.animal = a // lets a tap find its animal (see tagged())
   return a
 }
 
-/** A baby tips its big head back to look up at the child (negative x turns the face up). */
-const LOOK_UP = -0.45
-/** Babies are softer and paler than their parents: a gentle cream glow lifts every colour. */
-const babyMaterials = new Map(
-  [matte, glossy].map((m) => [m, Object.assign(m.clone(), { emissive: new THREE.Color('#fff1e6'), emissiveIntensity: 0.1 })]),
-)
-
-/**
- * The same animal as a baby: smaller, rounder and paler, with a small body under a big head that
- * looks up, so it reads as a baby by shape and colour, not by size alone (far cards look small too).
- */
-function babyfy(a) {
-  a.baby = true
-  a.size = ANIMAL_SIZE * 0.68
-  a.wide = 1.1
-  // A small body under a big head: the head sits lower on the neck and grows, the body shrinks
-  if (a.head) {
-    for (const part of a.head.parent.children) if (part !== a.head) part.scale.setScalar(0.78)
-    a.head.position.multiplyScalar(0.78)
-    a.head.scale.setScalar(1.35)
-    a.lookUp = LOOK_UP
-  }
-  a.holder.traverse((o) => {
-    if (o.isMesh && babyMaterials.has(o.material)) o.material = babyMaterials.get(o.material)
-  })
-  return a
+/** An animal says hello: its own call, with its head and body bobbing in time. */
+function chatter(a) {
+  const pitch = a.small ? 1.4 : 1 // a baby calls higher (and quicker)
+  sound.voice(a.name, 0, pitch)
+  const len = (VOICE_LENGTH[a.name] ?? 0.5) / pitch
+  tween(len + 0.15, (t) => (a.chat = Math.sin(t * Math.PI * Math.max(2, Math.round(len * 9))) * (1 - t * 0.6) * (t < 1 ? 1 : 0)))
 }
 
-/** Where the top of each animal's head is (in the head's own space), measured once. */
-const headTops = {}
-function headTop(a) {
-  if (headTops[a.name]) return headTops[a.name]
-  a.holder.updateMatrixWorld(true)
-  const box = new THREE.Box3().setFromObject(a.head)
-  const top = a.head.worldToLocal(new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2))
-  return (headTops[a.name] = { top, width: box.max.x - box.min.x })
+/** A tapped animal is happy to see you: a hop, its call and a few stars. */
+function cheer(a, pos) {
+  if (a.busy) return
+  hopOnce(a, 0.38)
+  chatter(a)
+  if (pos) effects.sparkle(pos, { count: 8, speed: 1.3, up: 1.6, size: 0.06 })
 }
 
-const lookParts = {
-  loop: new THREE.ConeGeometry(0.075, 0.13, 14).rotateZ(Math.PI / 2),
-  knot: new THREE.SphereGeometry(0.04, 12, 8),
-  cap: new THREE.SphereGeometry(0.12, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-  band: new THREE.TorusGeometry(0.12, 0.022, 8, 24).rotateX(Math.PI / 2),
-  bobble: new THREE.SphereGeometry(0.045, 12, 8),
-  white: new THREE.MeshStandardMaterial({ color: '#fff6e8', roughness: 0.8 }),
-}
-const lookMaterials = Object.fromEntries(Object.entries(LOOKS).map(([id, l]) => [id, new THREE.MeshStandardMaterial({ color: l.color, roughness: 0.6 })]))
-
-/** A look-alike twin wears something on its head: a bow or a woolly hat (see LOOKS). */
-function dressUp(a, look) {
-  if (!a.head) return a
-  a.look = look
-  const { top, width } = headTop(a)
-  const g = new THREE.Group()
-  const m = lookMaterials[look]
-  if (look === 'bow') {
-    const left = new THREE.Mesh(lookParts.loop, m)
-    left.position.x = -0.075
-    const right = new THREE.Mesh(lookParts.loop, m)
-    right.position.x = 0.075
-    right.rotation.z = Math.PI
-    g.add(left, right, new THREE.Mesh(lookParts.knot, m))
-    g.position.copy(top).add(new THREE.Vector3(0, 0.02, 0.02))
-  } else {
-    g.add(new THREE.Mesh(lookParts.cap, m), new THREE.Mesh(lookParts.band, lookParts.white))
-    const bobble = new THREE.Mesh(lookParts.bobble, lookParts.white)
-    bobble.position.y = 0.13
-    g.add(bobble)
-    g.position.copy(top).add(new THREE.Vector3(0, -0.03, 0))
-  }
-  // A big head gets a bigger bow; the head's own scale is undone so every bow reads alike
-  g.scale.setScalar(THREE.MathUtils.clamp(width / 0.5, 0.8, 1.4) / a.head.scale.x)
-  g.traverse((o) => {
-    if (o.isMesh) o.castShadow = true
-  })
-  a.head.add(g)
-  return a
+/** Each animal arrives its own way: now a twirl, now a wiggle, now a look around. */
+function flourish(a) {
+  if (a.busy) return
+  const pick = (Math.random() * 3) | 0
+  if (pick === 0) tween(0.5, (t) => (a.spin = ease.inOutCubic(t) * Math.PI * 2 * (t < 1 ? 1 : 0)))
+  else if (pick === 1) tween(0.6, (t) => (a.tilt = Math.sin(t * Math.PI * 4) * 0.3 * (1 - t)))
+  else tween(0.8, (t) => (a.shake = Math.sin(t * Math.PI * 2) * 0.5 * (1 - t)))
 }
 
-/** A small written label (a baby's word, a call): a cream paper tag drawn on a canvas, one per text. */
-const tagTextures = {}
-const tagMaterials = {}
-const tagGeometry = new THREE.PlaneGeometry(0.66, 0.22)
-function makeTag(text) {
-  const tex = (tagTextures[text] ??= (() => {
-    const c = document.createElement('canvas')
-    c.width = 384
-    c.height = 128
-    const g = c.getContext('2d')
-    g.fillStyle = '#fffaf0'
-    g.strokeStyle = '#b9adff'
-    g.lineWidth = 8
-    g.beginPath()
-    g.roundRect(6, 6, 372, 116, 54)
-    g.fill()
-    g.stroke()
-    g.fillStyle = '#5a3d7a'
-    g.font = '900 64px ui-rounded, "Arial Rounded MT Bold", Nunito, system-ui, sans-serif'
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    let size = 64
-    while (g.measureText(text).width > 340 && size > 30) g.font = `900 ${(size -= 4)}px ui-rounded, "Arial Rounded MT Bold", Nunito, system-ui, sans-serif`
-    g.fillText(text, 192, 68)
-    const t = new THREE.CanvasTexture(c)
-    t.colorSpace = THREE.SRGBColorSpace
-    t.anisotropy = 4
-    return t
-  })())
-  const tag = new THREE.Mesh(tagGeometry, (tagMaterials[text] ??= new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })))
-  // Lies on the front of the card, tipped up towards the child
-  tag.rotation.x = -Math.PI / 2 + 0.55
-  tag.position.set(0, FACE_TOP + 0.1, 0.47)
-  tag.visible = false
-  return tag
-}
-
-/** What an animal is called: "Cow!", or for a baby "Calf!". */
-const nameOf = (a) => `${cap(a.baby ? WORDS[a.name].baby : a.name)}${a.look ? ` with ${LOOKS[a.look].a}` : ''}!`
-
-/**
- * Says an animal's name after its call. For a card being revealed (card), a name already said this
- * round is not said again (the call alone is enough), and both go stale (are skipped, never said
- * late) once the card has turned back; its name also once it is matched, as the match line says it.
- */
-function callAndName(a, { card = null } = {}) {
-  const word = nameOf(a)
-  if (!card) {
-    talk.call(a.name, { baby: a.baby, droppable: true })
-    talk.say(word, { droppable: true })
-    return
-  }
-  const down = () => card.state === 'down' || card.state === 'closing'
-  talk.call(a.name, { baby: a.baby, stale: () => down() || (card.state === 'matched' && card.kind !== 'sound') })
-  if (game.named.has(word) || talk.has(word)) return
-  talk.say(word, { droppable: true, stale: () => card.state !== 'open' && card.state !== 'opening', onStart: () => game.named.add(word) })
+/** Turns an animal (smoothly) to face the yaw `to`. */
+function turnTo(a, to, dur = 0.28) {
+  const from = a.yaw
+  return tween(dur, (t) => (a.yaw = from + (to - from) * ease.inOutCubic(t)))
 }
 
 function poseAnimal(a, time) {
   const t = time + a.phase
   const bounce = a.excited ? Math.abs(Math.sin(t * 6.5)) * 0.07 : 0
   a.holder.position.y = a.baseY + a.hop + bounce
-  a.holder.rotation.y = a.yaw + a.spin
+  a.holder.rotation.set(a.roll + (a.lean ?? 0), a.yaw + a.spin, a.rock)
   const s = a.pop * a.size
   const breathe = Math.sin(t * 3) * 0.02
-  const w = s * a.wide * (1 + a.squash * 0.5)
-  a.holder.scale.set(w, s * (1 - a.squash + breathe), w)
-  if (a.head) a.head.rotation.set((a.lookUp ?? 0) + a.nod + Math.sin(t * 2.3) * 0.05, a.shake + Math.sin(t * 0.9) * 0.12, a.tilt + Math.sin(t * 1.7) * 0.07)
+  const bob = Math.abs(a.chat)
+  const w = s * (1 + a.squash * 0.5 + bob * 0.05)
+  a.holder.scale.set(w, s * (1 - a.squash + breathe + bob * 0.08), w)
+  if (a.head) a.head.rotation.set((a.lookUp ?? 0) + a.nod - bob * 0.28 + Math.sin(t * 2.3) * 0.05, a.shake + Math.sin(t * 0.9) * 0.12, a.tilt + Math.sin(t * 1.7) * 0.07)
 }
 
 /** A happy dance: three hops, a full spin and a wiggly head. */
@@ -688,96 +650,246 @@ function hopOnce(a, height = 0.3) {
   })
 }
 
+/**
+ * Each kind of animal has its own happy trick, done when a pair is found (and on three quick taps):
+ * a dog chases its tail, a frog leaps, an elephant stomps, a chick flaps, a penguin flips.
+ */
+const TRICKS = {
+  chase: (a) => tween(1.0, (t) => {
+    a.spin = ease.inOutCubic(t) * Math.PI * 6
+    a.hop = Math.abs(Math.sin(t * Math.PI * 3)) * 0.18
+    a.tilt = Math.sin(t * Math.PI * 6) * 0.2
+  }),
+  leap: (a) => tween(1.0, (t) => {
+    // crouch, spring up high, land with a squash
+    if (t < 0.2) a.squash = (t / 0.2) * 0.3
+    else if (t < 0.8) {
+      const u = (t - 0.2) / 0.6
+      a.squash = -0.12 * Math.sin(u * Math.PI)
+      a.hop = Math.sin(u * Math.PI) * 1.1
+    } else {
+      a.hop = 0
+      a.squash = Math.sin(((t - 0.8) / 0.2) * Math.PI) * 0.3
+    }
+  }),
+  stomp: (a) => tween(1.1, (t) => {
+    const ph = t * 4
+    a.rock = Math.sin(ph * Math.PI) * 0.22 * (1 - t * 0.5)
+    a.hop = Math.abs(Math.sin(ph * Math.PI)) * 0.14
+    a.squash = Math.max(0, Math.cos(ph * Math.PI * 2)) * 0.08
+  }),
+  flap: (a) => tween(1.0, (t) => {
+    a.hop = Math.abs(Math.sin(t * Math.PI * 5)) * 0.28
+    a.tilt = Math.sin(t * Math.PI * 10) * 0.25
+    a.rock = Math.sin(t * Math.PI * 5) * 0.12
+  }),
+  flip: (a) => tween(1.0, (t) => {
+    a.hop = Math.sin(t * Math.PI) * 0.85
+    a.roll = -ease.inOutCubic(t) * Math.PI * 2
+  }),
+}
+/** Does the animal's own trick; a golden one does a flip and then its own trick. */
+async function trick(a, golden = false) {
+  if (a.busy) return
+  a.busy = true
+  if (golden) await TRICKS.flip(a)
+  await TRICKS[ANIMALS[a.name].trick](a)
+  Object.assign(a, { hop: 0, squash: 0, spin: 0, tilt: 0, roll: 0, rock: 0, busy: false })
+}
+
 // --- Cards ------------------------------------------------------------------------------------
 
 const ringGeometry = new THREE.TorusGeometry(0.37, 0.03, 8, 48)
+const goldRingGeometry = new THREE.TorusGeometry(0.4, 0.05, 10, 48)
 const ringMaterial = new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.4 })
 /** One tinted card-spot material per animal, shared by every card that shows it. */
 const spotMaterials = {}
-/** A sound card's (or a sleeping baby's) spot stays plain until it is matched: its colour would give the animal away. */
-let soundSpot = null
 
-// The sound card's loudspeaker, made at runtime: a box, a cone and three sound waves, standing up
-// and facing the child like the 🔊 picture on the menu.
-const speakerParts = {
-  box: new THREE.BoxGeometry(0.14, 0.2, 0.14),
-  cone: new THREE.CylinderGeometry(0.07, 0.19, 0.16, 28, 1, true).rotateZ(Math.PI / 2),
-  cap: new THREE.CircleGeometry(0.19, 28).rotateY(Math.PI / 2),
-  wave: (r) => new THREE.TorusGeometry(r, 0.028, 8, 24, Math.PI / 2).rotateZ(-Math.PI / 4),
-  body: new THREE.MeshStandardMaterial({ color: '#8c7cf0', roughness: 0.45 }),
-  inside: new THREE.MeshStandardMaterial({ color: '#5a3d7a', roughness: 0.7, side: THREE.DoubleSide }),
+/** The card backs' colours, shared by every card and changed for each board (see THEMES). */
+const themeMaterials = {
+  card_back: new THREE.MeshStandardMaterial({ roughness: 0.4 }),
+  card_panel: new THREE.MeshStandardMaterial({ roughness: 0.4 }),
+  card_star: new THREE.MeshStandardMaterial({ roughness: 0.3 }),
 }
-const waveGeometries = [0.13, 0.23, 0.33].map((r) => speakerParts.wave(r))
+/** A golden pair's spot, its animals' shine and its ring. */
+const goldSpot = new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 0.25, roughness: 0.25, metalness: 0.6 })
+/**
+ * A golden animal is gold all over: each colour becomes a shade of gold by its brightness, so dark
+ * eyes stay dark and a pink pig turns as golden as a yellow chick.
+ */
+const goldMaterials = new Map(
+  [matte, glossy].map((m) => {
+    const gold = Object.assign(m.clone(), { metalness: 0.55, roughness: m === glossy ? 0.12 : 0.32, emissive: new THREE.Color('#ff9d00'), emissiveIntensity: 0.12 })
+    gold.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+        diffuseColor.rgb = vec3(1.0, 0.76, 0.2) * (0.25 + lum * 1.0);`,
+      )
+    }
+    gold.customProgramCacheKey = () => 'gold'
+    return [m, gold]
+  }),
+)
 
-function makeSpeaker() {
-  const group = new THREE.Group()
-  const lean = new THREE.Group() // leans back a little towards the camera
-  lean.position.y = 0.32
-  lean.rotation.x = -0.35
-  group.add(lean)
-  const box = new THREE.Mesh(speakerParts.box, speakerParts.body)
-  box.position.x = -0.2
-  const cone = new THREE.Mesh(speakerParts.cone, speakerParts.body)
-  cone.position.x = -0.06
-  const cap = new THREE.Mesh(speakerParts.cap, speakerParts.inside)
-  cap.position.x = 0.02
-  lean.add(box, cone, cap)
-  const waves = waveGeometries.map((geo) => {
-    const mat = new THREE.MeshStandardMaterial({ color: '#ffbe0b', emissive: '#ff9f1c', emissiveIntensity: 0.15, roughness: 0.4 })
-    const wave = new THREE.Mesh(geo, mat)
-    wave.position.x = 0.04
-    lean.add(wave)
-    return wave
-  })
-  group.traverse((o) => {
+/** Where the top of each animal's head is (in the head's own space), measured once. */
+const headTops = {}
+function headTop(a) {
+  const key = a.small ? `${a.name}-baby` : a.name
+  if (headTops[key]) return headTops[key]
+  a.holder.updateMatrixWorld(true)
+  const box = new THREE.Box3().setFromObject(a.head)
+  const top = a.head.worldToLocal(new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2))
+  return (headTops[key] = { top, width: box.max.x - box.min.x })
+}
+
+/** The middle of an animal's round head (in the head's own space) and its smallest size, measured once. */
+const headBoxes = {}
+function headBox(a) {
+  const key = a.small ? `${a.name}-baby` : a.name
+  if (headBoxes[key]) return headBoxes[key]
+  a.holder.updateMatrixWorld(true)
+  // Tall ears would pull the middle up: the round part is taken from the bottom of the head
+  const box = new THREE.Box3().setFromObject(a.head)
+  const size = box.getSize(new THREE.Vector3())
+  const center = a.head.worldToLocal(box.getCenter(new THREE.Vector3()).setY(box.min.y + Math.min(size.x, size.y) * 0.5))
+  return (headBoxes[key] = { center, size: Math.min(size.x, size.y, size.z) })
+}
+
+const hatParts = {
+  crownBand: new THREE.CylinderGeometry(0.1, 0.09, 0.07, 20, 1, true),
+  crownPoint: new THREE.ConeGeometry(0.028, 0.07, 8),
+  jewel: new THREE.SphereGeometry(0.02, 10, 6),
+  cone: new THREE.ConeGeometry(0.075, 0.2, 20),
+  pompom: new THREE.SphereGeometry(0.035, 12, 8),
+  bonnet: new THREE.SphereGeometry(0.15, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.55),
+  bonnetCloth: new THREE.MeshStandardMaterial({ color: '#bfe3ff', roughness: 0.85 }),
+  gold: new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 0.3, metalness: 0.7, roughness: 0.25, side: THREE.DoubleSide }),
+  ruby: new THREE.MeshStandardMaterial({ color: '#ff3d6e', roughness: 0.2 }),
+  white: new THREE.MeshStandardMaterial({ color: '#fffaf0', roughness: 0.8 }),
+}
+const PARTY_COLOURS = ['#ff5d8f', '#3fa2ff', '#6ad35a', '#b388ff', '#ff8c2e']
+
+/** Puts something on an animal's head: a golden crown, or a party hat in a colour. */
+function putOnHat(a, kind, colour) {
+  if (!a.head) return
+  const { top, width } = headTop(a)
+  const g = new THREE.Group()
+  if (kind === 'bonnet') {
+    // A baby's soft bonnet over the back of its head (centred on the head, not on top of tall
+    // ears), with a little bow at the side
+    const head = headBox(a)
+    const cap = new THREE.Mesh(hatParts.bonnet, hatParts.bonnetCloth)
+    cap.rotation.x = -1.05
+    const bow = new THREE.Mesh(hatParts.pompom, hatParts.white)
+    bow.position.set(0.13, -0.04, 0.02)
+    g.add(cap, bow)
+    g.position.copy(head.center)
+    g.scale.setScalar((head.size * 0.58) / 0.15 / a.head.scale.x)
+    a.head.add(g)
+    return
+  } else if (kind === 'crown') {
+    g.add(new THREE.Mesh(hatParts.crownBand, hatParts.gold))
+    for (let i = 0; i < 5; i++) {
+      const ang = (i / 5) * Math.PI * 2
+      const point = new THREE.Mesh(hatParts.crownPoint, hatParts.gold)
+      point.position.set(Math.sin(ang) * 0.095, 0.065, Math.cos(ang) * 0.095)
+      const jewel = new THREE.Mesh(hatParts.jewel, hatParts.ruby)
+      jewel.position.set(Math.sin(ang) * 0.1, 0, Math.cos(ang) * 0.1)
+      g.add(point, jewel)
+    }
+    g.position.copy(top).add(new THREE.Vector3(0, 0.02, 0))
+  } else {
+    const cone = new THREE.Mesh(hatParts.cone, new THREE.MeshStandardMaterial({ color: colour, roughness: 0.5 }))
+    cone.position.y = 0.1
+    const pompom = new THREE.Mesh(hatParts.pompom, hatParts.white)
+    pompom.position.y = 0.21
+    g.add(cone, pompom)
+    g.position.copy(top).add(new THREE.Vector3(0.02, -0.02, 0))
+    g.rotation.z = -0.25
+  }
+  g.scale.setScalar((THREE.MathUtils.clamp(width / 0.5, 0.8, 1.4) * (kind === 'party' ? 1.6 : 1)) / a.head.scale.x)
+  g.traverse((o) => {
     if (o.isMesh) o.castShadow = true
   })
-  return { group, waves, pop: 0, yaw: 0 }
+  a.head.add(g)
 }
 
-// A little wicker basket that every baby sits in, so a baby reads as a baby from above (not by
-// size alone). On the bigger Babies boards (CRADLE_LEVEL) a blanket hides who is asleep in it.
-const basketParts = {
-  base: new THREE.CylinderGeometry(0.29, 0.24, 0.12, 32).translate(0, 0.06, 0),
-  rim: new THREE.TorusGeometry(0.29, 0.05, 10, 36).rotateX(Math.PI / 2).translate(0, 0.12, 0),
-  blanket: new THREE.SphereGeometry(0.27, 28, 14).scale(1, 0.5, 1).translate(0, 0.13, 0.02),
-  pillow: new THREE.SphereGeometry(0.11, 18, 10).scale(1.5, 0.7, 0.9).translate(0, 0.17, -0.17),
-  fold: new THREE.CapsuleGeometry(0.035, 0.38, 6, 12).rotateZ(Math.PI / 2).scale(1, 0.9, 1.5).translate(0, 0.235, -0.05),
-  wicker: new THREE.MeshStandardMaterial({ color: '#c9945a', roughness: 0.8 }),
-  rimWicker: new THREE.MeshStandardMaterial({ color: '#dcae72', roughness: 0.7 }),
-  cloth: new THREE.MeshStandardMaterial({ color: '#ffc9dc', roughness: 0.9 }),
-  pillowCloth: new THREE.MeshStandardMaterial({ color: '#fff4e4', roughness: 0.9 }),
-}
+/** Babies are softer and paler than grown-ups: a gentle cream glow lifts every colour. */
+const babyMaterials = new Map(
+  [matte, glossy].map((m) => [m, Object.assign(m.clone(), { emissive: new THREE.Color('#fff1e6'), emissiveIntensity: 0.1 })]),
+)
 
-function makeBasket(covered) {
-  const group = new THREE.Group()
-  group.add(new THREE.Mesh(basketParts.base, basketParts.wicker), new THREE.Mesh(basketParts.rim, basketParts.rimWicker))
-  let blanket = null
-  if (covered) {
-    blanket = new THREE.Group()
-    // A pink blanket turned down at the top, over a cream pillow: someone small is asleep in there
-    blanket.add(new THREE.Mesh(basketParts.blanket, basketParts.cloth), new THREE.Mesh(basketParts.pillow, basketParts.pillowCloth), new THREE.Mesh(basketParts.fold, basketParts.pillowCloth))
-    group.add(blanket)
+/** A baby: small and round, with a big head that looks up at the child. */
+function babyfy(a) {
+  a.small = 0.6
+  if (a.head) {
+    for (const part of a.head.parent.children) if (part !== a.head) part.scale.set(0.82, 0.7, 0.82) // a short, round little body
+    a.head.position.multiplyScalar(0.72)
+    a.head.scale.setScalar(1.45)
+    a.lookUp = -0.4
+    putOnHat(a, 'bonnet')
   }
-  group.traverse((o) => {
-    if (o.isMesh) o.castShadow = o.receiveShadow = true
+  a.holder.traverse((o) => {
+    if (o.isMesh && babyMaterials.has(o.material)) o.material = babyMaterials.get(o.material)
   })
-  return { group, blanket, pop: 0 }
+}
+const feltCanvases = {}
+
+/** Each place tints the table a little, so a board feels like a trip somewhere (night is darkest). */
+function tintTable(colour) {
+  const tint = new THREE.Color(colour)
+  for (const [m, c] of tableColours) m.color.copy(c).multiply(tint)
+}
+
+/** A night board is lit by moonlight: cooler, softer light (the fireflies glow in it). */
+function setNight(on) {
+  sky.color.set(on ? '#b8c4ff' : '#fff8ec')
+  sky.groundColor.set(on ? '#6a5a8a' : '#d9a874')
+  sky.intensity = on ? 1.4 : 1.5
+  sun.color.set(on ? '#e5e6ff' : '#fff3dc')
+  sun.intensity = on ? 1.9 : 2.3
+  scene.environmentIntensity = on ? 0.36 : 0.45
+  renderer.toneMappingExposure = on ? 1.02 : 1.05
+  BG.set(on ? '#5b4f7a' : '#f3d7b0')
+  lanternLight.intensity = on ? 2.2 : 0
+  halo.visible = on
+  scene.fog.color.copy(BG)
+  document.body.classList.toggle('night', on)
+}
+
+/** Dresses the table for a new board: the blanket and the card backs take the next colours. */
+function applyTheme(theme) {
+  setNight(!!theme.night)
+  tintTable(theme.table ?? '#ffffff')
+  setThemeProp(theme.prop)
+  themeMaterials.card_back.color.set(theme.back)
+  themeMaterials.card_panel.color.set(theme.panel ?? theme.back).lerp(new THREE.Color('#fff1dd'), theme.panel ? 0 : 0.22)
+  themeMaterials.card_star.color.set(theme.star)
+  if (!room.felt || !assets.feltImage) return
+  // The same soft checked blanket, dyed: its light and shade kept, its colour changed
+  room.felt.image = feltCanvases[theme.mat] ??= (() => {
+    const img = assets.feltImage
+    const c = document.createElement('canvas')
+    c.width = img.width
+    c.height = img.height
+    const g = c.getContext('2d')
+    g.drawImage(img, 0, 0)
+    g.globalCompositeOperation = 'color'
+    g.fillStyle = theme.mat
+    g.fillRect(0, 0, c.width, c.height)
+    return c
+  })()
+  room.felt.needsUpdate = true
 }
 
 class Card {
-  /**
-   * kind: 'animal', 'sound' (plays the call, shows a loudspeaker), 'baby' (in its basket) or
-   * 'cradle' (a baby asleep under a blanket: only its word is heard until it is matched).
-   * set: what it matches with (its animal, or in Homes the group it lives in). look: a look-alike
-   * twin's bow or hat (see LOOKS).
-   */
-  constructor(animal, kind = 'animal', set = animal, look = null) {
+  /** Both twins share their costume or reveal surprise. */
+  constructor(animal, special = null, hatColour = null) {
     this.animal = animal
-    this.kind = kind
-    this.set = set
-    this.seen = false // turned up at least once this round
-    this.clues = 0 // times this clue card's word was said this round (see sayClue)
+    this.special = special
+    const golden = (this.golden = special === 'gold')
     this.state = 'down' // down | opening | open | closing | matched
     this.group = new THREE.Group()
     this.group.userData.card = this // a tap anywhere on the card, its animal or its ring finds the card
@@ -785,46 +897,28 @@ class Card {
     this.group.add(this.pivot)
     const mesh = assets.card.clone(true)
     mesh.traverse((o) => {
-      if (o.isMesh && o.material.name === 'card_spot') {
-        this.spot = o
-        this.base = o.material
-        // A sound card or a sleeping baby keeps a plain spot until it is matched: its colour
-        // would give the animal away.
-        if (kind === 'sound' || kind === 'cradle') {
-          o.material = soundSpot ??= o.material.clone()
-          soundSpot.color.set('#efe9ff')
-        } else this.tint()
-      }
+      if (!o.isMesh) return
+      const name = o.material.name
+      if (name === 'card_spot') {
+        o.material = golden ? goldSpot : (spotMaterials[animal] ??= o.material.clone())
+        if (!golden) o.material.color.set(ANIMALS[animal].color)
+      } else if (themeMaterials[name]) o.material = themeMaterials[name]
     })
     this.pivot.add(mesh)
     this.critter = makeAnimal(animal)
     this.critter.baseY = FACE_TOP
-    if (look) dressUp(this.critter, look)
-    if (kind === 'baby' || kind === 'cradle') {
-      babyfy(this.critter)
-      this.critter.baseY = FACE_TOP + 0.05 // sitting in the basket
-      this.basket = makeBasket(kind === 'cradle')
-      this.basket.group.position.y = FACE_TOP
-      this.basket.group.visible = false
-      this.group.add(this.basket.group)
-    }
+    if (golden) {
+      this.critter.holder.traverse((o) => {
+        if (o.isMesh && goldMaterials.has(o.material)) o.material = goldMaterials.get(o.material)
+      })
+      putOnHat(this.critter, 'crown')
+    } else if (special === 'baby') babyfy(this.critter)
+    else if (special === 'hat') putOnHat(this.critter, 'party', hatColour)
     this.critter.holder.position.z = 0.1
     this.critter.holder.visible = false
     this.critter.pop = 0
     this.group.add(this.critter.holder)
-    if (kind === 'sound') {
-      this.speaker = makeSpeaker()
-      this.speaker.group.position.y = FACE_TOP
-      this.speaker.group.visible = false
-      this.group.add(this.speaker.group)
-    }
-    // A clue card's clue is also written on it ("Moo!", "kit"), so it still works with the sound off
-    if (kind === 'sound' || kind === 'cradle') {
-      this.tag = makeTag(kind === 'sound' ? WORDS[animal].call : WORDS[animal].baby)
-      this.tagPop = 0
-      this.group.add(this.tag)
-    }
-    this.ring = new THREE.Mesh(ringGeometry, ringMaterial)
+    this.ring = new THREE.Mesh(golden ? goldRingGeometry : ringGeometry, ringMaterial)
     this.ring.rotation.x = -Math.PI / 2
     this.ring.position.y = FACE_TOP + 0.01
     this.ring.visible = false
@@ -832,142 +926,179 @@ class Card {
     this.hover = 0
     this.hoverTarget = 0
     this.lift = 0
-    this.waveUntil = 0
-    this.hintUntil = 0
     this.revealed = null
   }
 
-  /** Colours the spot in the animal's own colour. */
-  tint() {
-    if (!this.spot) return
-    this.spot.material = spotMaterials[this.animal] ??= this.base.clone()
-    this.spot.material.color.set(ANIMALS[this.animal].color)
+  /**
+   * Peekaboo: the card lifts like a lid on one side, its animal peeps out from under it and waves,
+   * then hides again. A small surprise (see game.peekabooAt); tapping the card flips it as usual.
+   */
+  peekaboo() {
+    if (this.state !== 'down' || this.peeking) return
+    this.peeking = true
+    const a = this.critter
+    const side = this.group.position.x > 0 ? -1 : 1 // the lid opens towards the middle of the board
+    const hinge = -side * 0.5
+    a.holder.visible = true
+    a.holder.position.x = hinge * 0.35
+    sound.giggle()
+    const tidy = () => {
+      this.pivot.position.x = 0
+      this.peekLift = 0
+      a.holder.position.x = 0
+      Object.assign(a, { tilt: 0, rock: 0 })
+      this.peeking = false
+    }
+    tween(2.2, (t) => {
+      if (!this.peeking) return
+      if (this.state !== 'down') {
+        // Tapped mid-peekaboo: the flip takes over from here
+        this.pivot.rotation.z = 0
+        return tidy()
+      }
+      const k = t < 0.2 ? ease.outCubic(t / 0.2) : t > 0.82 ? 1 - ease.inCubic((t - 0.82) / 0.18) : 1
+      const lid = k * 0.95
+      this.pivot.rotation.z = side * lid
+      this.pivot.position.x = hinge + side * 0.5 * Math.cos(lid)
+      this.peekLift = 0.5 * Math.sin(lid)
+      a.pop = k * 0.8
+      a.tilt = Math.sin(t * Math.PI * 9) * 0.32 * k
+      a.rock = Math.sin(t * Math.PI * 4.5) * 0.14 * k
+      if (t >= 1) {
+        this.pivot.rotation.z = 0
+        a.holder.visible = false
+        a.pop = 0
+        tidy()
+      }
+    })
   }
 
-  /** Flips the card over with a little hop, then (face up) pops the animal out. */
-  flipUp() {
+  /** Flips the card with a hop; its animal pops out and optionally calls. */
+  flipUp({ call = true } = {}) {
     this.state = 'opening'
-    this.seen = true
     sound.flip()
-    this.revealed = this.reveal() // tapCard waits on this for both cards of a turn
+    this.revealed = this.reveal(call) // tapCard waits on this for both cards of a turn
     return this.revealed
   }
 
-  async reveal() {
-    await tween(0.42, (t) => {
+  async reveal(call) {
+    // Up it jumps, stretching thin as it turns edge-on, then lands with a squash
+    await tween(0.4, (t) => {
       this.pivot.rotation.z = ease.inOutCubic(t) * Math.PI
-      this.lift = Math.sin(t * Math.PI) * 0.6
+      this.lift = Math.sin(t * Math.PI) * 0.65
+      this.pivot.scale.x = 1 - Math.sin(t * Math.PI) * 0.14
     })
+    this.pivot.scale.x = 1
     this.lift = 0
     this.land()
-    await this.popOut()
-  }
-
-  async popOut() {
     sound.pop()
     effects.sparkle(this.worldTop(), { count: 10, speed: 1.4, up: 1.6, size: 0.06 })
-    if (this.kind === 'sound') {
-      // Only the call ("Moo!"): the child must know or remember who makes it and find that animal.
-      const sp = this.speaker
-      sp.group.visible = true
-      this.playCall()
-      this.showTag()
-      await tween(0.42, (t) => (sp.pop = ease.outBack(t)))
-    } else if (this.kind === 'cradle') {
-      // Only the word: the child must know whose baby a kitten is.
-      talk.hurry()
-      this.sayClue()
-      this.showTag()
-      await this.showBasket()
-    } else {
-      callAndName(this.critter, { card: this })
-      if (this.basket) this.showBasket()
-      await this.showAnimal()
+    if (this.golden) {
+      // A golden one! It glitters as it comes out
+      sound.shimmer()
+      effects.sparkle(this.worldTop(), { count: 24, speed: 2, up: 2.2, size: 0.08, colors: GOLD })
     }
+    if (this.special === 'hat') {
+      // Party time! A pop of confetti and a toot
+      sound.toot()
+      effects.burst(this.worldTop())
+    }
+    if (call) chatter(this.critter)
+    await this.showAnimal()
+    if (this.state === 'opening' && ['sleepy', 'sneeze'].includes(this.special)) this.surprise()
+    else if (this.state === 'opening') flourish(this.critter)
     if (this.state === 'opening') this.state = 'open'
   }
 
-  showBasket() {
-    const b = this.basket
-    b.group.visible = true
-    if (b.blanket) b.blanket.visible = this.state !== 'matched'
-    return tween(0.42, (t) => (b.pop = ease.outBack(t)))
-  }
-
-  /**
-   * A clue card's word ("Moo!", "Kitten!"), said first: older names waiting are dropped. Never late:
-   * it goes stale once the card turns back. Said on the first two reveals of each card in a round;
-   * after that the written tag carries it, and tapping the open card says it again (again = true).
-   * Across the board, at most CLUE_BURST clue words in CLUE_WINDOW seconds: random tapping is
-   * answered by the tags (and a sound card's call), not by a stream of words.
-   */
-  sayClue(again = false) {
-    if (!again && this.clues >= 2) return
-    const text = this.kind === 'sound' ? WORDS[this.animal].call : nameOf(this.critter)
-    if (talk.has(text)) return
-    game.clueTimes = game.clueTimes.filter((t) => game.time - t < CLUE_WINDOW)
-    if (!again && game.clueTimes.length >= CLUE_BURST) return
-    talk.say(text, {
-      stale: () => this.clueStale(),
-      onStart: () => {
-        this.clues++
-        game.clueTimes.push(game.time)
-      },
+  /** A drowsy yawn then a pop awake, or a wind-up sneeze with a tiny confetti puff. */
+  surprise() {
+    const a = this.critter
+    const sleepy = this.special === 'sleepy'
+    let popped = false
+    tween(1.25, (t) => {
+      if (!['opening', 'open', 'matched'].includes(this.state)) return
+      const wind = Math.sin(Math.min(1, t / 0.65) * Math.PI / 2)
+      a.nod = t < 0.65 ? wind * (sleepy ? 0.65 : -0.35) : 0
+      a.squash = t < 0.65 ? wind * 0.18 : 0
+      a.chat = sleepy && t < 0.65 ? wind * 0.8 : 0
+      if (t >= 0.65 && !popped) {
+        popped = true
+        sound.boing()
+        hopOnce(a, sleepy ? 0.5 : 0.25)
+        if (!sleepy) { sound.toot(); effects.burst(this.worldTop()) }
+      }
+      if (t >= 1) Object.assign(a, { nod: 0, squash: 0, chat: 0 })
     })
   }
 
-  /**
-   * A clue is never said late: it goes stale once its card turns back. A sound card's call and word
-   * also outlast a quick match, so the child hears "Moo!" before "The cow moos!" answers it.
-   */
-  clueStale() {
-    if (this.kind === 'sound') return this.state === 'down' || this.state === 'closing'
-    return this.state !== 'open' && this.state !== 'opening'
-  }
-
-  showTag() {
-    this.tag.visible = true
-    tween(0.42, (t) => (this.tagPop = ease.outBack(t)))
-  }
-
-  /** A matched cradle: the blanket slides away and the baby sits up. */
-  async wake() {
-    const blanket = this.basket.blanket
-    await tween(0.3, (t) => {
-      blanket.scale.setScalar(Math.max(0.001, 1 - ease.inCubic(t)))
-      blanket.position.y = t * 0.1
-    })
-    blanket.visible = false
-    this.tint()
-    effects.sparkle(this.worldTop(), { count: 8, speed: 1.2, up: 1.4, size: 0.06 })
-    await this.showAnimal()
-  }
-
-  /** The sound card's call, with its waves pulsing while it plays. */
-  playCall(again = false) {
-    talk.hurry() // the sound is the clue: older names (and a goal still being said) give way
-    talk.call(this.animal, { onStart: () => (this.waveUntil = game.time + (VOICE_LENGTH[this.animal] ?? 0.6) + 0.2), stale: () => this.clueStale() })
-    this.sayClue(again)
-  }
-
+  /** The animal bursts out big, leaning out towards the child for a beat, then settles on its spot. */
   async showAnimal() {
     const a = this.critter
     a.holder.visible = true
-    await tween(0.42, (t) => {
-      a.pop = ease.outBack(t)
-      a.hop = Math.sin(t * Math.PI) * 0.35
+    // The burst is a little smaller on the back rows, so the animal stays clear of the HUD
+    const multiRow = game.layout.grid.rows >= 2
+    const big = multiRow ? 1.12 : 1.4 - 0.15 * (this.backness ?? 0)
+    const reach = multiRow ? 0.16 : 0.4
+    await tween(0.3, (t) => {
+      a.pop = Math.min(multiRow ? 1.2 : Infinity, ease.outBack(t) * big)
+      a.hop = ease.outCubic(t) * 0.55
+      a.holder.position.z = 0.1 + ease.outCubic(t) * reach
     })
-    a.hop = 0
+    await tween(0.35, (t) => {
+      const e = ease.inOutCubic(t)
+      a.pop = big - (big - 1) * e
+      a.hop = 0.55 * (1 - e)
+      a.holder.position.z = 0.1 + reach * (1 - e)
+      a.squash = t > 0.8 ? Math.sin(((t - 0.8) / 0.2) * Math.PI) * 0.18 : 0
+    })
+    Object.assign(a, { pop: 1, hop: 0, squash: 0 })
+    a.holder.position.z = 0.1
   }
 
-  /** A matched sound card: the loudspeaker shrinks away and the animal that made the sound pops out. */
-  async becomeAnimal() {
-    const sp = this.speaker
-    await tween(0.25, (t) => (sp.pop = 1 - ease.inCubic(t)))
-    sp.group.visible = false
-    this.tint()
-    effects.sparkle(this.worldTop(), { count: 8, speed: 1.2, up: 1.4, size: 0.06 })
-    await this.showAnimal()
+  /** A baby pair's grown-up pops up behind the baby, nuzzles it and stays. */
+  callParent() {
+    const p = (this.parent = makeAnimal(this.animal))
+    p.baseY = FACE_TOP
+    p.size = (this.critter.size / (this.critter.small ?? 1)) * 0.8
+    p.yaw = this.critter.yaw
+    p.lean = this.critter.lean
+    p.pop = 0
+    p.holder.position.set(0.24, 0, -0.24) // behind the baby and to one side, still on its own card
+    this.critter.holder.position.x = -0.12
+    this.group.add(p.holder)
+    sound.pop(0.1)
+    effects.sparkle(this.worldTop(), { count: 10, speed: 1.2, up: 1.6, colors: HEARTS })
+    tween(0.45, (t) => (p.pop = ease.outBack(t)), { delay: 0.1 })
+    tween(1.2, (t) => (p.nod = Math.sin(t * Math.PI * 3) * 0.25 * (1 - t)), { delay: 0.5 })
+  }
+
+  /** A tap while the game is busy: the card gives a tiny wiggle, so the tap is felt. */
+  wiggle() {
+    if (this.wiggling) return
+    this.wiggling = true
+    sound.tick()
+    tween(0.35, (t) => {
+      this.pivot.rotation.y = Math.sin(t * Math.PI * 4) * 0.08 * (1 - t)
+      if (t >= 1) {
+        this.pivot.rotation.y = 0
+        this.wiggling = false
+      }
+    })
+  }
+
+  /** A face-down card lifts one corner for a peek, then lies down again (idle life only, never a hint). */
+  peekCorner() {
+    if (this.state !== 'down' || this.peeking) return
+    this.peeking = true
+    const side = Math.random() < 0.5 ? -1 : 1
+    tween(1.1, (t) => {
+      // Tapped mid-peek: the flip takes over at once
+      const k = this.state === 'down' && t < 1 ? Math.sin(t * Math.PI) ** 2 : 0
+      this.pivot.rotation.x = -k * 0.22
+      if (this.state === 'down') this.pivot.rotation.z = side * k * 0.12
+      this.peekLift = k * 0.08
+      if (t >= 1) this.peeking = false
+    })
   }
 
   /** Animal ducks back into the card, which flips face down. */
@@ -979,19 +1110,9 @@ class Card {
   async shut(fast) {
     this.state = 'closing'
     const a = this.critter
-    const sp = this.speaker
-    const b = this.basket
     a.excited = false
-    await tween(fast ? 0.12 : 0.22, (t) => {
-      a.pop = 1 - ease.inCubic(t)
-      if (sp) sp.pop = a.pop
-      if (b) b.pop = a.pop
-      if (this.tag) this.tagPop = a.pop
-    })
+    await tween(fast ? 0.12 : 0.22, (t) => (a.pop = 1 - ease.inCubic(t)))
     a.holder.visible = false
-    if (sp) sp.group.visible = false
-    if (b) b.group.visible = false
-    if (this.tag) this.tag.visible = false
     sound.flip()
     await tween(fast ? 0.28 : 0.38, (u) => {
       this.pivot.rotation.z = Math.PI * (1 - ease.inOutCubic(u))
@@ -1004,12 +1125,11 @@ class Card {
 
   land(puff = true) {
     if (puff) effects.puff(this.group.position.clone().setY(MAT_TOP), { count: 7, radius: 0.45, size: 0.06 })
-    tween(0.25, (t) => (this.pivot.scale.y = 1 - Math.sin(t * Math.PI) * 0.25))
-  }
-
-  /** A soft hint: the card rises a little and settles again, once. */
-  hint() {
-    this.hintUntil = game.time + 1.6
+    tween(0.3, (t) => {
+      const k = Math.sin(t * Math.PI) * (1 - t * 0.4)
+      this.pivot.scale.y = 1 - k * 0.3
+      this.pivot.scale.x = this.pivot.scale.z = 1 + k * 0.08
+    })
   }
 
   showRing() {
@@ -1021,34 +1141,22 @@ class Card {
     return this.group.position.clone().setY(REST_Y + FACE_TOP + 0.45)
   }
 
+  /** Where the card is on screen, in pixels. */
+  screenPoint() {
+    _p.copy(this.group.position).setY(REST_Y + 0.05).project(camera)
+    return { x: ((_p.x + 1) / 2) * innerWidth, y: ((1 - _p.y) / 2) * innerHeight }
+  }
+
   update(dt, time) {
     const hoverTarget = this.state === 'down' ? this.hoverTarget : 0
     this.hover = THREE.MathUtils.damp(this.hover, hoverTarget, 14, dt)
-    // A hint (see hint()) is one slow rise and settle: no glow, no flashing
-    const nudge = this.state === 'down' && time < this.hintUntil ? Math.sin(((this.hintUntil - time) / 1.6) * Math.PI) * 0.16 : 0
-    this.pivot.position.y = this.lift + this.hover * 0.08 + nudge
+    this.pivot.position.y = this.lift + this.hover * 0.08 + (this.peekLift ?? 0)
     if (this.critter.holder.visible) poseAnimal(this.critter, time)
-    if (this.speaker?.group.visible) this.poseSpeaker(time)
-    if (this.basket?.group.visible) this.basket.group.scale.setScalar(Math.max(0.001, this.basket.pop))
-    if (this.tag?.visible) this.tag.scale.setScalar(Math.max(0.001, this.tagPop))
+    if (this.parent) poseAnimal(this.parent, time)
     if (this.ring.visible) this.ring.rotation.z += dt * 0.6
   }
-
-  /** The loudspeaker sways a little; its waves glow outwards one after another while it plays. */
-  poseSpeaker(time) {
-    const sp = this.speaker
-    const playing = time < this.waveUntil
-    sp.group.scale.setScalar(Math.max(0.001, sp.pop))
-    sp.group.rotation.y = this.critter.yaw + Math.sin(time * 1.3) * 0.08
-    sp.group.position.y = FACE_TOP + Math.sin(time * 2) * 0.015
-    sp.waves.forEach((wave, i) => {
-      const k = playing ? (Math.sin(time * 7 - i * 1.1) + 1) / 2 : 0
-      wave.material.emissiveIntensity = 0.15 + k * 0.9
-      wave.scale.setScalar(1 + k * 0.12)
-    })
-  }
 }
-
+const _p = new THREE.Vector3()
 // --- Layout and camera ---------------------------------------------------------------------------
 
 /** Picks the grid (columns x rows) that makes the cards biggest on this screen. */
@@ -1062,8 +1170,11 @@ function chooseGrid(n, region) {
     const h = (rows * CARD_D + (rows - 1) * GAP_Z) * Math.sin(elev) + ANIMAL_H * Math.cos(elev) + 0.4
     const empty = cols * rows - n
     // A lone card on its own last row looks left over (see rowSizes, which avoids it when it can)
-    const lone = rows > 1 && rowSizes(n, cols, rows).at(-1) === 1 ? 0.8 : 1
-    const score = Math.min(aspect / w, 1 / h) * (1 - empty * 0.04) * lone
+    const sizes = rowSizes(n, cols, rows)
+    const lone = rows > 1 && sizes.at(-1) === 1 ? 0.8 : 1
+    // Full rows look tidy: each short row costs a little
+    const short = sizes.filter((k) => k < cols).length
+    const score = Math.min(aspect / w, 1 / h) * (1 - empty * 0.04) * (1 - short * 0.05) * lone
     if (!best || score > best.score) best = { cols, rows, score }
   }
   return best
@@ -1079,7 +1190,12 @@ function elevation() {
  */
 function rowSizes(n, cols, rows) {
   const empty = cols * rows - n
-  if (empty < rows) return Array.from({ length: rows }, (_, r) => (r >= rows - empty ? cols - 1 : cols))
+  if (empty < rows) {
+    // The short rows go to the ends, first and last in turn (10 in four rows: 2+3+3+2), so the
+    // board stays even and balanced
+    const shortRows = new Set(Array.from({ length: empty }, (_, k) => (k % 2 ? Math.floor(k / 2) : rows - 1 - Math.floor(k / 2))))
+    return Array.from({ length: rows }, (_, r) => (shortRows.has(r) ? cols - 1 : cols))
+  }
   return Array.from({ length: rows }, (_, r) => (r === rows - 1 ? n - cols * (rows - 1) : cols))
 }
 
@@ -1100,7 +1216,7 @@ function freeRegion() {
   let top = 8
   let bottom = h - 8
   if (game.state === 'menu') {
-    top = document.querySelector('.menu-top').getBoundingClientRect().bottom + 4
+    top = 12
     bottom = document.querySelector('.menu-bottom').getBoundingClientRect().top - 4
   } else {
     for (const el of document.querySelectorAll('.hud-left, .hud-center')) top = Math.max(top, el.getBoundingClientRect().bottom + 6)
@@ -1222,12 +1338,27 @@ function relayout(animate = true) {
   const s = slots(game.cards.length, grid.cols, grid.rows)
   game.layout = { hw: s.hw, hd: s.hd, grid }
   placeRoom(s.hw, s.hd)
+  // Perspective shrinks the back rows: their animals are made a little bigger to make up for it
+  const boost = Math.min(0.28, 0.09 * (grid.rows - 1))
   game.cards.forEach((card, i) => {
     card.slot = s.list[i]
-    if (game.state !== 'dealing') card.group.position.copy(card.slot)
-    card.critter.yaw = Math.atan2(-card.slot.x, 9) * 0.8
+    if (game.state !== 'dealing' && game.state !== 'won') card.group.position.copy(card.slot)
+    if (game.state !== 'won') card.critter.yaw = Math.atan2(-card.slot.x, 9) * 0.8
+    // 1 on the back row, 0 on the front
+    card.backness = s.hd > 0 ? (s.hd - card.slot.z) / (2 * s.hd) : 0
+    // The camera looks down steeply (most of all in portrait, and on the front rows): face-up
+    // animals lean back a little so their faces turn up to the child instead of showing their heads
+    const steep = innerWidth / innerHeight < 0.8
+    // In portrait the front rows are a little smaller, so they don't stand over the cards behind them
+    const front = steep && grid.rows > 2 ? 1 - 0.14 * (1 - card.backness) : 1
+    card.critter.size = ANIMAL_SIZE * (card.critter.small ?? 1) * (1 + boost * card.backness) * front
+    card.critter.lean = -((steep ? 0.12 : 0.06) + (steep ? 0.22 : 0.12) * (1 - card.backness))
+    if (card.parent) Object.assign(card.parent, { lean: card.critter.lean, yaw: card.critter.yaw })
   })
-  const view = frame(s.hw + 0.1, s.hd + 0.1, ANIMAL_H)
+  // Include hats and back-row enlargement; use a smaller jump margin beside the win card.
+  const hatHeight = game.cards.some((c) => c.special === 'hat') ? 0.5 * (1 + boost) : 0
+  const partyJump = game.state === 'won' && !$('win').classList.contains('hidden') ? 0.25 : innerHeight <= 500 && innerWidth > innerHeight ? 0.8 : 1.1
+  const view = frame(s.hw + 0.1, s.hd + 0.1, ANIMAL_H * (1 + boost) + hatHeight + partyJump)
   settleProps(view, s.hw + 0.45, s.hd + 0.45)
   applyCamera(view, animate)
 }
@@ -1241,149 +1372,106 @@ function show(screen) {
   $('win').classList.toggle('hidden', screen !== 'win')
 }
 
-/**
- * The level Play starts: the one suggested after the last win in this mode (one step on, two after
- * a careful board, the same size after a hard one), else the first one not yet done.
- */
+/** The board ▶ starts: the one after the last win, else the first not yet finished. */
 function nextLevel() {
-  const levels = levelsFor(progress.mode)
-  const suggested = progress.next[progress.mode]
-  if (Number.isInteger(suggested)) return Math.min(levels.length - 1, Math.max(0, suggested))
-  const done = doneLevels()
-  const i = levels.findIndex((_, k) => !done[k])
-  return i < 0 ? levels.length - 1 : i
+  if (Number.isInteger(progress.next)) return Math.min(LEVELS.length - 1, Math.max(0, progress.next))
+  const i = LEVELS.findIndex((_, k) => !progress.done[k])
+  return i < 0 ? LEVELS.length - 1 : i
 }
 
+/** Each board is a picture of its cards: a 2×2 square of little cards, up to 5×4. A finished one has a paw. */
 function renderLevels() {
   const next = nextLevel()
-  const done = doneLevels()
-  $('levels').innerHTML = levelsFor(progress.mode).map((cards, i) => {
-    // A finished level gets a paw print: no grading by turns
-    const row = done[i] ? '<span aria-label="Done">🐾</span>' : ''
-    // Babies asleep in baskets (only their word is heard) from CRADLE_LEVEL on
-    // and twins with look-alikes from LOOK_LEVEL on
-    const key = goalKey(progress.mode, i)
-    const cradle = key === 'cradle' ? '<span class="cradle" aria-label="sleeping babies">🧺</span>' : key === 'looks' ? '<span class="cradle" aria-label="look-alike twins">🎀</span>' : ''
-    return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}"><span class="num">${i + 1}</span><span class="cards"><i class="mini"></i>${cards}${cradle}</span><span class="lstars">${row}</span></button>`
+  $('levels').innerHTML = LEVELS.map((pairs, i) => {
+    const [cols, rows] = LEVEL_PICTURES[i]
+    const cards = '<i class="mini"></i>'.repeat(pairs * 2)
+    const paw = progress.done[i] ? '<span class="paw">🐾</span>' : ''
+    return `<button class="level ${i === next ? 'next' : ''}" data-level="${i}" aria-label="${pairs * 2} cards"><span class="grid" style="--cols:${cols};--rows:${rows}">${cards}</span>${paw}</button>`
   }).join('')
-  for (const el of document.querySelectorAll('[data-level]')) {
-    el.addEventListener('click', () => {
+  // Only the menu's own buttons (the win card's ▶ is wired once, below)
+  for (const el of $('levels').querySelectorAll('[data-level]')) {
+    // Only a press that started on the menu counts (not a finger lifted from a hold on the screen before)
+    let downAt = 0
+    el.addEventListener('pointerdown', () => (downAt = performance.now()))
+    el.addEventListener('click', (e) => {
+      if (e.detail !== 0 && downAt < game.menuShownAt) return
       sound.tap()
       startLevel(Number(el.dataset.level))
     })
   }
 }
 
-/** The pictured choice of what makes a pair: twins, animal and sound, or animal and baby. */
-function renderModes() {
-  for (const el of document.querySelectorAll('[data-mode]')) {
-    const on = el.dataset.mode === progress.mode
-    el.classList.toggle('on', on)
-    el.setAttribute('aria-pressed', on)
-  }
-  $('menu-hint').textContent = MODES[progress.mode].hint
-}
-
-function chooseMode(mode) {
-  if (!MODES[mode]) return
-  progress.mode = mode
-  save()
-  renderModes()
-  renderLevels()
-  relayout(true) // the hint's length changed: the toys settle clear of it again
-  talk.clear()
-  // Just the button's word: the round says its one goal (a sleeping-baby or look-alike board has its
-  // own), so no board starts with two goals in a row.
-  talk.say(MODES[mode].word, { droppable: true })
-}
-
-/** Which goal a board has: the mode's, or the bigger boards' own (sleeping babies, look-alikes). */
-function goalKey(mode, level) {
-  if (mode === 'baby' && level >= CRADLE_LEVEL) return 'cradle'
-  if (mode === 'twins' && level >= LOOK_LEVEL) return 'looks'
-  return mode
-}
-
-/** The round's goal, said once after the menu: never again on Next or 🔁 unless the rule changes. */
-function sayGoal() {
-  const key = goalKey(game.mode, game.level)
-  if (game.goalSaid === key) return
-  game.goalSaid = key
-  // Droppable: a child already turning cards over may cut it short with a clue (see talk.hurry)
-  talk.say(LEVEL_GOALS[key] ?? MODES[key].goal, { droppable: true, goal: true })
-}
-
-function renderPairs() {
-  const found = [...new Set(game.cards.filter((c) => c.state === 'matched').map((c) => c.set))]
-  if (game.mode === 'groups') {
-    // Homes: every group's sign is there from the start (faded) with how many animals it holds,
-    // so the child knows what to look for; a found group lights up.
-    // Each sign can be tapped to hear its word: pre-readers learn what 🌾 means.
-    $('pairs').innerHTML = game.sets.map((id) => `<button class="group ${found.includes(id) ? 'done' : ''}" data-group="${id}" aria-label="${GROUPS[id].word}: ${game.setSize[id]}">${GROUPS[id].icon}<b>${game.setSize[id]}</b></button>`).join('')
-  } else {
-    const emoji = (set) => {
-      const card = game.cards.find((c) => c.set === set)
-      return `${ANIMALS[card.animal].emoji}${card.critter.look ? `<sup>${LOOKS[card.critter.look].icon}</sup>` : ''}`
-    }
-    $('pairs').innerHTML = game.sets.map((_, i) => (found[i] ? `<span class="done">${emoji(found[i])}</span>` : '<span></span>')).join('')
-  }
-  $('level-pill').textContent = `Level ${game.level + 1}`
-}
-
-let bannerTimer = 0
-const _p = new THREE.Vector3()
-/**
- * Big praise text. It goes just under the HUD, unless that would cover the animals it is
- * cheering for (the cards in avoid): then it moves to the bottom or the middle of the screen.
- */
-function banner(text, ms = 900, avoid = []) {
-  const el = $('banner')
-  el.replaceChildren(Object.assign(document.createElement('span'), { textContent: text }))
-  const textW = el.firstChild.offsetWidth // layout size, unaffected by the pop-in scale
-  const h = el.offsetHeight
-  const left = (innerWidth - textW) / 2 - 10
-  const right = (innerWidth + textW) / 2 + 10
-  // Screen boxes of the cards to keep clear, animal included.
-  const boxes = avoid.map((card) => {
-    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity
-    for (const dx of [-CARD_W / 2, CARD_W / 2]) for (const dz of [-CARD_D / 2, CARD_D / 2]) for (const y of [REST_Y, REST_Y + FACE_TOP + ANIMAL_H + 0.25]) {
-      _p.set(card.group.position.x + dx, y, card.group.position.z + dz).project(camera)
-      const sx = ((_p.x + 1) / 2) * innerWidth
-      const sy = ((1 - _p.y) / 2) * innerHeight
-      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy)
-    }
-    return { x0, x1, y0, y1 }
-  })
-  const hudBottom = Math.max(0, ...[...document.querySelectorAll('.hud-left, .hud-center')].map((e) => e.getBoundingClientRect().bottom))
-  const bottom = innerHeight - safeBottom() - h - 12
-  const covered = (top) => boxes.reduce((sum, b) => sum + Math.max(0, Math.min(right, b.x1) - Math.max(left, b.x0)) * Math.max(0, Math.min(top + h, b.y1) - Math.max(top, b.y0)), 0)
-  let best = hudBottom + 4
-  for (let top = hudBottom + 4; top <= bottom; top += 8) {
-    if (covered(top) < covered(best) - 1) best = top
-    if (covered(best) === 0) break
-  }
-  if (covered(best) > 0 && covered(bottom) < covered(best)) best = bottom
-  el.style.top = `${best}px`
-  el.classList.add('show')
-  clearTimeout(bannerTimer)
-  bannerTimer = setTimeout(() => el.classList.remove('show'), ms)
+/** One empty circle per pair at the top; a found pair's animal pops into its circle. */
+function renderPairs(popped = null, golden = false) {
+  const found = game.found
+  if (popped && golden) game.goldFound = popped
+  $('pairs').innerHTML = Array.from({ length: game.pairs }, (_, i) =>
+    found[i] ? `<span class="done ${found[i] === popped ? 'pop' : ''} ${found[i] === game.goldFound ? 'gold' : ''}">${ANIMALS[found[i]].emoji}</span>` : '<span></span>',
+  ).join('')
 }
 
 function updateMute() {
-  $('mute').textContent = progress.muted ? '🔇' : '🔊'
+  for (const id of ['mute', 'menu-mute']) $(id).textContent = progress.muted ? '🔇' : '🔊'
 }
+
+// --- The drawn hand: shows a stuck child what to tap, only after a quiet while --------------------
+
+const hand = $('hand')
+let handTimer
+hand.addEventListener('animationend', hideHand)
+function showHand(x, y) {
+  hand.style.left = `${x}px`
+  hand.style.top = `${y}px`
+  hand.classList.remove('hidden', 'tap')
+  void hand.offsetWidth // restart the tap animation
+  hand.classList.add('tap')
+  game.hands++
+  clearTimeout(handTimer)
+  handTimer = setTimeout(hideHand, 2700)
+}
+
+function hideHand() {
+  clearTimeout(handTimer)
+  hand.classList.add('hidden')
+  hand.classList.remove('tap')
+}
+
+/** Called every frame: after a quiet while, the hand taps once where a tap would start the fun. */
+function maybeShowHand() {
+  if (!hand.classList.contains('hidden')) return
+  if (game.state === 'menu') {
+    if (game.hands >= 2 || game.idle < (game.hands ? 20 : HAND_MENU)) return
+    const r = $('play').getBoundingClientRect()
+    showHand(r.left + r.width / 2, r.top + r.height * 0.55)
+  } else if (game.state === 'play') {
+    if (game.hands >= 2 || game.busy || game.mismatch || game.idle < (everFlipped ? HAND_LATER : HAND_FIRST)) return
+    const down = game.cards.filter((c) => c.state === 'down')
+    if (!down.length) return
+    const p = down[(Math.random() * down.length) | 0].screenPoint()
+    showHand(p.x, p.y)
+  } else return
+  game.idle = 0
+}
+/** Has this child ever turned a card over? Then the hand waits much longer (and only on a stall). */
+let everFlipped = false
 
 // --- Menu ---------------------------------------------------------------------------------------
 
 function enterMenu() {
+  if (game.found.length) game.friends = [...game.found]
   resetScene()
+  applyTheme(MENU_LOOK) // the menu keeps its own colours
   game.state = 'menu'
-  game.goalSaid = null // back on the menu, the next round says its goal again
+  game.menuShownAt = performance.now()
+  game.hands = 0
+  game.idle = 0
   show('menu')
-  renderModes()
   renderLevels()
   const count = innerWidth / innerHeight < 0.8 ? 3 : 5
-  game.paradeAnimals = shuffle([...NAMES]).slice(0, count).map((name, i) => {
+  // The animals just found follow the child back to the menu; the rest are a surprise
+  const friends = shuffle([...game.friends]).slice(0, count)
+  const names = [...friends, ...shuffle(NAMES.filter((n) => !friends.includes(n)))].slice(0, count)
+  game.paradeAnimals = shuffle(names).map((name, i) => {
     const a = makeAnimal(name)
     const x = (i - (count - 1) / 2) * PARADE_GAP
     a.holder.position.set(x, MAT_TOP, 0)
@@ -1393,6 +1481,7 @@ function enterMenu() {
     a.pop = 0
     parade.add(a.holder)
     tween(0.5, (t) => (a.pop = ease.outBack(t)), { delay: 0.25 + i * 0.12 })
+    wait(0.3 + i * 0.12).then(() => sound.pop())
     return a
   })
   relayout(true)
@@ -1401,68 +1490,58 @@ function enterMenu() {
 /** Empties the table: cards, menu animals, particles and every running tween. */
 function resetScene() {
   game.round++ // anything still waiting for the old board checks this and gives up
-  stopPeekSpeech()
+  hideHand()
   clearTweens() // also strands any pending waits from the old board, so they never resume
   effects.clear()
   parade.clear()
   game.paradeAnimals = []
-  // Each loudspeaker's waves glow on their own, so their materials go with the board
-  for (const card of game.cards) card.speaker?.waves.forEach((wave) => wave.material.dispose())
   board.clear()
   game.cards = []
   game.open = []
   game.mismatch = null
   game.busy = false
+  game.queued = null
 }
 
 // --- Playing ------------------------------------------------------------------------------------
 
 function startLevel(level) {
   resetScene()
-  game.mode = progress.mode
-  game.level = Math.min(level, levelsFor(game.mode).length - 1)
+  game.level = Math.min(Math.max(0, level), LEVELS.length - 1)
+  game.pairs = LEVELS[game.level]
   game.matched = 0
+  game.found = []
+  game.goldFound = null
   game.turns = 0
-  game.slips = 0
-  game.recalled = 0 // cards found again from memory: a seen card turned over as the match
-  game.setSlips = {}
-  game.named = new Set()
-  game.clueTimes = []
-  talk.newRound()
-  game.peekUsed = false
-  $('peek').disabled = false
-  $('peek').setAttribute('aria-label', game.mode === 'groups' ? 'Peek at two animals that live together' : 'Peek at one matching pair')
+  // Most boards have a peekaboo early enough to see before the last pair.
+  game.peekabooAt = Math.random() < 0.8 ? 1 : Infinity
+  game.hands = 0
   game.idle = 0
   game.state = 'dealing'
   show('play')
-  // Each card: [animal, kind, set]. A pair is an animal and its twin, its sound card or its baby.
-  let deck
-  if (game.mode === 'groups') {
-    const sizes = GROUP_LEVELS[game.level]
-    // A 4 in the level is the wild group with all four animals; the other homes are picked at random.
-    const order = Object.keys(GROUPS)
-    const allWild = sizes.includes(4)
-    const others = shuffle(order.filter((id) => !allWild || id !== 'wild')).slice(0, sizes.length - (allWild ? 1 : 0))
-    const ids = (allWild ? ['wild', ...others] : others).sort((x, y) => order.indexOf(x) - order.indexOf(y))
-    deck = ids.flatMap((id) => shuffle([...GROUPS[id].members]).slice(0, id === 'wild' && allWild ? 4 : 3).map((animal) => [animal, 'animal', id]))
-    game.sets = ids
-  } else {
-    const pool = { twins: NAMES, sound: WITH_CALLS, baby: WITH_BABIES }[game.mode]
-    const pairs = levelsFor(game.mode)[game.level] / 2
-    // Look-alike twins: some animals come twice, one pair with a bow and one with a hat
-    const doubles = game.mode === 'twins' && game.level >= LOOK_LEVEL ? game.level - LOOK_LEVEL + 1 : 0
-    const picks = shuffle([...pool].filter((n) => !doubles || n !== 'fish')).slice(0, pairs - doubles)
-    const sets = picks.flatMap((animal, i) => (i < doubles ? [[animal, 'bow'], [animal, 'hat']] : [[animal, null]]))
-    const partner = { twins: 'animal', sound: 'sound', baby: game.level >= CRADLE_LEVEL ? 'cradle' : 'baby' }[game.mode]
-    deck = sets.flatMap(([animal, look]) => {
-      const set = look ? `${animal}-${look}` : animal
-      return [[animal, 'animal', set, look], [animal, partner, set, look]]
-    })
-    game.sets = sets.map(([animal, look]) => (look ? `${animal}-${look}` : animal))
-  }
-  game.setSize = {}
-  for (const [animal, , set = animal] of deck) game.setSize[set] = (game.setSize[set] ?? 0) + 1
-  game.cards = shuffle(deck).map(([animal, kind, set, look]) => new Card(animal, kind, set, look))
+  const theme = (game.theme = THEMES[game.boards++ % THEMES.length])
+  applyTheme(theme)
+  // Home animals lead; distinct visitors fill large boards so every mismatch is fair.
+  const home = shuffle([...theme.animals])
+  const animals = [...home, ...shuffle(NAMES.filter((n) => !home.includes(n)))]
+  const picks = animals.slice(0, game.pairs).map((animal) => ({ animal, variant: null }))
+  shuffle(picks)
+  const pool = ['baby', 'hat', 'sleepy', 'sneeze']
+  let special
+  if (game.lastSpecial !== 'gold' && (game.sinceGold >= GOLDEN_EVERY || Math.random() < GOLDEN_CHANCE)) special = 'gold'
+  else special = shuffle(pool.filter((k) => k !== game.lastSpecial))[0]
+  game.sinceGold = special === 'gold' ? 0 : game.sinceGold + 1
+  game.lastSpecial = special
+  // A second surprise is optional, and can be any other kind.
+  const secondSpecial = game.pairs >= 4 && Math.random() < 0.6 ? shuffle(pool.filter((k) => k !== special))[0] : null
+  const hatColour = PARTY_COLOURS[(Math.random() * PARTY_COLOURS.length) | 0]
+  if (picks[0]) picks[0].variant = special
+  if (picks[1] && secondSpecial) picks[1].variant = secondSpecial
+  game.cards = shuffle(picks.flatMap((p, pairId) => [0, 1].map(() => {
+    const card = new Card(p.animal, p.variant, hatColour)
+    card.pairId = pairId
+    return card
+  })))
   for (const card of game.cards) board.add(card.group)
   renderPairs()
   relayout(true)
@@ -1485,28 +1564,50 @@ function startLevel(level) {
       }
     }, { delay: 0.35 + i * 0.06 })
   })
-  wait(0.35 + game.cards.length * 0.06 + 0.5).then(() => {
-    game.state = 'play'
-    banner(MODES[game.mode].banner, 1400)
-    sayGoal() // pre-readers hear the goal once: when the mode is chosen, or the first round after the menu
+  const round = game.round
+  wait(0.35 + game.cards.length * 0.06 + 0.5).then(async () => {
+    // Now and then the cards do a little shuffle-dance before play (all face down: nothing is given away)
+    if (game.pairs >= 3 && Math.random() < 0.3) await shuffleDance()
+    if (round === game.round) game.state = 'play'
   })
 }
 
-/**
- * A turn is a pair, or in Homes a whole group: cards keep turning up while they belong with the
- * first one. A card that does not belong ends the turn, and they all turn back.
- */
+/** The face-down cards hop in a wave, then two pairs of them swap places in big arcs. */
+async function shuffleDance() {
+  const round = game.round
+  const cards = game.cards
+  cards.forEach((c, i) => {
+    const delay = (c.slot.x + game.layout.hw) * 0.12
+    tween(0.4, (t) => (c.group.position.y = c.slot.y + Math.sin(t * Math.PI) * 0.35), { delay })
+    wait(delay).then(() => round === game.round && i % 3 === 0 && sound.tick())
+  })
+  await wait(0.5 + game.layout.hw * 0.24)
+  if (round !== game.round) return
+  const order = shuffle(cards.map((_, i) => i))
+  const swaps = [[order[0], order[1]], [order[2], order[3]]]
+  sound.boing()
+  await Promise.all(swaps.map(([i, j]) => {
+    const [a, b] = [cards[i], cards[j]]
+    const [from, to] = [a.slot.clone(), b.slot.clone()]
+    return tween(0.7, (t) => {
+      const e = ease.inOutCubic(t)
+      a.group.position.lerpVectors(from, to, e).setY(from.y + Math.sin(t * Math.PI) * 1.1)
+      b.group.position.lerpVectors(to, from, e).setY(from.y + Math.sin(t * Math.PI) * 0.7)
+      a.group.rotation.y = b.group.rotation.y = e * Math.PI * 2
+      if (t >= 1) a.group.rotation.y = b.group.rotation.y = 0
+    })
+  }))
+  if (round !== game.round) return
+  for (const [i, j] of swaps) [cards[i], cards[j]] = [cards[j], cards[i]]
+  for (const c of cards) c.land()
+  sound.tick()
+  relayout(false) // the cards keep their new places
+}
+
 async function tapCard(card) {
   if (game.state !== 'play') return
   if (card.state === 'matched' || card.state === 'open') {
-    // Matched animals love attention; an open clue card says its clue again (a sleeping baby only
-    // its word: its call, or a hop under the blanket, would give it away).
-    if (card.state === 'open' && card.kind === 'sound') card.playCall(true)
-    else if (card.state === 'open' && card.kind === 'cradle') card.sayClue(true)
-    else {
-      hopOnce(card.critter)
-      callAndName(card.critter)
-    }
+    tapAnimal(card)
     return
   }
   if (card.state === 'closing') {
@@ -1517,24 +1618,21 @@ async function tapCard(card) {
     card.wanted = false
     return tapCard(card)
   }
-  if (card.state !== 'down' || game.busy) return
-  talk.cutGoal() // a child already turning cards has heard enough of the goal; the card's words come next
-  if (game.mismatch) closeMismatch(true)
-  const first = game.open[0] ?? card
-  // Did the child already see where a partner of the first card was? Then a miss is a slip.
-  const knew = card !== first && game.cards.some((c) => c !== card && c !== first && c.state === 'down' && c.seen && belongs(c, first))
-  const wasSeen = card.seen
-  game.open.push(card)
-  const revealing = card.flipUp()
-  const fits = card === first || belongs(card, first)
-  if (fits && card !== first && wasSeen) game.recalled++
-  // Right outside the game too (a penguin is wild): said kindly, and never counted as a slip
-  const kindMiss = !fits && game.mode === 'groups' && overlap(first, card)
-  if (card === first && (game.setSlips[first.set] ?? 0) >= 2) {
-    // This one has been missed twice although its partner was seen: that partner rises a little.
-    for (const c of game.cards) if (c !== card && c.state === 'down' && c.seen && belongs(c, card)) c.hint()
+  if (card.state === 'down' && game.busy) {
+    // Quick fingers: the tap is felt now, and the card turns over as soon as the board is free
+    card.wiggle()
+    game.queued = card
+    return
   }
-  if (fits && game.open.length < game.setSize[first.set]) {
+  if (card.state !== 'down') return
+  if (game.mismatch) closeMismatch(true)
+  everFlipped = true
+  const first = game.open[0]
+  game.open.push(card)
+  // The second card of a pair keeps quiet on the way up: the two animals call together when they meet.
+  const match = !!first && first.pairId === card.pairId
+  const revealing = card.flipUp({ call: !match })
+  if (!first) {
     await revealing
     if (card.state === 'open') card.critter.excited = true
     return
@@ -1542,130 +1640,150 @@ async function tapCard(card) {
   const opened = [...game.open]
   game.busy = true
   game.turns++
-  if (!fits && knew && !kindMiss) {
-    game.slips++
-    game.setSlips[first.set] = (game.setSlips[first.set] ?? 0) + 1
-  }
   await Promise.all(opened.map((c) => c.revealed))
   game.busy = false
   game.open = []
   for (const c of opened) c.critter.excited = false
-  if (fits) onMatch(opened)
-  else onMismatch(opened, kindMiss)
-}
-
-/** Homes: does the odd card (or the first) also really fit the other's home? Returns who and how. */
-function overlap(first, odd) {
-  if (ALSO[odd.animal]?.home === first.set) return { animal: odd.animal, ...ALSO[odd.animal] }
-  if (ALSO[first.animal]?.home === odd.set) return { animal: first.animal, ...ALSO[first.animal] }
-  return null
+  if (match) onMatch(opened)
+  else onMismatch(opened)
+  const queued = game.queued
+  game.queued = null
+  if (queued?.state === 'down') tapCard(queued)
 }
 
 /**
- * Does card go with first? The same set (a pair, or in Homes a group), except a sleeping baby: it
- * goes with any parent whose baby has its word (a cub is a lion's or a panda's), never with a baby.
+ * A face-up animal loves attention: it hops and calls. Tap it three times quickly and it does
+ * a big spinning jump.
  */
-function belongs(card, first) {
-  if (card.kind === 'cradle' || first.kind === 'cradle') return card.kind !== first.kind && WORDS[card.animal].baby === WORDS[first.animal].baby
-  return card.set === first.set
+function tapAnimal(card) {
+  const a = card.critter
+  const now = game.time
+  a.taps = now - (a.lastTap ?? -9) < 1.2 ? (a.taps ?? 0) + 1 : 1
+  a.lastTap = now
+  if (a.taps >= 3 && !a.busy) {
+    a.taps = 0
+    trick(a, card.golden)
+    chatter(a)
+    sound.boing()
+    effects.sparkle(card.worldTop(), { count: 18, speed: 2, up: 2.4, size: 0.08 })
+    return
+  }
+  cheer(a, card.worldTop())
 }
 
-/**
- * A sleeping baby matched with a parent that shares its word but not its animal (a "calf" card
- * given to the elephant, though it was dealt as the cow's): it swaps with the elephant's own
- * sleeping calf, which nobody has seen, so the baby that wakes up is the elephant's.
- */
-function settleCradle(cards) {
-  const cradle = cards.find((c) => c.kind === 'cradle')
-  const parent = cards.find((c) => c !== cradle)
-  if (!cradle || cradle.set === parent.set) return
-  const other = game.cards.find((c) => c.kind === 'cradle' && c.set === parent.set)
-  for (const key of ['animal', 'set', 'critter']) [cradle[key], other[key]] = [other[key], cradle[key]]
-  for (const c of [cradle, other]) {
-    c.group.add(c.critter.holder)
-    c.critter.yaw = Math.atan2(-c.slot.x, 9) * 0.8
+// Small reusable shapes: each place reacts to a found pair, without adding a new task.
+const placeRing = new THREE.TorusGeometry(0.32, 0.025, 6, 24)
+const placePetal = new THREE.SphereGeometry(0.065, 6, 4)
+const placeMaterials = Object.fromEntries(Object.entries({ flower: '#ff9ec4', starfish: '#b8efff', lantern: '#fff27a', pumpkin: '#e8742b' }).map(([k, color]) => [k, new THREE.MeshBasicMaterial({ color, toneMapped: false })]))
+function placeSurprise(cards) {
+  const kind = game.theme.prop
+  const prop = room.props.find((p) => p.name === 'prop_theme')
+  // Hay leaps like popcorn; the palm bows to the pair; the pumpkin rolls and settles.
+  if (prop && !prop.userData.toy.busy && ['hay', 'palm', 'pumpkin'].includes(kind)) {
+    prop.userData.toy.busy = true
+    const y = prop.position.y
+    const z = prop.rotation.z
+    tween(1.3, (t) => {
+      const wave = Math.sin(t * Math.PI * 3) * (1 - t)
+      prop.position.y = y + (kind === 'hay' ? Math.abs(wave) * 0.65 : 0)
+      prop.rotation.z = z + (kind === 'hay' ? wave * 0.2 : wave * 0.4)
+      if (t >= 1) prop.userData.toy.busy = false
+    })
+  }
+  for (const card of cards) {
+    if (kind === 'snowman' && card.special !== 'baby') {
+      // A little skating figure-eight, returning to this animal's own card.
+      const x = card.critter.holder.position.x
+      const z = card.critter.holder.position.z
+      tween(1.7, (t) => {
+        card.critter.holder.position.x = x + Math.sin(t * Math.PI * 2) * 0.3
+        card.critter.holder.position.z = z + Math.sin(t * Math.PI * 4) * 0.12
+      })
+    }
+    if (!placeMaterials[kind]) continue
+    const pieces = new THREE.Group()
+    card.group.add(pieces)
+    const n = kind === 'starfish' ? 3 : 10
+    for (let i = 0; i < n; i++) {
+      const m = new THREE.Mesh(kind === 'starfish' ? placeRing : placePetal, placeMaterials[kind])
+      if (kind === 'flower' || kind === 'pumpkin') m.scale.set(1, 0.4, 1.7)
+      pieces.add(m)
+    }
+    tween(1.7, (t) => {
+      pieces.children.forEach((m, i) => {
+        const angle = i / n * Math.PI * 2 + t * Math.PI * 2
+        const r = kind === 'lantern' ? 0.85 - Math.sin(t * Math.PI) * 0.5 : 0.3 + t * 0.6
+        m.position.set(Math.cos(angle) * r, FACE_TOP + 0.25 + Math.sin(t * Math.PI) * 0.6, Math.sin(angle) * r)
+        if (kind === 'starfish') m.rotation.x = -Math.PI / 2
+        else m.rotation.z = angle
+        const size = Math.min(1, t * 8, (1 - t) * 5)
+        m.scale.set(size, size * (kind === 'flower' || kind === 'pumpkin' ? 0.4 : 1), size)
+      })
+      if (t >= 1) pieces.removeFromParent()
+    })
   }
 }
 
-function onMatch(cards) {
-  settleCradle(cards)
-  const [a] = cards
+/** The two animals find each other: they turn to look, hop and call together, then dance. */
+async function onMatch(cards) {
+  const round = game.round
   for (const card of cards) card.state = 'matched'
   game.matched++
+  game.found.push(cards[0].animal)
+  const [a, b] = cards
+  const yaws = cards.map((c) => c.critter.yaw)
+  const face = (me, other) => {
+    const dx = other.group.position.x - me.group.position.x
+    const dz = other.group.position.z - me.group.position.z
+    // Never right round to show their backs: a turn of at most ~46°
+    return THREE.MathUtils.clamp(Math.atan2(dx, Math.max(dz, Math.abs(dx) * 0.35)), -0.8, 0.8)
+  }
+  await Promise.all([turnTo(a.critter, face(a, b)), turnTo(b.critter, face(b, a))])
+  if (round !== game.round) return
   sound.match()
-  // Name what was learned: "Two cows!", "The cow moos!", "A cow's baby is a calf!",
-  // "Cow, pig and chick live on the farm!" Older names still waiting go stale (see callAndName).
-  talk.say(game.mode === 'groups' ? MATCH_WORDS.groups(a.set, cards.map((c) => c.animal)) : MATCH_WORDS[game.mode](a.animal, a.critter.look))
-  learn(cards)
+  chatter(a.critter)
+  b.critter.chat = 0
+  tween((VOICE_LENGTH[b.animal] ?? 0.5) + 0.15, (t) => (b.critter.chat = a.critter.chat))
   for (const card of cards) {
-    if (card.kind === 'sound') card.becomeAnimal().then(() => dance(card.critter, { dur: 1.0, hops: 2, height: 0.35 }))
-    else if (card.kind === 'cradle') card.wake().then(() => dance(card.critter, { dur: 1.0, hops: 2, height: 0.3 }))
-    else dance(card.critter, { delay: 0.05 })
+    hopOnce(card.critter, 0.42)
     card.showRing()
-    effects.sparkle(card.worldTop(), { count: 8, speed: 1.2, up: 1.2 })
+    effects.sparkle(card.worldTop(), { count: 14, speed: 1.6, up: 1.8, colors: a.golden ? GOLD : HEARTS })
   }
-  // The pair joins the row of found animals at the top (no praise banner).
-  renderPairs()
-  if (game.matched === game.sets.length) {
-    // The party waits until the last pair has been named (that line teaches the last set; the
-    // long cap is only for a voice that never says it has finished).
-    const round = game.round
-    Promise.all([wait(1.1), Promise.race([talk.idle(), wait(20)])]).then(() => round === game.round && winLevel())
+  placeSurprise(cards)
+  renderPairs(cards[0].animal, a.golden)
+  await wait(0.6)
+  if (round !== game.round) return
+  // Then each does its own trick (a golden pair a flip first, in a shower of gold)
+  if (a.golden) {
+    sound.chime()
+    for (const card of cards) effects.sparkle(card.worldTop(), { count: 40, speed: 2.6, up: 3, size: 0.1, colors: GOLD })
   }
+  await Promise.all(cards.map((card, i) => turnTo(card.critter, yaws[i], 0.25)))
+  if (round !== game.round) return
+  for (const card of cards) trick(card.critter, card.golden)
+  // Found babies: their mum or dad pops up behind them for a cuddle
+  if (a.special === 'baby') for (const card of cards) card.callParent()
+  if (game.matched === game.pairs) wait(a.golden ? 2.2 : 1.3).then(() => round === game.round && winLevel())
 }
+const _origin = new THREE.Vector3()
+const HEARTS = ['#ff5d8f', '#ff8fb1', '#ffd23f', '#ffffff']
+const GOLD = ['#ffd23f', '#ffe98a', '#ffb300', '#ffffff']
 
-/** The animal book remembers what each match taught: met, its call, its baby, its home. */
-function learn(cards) {
-  const fact = { sound: 'call', baby: 'baby', groups: 'home' }[game.mode]
-  for (const { animal } of cards) {
-    const page = (progress.book[animal] ??= {})
-    page.met = 1
-    if (fact) page[fact] = 1
-  }
-  save()
-}
-
-function onMismatch(cards, kind = null) {
+function onMismatch(cards) {
   sound.miss()
   for (const card of cards) {
     const c = card.critter
-    // A kind miss (the child was right, the game sorts it elsewhere) nods instead of shaking its head
+    // A puzzled little head shake: "not me!"
     tween(0.7, (t) => {
-      if (kind) c.nod = Math.sin(t * Math.PI * 2) * 0.2 * (1 - t)
-      else c.shake = Math.sin(t * Math.PI * 4) * 0.45 * (1 - t)
+      c.shake = Math.sin(t * Math.PI * 4) * 0.45 * (1 - t)
       c.tilt = Math.sin(t * Math.PI) * 0.15
-      if (t >= 1) c.shake = c.tilt = c.nod = 0
+      if (t >= 1) c.shake = c.tilt = 0
     })
   }
-  if (game.mode === 'groups') {
-    if (kind) {
-      // "A penguin is wild too! In this game, it goes with the water animals."
-      talk.sayOnce(`${an(kind.animal)} ${kind.animal} ${kind.line}! In this game, it goes with the ${GROUPS[GROUP_OF[kind.animal]].word}.`)
-    } else {
-      // The one that did not belong says where it lives, once a round: "A dog is a pet."
-      const odd = cards.at(-1).animal
-      talk.sayOnce(`${an(odd)} ${odd} ${LIVES[odd] ?? GROUPS[GROUP_OF[odd]].is}.`)
-    }
-  } else if (game.mode === 'twins' && cards[0].animal === cards[1].animal) {
-    // Look-alikes: the same animal, but not the same twin
-    talk.sayOnce(`Look closely! One ${cards[0].animal} has ${LOOKS.bow.a}, and one has ${LOOKS.hat.a}.`)
-  } else {
-    // A sleeping baby that was missed says whose baby it is, once a round: "A cub is a lion's or a
-    // panda's baby." Only the parents on this board are named.
-    const cradle = cards.find((c) => c.kind === 'cradle')
-    if (cradle) {
-      const word = WORDS[cradle.animal].baby
-      const parents = [...new Set(game.cards.filter((c) => c.kind === 'animal' && WORDS[c.animal].baby === word).map((c) => c.animal))]
-      // Not droppable: the one corrective fact on this board is heard whole; the next clue waits
-      talk.sayOnce(`${an(word)} ${word} is ${orWords.format(parents.map((p) => `${an(p).toLowerCase()} ${p}’s`))} baby.`)
-    }
-  }
   game.mismatch = { cards }
-  // The cards stay open until their names (or sounds) have been heard, then turn back over.
-  // Big boards need less time to look: the names were already said the first time.
+  // Long enough to see both animals; a tap on another card closes them at once.
   const round = game.round
-  const look = game.cards.length >= 12 ? 0.8 : 1.25
-  Promise.all([wait(look), Promise.race([talk.idle(), wait(4)])]).then(() => {
+  wait(1.3).then(() => {
     if (round === game.round && game.mismatch?.cards === cards) closeMismatch(false)
   })
 }
@@ -1680,113 +1798,260 @@ function closeMismatch(fast) {
 }
 
 /**
- * The board that comes next adapts to how this one went, without locking anything (every level
- * stays on the menu): a careful board (hardly a slip) steps up two sizes, a hard one (many slips)
- * stays the same size with new animals, anything else steps up one.
+ * The finale: a little tune and confetti, one of the parties (see FINALES), then everyone jumps
+ * together under a shower of confetti.
  */
-function adaptNext() {
-  const last = levelsFor(game.mode).length - 1
-  // Careful means remembering, not luck: few slips, and some cards found again from memory (a
-  // small board matched first time by chance has no memory in it, so it only steps up one).
-  const careful = game.slips <= Math.max(1, Math.floor(game.sets.length / 4)) && game.recalled >= Math.max(1, Math.ceil(game.sets.length / 3))
-  const hard = game.slips >= Math.ceil(game.sets.length / 2) + 1
-  const step = hard ? 0 : careful && game.level >= 1 ? 2 : 1
-  const next = Math.min(last, game.level + step)
-  progress.next[game.mode] = next
-  return { next, step: next - game.level, hard }
+/** Moves an animal standing on its card to a point on the table (world x, z). */
+function standAt(card, x, z) {
+  card.critter.holder.position.x = x - card.group.position.x
+  card.critter.holder.position.z = z - card.group.position.z
 }
+
+/** Each party returns when everyone jumps together (seconds from its start). */
+const FINALES = [
+  // Roll call: each pair hops and calls in turn; then a wave of hops runs left to right, column by
+  // column, each a note higher up the scale
+  (order, later) => {
+    const gap = Math.min(WIN_CALL_GAP, 3.2 / order.length) // a big board's roll call stays quick
+    order.forEach((animal, i) => {
+      later(0.7 + i * gap, () => {
+        const pair = game.cards.filter((c) => c.animal === animal)
+        chatter(pair[0].critter)
+        for (const c of pair) {
+          hopOnce(c.critter, 0.45)
+          effects.sparkle(c.worldTop(), { count: 8, speed: 1.2, up: 1.6, size: 0.06 })
+        }
+      })
+    })
+    const wave = 0.9 + order.length * gap
+    const columns = [...new Set(game.cards.map((c) => Math.round(c.slot.x * 10)))].sort((x, y) => x - y)
+    columns.forEach((x, i) => {
+      later(wave + i * 0.2, () => {
+        sound.note(i)
+        for (const c of game.cards) if (Math.round(c.slot.x * 10) === x) hopOnce(c.critter, 0.5)
+      })
+    })
+    return wave + columns.length * 0.2 + 0.35
+  },
+  // A conga: everyone hops off their card into a line that dances once round the mat, to a drum
+  (order, later) => {
+    const { hw, hd } = game.layout
+    const rx = Math.max(0.35, hw - 0.45)
+    const rz = Math.max(0.3, hd - 0.45)
+    // Round the edge of the mat: a rounded rectangle (u from 0 to 1 goes once round)
+    const path = (u) => {
+      const ang = u * Math.PI * 2 + Math.PI / 2 // starting at the front middle
+      const c = Math.cos(ang)
+      const sn = Math.sin(ang)
+      return [rx * Math.sign(c) * Math.abs(c) ** 0.5, rz * Math.sign(sn) * Math.abs(sn) ** 0.5]
+    }
+    const line = [...game.cards].sort((a, b) => b.golden - a.golden || order.indexOf(a.animal) - order.indexOf(b.animal))
+    const spacing = Math.min(1 / line.length, 0.11)
+    const GO = 0.6
+    const MARCH = 4.5
+    const STOP = 0.45
+    const BACK = 0.6
+    if (line[0].golden) sound.chime()
+    line.forEach((card, i) => {
+      const a = card.critter
+      const home = card.group.position.clone().add(a.holder.position)
+      const yaw0 = a.yaw
+      const u0 = -i * spacing
+      a.busy = true
+      tween(GO + MARCH + BACK, (t) => {
+        const T = t * (GO + MARCH + BACK)
+        if (T < GO) {
+          const e = ease.inOutCubic(T / GO)
+          const [x, z] = path(u0)
+          standAt(card, home.x + (x - home.x) * e, home.z + (z - home.z) * e)
+          a.hop = Math.sin((T / GO) * Math.PI) * 0.5
+        } else if (T < GO + MARCH) {
+          // Dance a stretch, stop, turn to the child and hop (cha!), three times round
+          const m = T - GO
+          const leg = Math.min(2, Math.floor(m / (MARCH / 3)))
+          const inLeg = m - leg * (MARCH / 3)
+          const moving = inLeg < MARCH / 3 - STOP
+          const u = u0 + (leg + Math.min(1, inLeg / (MARCH / 3 - STOP))) / 3
+          const [x, z] = path(u)
+          const [nx, nz] = path(u + 0.01)
+          standAt(card, x, z)
+          if (moving) {
+            // Facing the way they go, but never further round than three-quarters, so faces stay in view
+            const dir = Math.atan2(nx - x, nz - z)
+            a.yaw = Math.abs(dir) > 1.1 ? Math.sign(nx - x || 1) * 1.1 : dir
+            a.hop = Math.abs(Math.sin(m * Math.PI * 2.9)) * 0.16
+            a.rock = Math.sin(m * Math.PI * 2.9) * 0.18
+          } else {
+            const k = (inLeg - (MARCH / 3 - STOP)) / STOP
+            a.yaw *= 0.75 // turning to the child
+            a.hop = Math.sin(k * Math.PI) * 0.45
+            a.rock = 0
+          }
+          if (card.golden && Math.random() < 0.15) effects.sparkle(card.worldTop(), { count: 1, speed: 0.4, up: 0.8, size: 0.05, colors: GOLD })
+        } else {
+          const e = ease.inOutCubic((T - GO - MARCH) / BACK)
+          const [x, z] = path(u0 + 1)
+          standAt(card, x + (home.x - x) * e, z + (home.z - z) * e)
+          a.yaw = yaw0
+          a.rock = 0
+          a.hop = Math.sin(e * Math.PI) * 0.5
+        }
+        if (t >= 1) {
+          standAt(card, home.x, home.z)
+          Object.assign(a, { hop: 0, rock: 0, yaw: yaw0, busy: false })
+        }
+      }, { delay: 0.6 })
+    })
+    for (let k = 0; k < 12; k++) later(0.6 + GO + k * (MARCH / 12), () => sound.drum(k % 4 === 3))
+    order.forEach((animal, i) => later(1.4 + i * Math.min(0.5, 3.6 / order.length), () => chatter(game.cards.find((c) => c.animal === animal).critter)))
+    return 0.6 + GO + MARCH + BACK + 0.2
+  },
+  // A ring dance: everyone hops into a circle in the middle and dances round, a note at each step
+  (order, later) => {
+    const { hw, hd } = game.layout
+    const cards = game.cards
+    // A wide ring: an oval nearly as big as the board, everyone spread out evenly
+    const rx = Math.max(0.35, hw - 0.45)
+    const rz = Math.max(0.3, hd - 0.45)
+    const GO = 0.7
+    const SPIN = 3.6
+    const BACK = 0.7
+    cards.forEach((card, i) => {
+      const a = card.critter
+      const home = card.group.position.clone().add(a.holder.position)
+      const yaw0 = a.yaw
+      const th = (i / cards.length) * Math.PI * 2
+      const at = (T) => {
+        const ang = th + (T / SPIN) * Math.PI * 1.6
+        return [Math.sin(ang) * rx, Math.cos(ang) * rz, ang]
+      }
+      a.busy = true
+      tween(GO + SPIN + BACK, (t) => {
+        const T = t * (GO + SPIN + BACK)
+        if (T < GO) {
+          const e = ease.inOutCubic(T / GO)
+          const [x, z] = at(0)
+          standAt(card, home.x + (x - home.x) * e, home.z + (z - home.z) * e)
+          a.hop = Math.sin((T / GO) * Math.PI) * 0.5
+        } else if (T < GO + SPIN) {
+          const [x, z] = at(T - GO)
+          standAt(card, x, z)
+          a.yaw = Math.sin((T - GO) * Math.PI * 1.2 + i) * 0.5 // facing the child, swaying
+          a.hop = Math.abs(Math.sin((T - GO) * Math.PI * 2.5 + i)) * 0.22
+        } else {
+          const e = ease.inOutCubic((T - GO - SPIN) / BACK)
+          const [x, z] = at(SPIN)
+          standAt(card, x + (home.x - x) * e, z + (home.z - z) * e)
+          a.yaw = yaw0
+          a.hop = Math.sin(e * Math.PI) * 0.5
+        }
+        if (t >= 1) {
+          standAt(card, home.x, home.z)
+          Object.assign(a, { hop: 0, yaw: yaw0, busy: false })
+        }
+      }, { delay: 0.6 })
+    })
+    for (let k = 0; k < 9; k++) later(0.6 + GO + k * (SPIN / 9), () => sound.note(k))
+    order.forEach((animal, i) => later(1.5 + i * Math.min(0.45, 3.2 / order.length), () => chatter(game.cards.find((c) => c.animal === animal).critter)))
+    return 0.6 + GO + SPIN + BACK + 0.2
+  },
+  // A fountain of hops: two waves blossom out from the middle, then settle.
+  (order, later) => {
+    const cards = [...game.cards].sort((a, b) => a.slot.lengthSq() - b.slot.lengthSq())
+    for (let wave = 0; wave < 2; wave++) cards.forEach((c, i) => {
+      later(0.6 + wave * 1.5 + i * 0.065, () => {
+        hopOnce(c.critter, 0.55 + wave * 0.15)
+        if (i % 2 === 0) sound.note(i % 8)
+      })
+    })
+    return 3.8
+  },
+  // A domino giggle: a playful lean runs across the twins and bounces back.
+  (order, later) => {
+    const cards = [...game.cards].sort((a, b) => a.slot.x - b.slot.x || a.slot.z - b.slot.z)
+    for (let wave = 0; wave < 2; wave++) (wave ? [...cards].reverse() : cards).forEach((c, i) => {
+      later(0.6 + wave * 1.6 + i * 0.07, () => {
+        sound.note(i % 8)
+        const a = c.critter
+        a.busy = true
+        tween(0.65, (t) => {
+          a.rock = Math.sin(t * Math.PI * 2) * 0.3
+          a.hop = Math.sin(t * Math.PI) * 0.25
+          if (t >= 1) Object.assign(a, { rock: 0, hop: 0, busy: false })
+        })
+      })
+    })
+    return 4
+  },
+]
 
 function winLevel() {
   game.state = 'won'
-  const sets = game.sets.length
-  // A finished level is remembered as done (1). Saves from before the calm pass may hold 2 or 3.
-  const done = doneLevels()
-  done[game.level] = Math.max(done[game.level] ?? 0, 1)
-  const { next, step, hard } = adaptNext()
+  game.friends = [...game.found]
+  progress.done[game.level] = 1
+  // Usually climb, with small breathers; the biggest board always returns to 2–4 pairs.
+  const last = LEVELS.length - 1
+  const next = game.level === last ? shuffle([0, 1, 2])[0]
+    : game.level >= 2 && Math.random() < 0.3 ? shuffle([0, 1].filter((n) => n !== game.level))[0]
+      : game.level + 1
+  progress.next = next
   save()
-
-  // One soft moment: a gentle chord, a few slow pieces drifting down, then each
-  // animal waves and says hello in turn, one voice at a time (WIN_CALL_GAP apart).
+  const round = game.round
+  const later = (s, fn) => wait(s).then(() => round === game.round && fn())
   sound.fanfare()
   const { hw, hd } = game.layout
-  effects.rain(new THREE.Vector3(0, 0, 0), hw + 0.6, hd + 0.6, 24)
+  effects.rain(new THREE.Vector3(0, 0, 0), hw + 0.6, hd + 0.6, 40)
   const byPlace = [...game.cards].sort((a, b) => a.slot.z - b.slot.z || a.slot.x - b.slot.x)
-  // Homes: group by group, so the farm animals call together, then the pets…
-  if (game.mode === 'groups') byPlace.sort((a, b) => game.sets.indexOf(a.set) - game.sets.indexOf(b.set))
-  const found = []
-  for (const card of byPlace) if (!found.includes(card.animal)) found.push(card.animal)
-  talk.trim() // only what is droppable: a match line still waiting is heard
-  const round = game.round
-  found.forEach((animal, i) => {
-    const delay = 0.6 + i * WIN_CALL_GAP
-    for (const card of game.cards) if (card.animal === animal) dance(card.critter, { delay, dur: 1.0, hops: 2, height: 0.35 })
-    // Waited on the game clock (not booked ahead on the AudioContext), so leaving strands it
-    wait(delay).then(() => round === game.round && sound.voice(animal))
+  const order = [...new Set(byPlace.map((c) => c.animal))]
+  // Choose a fresh party, including the hop fountain and domino giggle.
+  game.finale = shuffle(FINALES.map((_, i) => i).filter((i) => i !== game.finale))[0]
+  const together = FINALES[game.finale](order, later)
+  // Everyone together: one big spinning jump, and confetti
+  later(together, () => {
+    sound.boing()
+    for (const c of game.cards) dance(c.critter, { dur: 1.1, hops: 1, height: 1.0 })
+    effects.rain(new THREE.Vector3(0, 0, 0), hw + 0.8, hd + 0.8, 120)
+    later(1.15, () => {
+      for (const c of game.cards) {
+        c.critter.holder.position.x = c.special === 'baby' ? -0.12 : 0
+        c.critter.holder.position.z = 0.1
+        Object.assign(c.critter, { roll: 0, rock: 0, tilt: 0, spin: 0, hop: 0, squash: 0, busy: false })
+      }
+      for (const c of game.cards) effects.puff(c.group.position.clone().setY(MAT_TOP), { count: 6, radius: 0.4, size: 0.06 })
+    })
   })
-  // After the last hello, name what was found: the animals on a small board, just the line on a
-  // big one (every name was already said while playing).
-  const names = (list) => (list.length <= 4 ? `${cap(listWords.format(list))}. ` : '')
-  const recap = {
-    twins: () => `${names(found)}You found all the twins!`,
-    sound: () => `${names(found)}You know all their sounds!`,
-    baby: () => `${names(found.map((name) => WORDS[name].baby))}You found every baby!`,
-    groups: () => `${cap(listWords.format(game.sets.map((id) => GROUPS[id].word)))}. You know who lives together!`,
-  }[game.mode]()
-  wait(0.6 + found.length * WIN_CALL_GAP + 0.5).then(() => talk.say(recap))
 
-  wait(1.6).then(() => {
-    const last = game.level === levelsFor(game.mode).length - 1
-    $('win-title').textContent = 'You found them all!'
-    $('win-text').textContent = {
-      twins: `${sets} pairs of animal twins`,
-      sound: `${sets} animals and their sounds`,
-      baby: `${sets} animals and their babies`,
-      groups: `${sets} groups that live together`,
-    }[game.mode]
-    // What comes next, and why: a quiet line, never a grade.
-    $('win-next').textContent = last
-      ? ''
-      : step >= 2
-        ? 'You remembered where they were! Next is a bigger board.'
-        : hard
-          ? 'Next: the same size, with new animals.'
-          : ''
-    $('next').classList.toggle('hidden', last)
-    $('next').dataset.level = next
-    // Show what the child found, in the order they say hello. Each can be tapped to hear it again.
-    const entries = game.mode === 'groups'
-      ? game.sets.map((id) => ({ animals: found.filter((n) => GROUP_OF[n] === id), html: `<i>${GROUPS[id].icon}</i>${found.filter((n) => GROUP_OF[n] === id).map((n) => ANIMALS[n].emoji).join('')}`, label: GROUPS[id].word, line: () => MATCH_WORDS.groups(id, found.filter((n) => GROUP_OF[n] === id)) }))
-      : [...new Set(byPlace.map((c) => c.set))].map((set) => {
-          const { animal, critter: { look } } = game.cards.find((c) => c.set === set)
-          return {
-            animals: [animal],
-            look,
-            html: game.mode === 'baby' ? `${ANIMALS[animal].emoji}<small>${ANIMALS[animal].emoji}</small>` : `${ANIMALS[animal].emoji}${look ? `<sup>${LOOKS[look].icon}</sup>` : ''}`,
-            label: game.mode === 'baby' ? `${animal} and ${WORDS[animal].baby}` : look ? `${animal} with ${LOOKS[look].a}` : animal,
-            line: () => (game.mode === 'baby' ? MATCH_WORDS.baby(animal) : `${cap(animal)}${look ? ` with ${LOOKS[look].a}` : ''}!`),
-          }
-        })
-    $('win-stars').classList.toggle('grouped', game.mode === 'groups')
-    $('win-stars').replaceChildren(...entries.map((entry) => {
+  // The buttons come once the party has had the stage (the animals can still be tapped meanwhile)
+  // Wait for the actual dance, homecoming and final landing before showing controls.
+  later(together + 1.25, () => {
+    game.nextBoard = next
+    // The animals found, popping in one by one; tap one to hear it again.
+    const pairs = [...new Map(byPlace.map((c) => [c.pairId, c])).values()]
+    $('win-stars').replaceChildren(...pairs.map((card, i) => {
+      const animal = card.animal
       const el = document.createElement('button')
-      el.className = 'found'
-      el.innerHTML = entry.html
-      el.setAttribute('aria-label', entry.label)
-      // Fades in as its first animal says hello
-      el.style.animationDelay = `${(0.6 + found.indexOf(entry.animals[0]) * WIN_CALL_GAP - 1.6).toFixed(2)}s`
+      el.className = `found ${animal === game.goldFound ? 'gold' : ''}`
+      el.textContent = ANIMALS[animal].emoji
+      el.setAttribute('aria-label', animal)
+      el.style.animationDelay = `${(0.15 + i * 0.09).toFixed(2)}s`
       el.addEventListener('click', () => {
-        for (const card of game.cards) if (entry.animals.includes(card.animal) && (card.critter.look ?? null) === (entry.look ?? null)) hopOnce(card.critter, 0.35)
-        if (entry.animals.length === 1) talk.call(entry.animals[0], { droppable: true })
-        talk.say(entry.line(), { droppable: true })
+        const pair = game.cards.filter((c) => c.pairId === card.pairId)
+        chatter(pair[0].critter)
+        for (const c of pair) hopOnce(c.critter, 0.4)
+        el.classList.remove('bump')
+        void el.offsetWidth
+        el.classList.add('bump')
       })
       return el
     }))
-    $('win-stars').setAttribute('aria-label', entries.map((e) => e.label).join(', '))
+    // Six and up, and all narrow screens: balanced rows instead of a stranded emoji.
+    $('win-stars').classList.toggle('rows', order.length >= 6 || innerWidth <= 420)
+    $('win-stars').style.setProperty('--cols', Math.ceil(order.length / 2))
     show('win')
+    game.winShownAt = performance.now()
     relayout(true) // the camera pulls back so the animals stay in view above the card
   })
 }
-
 // --- Input ------------------------------------------------------------------------------------
 
 const raycaster = new THREE.Raycaster()
@@ -1842,11 +2107,17 @@ function tapToy(e) {
   const done = () => {
     prop.position.y = 0
     prop.rotation.x = prop.rotation.z = 0
-    prop.scale.setScalar(1)
+    if (name !== 'prop_theme') prop.scale.setScalar(1) // a place's toy keeps the size it was given to fit
     toy.busy = false
   }
   const yaw = prop.rotation.y
   const anims = {
+    // A place's own toy: a happy wobble and a little hop
+    prop_theme: [0.9, (t) => {
+      prop.position.y = Math.sin(t * Math.PI) * 0.25
+      prop.rotation.z = Math.sin(t * Math.PI * 4) * 0.18 * (1 - t)
+      prop.rotation.y = yaw + Math.sin(t * Math.PI * 2) * 0.3
+    }],
     // Bounces high, three times, a little lower each time.
     prop_ball: [1.3, (t) => {
       const k = Math.min(2, Math.floor(t * 3))
@@ -1892,16 +2163,19 @@ function tapToy(e) {
   return true
 }
 
-addEventListener('pointerdown', () => sound.unlock(), { capture: true })
-canvas.addEventListener('pointerdown', (e) => {
+addEventListener('pointerdown', () => {
+  sound.unlock()
   game.idle = 0
+  hideHand()
+}, { capture: true })
+canvas.addEventListener('pointerdown', (e) => {
   if (game.state === 'menu') {
     const hit = pick(e, parade.children)
     const a = hit && tagged(hit.object, 'animal')
     if (a) {
       if (!a.busy) {
         dance(a, { dur: 0.9, hops: 2, height: 0.4 })
-        callAndName(a)
+        chatter(a)
         effects.sparkle(a.holder.position.clone().setY(1.0), { count: 14 })
       }
       return
@@ -1913,10 +2187,8 @@ canvas.addEventListener('pointerdown', (e) => {
   if (game.state === 'won') {
     // The party goes on under the win card: tapped animals hop and say hello.
     const card = pickCard(e)
-    if (card) {
-      hopOnce(card.critter, 0.35)
-      callAndName(card.critter)
-    } else tapToy(e)
+    if (card) tapAnimal(card)
+    else tapToy(e)
     return
   }
   const card = game.state === 'play' && pickCard(e)
@@ -1939,122 +2211,157 @@ function tagged(obj, key) {
   return null
 }
 
-$('play').addEventListener('click', () => {
-  sound.tap()
-  startLevel(nextLevel())
-})
-$('home').addEventListener('click', () => {
-  sound.tap()
-  enterMenu()
-})
-$('win-home').addEventListener('click', () => {
-  sound.tap()
-  enterMenu()
-})
-$('again').addEventListener('click', () => {
-  sound.tap()
-  startLevel(game.level)
-})
-$('next').addEventListener('click', () => {
-  sound.tap()
-  // The board winLevel chose from how this one went (see adaptNext)
-  startLevel(Number($('next').dataset.level ?? game.level + 1))
-})
-// Homes: a tapped sign says its word ("Water animals: 3"), or once found, who lives there.
-$('pairs').addEventListener('click', (e) => {
-  const id = e.target.closest('[data-group]')?.dataset.group
-  if (!id || (game.state !== 'play' && game.state !== 'dealing')) return
-  const home = game.cards.filter((c) => c.set === id && c.state === 'matched').map((c) => c.animal)
-  const line = home.length ? MATCH_WORDS.groups(id, home) : `${cap(GROUPS[id].word)}: ${game.setSize[id]}`
-  if (!talk.has(line)) talk.say(line, { droppable: true })
-})
-// --- The animal book -------------------------------------------------------------------------------
-
-/** What the book says about an animal: only what the child has found out. */
-function pageWords(name) {
-  const page = progress.book[name] ?? {}
-  const w = WORDS[name]
-  return [
-    `${cap(name)}!`,
-    page.call && w.call ? `It says ${w.call}` : '',
-    page.baby && w.baby ? `Its baby is ${an(w.baby).toLowerCase()} ${w.baby}.` : '',
-    page.home ? `It ${LIVES[name] ?? GROUPS[GROUP_OF[name]].is}.` : '',
-  ].filter(Boolean).join(' ')
-}
-
-/**
- * A page for every animal. A page fills in as the child finds the animal (any mode), its call
- * (Sounds), its baby (Babies) and its home (Homes); the dashed spaces show what is still to find.
- */
-function openBook() {
-  $('book-grid').replaceChildren(...NAMES.map((name) => {
-    const page = progress.book[name] ?? {}
-    const w = WORDS[name]
-    const fact = (known, icon, text) => (known ? `<span>${icon} ${text}</span>` : `<span class="todo">${icon} ?</span>`)
-    const el = document.createElement('button')
-    el.className = `page ${page.met ? '' : 'unmet'}`
-    el.innerHTML = `<span class="face">${ANIMALS[name].emoji}</span><span class="name">${page.met ? cap(name) : '?'}</span><span class="facts">${[
-      w.call ? fact(page.call, '🔊', w.call.replace(/!$/, '')) : '',
-      w.baby ? fact(page.baby, '🍼', w.baby) : '',
-      fact(page.home, GROUPS[GROUP_OF[name]].icon, { farm: 'farm', pets: 'home', wild: 'wild', water: 'water' }[GROUP_OF[name]]),
-    ].join('')}</span>`
-    el.setAttribute('aria-label', page.met ? pageWords(name) : 'Not found yet')
-    el.addEventListener('click', () => {
-      sound.tap()
-      if (!page.met) return
-      talk.clear()
-      talk.call(name, { droppable: true })
-      talk.say(pageWords(name), { droppable: true })
-    })
-    return el
-  }))
-  $('book-page').classList.remove('hidden')
-}
-
-function closeBook() {
-  talk.clear()
-  $('book-page').classList.add('hidden')
-}
-
-$('book').addEventListener('click', () => {
-  sound.tap()
-  openBook()
-})
-$('book-close').addEventListener('click', () => {
-  sound.tap()
-  closeBook()
-})
-
-for (const el of document.querySelectorAll('[data-mode]')) {
-  el.addEventListener('click', () => {
+{
+  // ▶ too counts only a press that started on the menu
+  let downAt = 0
+  $('play').addEventListener('pointerdown', () => (downAt = performance.now()))
+  $('play').addEventListener('click', (e) => {
+    if (e.detail !== 0 && downAt < game.menuShownAt) return
     sound.tap()
-    chooseMode(el.dataset.mode)
+    startLevel(nextLevel())
   })
 }
-$('mute').addEventListener('click', () => {
+/**
+ * 🏠 and 🔊 during play are pressed and held (a ring fills round the button), so a stray tap or a
+ * mash never ends a board or silences the game. A keyboard press acts at once.
+ */
+const HOLD = 0.7
+/**
+ * Every finger on the screen, anywhere: a hold only starts when it is the only one, so a resting
+ * hand (one finger on 🏠, two on the board) never exits or mutes.
+ */
+const fingers = new Set()
+/** After a hold acts, the lifting finger's click (on whatever is under it now) is dropped once. */
+function swallowNextClick(pointerId) {
+  let released = false
+  let timer
+  const stop = () => {
+    removeEventListener('click', drop, true)
+    removeEventListener('pointerup', lift, true)
+    removeEventListener('pointercancel', lift, true)
+    clearTimeout(timer)
+  }
+  const drop = (e) => {
+    if (e.pointerId !== pointerId) return
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    if (released) stop()
+  }
+  const lift = (e) => {
+    if (e.pointerId !== pointerId) return
+    released = true
+    // A compatibility click follows pointerup in this event turn. No deadline while held.
+    timer = setTimeout(stop, 0)
+  }
+  addEventListener('click', drop, true)
+  addEventListener('pointerup', lift, true)
+  addEventListener('pointercancel', lift, true)
+}
+const holds = new Set() // the cancel functions of holds that are running
+document.addEventListener('pointerdown', (e) => {
+  fingers.add(e.pointerId)
+  for (const cancel of [...holds]) cancel(e.pointerId)
+}, true)
+for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, (e) => fingers.delete(e.pointerId), true)
+
+/**
+ * quick(): when true, a plain tap acts at once (🔊 unmutes with a tap; only muting needs the hold).
+ * One finger only: any other finger landing anywhere cancels the hold, no new hold starts until
+ * every finger has lifted, and only the finger that started a hold can end it.
+ */
+function holdButton(btn, action, quick = () => false) {
+  let start = 0
+  let frame = 0
+  let finger = null
+  const end = () => {
+    cancelAnimationFrame(frame)
+    frame = 0
+    start = 0
+    finger = null
+    holds.delete(cancel)
+    btn.style.setProperty('--hold', 0)
+    btn.classList.remove('holding')
+  }
+  const cancel = (id) => id !== finger && end()
+  const step = () => {
+    frame = 0
+    if (!start) return // cancelled
+    const k = Math.min(1, (performance.now() - start) / (HOLD * 1000))
+    btn.style.setProperty('--hold', k)
+    if (k < 1) frame = requestAnimationFrame(step)
+    else {
+      const completedFinger = finger
+      end()
+      swallowNextClick(completedFinger) // the finger is still down: its lift must not click what replaces this button
+      sound.tap()
+      action()
+    }
+  }
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    if (fingers.size > 1) return end() // other fingers are down somewhere: no hold
+    if (quick()) {
+      sound.unlock()
+      action()
+      sound.tap()
+      return
+    }
+    end() // nothing left over from before
+    finger = e.pointerId
+    btn.setPointerCapture?.(e.pointerId)
+    start = performance.now()
+    btn.classList.add('holding')
+    sound.tick()
+    holds.add(cancel)
+    frame = requestAnimationFrame(step)
+  })
+  const lift = (e) => {
+    if (e.pointerId === finger) end()
+  }
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) btn.addEventListener(type, lift)
+  btn.addEventListener('click', (e) => {
+    if (e.detail === 0) action() // keyboard
+  })
+}
+holdButton($('home'), enterMenu)
+/**
+ * The win card's buttons wake up a moment after it appears (ARM), and a finger already down by
+ * then does not count: a child still tapping animals at the party never skips or leaves by
+ * accident. Its 🏠, like the one in play, is held.
+ */
+const ARM = 600
+function armedButton(id, fn) {
+  const btn = $(id)
+  let downAt = 0
+  btn.addEventListener('pointerdown', () => (downAt = performance.now()))
+  btn.addEventListener('click', (e) => {
+    const armed = performance.now() - game.winShownAt >= ARM && (e.detail === 0 || downAt >= game.winShownAt + ARM)
+    if (!armed || game.state !== 'won') return
+    sound.tap()
+    fn()
+  })
+}
+armedButton('again', () => startLevel(game.level))
+armedButton('next', () => startLevel(game.nextBoard ?? game.level + 1))
+holdButton($('win-home'), () => performance.now() - game.winShownAt >= ARM && game.state === 'won' && enterMenu())
+function toggleMute() {
   progress.muted = !progress.muted
   sound.setMuted(progress.muted)
-  voice.setMuted(progress.muted)
-  if (progress.muted) stopPeekSpeech()
   updateMute()
-  save()
-})
+}
+// Muting takes a hold (so mashing never silences the game); a tap brings the sound back
+for (const id of ['mute', 'menu-mute']) holdButton($(id), toggleMute, () => progress.muted)
 addEventListener('keydown', (e) => {
-  if (!$('book-page').classList.contains('hidden')) {
-    if (e.key === 'Escape') closeBook()
-    return
-  }
+  // Enter starts from the menu; no key ends a board (🏠 is held for that)
   if (e.key === 'Enter' && game.state === 'menu') startLevel(nextLevel())
-  else if (e.key === 'Escape' && game.state !== 'menu' && game.state !== 'loading') enterMenu()
 })
 // Block pinch zoom and double-tap zoom on iOS.
 for (const type of ['gesturestart', 'dblclick']) document.addEventListener(type, (e) => e.preventDefault())
 
 let resizeTimer = 0
 function resize() {
-  const w = innerWidth
-  const h = innerHeight
-  renderer.setSize(w, h, false)
+  renderer.setSize(innerWidth, innerHeight, false)
+  hideHand()
   clearTimeout(resizeTimer)
   resizeTimer = setTimeout(() => game.state !== 'loading' && relayout(false), 60)
 }
@@ -2067,20 +2374,43 @@ function frameLoop() {
   timer.update()
   const dt = Math.min(timer.getDelta(), 0.05)
   game.time += dt
+  game.idle += dt
   updateTweens(dt)
   for (const card of game.cards) card.update(dt, game.time)
   for (const a of game.paradeAnimals) {
     poseAnimal(a, game.time)
-    if (!a.busy && Math.random() < dt * 0.08) hopOnce(a, 0.2)
+    if (!a.busy && Math.random() < dt * 0.1) hopOnce(a, 0.2)
   }
   if (game.state === 'play' || game.state === 'won') {
-    // Matched animals hop now and then, quietly.
-    const rate = game.state === 'won' ? 0.08 : 0.04
+    // Found animals stay lively: a little hop now and then.
+    const rate = game.state === 'won' ? 0.1 : 0.05
     for (const card of game.cards) {
       if (card.state === 'matched' && !card.critter.busy && Math.random() < dt * rate) hopOnce(card.critter, 0.2)
+      // A golden pair glitters now and then
+      if (card.golden && card.state === 'matched' && Math.random() < dt * 0.6) effects.sparkle(card.worldTop(), { count: 2, speed: 0.6, up: 1, size: 0.05, colors: GOLD })
     }
   }
-  // No idle nudges: a child who is thinking is left to think (calm pass 2026-10-09).
+  // At night the lantern glows warm on the table round it
+  if (halo.visible) {
+    halo.getWorldPosition(lanternLight.position)
+    lanternLight.intensity = themeProps.lantern?.visible && themeProps.lantern.parent ? 2.2 + Math.sin(game.time * 2.1) * 0.25 : 0
+  }
+  // A place's weather: snow drifting down, bubbles wobbling up
+  if (game.theme?.weather && game.layout && game.state !== 'menu' && Math.random() < dt * 5) {
+    effects.weather(game.theme.weather, _origin, game.layout.hw + 0.5, game.layout.hd + 0.5)
+  }
+  // Peekaboo (some boards, once, a few turns in): a hidden animal peeps out and waves
+  if (game.state === 'play' && game.turns >= game.peekabooAt && !game.open.length && !game.busy && !game.mismatch && Math.random() < dt * 0.5) {
+    game.peekabooAt = Infinity
+    const down = game.cards.filter((c) => c.state === 'down')
+    down[(Math.random() * down.length) | 0]?.peekaboo()
+  }
+  // Now and then a face-down card lifts a corner, as if someone underneath were peeking out
+  if (game.state === 'play' && !game.open.length && !game.busy && Math.random() < dt * 0.12) {
+    const down = game.cards.filter((c) => c.state === 'down')
+    down[(Math.random() * down.length) | 0]?.peekCorner()
+  }
+  maybeShowHand()
   effects.update(dt, camera)
   syncCamera()
   renderer.render(scene, camera)
@@ -2093,7 +2423,7 @@ async function main() {
     await loadAssets()
   } catch (err) {
     console.error(err)
-    $('loading-text').textContent = 'Oops, the animals are hiding. Please reload!'
+    $('loading').classList.add('failed')
     return
   }
   buildRoom()
@@ -2105,37 +2435,5 @@ async function main() {
 }
 
 main()
-
-function stopPeekSpeech() {
-  talk.clear()
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) stopPeekSpeech()
-})
-addEventListener('pagehide', stopPeekSpeech)
-
-// One demonstration per round supports memory without solving the whole board.
-$('peek').onclick = async () => {
-  if (game.state !== 'play' || game.busy || game.open.length || game.peekUsed) return
-  // A pair (or in Homes a group) whose cards are all face down
-  const first = game.cards.find((card) => card.state === 'down' && game.cards.every((c) => c.set !== card.set || c.state === 'down'))
-  if (!first) return
-  // Two cards: the whole pair, or two of a group (the rest of the group is still to find)
-  const shown = game.cards.filter((c) => c.set === first.set).slice(0, 2)
-  game.peekUsed = true
-  $('peek').disabled = true
-  $('peek').setAttribute('aria-label', 'Peek used for this round')
-  game.busy = true
-  const round = game.round
-  talk.clear()
-  const revealing = Promise.all(shown.map((card) => card.flipUp()))
-  talk.say(game.mode === 'groups' ? 'These two live together. Remember where they are.' : 'These two match. Remember where they are.')
-  await revealing
-  banner(game.mode === 'twins' ? 'Look! Twins!' : game.mode === 'groups' ? `Look! ${cap(GROUPS[first.set].word)}!` : 'Look! A pair!', 2200, shown)
-  await Promise.all([wait(2.4), Promise.race([talk.idle(), wait(6)])])
-  if (game.state !== 'play' || round !== game.round) return
-  await Promise.all(shown.map((card) => card.close()))
-  game.busy = false
-}
-if (new URLSearchParams(location.search).has('debug')) window.__memory = { game, camera, talk, chooseMode, belongs }
+$('reload').addEventListener('click', () => location.reload())
+if (new URLSearchParams(location.search).has('debug')) window.__memory = { game, camera, propVisible: () => !!room.props.find((p) => p.name === 'prop_theme')?.visible }

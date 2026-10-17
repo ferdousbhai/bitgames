@@ -8,7 +8,6 @@ export class Audio {
   constructor() {
     this.ctx = null
     this.muted = false
-    this.musicOn = true
     this.musicStep = 0
     this.musicNext = 0
     this.melody = 2
@@ -33,7 +32,7 @@ export class Audio {
     this.sfx = ctx.createGain()
     this.sfx.connect(this.master)
     this.music = ctx.createGain()
-    this.music.gain.value = this.musicOn ? 0.32 : 0
+    this.music.gain.value = 0.32
     this.music.connect(this.master)
     // A soft echo, shared by everything sparkly
     this.echo = ctx.createDelay(1)
@@ -60,12 +59,6 @@ export class Audio {
     if (this.master) this.master.gain.setTargetAtTime(muted ? 0 : 0.8, this.ctx.currentTime, 0.05)
   }
 
-  /** The music switch: the tune fades out or back in; everything else keeps playing. */
-  setMusic(on) {
-    this.musicOn = on
-    if (this.music) this.music.gain.setTargetAtTime(on ? 0.32 : 0, this.ctx.currentTime, 0.2)
-  }
-
   suspend() {
     this.ctx?.suspend().catch(() => {})
   }
@@ -89,33 +82,109 @@ export class Audio {
     osc.stop(t + dur + 0.05)
   }
 
-  /** A soft note chosen by where the catch happened (0 = left … 5 = right); it never climbs with streaks. */
+  /** A bright little "tink" as a star is caught, pitched by where it was caught (low left, high right). */
   catch(step) {
     if (!this.ctx) return
     const n = SCALE[Math.min(step, SCALE.length - 1)]
-    this.tone(n, { dur: 0.32, vol: 0.16 })
-    this.tone(n * 2, { dur: 0.18, vol: 0.05, type: 'triangle', echo: false })
+    this.tone(n, { dur: 0.22, vol: 0.13, type: 'triangle', slide: 1.06 })
+    this.tone(n * 2, { dur: 0.12, vol: 0.05, echo: false })
   }
 
-  /** Not this number: two low, soft notes that drift down, like a gentle "hmm". Never a buzzer. */
-  notThis() {
-    if (!this.ctx) return
-    this.tone(392, { dur: 0.3, vol: 0.07, attack: 0.03, echo: false })
-    this.tone(330, { when: 0.16, dur: 0.4, vol: 0.06, attack: 0.03, echo: false })
-  }
-
-  /** A star lighting in the constellation: one soft bell per star, a step up the scale each time. */
+  /** A star landing in the picture: one bell per star, a step up the scale each time, so every picture is a little tune. */
   light(n) {
     if (!this.ctx) return
-    const f = SCALE[Math.min(n - 1, SCALE.length - 1)]
-    this.tone(f, { dur: 0.7, vol: 0.09, attack: 0.03 })
+    const f = SCALE[(n - 1) % SCALE.length]
+    this.tone(f, { dur: 0.7, vol: 0.1, attack: 0.02 })
     this.tone(f * 1.5, { dur: 0.5, vol: 0.03, type: 'triangle', when: 0.04, echo: false })
   }
 
-  /** A constellation is whole: a slow, quiet chord. */
-  constellation() {
+  /** The big pink star bursts: a quick sparkly run up the scale. */
+  sparkle() {
     if (!this.ctx) return
-    ;[392, 523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, { when: i * 0.12, dur: 1.6, vol: 0.05, attack: 0.08 }))
+    ;[0, 2, 4, 5, 7, 9].forEach((k, i) => this.tone(SCALE[k], { when: i * 0.05, dur: 0.3, vol: 0.08, type: 'triangle' }))
+  }
+
+  /** The picture is whole and wakes up: a shimmering sweep and a warm chord. */
+  wake() {
+    if (!this.ctx) return
+    SCALE.forEach((f, i) => this.tone(f, { when: i * 0.035, dur: 0.4, vol: 0.05, type: 'sine' }))
+    ;[392, 523.25, 659.25, 783.99].forEach((f) => this.tone(f, { when: 0.4, dur: 1.4, vol: 0.05, attack: 0.06, type: 'triangle' }))
+  }
+
+  /** Each star creature's own little sound (on waking, and when tapped). */
+  voice(id) {
+    if (!this.ctx) return
+    if (id === 'cat') return this.meow()
+    if (id === 'bear') {
+      // A friendly low "hrrm-hm"
+      this.tone(150, { dur: 0.35, vol: 0.2, type: 'triangle', slide: 0.8, attack: 0.04, echo: false })
+      this.tone(190, { when: 0.3, dur: 0.3, vol: 0.18, type: 'triangle', slide: 0.75, attack: 0.03, echo: false })
+    } else if (id === 'fish') {
+      // Bubbles: quick blips sliding up
+      for (let i = 0; i < 4; i++) this.tone(500 + Math.random() * 500, { when: i * 0.09, dur: 0.08, vol: 0.12, slide: 2.2, echo: false })
+    } else if (id === 'bird') {
+      // Tweet-tweet
+      ;[0, 0.16].forEach((w) => this.tone(1900, { when: w, dur: 0.1, vol: 0.09, slide: 1.5, echo: false }))
+      this.tone(2300, { when: 0.34, dur: 0.16, vol: 0.08, slide: 0.7 })
+    } else if (id === 'bunny') {
+      // A springy boing up
+      this.tone(300, { dur: 0.25, vol: 0.14, slide: 2.6, echo: false })
+      this.tone(600, { when: 0.12, dur: 0.18, vol: 0.06, type: 'triangle', slide: 1.6, echo: false })
+    } else if (id === 'butterfly') {
+      // A soft high flutter
+      for (let i = 0; i < 6; i++) this.tone(SCALE[5 + (i % 4)], { when: i * 0.06, dur: 0.18, vol: 0.05, type: 'triangle' })
+    }
+  }
+
+  /** A star (or a zoo treat) twinkling into the sky: two soft high notes. */
+  twinkle() {
+    if (!this.ctx) return
+    this.tone(SCALE[7], { dur: 0.25, vol: 0.05, type: 'triangle' })
+    this.tone(SCALE[9], { when: 0.08, dur: 0.3, vol: 0.04, type: 'triangle' })
+  }
+
+  /** A planet's friendly sneeze: a rising "ah…" and a soft, breathy "choo!". */
+  achoo() {
+    if (!this.ctx) return
+    this.tone(330, { dur: 0.4, vol: 0.09, type: 'triangle', slide: 1.5, attack: 0.08, echo: false })
+    const ctx = this.ctx
+    const t = ctx.currentTime + 0.48
+    const src = ctx.createBufferSource()
+    src.buffer = this.noise
+    const f = ctx.createBiquadFilter()
+    f.type = 'bandpass'
+    f.Q.value = 1.5
+    f.frequency.setValueAtTime(2600, t)
+    f.frequency.exponentialRampToValueAtTime(900, t + 0.25)
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28)
+    src.connect(f).connect(g).connect(this.sfx)
+    src.start(t)
+    src.stop(t + 0.3)
+    this.tone(520, { when: 0.5, dur: 0.2, vol: 0.06, type: 'triangle', slide: 0.6, echo: false })
+  }
+
+  /** A bubble popping as Kitty catches the star inside it. */
+  pop() {
+    if (!this.ctx) return
+    this.tone(700, { dur: 0.07, vol: 0.14, slide: 0.4, echo: false })
+    this.tone(1400, { when: 0.02, dur: 0.06, vol: 0.06, type: 'triangle', slide: 1.8, echo: false })
+  }
+
+  /** A candy star bouncing off the bottom of the sky: a soft "bip", lower each bounce. */
+  bip(n) {
+    if (!this.ctx) return
+    this.tone(SCALE[Math.max(0, 6 - n * 2)] * 0.5, { dur: 0.12, vol: 0.06, type: 'triangle', slide: 1.3, echo: false })
+  }
+
+  /** The friendly UFO's beep-boop when it is tapped. */
+  beep() {
+    if (!this.ctx) return
+    this.tone(880, { dur: 0.1, vol: 0.08, type: 'square', echo: false })
+    this.tone(660, { when: 0.12, dur: 0.1, vol: 0.08, type: 'square', echo: false })
+    this.tone(1320, { when: 0.24, dur: 0.18, vol: 0.06, type: 'square', slide: 1.3 })
   }
 
   /** A soft cartoon boing for bumping a sleepy rock: no harsh crash. */
@@ -143,7 +212,7 @@ export class Audio {
     lfo.stop(t + 0.65)
   }
 
-  /** Arriving at a new planet: a happy little fanfare. */
+  /** Home at last: a happy little fanfare. */
   fanfare() {
     if (!this.ctx) return
     const notes = [523.25, 659.25, 783.99, 1046.5]
@@ -233,7 +302,7 @@ export class Audio {
 
   /** Gentle music-box tune, scheduled a little ahead of time. */
   updateMusic() {
-    if (!this.ready || !this.musicOn) return
+    if (!this.ready) return
     const ctx = this.ctx
     const beat = 60 / 96 / 2
     if (this.musicNext < ctx.currentTime) this.musicNext = ctx.currentTime + 0.05

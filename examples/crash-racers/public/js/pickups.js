@@ -192,7 +192,9 @@ export class Pickups {
       const it = this.stars[i]
       d.position.set(it.x, it.y + Math.sin(this.time * 3 + i * 0.7) * 0.12, it.z)
       d.rotation.set(0, spin + i * 0.35, 0)
-      d.scale.setScalar(seen?.stars[i] ? 0 : 1.1)
+      // Right by the camera a star shrinks away instead of filling the screen.
+      const close = camera ? clamp((Math.hypot(it.x - camera.position.x, it.z - camera.position.z) - 2.5) / 3.5, 0, 1) : 1
+      d.scale.setScalar(seen?.stars[i] ? 0 : 1.1 * close)
       d.updateMatrix()
       this.starMesh.setMatrixAt(i, d.matrix)
     }

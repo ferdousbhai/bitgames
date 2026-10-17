@@ -120,7 +120,8 @@ export function buildArena(id, gltfScene, paint) {
         const box = new THREE.Box3().setFromObject(node)
         const size = box.getSize(new THREE.Vector3())
         const c = box.getCenter(new THREE.Vector3())
-        obstacles.push({ x: c.x, z: c.z, r: (Math.max(size.x, size.z) / 2) * 0.9, h: size.y })
+        // The node is kept so a rolled-into obstacle can hop; its kind (fountain, bale, block) from its name.
+        obstacles.push({ x: c.x, z: c.z, r: (Math.max(size.x, size.z) / 2) * 0.9, h: size.y, node, baseY: node.position.y, kind: node.name.replace(/^obstacle_/, '').replace(/\d.*$/, '') })
         root.add(node)
         continue
       }

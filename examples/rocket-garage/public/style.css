@@ -35,7 +35,6 @@ img { -webkit-user-drag: none; pointer-events: none; }
 .title-top, .title-bottom { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 16px; }
 .title-top { top: calc(16px + env(safe-area-inset-top)); }
 .title-bottom { bottom: calc(22px + env(safe-area-inset-bottom)); }
-.tag { margin: 0; font-size: clamp(18px, 3.6vw, 26px); font-weight: 900; color: #fff; text-shadow: 0 3px 0 rgba(58, 42, 122, 0.45); }
 .big-go {
   pointer-events: auto; background: linear-gradient(#ff7a8f, #ff3b5c); color: #fff; font-size: clamp(32px, 7vw, 46px); font-weight: 900;
   padding: 12px 56px; border-radius: 999px; box-shadow: 0 8px 0 #b81d3c, 0 14px 30px rgba(0,0,0,.2); transition: transform .1s;
@@ -63,8 +62,13 @@ img { -webkit-user-drag: none; pointer-events: none; }
   pointer-events: auto; display: flex; align-items: center; gap: 2px; background: rgba(255,255,255,.85); border-radius: 999px;
   padding: 4px 10px; box-shadow: 0 4px 0 rgba(58,42,122,.25); min-width: 0;
 }
-.reach .d { position: relative; font-size: 28px; line-height: 1; padding: 2px 3px; transition: transform .3s, filter .3s, opacity .3s; }
-.reach .d.far { filter: grayscale(1) brightness(1.2); opacity: .35; }
+.reach .d { background: none; cursor: pointer; position: relative; font-size: 28px; line-height: 1; padding: 2px 3px; transition: transform .3s, filter .3s, opacity .3s; }
+/* Places not landed on yet are dark silhouettes, still plain to see on the white bar;
+   places past the boosters' reach are fainter, and the 🚀 sits under where this rocket will go */
+.reach .d.far { filter: grayscale(1) brightness(.4) contrast(1.4); opacity: .55; }
+.reach .d.out { opacity: .3; }
+.reach .d.goal { filter: none; opacity: 1; background: #fff3c4; border-radius: 50%; box-shadow: 0 0 0 3px #ffd23f; }
+.tab.shake { animation: shake .4s; }
 .reach .d.goal { transform: scale(1.25); }
 .reach .d.goal::after { content: "🚀"; position: absolute; left: 50%; bottom: -14px; font-size: 14px; transform: translateX(-50%) rotate(-45deg); }
 .reach .d .flag { position: absolute; right: -4px; top: -6px; font-size: 13px; }
@@ -74,7 +78,6 @@ img { -webkit-user-drag: none; pointer-events: none; }
 .reach .dash.lit { background: #ffd23f; }
 
 .flightbar { display: flex; align-items: center; gap: 8px; pointer-events: none; }
-.pill { background: rgba(27, 20, 70, 0.55); border-radius: 999px; padding: 4px 16px; font-size: 28px; font-weight: 900; color: #ffd23f; text-shadow: 0 2px 0 rgba(0,0,0,.3); }
 .turbo { display: flex; align-items: center; gap: 4px; background: rgba(27, 20, 70, 0.55); border-radius: 999px; padding: 4px 10px; font-size: 22px; }
 .turbo i { display: block; width: clamp(50px, 14vw, 110px); height: 12px; border-radius: 6px; background: rgba(255,255,255,.25); overflow: hidden; }
 .turbo i span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd23f, #ff9f43); border-radius: 6px; transition: width .25s; }
@@ -148,8 +151,7 @@ body.portrait #tray.away { transform: translateY(calc(100% + 40px)); }
   box-shadow: 0 9px 0 #8c0b22, 0 0 0 7px #ffd23f, 0 0 0 11px #3b3355, 0 18px 30px rgba(0,0,0,.3);
   transition: transform .1s;
 }
-.launch .em { font-size: 46px; line-height: 1; transform: rotate(-45deg); }
-.launch .go { font-size: 24px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.launch .em { font-size: 62px; line-height: 1; transform: rotate(-45deg); }
 .launch:active { transform: translateY(7px) scale(.97); box-shadow: 0 2px 0 #8c0b22, 0 0 0 7px #ffd23f, 0 0 0 11px #3b3355; }
 .dice {
   width: 64px; height: 64px; border-radius: 20px; background: #fff; font-size: 36px; box-shadow: 0 5px 0 rgba(58,42,122,.3);
@@ -158,8 +160,7 @@ body.portrait #tray.away { transform: translateY(calc(100% + 40px)); }
 .dice:active { transform: translateY(4px) rotate(20deg); box-shadow: 0 1px 0 rgba(58,42,122,.3); }
 body.portrait #actions { flex-direction: column; align-items: center; gap: 4px; left: calc(10px + env(safe-area-inset-left)); }
 body.portrait .launch { width: 92px; height: 92px; }
-body.portrait .launch .em { font-size: 38px; }
-body.portrait .launch .go { font-size: 20px; }
+body.portrait .launch .em { font-size: 50px; }
 body.portrait .dice { width: 54px; height: 54px; font-size: 30px; margin-bottom: 10px; }
 
 /* --- Flight --- */
@@ -204,15 +205,21 @@ body.portrait .dice { width: 54px; height: 54px; font-size: 30px; margin-bottom:
 }
 body.landscape #reward { left: auto; top: calc(66px + env(safe-area-inset-top)); bottom: calc(8px + env(safe-area-inset-bottom)); right: calc(14px + env(safe-area-inset-right)); align-items: center; width: min(44vw, 440px); padding: 0; }
 @keyframes float-in { from { transform: translateY(60px) scale(.8); opacity: 0; } }
+/* Sideways screens: the card slides in from the right edge, clear of the landing party */
+body.landscape #reward .card { animation: slide-in .6s cubic-bezier(.2, 1.3, .4, 1); }
+@keyframes slide-in { from { transform: translateX(110%); opacity: 0; } }
 .reward-head { font-size: 44px; line-height: 1.1; }
-.reward-stars { font-size: 26px; font-weight: 900; color: #e0a400; }
-.reward-stars:empty { display: none; }
-.reward-new { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+/* New parts wrap onto tidy rows of one size (--gift); lots of them are a little smaller */
+.reward-new { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; max-width: 100%; --gift: 66px; }
+.reward-new.many { --gift: 54px; gap: 6px; }
 .reward-new:empty { display: none; }
 .reward-new .gift {
-  position: relative; width: 70px; height: 70px; border-radius: 18px; background: #fff3c4; box-shadow: 0 0 0 3px #ffd23f; display: grid; place-items: center;
-  animation: gift .6s cubic-bezier(.2, 1.8, .4, 1) both;
+  position: relative; flex: none; width: var(--gift); height: var(--gift); border-radius: calc(var(--gift) * .26); background: #fff3c4; box-shadow: 0 0 0 3px #ffd23f;
+  display: grid; place-items: center; animation: gift .6s cubic-bezier(.2, 1.8, .4, 1) both;
 }
+/* A part found while flying past a planet wears that planet's badge */
+.reward-new .gift .from { position: absolute; left: -4px; bottom: -4px; font-size: calc(var(--gift) * .28); line-height: 1; }
+body.landscape #reward:has(.reward-new.many) { width: min(62vw, 560px); }
 .reward-new .gift img { width: 90%; height: 90%; object-fit: contain; }
 .reward-new .gift:last-child::after { content: "✨"; position: absolute; top: -10px; right: -8px; font-size: 18px; }
 @keyframes gift { from { transform: scale(0) rotate(-30deg); } }
@@ -221,6 +228,64 @@ body.landscape #reward { left: auto; top: calc(66px + env(safe-area-inset-top));
 .btn.garage { background: #e6f4ff; box-shadow: 0 6px 0 #9cc7ea; }
 .btn.again { background: linear-gradient(#ff7a8f, #ff3b5c); box-shadow: 0 6px 0 #b81d3c; }
 .btn:active { transform: translateY(5px); box-shadow: none; }
+
+/* --- ⚡ Turbo: the bar fills to twenty stars (four fives), then lights up as a button to the next planet --- */
+.turbo i { position: relative; }
+.turbo i::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent calc(25% - 1px), #1b1446aa 0 calc(25% + 1px), transparent 0 calc(50% - 1px), #1b1446aa 0 calc(50% + 1px), transparent 0 calc(75% - 1px), #1b1446aa 0 calc(75% + 1px), transparent 0);
+}
+button.turbo { pointer-events: auto; color: inherit; font: inherit; border: 0; min-height: 44px; transition: transform .2s; }
+button.turbo:disabled { cursor: default; }
+.turbo em { font-style: normal; display: none; }
+.turbo.full:not(.used) { background: #fff8e9; box-shadow: 0 0 0 4px #8ef0c8, 0 4px 0 rgba(58,42,122,.35); cursor: pointer; font-size: 30px; padding: 6px 16px; }
+.turbo.full:not(.used) em { display: inline; }
+.turbo.full:not(.used) em::before { content: "➜ "; color: #3a2a7a; font-weight: 900; }
+.turbo.full:not(.used) i { display: none; }
+.turbo.full:not(.used):active { transform: translateY(3px); }
+.turbo.used { opacity: .55; }
+@keyframes turbo-ready { from { transform: scale(.6); } }
+/* While it waits, the ready ⚡ glows slowly (no flashing), and a twin floats beside the rocket */
+.turbo.full:not(.used) { animation: turbo-ready .6s cubic-bezier(.2, 1.8, .4, 1), turbo-glow 2.4s ease-in-out .6s infinite; }
+@keyframes turbo-glow { 50% { box-shadow: 0 0 0 6px #8ef0c8, 0 0 22px 8px #8ef0c8aa, 0 4px 0 rgba(58,42,122,.35); } }
+.turbo-cue {
+  position: fixed; left: 0; top: 0; z-index: 6; width: 64px; height: 64px; border-radius: 50%; font-size: 36px; display: grid; place-items: center;
+  background: radial-gradient(circle at 40% 35%, #fffbe6, #fff3a0 60%, #ffd23f); box-shadow: 0 0 0 4px #8ef0c8, 0 0 20px 6px #8ef0c899;
+  translate: -50% -50%; animation: cue-bob 1.8s ease-in-out infinite;
+}
+@keyframes cue-bob { 50% { transform: translateY(-8px) scale(1.06); } }
+
+/* --- 🏠 away from the garage (and 🔊 🎵 always) is held, not tapped: a ring fills round it --- */
+@property --hold { syntax: '<number>'; inherits: false; initial-value: 0; }
+#home { position: relative; }
+#home::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: conic-gradient(#ffd23f calc(var(--hold) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+}
+#home.holding { transform: scale(1.08); }
+#home.holding::after { opacity: 1; animation: hold-home var(--hold-for, .7s) linear forwards; }
+@keyframes hold-home { from { --hold: 0; } to { --hold: 1; } }
+
+/* The star picture on the reward card: this trip's new dots pop on */
+.reward-new .gift.pic { background: none; box-shadow: none; }
+.reward-new .gift.pic svg { width: 100%; height: 100%; }
+.card-pic .pic-new { transform-box: fill-box; transform-origin: center; animation: pic-pop .5s cubic-bezier(.2, 1.8, .4, 1) both; }
+@keyframes pic-pop { from { transform: scale(0); } }
+/* A place too far for these boosters shakes its head in a red ring */
+.reach .d.no { animation: shake .45s; box-shadow: 0 0 0 3px #ff4f6d; border-radius: 50%; }
+@media (prefers-reduced-motion: reduce) { .card-pic .pic-new, .reach .d.no { animation: none; } }
+/* 🔊 and 🎵 are held like 🏠: the same filling ring */
+#sound, #music { position: relative; }
+#sound::after, #music::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: conic-gradient(#ffd23f calc(var(--hold) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+}
+#sound.holding, #music.holding { transform: scale(1.08); }
+#sound.holding::after, #music.holding::after { opacity: 1; animation: hold-home var(--hold-for, 1.3s) linear forwards; }
 
 /* --- Wipe, ghost, hints --- */
 #wipe {
@@ -237,7 +302,6 @@ body.landscape #reward { left: auto; top: calc(66px + env(safe-area-inset-top));
 @media (max-width: 520px) {
   .round-btn { width: 44px; height: 44px; font-size: 22px; }
   .reach .d { font-size: 22px; padding: 1px; }
-  .pill { font-size: 22px; padding: 3px 12px; }
   .items { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
   .swatch { width: 36px; height: 40px; }
   .journey { width: 36px; }
@@ -247,12 +311,11 @@ body.landscape #reward { left: auto; top: calc(66px + env(safe-area-inset-top));
   .logo { font-size: clamp(32px, 8vw, 56px); }
   .tab { max-width: 48px; border-radius: 12px; }
   .items { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
-  .launch { width: 92px; height: 92px; } .launch .em { font-size: 34px; } .launch .go { font-size: 18px; }
+  .launch { width: 92px; height: 92px; } .launch .em { font-size: 46px; }
   .dice { width: 50px; height: 50px; font-size: 28px; }
   .btn { width: 58px; height: 58px; font-size: 30px; border-radius: 20px; }
   .reward-head { font-size: 28px; }
-  .reward-stars { font-size: 20px; }
-  .reward-new .gift { width: 46px; height: 46px; border-radius: 12px; }
+  .reward-new { --gift: 46px; } .reward-new.many { --gift: 40px; }
   #reward .card { padding: 8px 14px 12px; gap: 6px; }
 }
 
@@ -261,14 +324,14 @@ body.landscape #reward { left: auto; top: calc(66px + env(safe-area-inset-top));
 .banner.top.show { transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
 .banner { -webkit-text-stroke: 0; filter: drop-shadow(0 0 2px #3a2a7a) drop-shadow(0 0 1px #3a2a7a); }
 
-/* --- Portrait reward card: one short row (place + stars beside the buttons) so the planet's face stays in view --- */
-body.portrait #reward .card { display: grid; grid-template-columns: auto auto; grid-template-areas: "head btns" "stars btns" "new new"; column-gap: 18px; row-gap: 2px; align-items: center; padding: 10px 16px 12px; }
+/* --- Portrait reward card: one short row (the place beside the buttons) so the planet's face stays in view --- */
+body.portrait #reward { align-items: flex-end; }
+body.portrait #reward .card { display: grid; grid-template-columns: auto auto; grid-template-areas: "head btns" "new new"; grid-template-rows: auto auto; align-content: start; height: auto; column-gap: 18px; row-gap: 2px; align-items: center; padding: 10px 16px 12px; }
 body.portrait .reward-head { grid-area: head; font-size: 40px; }
-body.portrait .reward-stars { grid-area: stars; text-align: center; }
 body.portrait .reward-new { grid-area: new; margin-top: 4px; }
 body.portrait #reward .btns { grid-area: btns; margin: 0; }
 body.portrait .btn { width: 76px; height: 76px; font-size: 40px; }
-body.portrait .reward-new .gift { width: 58px; height: 58px; }
+body.portrait .reward-new { --gift: 58px; } body.portrait .reward-new.many { --gift: 46px; }
 
 /* --- Short sideways phones (260–500px tall) --- */
 @media (max-height: 500px) {
@@ -281,17 +344,16 @@ body.portrait .reward-new .gift { width: 58px; height: 58px; }
   body.landscape .items { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; min-height: 56px; }
   body.landscape .paints { flex-wrap: nowrap; gap: 0; padding-top: 0; }
   body.landscape .swatch { flex: 1 1 0; min-width: 0; max-width: 42px; height: 40px; }
-  body.landscape #actions { display: grid; grid-template-columns: auto auto; gap: 6px 8px; justify-items: center; left: calc(10px + env(safe-area-inset-left)); bottom: calc(10px + env(safe-area-inset-bottom)); }
+  body.landscape #actions { display: grid; grid-template-columns: auto auto; gap: 6px 8px; justify-items: center; left: calc(16px + env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom)); }
   body.landscape #actions .launch { grid-column: 1 / -1; grid-row: 2; width: 86px; height: 86px; }
   body.landscape #actions .dice { margin: 0; width: 48px; height: 48px; font-size: 26px; border-radius: 16px; }
-  body.landscape .launch .em { font-size: 32px; } body.landscape .launch .go { font-size: 17px; }
+  body.landscape .launch .em { font-size: 44px; }
   .round-btn { width: 44px; height: 44px; font-size: 22px; }
   #topbar { padding-top: calc(6px + env(safe-area-inset-top)); }
   .banner.top { top: calc(29px + env(safe-area-inset-top)); font-size: 30px; }
 }
 @media (max-height: 330px) {
   body.landscape .logo { font-size: clamp(26px, 6vw, 40px); }
-  body.landscape .tag { font-size: 16px; }
 }
 
 /* The 3-2-1 sits beside the rumbling rocket on wide screens instead of on top of it */
@@ -303,7 +365,7 @@ body.portrait .countdown { top: 80%; }
   body.portrait #reward .card { column-gap: 12px; padding: 8px 12px 10px; }
   .banner.top { font-size: 26px; }
 }
-.reward-head, .reward-stars { white-space: nowrap; }
+.reward-head { white-space: nowrap; }
 @media (max-width: 340px) { .banner.top { font-size: 22px; } }
 /* Tall tablets: bigger parts in the tray (there is plenty of room under the rocket) */
 @media (min-width: 700px) and (min-height: 900px) {
@@ -314,37 +376,22 @@ body.portrait .countdown { top: 80%; }
 }
 
 /* --- Pass 2 --- */
-/* New parts stay in one row (they shrink a little), so the card's buttons never drop off short screens */
-.reward-new { flex-wrap: nowrap; max-width: 100%; }
-.reward-new { min-width: 0; align-items: center; }
-.reward-new .gift { flex: 0 1 70px; width: auto; min-width: 0; height: auto; aspect-ratio: 1; }
-@media (max-height: 500px) { .reward-new .gift { flex-basis: 46px; } }
-body.portrait .reward-new .gift { flex-basis: 58px; width: auto; height: auto; }
-/* Lots of new parts (a fly-by and a landing in one trip): closer together, and a wider card on sideways screens */
-.reward-new.many { gap: 4px; }
-body.landscape #reward:has(.reward-new.many) { width: min(62vw, 560px); }
-/* A part found while flying past a planet wears that planet's badge */
-.reward-new .gift .from { position: absolute; left: -6px; bottom: -6px; font-size: 18px; line-height: 1; }
-@media (max-height: 500px) { .reward-new .gift .from { font-size: 15px; } }
 /* Paint dots: two tidy rows of five when one row of ten won't fit (never eight and two) */
 #tray { container-type: inline-size; }
 @container (max-width: 470px) {
   .paints { display: grid; grid-template-columns: repeat(5, auto); justify-content: center; }
 }
 @media (max-height: 500px) { body.landscape .paints { display: flex; } }
-/* The GO button's yellow ring stays clear of the screen edge in portrait */
+/* The launch button's yellow ring stays clear of the screen edge in portrait */
 body.portrait #actions { left: calc(16px + env(safe-area-inset-left)); }
 /* Sideways tablets: bigger parts in the tray, which has plenty of room */
 @media (orientation: landscape) and (min-width: 1000px) and (min-height: 700px) {
   body.landscape .items { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
   body.landscape .tab { max-width: 58px; }
 }
-body.portrait .reward-new.many { flex-wrap: wrap; gap: 6px; }
-body.portrait .reward-new.many .gift { flex: 0 0 44px; }
 
 /* --- Pass 3 --- */
 /* Title words stay readable over the peach wall and the beam: a white rim round the logo letters, a plum outline behind the tagline */
-.tag { text-shadow: 2px 0 #3a2a7a, -2px 0 #3a2a7a, 0 2px #3a2a7a, 0 -2px #3a2a7a, 1.5px 1.5px #3a2a7a, -1.5px 1.5px #3a2a7a, 1.5px -1.5px #3a2a7a, -1.5px -1.5px #3a2a7a, 0 4px 0 #3a2a7a; }
 .logo span {
   -webkit-text-stroke: 0;
   text-shadow: 3px 0 #fff, -3px 0 #fff, 0 3px #fff, 0 -3px #fff, 2px 2px #fff, -2px 2px #fff, 2px -2px #fff, -2px -2px #fff, 0 7px 0 rgba(58, 42, 122, 0.4);
@@ -357,29 +404,27 @@ body.portrait .reward-new.many .gift { flex: 0 0 44px; }
 }
 
 /* --- Pass 4 --- */
-/* Tall tablets in portrait: a GO button (and 🧪 🎲) sized like the sideways one */
+/* Tall tablets in portrait: a launch button (and 🎲) sized like the sideways one */
 @media (min-width: 700px) and (min-height: 900px) {
   body.portrait .launch { width: 124px; height: 124px; }
-  body.portrait .launch .em { font-size: 46px; }
-  body.portrait .launch .go { font-size: 24px; }
+  body.portrait .launch .em { font-size: 62px; }
   body.portrait .dice { width: 64px; height: 64px; font-size: 36px; }
 }
 /* Short portrait phones: a little more tray, so two full rows of parts fit at a good size */
 @media (orientation: portrait) and (min-height: 540px) and (max-height: 700px) { body.portrait #tray { max-height: 51vh; } }
-/* 320×568 phones: the 🧪 🎲 GO column stays clear of the top bar above the taller tray */
+/* 320×568 phones: the 🎲 and 🚀 column stays clear of the top bar above the taller tray */
 @media (orientation: portrait) and (max-height: 600px) {
   body.portrait .dice { width: 48px; height: 48px; font-size: 27px; margin-bottom: 6px; border-radius: 16px; }
   body.portrait .launch { width: 84px; height: 84px; }
-  body.portrait .launch .em { font-size: 34px; } body.portrait .launch .go { font-size: 18px; }
+  body.portrait .launch .em { font-size: 44px; }
 }
 
 /* --- Pass 5 --- */
-/* The star count never breaks onto two lines (320px-wide phones squeezed it into a tall blob) */
-.pill, .turbo { white-space: nowrap; flex: none; }
+/* The turbo bar never breaks onto two lines */
+.turbo { white-space: nowrap; flex: none; }
 @media (max-width: 360px) {
   .flightbar { gap: 4px; }
   #topbar { gap: 4px; }
-  .pill { font-size: 20px; padding: 3px 9px; }
   .turbo { padding: 4px 7px; font-size: 18px; }
   .turbo i { width: 40px; }
   /* All five planets fit between 🏠 and 🎵 (the 👽 used to slip under the music button) */
@@ -387,7 +432,7 @@ body.portrait .reward-new.many .gift { flex: 0 0 44px; }
   .reach .d { font-size: 19px; padding: 0; }
   .reach .dash { width: 4px; }
 }
-/* The shortest upright phones (320×480): 🧪 and 🎲 sit side by side above GO, clear of the top bar */
+/* The shortest upright phones (320×480): 🎲 sits above the launch button, clear of the top bar */
 @media (orientation: portrait) and (max-height: 520px) {
   body.portrait #actions { display: grid; grid-template-columns: auto auto; gap: 6px; justify-items: center; }
   body.portrait #actions .launch { grid-column: 1 / -1; grid-row: 2; }
@@ -403,28 +448,20 @@ body.portrait .reward-new.many .gift { flex: 0 0 44px; }
 @media (orientation: portrait) and (min-width: 700px) and (min-height: 900px) {
   body.portrait #reward .card { max-width: min(720px, 100%); column-gap: 28px; padding: 16px 24px 20px; border-radius: 36px; }
   body.portrait .reward-head { font-size: 60px; }
-  body.portrait .reward-stars { font-size: 34px; }
   body.portrait .btn { width: 104px; height: 104px; font-size: 56px; border-radius: 32px; }
-  body.portrait .reward-new { gap: 12px; margin-top: 8px; }
-  body.portrait .reward-new .gift { flex-basis: 84px; border-radius: 22px; }
+  body.portrait .reward-new { gap: 12px; margin-top: 8px; --gift: 84px; }
   /* at most six in a row, so the rows stay even (nine gifts used to leave one alone on a second row) */
-  body.portrait .reward-new.many { gap: 10px; max-width: 458px; justify-self: center; }
-  body.portrait .reward-new.many .gift { flex: 0 0 68px; }
-  .reward-new .gift .from { font-size: 24px; }
+  body.portrait .reward-new.many { gap: 10px; max-width: 458px; justify-self: center; --gift: 68px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner, .finger, .reward-new .gift, #reward .card { animation: none; }
+  .spinner, .finger, .reward-new .gift, #reward .card, .turbo, .turbo-cue { animation: none !important; }
   #wipe { transition: none; }
 }
 
 /* --- Round 5 --- */
-/* The reward buttons stay centred when 🚀 is hidden on a missed card (🔧 alone sits in the middle) */
 .btns { justify-content: center; }
 body.portrait #reward .btns { justify-self: center; }
-/* A turbo landing's last stop on the reach bar: a small still ⚡ above the dash */
-.reach .dash.turbo { width: auto; height: auto; background: none; font-size: 15px; line-height: 1; }
-.reach .dash.turbo::after { content: "⚡"; }
-/* Portrait: the planet + stars and the buttons share the card in two even halves, each centred */
+/* Portrait: the planet and the buttons share the card in two even halves, each centred */
 body.portrait #reward .card { grid-template-columns: minmax(min-content, 1fr) minmax(min-content, 1fr); }
-body.portrait .reward-head, body.portrait .reward-stars { justify-self: center; }
+body.portrait .reward-head { justify-self: center; }

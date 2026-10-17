@@ -282,6 +282,15 @@ export class Scenery {
     mergeByMaterial(this.props, moving)
   }
 
+  /** Make the whale spout right now (Fishy Bay), as a surprise after a slide. */
+  spout() {
+    if (!this.whale) return
+    this.spoutIn = 4 + Math.random() * 3
+    const p = this.whale.position.clone()
+    p.y += 2.3
+    this.onSpout?.(p)
+  }
+
   update(dt, t) {
     auroraMaterial.uniforms.time.value = t
     for (const c of this.clouds) {

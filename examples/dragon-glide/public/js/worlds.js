@@ -2,9 +2,9 @@
  * The four places Ember flies through, one after another, each ending at a nest.
  * Distances are in world units along the flight (Ember flies toward -Z).
  */
-export const WORLD_LENGTH = 760
+export const WORLD_LENGTH = 560
 
-/** One calm cruising speed in every world (it used to climb from 15 to 18): no ramp to chase. */
+/** One easy cruising speed in every world: no ramp to chase. */
 const CALM_SPEED = 12
 
 export const WORLDS = [
@@ -19,14 +19,9 @@ export const WORLDS = [
     rock: { rock: '#a99bc9', rock_grass: '#7bd14b' },
     obstacles: ['windmill', 'rock'],
     gem: 'blue',
-    // two numbered rings at a time: fly through the number that comes next.
-    // Tiers (chosen from how the last ring world went): 1 to 5; counting down to land; counting on from a teen number.
-    goal: { type: 'rings', tiers: [
-      { start: 1, step: 1, size: [4, 5], decoy: 'far' },
-      { down: true, size: [5, 7], decoy: 'down' },
-      // for 6-8: counting on through the teens, where 14 and 41 look alike and the next ten is near
-      { start: [11, 15], step: 1, size: [5, 6], decoy: 'teen' },
-    ] },
+    treasures: ['star', 'pink', 'mint'],
+    surprise: 'rainbowRings', // this world's own surprise (see course.js)
+    critter: 'butterfly', // little critters that scatter as Ember brushes past
     lanterns: 0,
     waterfalls: 0.25,
     speed: CALM_SPEED,
@@ -39,14 +34,14 @@ export const WORLDS = [
     hemi: ['#fff0fa', '#d98ac0', 1.55], key: ['#fff0f6', 2.3],
     island: { island_grass: ['#ff9ecf', '#ffd1e8', '#bfa2ff'], island_dirt: '#fff5e6', island_rock: ['#8a5a3a', '#a06a44'], island_flower: ['#ff5c8a', '#4cc9f0', '#ffd23f', '#8ef0c8'] },
     decor: [['lollipop', 3], ['gumdrop', 3]],
-    hoop: { hoop_cloud: { color: '#ffc2e2', emissive: '#ffc2e2', emissiveIntensity: 0.35 } },
+    // mint rings, so they stand out on the pink sky
+    hoop: { hoop_cloud: { color: '#8ef0c8', emissive: '#2ec4b6', emissiveIntensity: 0.35 } },
     rock: { rock: '#c49bff', rock_grass: '#ff9ecf' },
     obstacles: ['lollipop', 'rock'],
-    // gold gems, so nothing along the way looks like the pink or blue hearts being gathered
     gem: 'gold',
-    // two colours of heart float in pairs; the basket takes only what was asked for.
-    // Tiers: one colour; two colours at once; a total split the child chooses, with more of one colour than the other
-    goal: { type: 'gather', kinds: ['pink', 'blue'], groups: 8, tiers: [{ wants: [[3, 5]] }, { wants: [[2, 3], [2, 4]] }, { total: [5, 7] }] },
+    treasures: ['pink', 'blue', 'sweet'],
+    surprise: 'lollies', // this world's own surprise (see course.js)
+    critter: 'gumdrop',
     lanterns: 0,
     waterfalls: 0.35,
     speed: CALM_SPEED,
@@ -63,12 +58,8 @@ export const WORLDS = [
     rock: { rock: '#b48ab0', rock_grass: '#8fcf5a' },
     obstacles: ['tower', 'rock'],
     gem: 'gold',
-    // counting on past five, where the nearest wrong number is only one away; then by twos; then by threes or fives
-    goal: { type: 'rings', tiers: [
-      { start: 1, step: 1, size: [7, 10], decoy: 'near' },
-      { start: 2, step: 2, size: [6, 8], decoy: 'skip' },
-      { step: [3, 5], size: [5, 6], decoy: 'skip' },
-    ] },
+    treasures: ['heart', 'blue', 'star'],
+    surprise: 'fireworks', // this world's own surprise (see course.js)
     lanterns: 0.35,
     waterfalls: 0.3,
     speed: CALM_SPEED,
@@ -85,8 +76,8 @@ export const WORLDS = [
     rock: { rock: '#7a74b0', rock_grass: '#3f8f8a' },
     obstacles: ['rock', 'tower'],
     gem: 'blue',
-    // three shapes, all one colour, float in threes; then two shapes at once; then a total with more of one shape
-    goal: { type: 'gather', kinds: ['star', 'moon', 'heart'], groups: 8, tiers: [{ wants: [[3, 4]] }, { wants: [[2, 3], [2, 3]] }, { total: [5, 7] }] },
+    treasures: ['star', 'moon'],
+    surprise: 'constellation', // this world's own surprise (see course.js)
     lanterns: 0.75,
     waterfalls: 0.2,
     night: true,

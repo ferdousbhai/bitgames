@@ -20,50 +20,41 @@
 <div id="loading" class="screen">
   <div class="logo"><span>C</span><span>R</span><span>A</span><span>S</span><span>H</span> <span>R</span><span>A</span><span>C</span><span>E</span><span>R</span><span>S</span></div>
   <div class="car-spinner">🏎️💨</div>
-  <div id="loading-text">Warming up the engines…</div>
-  <div id="load-error" class="hint hidden">😕 The cars got stuck. Try again?</div>
-  <button id="retry" class="big-go hidden">🔁 Try again</button>
+  <div id="loading-text" class="loading-cars" aria-label="Loading"></div>
+  <div id="load-error" class="hint hidden" aria-label="The cars got stuck">😕</div>
+  <button id="retry" class="big-go hidden" aria-label="Try again">🔁</button>
 </div>
 
 <div id="menu" class="screen hidden">
   <div class="logo small"><span>C</span><span>R</span><span>A</span><span>S</span><span>H</span> <span>R</span><span>A</span><span>C</span><span>E</span><span>R</span><span>S</span></div>
   <div id="players" class="players"></div>
   <div class="modes">
-    <button data-mode="race" class="mode on" aria-label="Race the robot cars: the right present at a gate gives you a speed boost"><span>🏁</span>Race</button>
-    <button data-mode="smash" class="mode" aria-label="Bumper cars: gentle bumping, park when you like"><span>🎪</span>Bumpers</button>
+    <button data-mode="race" class="mode on" aria-label="Race the robot cars" title="Race"><span>🏁</span><span>🏎️</span></button>
+    <button data-mode="smash" class="mode" aria-label="Bumper cars" title="Bumpers"><span>🎪</span><span>💥</span></button>
   </div>
-  <h2>Pick your car 🚗</h2>
   <div id="cars" class="car-row"></div>
-  <h2>Where do we go? 🗺️</h2>
   <div id="cities" class="cities"></div>
   <div class="options">
-    <div class="laps">Laps <button data-laps="1">1</button><button data-laps="2" class="on">2</button><button data-laps="3">3</button></div>
-    <button id="easy-gas" class="chip on">🧸 Easy mode</button>
-    <button id="menu-sound" class="chip sound-chip" title="Sound (M)">🔊</button>
+    <div class="laps" aria-label="Laps"><span aria-hidden="true">🏁</span><button data-laps="1" aria-label="1 lap">●</button><button data-laps="2" class="on" aria-label="2 laps">●●</button><button data-laps="3" aria-label="3 laps">●●●</button></div>
+    <button id="easy-gas" class="chip on" aria-label="Easy mode (hold to change)" title="Hold to change Easy mode">🧸</button>
+    <button id="menu-sound" class="chip sound-chip" title="Hold for sound on or off">🔊</button>
   </div>
-  <button id="go" class="big-go">🚦 GO!</button>
+  <button id="go" class="big-go" aria-label="Go!">▶</button>
 </div>
 
 <div id="waiting" class="screen hidden">
   <div class="car-spinner">🚗💨</div>
-  <h2 id="waiting-text">Waiting for the race to start…</h2>
+  <h2 id="waiting-text">⏳</h2>
   <div id="players-waiting" class="players"></div>
-  <h2>Pick your car 🚗</h2>
   <div id="cars-waiting" class="car-row"></div>
-  <p class="hint">The player who started the game picks the city.</p>
 </div>
 
 <div id="hud" class="hidden">
   <div class="hud-top">
-    <div id="place" class="pill place-pill hidden" role="status"><b class="rank">1st</b><span class="of"></span><span class="order" aria-hidden="true"></span></div>
-    <div id="lap" class="pill">Lap 1/2</div>
+    <div id="place" class="pill place-pill hidden" role="status"><b class="rank">1</b><span class="order" aria-hidden="true"></span></div>
+    <div id="lap" class="pill">🏁</div>
   </div>
-  <div id="gate-pick" class="gate-pick hidden" role="group" aria-label="Which lane at the gate">
-    <button type="button" class="lane-pick lane-left"><span class="picture"></span><span class="way" aria-hidden="true">◀</span></button>
-    <span class="gate-house" aria-hidden="true"></span>
-    <button type="button" class="lane-pick lane-middle hidden"><span class="picture"></span><span class="way" aria-hidden="true">▲</span></button>
-    <button type="button" class="lane-pick lane-right"><span class="picture"></span><span class="way" aria-hidden="true">▶</span></button>
-  </div>
+  <button type="button" id="gate-pick" class="gate-pick hidden" aria-label="Zoom through the rainbow"><span class="arrow" aria-hidden="true"></span><span class="bolt" aria-hidden="true">⚡</span></button>
   <canvas id="minimap" width="160" height="160"></canvas>
   <div id="banner" class="banner"></div>
   <div id="note" class="note" aria-live="polite"></div>
@@ -71,10 +62,10 @@
     <button data-touch="turbo" title="Turbo (Shift)" id="turbo-btn">🔥</button>
     <button data-touch="fix" title="Fix my car (F)" id="fix-btn">🔧</button>
     <button data-touch="reset" title="Back on the road (R)" id="reset-btn">🔄</button>
-    <button data-touch="park" title="Park and finish" id="park-btn" aria-label="Park and finish">🅿️</button>
+    <button title="Hold to park and finish" id="park-btn" aria-label="Hold to park and finish">🅿️</button>
     <button data-touch="horn" title="Horn (H)">📯</button>
     <button data-touch="camera" title="Camera (C)">🎥</button>
-    <button id="sound-btn" title="Sound (M)">🔊</button>
+    <button id="sound-btn" title="Hold for sound on or off">🔊</button>
   </div>
   <div class="touch">
     <div class="steer">
@@ -92,14 +83,13 @@
 <div id="countdown" class="countdown hidden"></div>
 
 <div id="results" class="screen hidden">
-  <h1 id="results-title">🏁 Finish!</h1>
-  <div id="gate-recap" class="gate-recap hidden" role="img"></div>
+  <h1 id="results-title">🏁</h1>
   <div id="podium" class="podium"></div>
   <div class="row">
-    <button id="again" class="big-go">🔁 Race again</button>
-    <button id="change-city" class="big-go alt">🗺️ New city</button>
+    <button id="again" class="big-go" aria-label="Again">🔁</button>
+    <button id="change-city" class="big-go alt" aria-label="New city">🗺️</button>
   </div>
-  <p id="results-wait" class="hint hidden">Waiting for the host to start the next race…</p>
+  <p id="results-wait" class="hint hidden">⏳</p>
 </div>
 
 <script type="module" src="./js/main.js"></script>

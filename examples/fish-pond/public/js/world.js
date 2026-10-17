@@ -238,7 +238,7 @@ export class World {
     const W = 70 // world units across the texture
     const toPx = (x, z) => [((x + W / 2) / W) * S, ((z + W / 2 + 15) / W) * S] // centred on z = -15
     const tex = canvasTexture(S, S, (g) => {
-      g.fillStyle = 'rgba(226, 242, 255, 0.66)' // thin enough to see who swims beneath (riddles need it)
+      g.fillStyle = 'rgba(226, 242, 255, 0.66)' // thin enough to see who swims beneath
       g.fillRect(0, 0, S, S)
       // frosty streaks
       for (let i = 0; i < 160; i++) {

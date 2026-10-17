@@ -2,12 +2,36 @@
 const PENTA = [0, 2, 4, 7, 9] // major pentatonic: any run of notes sounds happy
 const note = (step, base = 523.25) => base * 2 ** ((PENTA[((step % 5) + 5) % 5] + 12 * Math.floor(step / 5)) / 12)
 
-/** One gentle music-box tune per lane. */
+/**
+ * One music-box tune per lane, played A A B A with little rests (null) so it breathes. A layer of
+ * off-beat plinks joins from the second frame and a soft shaker from the fourth; a strike adds a
+ * twinkly echo for a while.
+ */
+const _ = null
 const TUNES = {
-  village: { melody: [0, 2, 4, 2, 5, 4, 2, 0, 1, 3, 5, 3, 7, 5, 4, 2], bass: [0, 0, -2, -2, -3, -3, -1, -1], beat: 0.19 },
-  aurora: { melody: [4, 2, 0, 2, 4, 5, 7, 5, 4, 2, 1, 2, 0, -1, 0, 2], bass: [0, 0, -3, -3, -2, -2, -1, -1], beat: 0.24 },
-  bay: { melody: [0, 4, 2, 5, 4, 7, 5, 4, 2, 4, 1, 3, 2, 1, 0, 2], bass: [0, -2, -3, -1, 0, -2, -3, -1], beat: 0.18 },
+  village: {
+    a: [0, 2, 4, 2, 5, 4, 2, 0, 1, 3, 5, 3, 7, 5, 4, _],
+    b: [7, _, 6, 5, 4, _, 5, 7, 9, 7, 5, 4, 2, 4, 1, _],
+    bassA: [0, 0, -2, -2, -3, -3, -1, -1],
+    bassB: [2, 2, 0, 0, -1, -1, -3, -1],
+    beat: 0.19,
+  },
+  aurora: {
+    a: [4, 2, 0, 2, 4, 5, 7, 5, 4, 2, 1, 2, 0, -1, 0, _],
+    b: [5, 7, 9, _, 7, 5, 4, _, 2, 4, 5, 4, 2, 1, 2, _],
+    bassA: [0, 0, -3, -3, -2, -2, -1, -1],
+    bassB: [-2, -2, 0, 0, -3, -3, -1, -1],
+    beat: 0.24,
+  },
+  bay: {
+    a: [0, 4, 2, 5, 4, 7, 5, 4, 2, 4, 1, 3, 2, 1, 0, _],
+    b: [5, _, 7, 5, 9, _, 7, 5, 4, 5, 2, 4, 3, 2, 1, _],
+    bassA: [0, -2, -3, -1, 0, -2, -3, -1],
+    bassB: [-3, -1, 0, -2, -3, -1, 0, -1],
+    beat: 0.18,
+  },
 }
+const FORM = ['a', 'a', 'b', 'a']
 
 export class Audio {
   constructor() {
@@ -17,6 +41,8 @@ export class Audio {
     this.nextBeat = 0
     this.beat = 0
     this.tune = TUNES.village
+    this.layer = 0 // 0, 1 or 2: more of the band joins as the game goes on
+    this.twinkle = 0 // beats of strike echo left
   }
 
   /** Browsers only allow sound after a tap or key press, so this runs on the first one. */
@@ -97,9 +123,61 @@ export class Audio {
     this.tone({ freq: 660, type: 'triangle', gain: 0.18, decay: 0.12, slide: 300 })
   }
 
-  /** One counted pin: a soft, short note that climbs with each number, so a count past 5 is still heard. */
-  tick(n = 1) {
-    this.tone({ freq: note(n + 2), type: 'sine', gain: 0.07, decay: 0.12 })
+  /**
+   * A pin tips over: a cartoon "bwoop" that drops in pitch. Each pin that falls in one slide starts a
+   * note higher, so a big knock plays a happy run up the scale and a strike a whole tumbling tune.
+   */
+  topple(n = 1) {
+    const f = note(n + 1, 392)
+    this.tone({ freq: f * 1.5, type: 'sine', gain: 0.14, decay: 0.24, slide: -f * 0.7, attack: 0.01 })
+    this.tone({ freq: f * 3, type: 'triangle', gain: 0.04, decay: 0.12, slide: -f })
+  }
+
+  /** The golden pin falls: a bright, rising chime with a shimmer. */
+  gold() {
+    ;[0, 2, 4, 7, 9].forEach((st, i) => this.tone({ freq: note(st + 5, 523.25), type: 'triangle', gain: 0.1, decay: 0.5, delay: i * 0.07 }))
+    this.burst({ freq: 6000, q: 1, gain: 0.05, decay: 0.6, type: 'highpass', delay: 0.1 })
+  }
+
+  /** The giant snowman lands: a deep, soft "whumpf". */
+  thump() {
+    this.tone({ freq: 110, type: 'sine', gain: 0.4, decay: 0.45, slide: -50 })
+    this.burst({ freq: 400, q: 0.7, gain: 0.25, decay: 0.3 })
+  }
+
+  /** A shower of snow (or the whale's spray) over the deck. */
+  splash() {
+    this.burst({ freq: 2500, q: 0.4, gain: 0.18, decay: 0.9, attack: 0.05 })
+    for (let i = 0; i < 6; i++) this.tone({ freq: note(8 + (i % 4)), type: 'sine', gain: 0.04, decay: 0.15, delay: 0.1 + i * 0.09 })
+  }
+
+  /** A baby penguin dives in: a tiny, high "wheee!" */
+  whee() {
+    this.tone({ freq: 900, type: 'sine', gain: 0.12, decay: 0.6, slide: 900, attack: 0.03 })
+    this.tone({ freq: 1800, type: 'triangle', gain: 0.03, decay: 0.5, slide: 1200, delay: 0.05 })
+  }
+
+  /** A new hat: a magic little sparkle run downwards then up. */
+  hat() {
+    ;[9, 7, 4, 7, 9, 12].forEach((st, i) => this.tone({ freq: note(st, 523.25), type: 'sine', gain: 0.08, decay: 0.3, delay: 0.3 + i * 0.08 }))
+  }
+
+  /** Penguin off a bumper: a springy "boing". */
+  boing() {
+    this.tone({ freq: 170, type: 'sine', gain: 0.22, decay: 0.32, slide: 260 })
+    this.tone({ freq: 340, type: 'triangle', gain: 0.06, decay: 0.25, slide: 420, delay: 0.02 })
+  }
+
+  /** The penguin pops up behind the pins: a bubbly "pop!" */
+  pop() {
+    this.tone({ freq: 420, type: 'sine', gain: 0.2, decay: 0.14, slide: 900 })
+    this.burst({ freq: 2200, q: 2, gain: 0.08, decay: 0.05 })
+  }
+
+  /** A miss: a little descending "whoops", never a buzzer. */
+  whoops() {
+    this.tone({ freq: 720, type: 'sine', gain: 0.13, decay: 0.35, slide: -360 })
+    this.tone({ freq: 540, type: 'sine', gain: 0.1, decay: 0.4, slide: -260, delay: 0.22 })
   }
 
   /** A little penguin squeak (tapping the penguin, or diving onto its belly). */
@@ -188,14 +266,22 @@ export class Audio {
   updateMusic(playing) {
     if (!this.ready || !this.musicOn || !playing) return
     const ctx = this.ctx
-    const { melody, bass, beat } = this.tune
+    const tune = this.tune
     if (this.nextBeat < ctx.currentTime) this.nextBeat = ctx.currentTime + 0.05
     while (this.nextBeat < ctx.currentTime + 0.3) {
       const b = this.beat++
       const t = this.nextBeat - ctx.currentTime
-      if (b % 2 === 0) this.tone({ freq: note(melody[(b / 2) % 16], 523.25), type: 'sine', gain: 0.18, decay: 0.5, delay: t, out: this.musicBus })
-      if (b % 4 === 0) this.tone({ freq: note(bass[(b / 4) % 8], 130.8), type: 'triangle', gain: 0.25, decay: 0.8, delay: t, out: this.musicBus })
-      this.nextBeat += beat
+      const part = FORM[Math.floor(b / 32) % FORM.length]
+      const m = tune[part][(b >> 1) % 16]
+      if (b % 2 === 0 && m !== null) {
+        this.tone({ freq: note(m, 523.25), type: 'sine', gain: 0.18, decay: 0.5, delay: t, out: this.musicBus })
+        if (this.twinkle > 0) this.tone({ freq: note(m + 5, 523.25), type: 'triangle', gain: 0.05, decay: 0.3, delay: t + tune.beat, out: this.musicBus })
+      }
+      if (b % 4 === 0) this.tone({ freq: note(tune[part === 'b' ? 'bassB' : 'bassA'][(b >> 2) % 8], 130.8), type: 'triangle', gain: 0.25, decay: 0.8, delay: t, out: this.musicBus })
+      if (this.layer >= 1 && b % 4 === 2) this.tone({ freq: note(tune[part === 'b' ? 'bassB' : 'bassA'][(b >> 2) % 8] + 7, 261.6), type: 'sine', gain: 0.06, decay: 0.18, delay: t, out: this.musicBus })
+      if (this.layer >= 2 && b % 2 === 1) this.burst({ freq: 7000, q: 0.8, gain: 0.025, decay: 0.05, type: 'highpass', delay: t })
+      if (this.twinkle > 0) this.twinkle--
+      this.nextBeat += tune.beat
     }
   }
 }

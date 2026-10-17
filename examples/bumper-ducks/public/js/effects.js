@@ -158,17 +158,32 @@ export class Effects {
     }
   }
 
-  /** A few pale dizzy stars from a bonk (bonks are frequent, so never a cloud of them). */
+  /** The fountain surprise: a tall column of water that rains back down in a wide ring. */
+  spout(x, z) {
+    for (let i = 0; i < 150; i++) {
+      const a = Math.random() * Math.PI * 2
+      const s = Math.random() * 3.6
+      this.drops.spawn(x + Math.cos(a) * 0.5, 0.3, z + Math.sin(a) * 0.5, Math.cos(a) * s, 12 + Math.random() * 9, Math.sin(a) * s, {
+        color: Math.random() < 0.35 ? '#ffffff' : '#bdeeff',
+        size: 0.45 + Math.random() * 0.45,
+        life: 2.2,
+        gravity: -12,
+      })
+    }
+    this.splash(x, z, 1.6)
+  }
+
+  /** Dizzy stars that pop out of a bonk. */
   bonkStars(x, z, strength = 1) {
-    const colors = ['#fff3c4', '#ffe0ef', '#e2f4ff']
-    const n = strength > 1 ? 4 : 3
+    const colors = ['#ffd23f', '#ff9ccb', '#7fd3ff', '#ffffff']
+    const n = Math.round(6 + strength * 5)
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + Math.random() * 0.8
-      const s = 1.5 + Math.random() * 1.5
-      this.stars.spawn(x, 1.4, z, Math.cos(a) * s, 3 + Math.random() * 2, Math.sin(a) * s, {
+      const a = Math.random() * Math.PI * 2
+      const s = 2 + Math.random() * 3
+      this.stars.spawn(x, 1.4, z, Math.cos(a) * s, 3 + Math.random() * 4, Math.sin(a) * s, {
         color: colors[i % colors.length],
-        size: 0.45 + Math.random() * 0.2,
-        life: 0.8,
+        size: 0.5 + Math.random() * 0.4,
+        life: 0.9,
         gravity: -9,
       })
     }
@@ -222,7 +237,7 @@ export class Effects {
     }
   }
 
-  /** A word or number that pops up from a spot in the world and floats away. */
+  /** An emoji that pops up from a spot in the world and floats away. */
   label(text, pos, { color = '#fff', size = 'normal' } = {}) {
     const v = new THREE.Vector3(pos.x, pos.y ?? 1.8, pos.z).project(this.camera)
     if (v.z > 1) return

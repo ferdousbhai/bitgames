@@ -2,7 +2,7 @@
 
 The generated 89-game batch was retired with the owner's approval on 2026-10-08. Only the twelve original games remain; Splash Tank lives in a separate repository and is untouched. There is no catalogue-size target. See [the handoff](../../docs/POLISH_HANDOFF.md) and [wipe evidence](../../docs/audit/wipe-execution-2026-10-08.json).
 
-`catalogue.mjs` explicitly names the originals. `build.mjs` copies their maintained learning helpers, refreshes shipment manifests and rebuilds the local catalogue. It no longer generates games. The retired runtime, game designs, assets and generated-game builders are removed. Preserve the originals and start future work with one compelling child-tested prototype, rather than reskins or bulk releases.
+`catalogue.mjs` explicitly names the originals. `build.mjs` refreshes shipment manifests and rebuilds the local catalogue. It no longer generates games. The retired runtime, game designs, assets and generated-game builders are removed. Preserve the originals and start future work with one compelling child-tested prototype, rather than reskins or bulk releases.
 
 ```sh
 node examples/_studio/build.mjs
@@ -20,7 +20,7 @@ EXAMPLES_ORIGIN=http://localhost:4213 node examples/_studio/tests/original-quali
 
 Chromium defaults to `EXAMPLES_CHROMIUM_ANGLE=gl` (the real GPU). Vulkan fell back to SwiftShader at 2–5 fps on the owner's machine, which slows game time and breaks timing checks. Use `swiftshader` only where no GPU is available.
 
-Other maintained checks are `tests/catalogue.mjs` and `tests/workshop-fallback.mjs`. Source/shipment tests do not prove child enjoyment or physical-device performance.
+The other maintained browser check is `tests/catalogue.mjs`. `original-quality.mjs` checks that every original shows no words and never speaks. Source/shipment tests do not prove child enjoyment or physical-device performance.
 
 Agents must use Blender 5.2 CLI. Edit the reproducible builders under `examples/<game-id>/blender/`, then rebuild only the requested game. Crash Racers uses `cars.py` and `props.py`; the wrapper also runs each game's texture/workshop builders:
 

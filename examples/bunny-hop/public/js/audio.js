@@ -8,9 +8,10 @@ const hz = (semitones, base = 523.25) => base * 2 ** (semitones / 12)
 export class Sound {
   constructor() {
     this.ctx = null
+    // sound starts on every visit: a mute is never saved, so a mashing child can't leave it off
     this.muted = false
     try {
-      this.muted = localStorage.getItem('bunnyhop.muted') === '1'
+      localStorage.removeItem('bunnyhop.muted') // (older versions saved it)
     } catch {}
     this.musicOn = false
     this.nextBeat = 0
@@ -42,9 +43,6 @@ export class Sound {
 
   setMuted(muted) {
     this.muted = muted
-    try {
-      localStorage.setItem('bunnyhop.muted', muted ? '1' : '0')
-    } catch {}
     if (this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.8, this.ctx.currentTime, 0.05)
   }
 
@@ -145,24 +143,61 @@ export class Sound {
     ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 1, len: 1.6, type: 'sine', gain: 0.08 }))
   }
 
-  /** A finished mission: one soft major chord, played once. */
-  chord() {
-    ;[0, 4, 7].forEach((s, i) => this.note(hz(s, 392), { at: i * 0.06, len: 1.6, type: 'sine', gain: 0.07, attack: 0.04 }))
+  /** A springy mushroom: a big rising "boiiing" with a wobble. */
+  spring() {
+    const o = this.note(180, { len: 0.6, type: 'sine', gain: 0.22, slide: 4 })
+    if (o) {
+      const lfo = this.ctx.createOscillator()
+      const depth = this.ctx.createGain()
+      lfo.frequency.value = 11
+      depth.gain.value = 40
+      lfo.connect(depth).connect(o.frequency)
+      lfo.start()
+      lfo.stop(this.ctx.currentTime + 0.65)
+    }
+    this.note(hz(7), { at: 0.08, len: 0.3, type: 'triangle', gain: 0.06, slide: 1.5 })
   }
 
-  /**
-   * An obstacle's own soft note (semitones above C5), played as Pip passes it, so a
-   * log, log, rock rhythm is heard as a little tune: a bell-like sine with a quiet octave.
-   */
-  step(semitones, at = 0) {
-    this.note(hz(semitones), { at, len: 0.7, type: 'sine', gain: 0.13, attack: 0.01 })
-    this.note(hz(semitones + 12), { at: at + 0.01, len: 0.35, type: 'triangle', gain: 0.03 })
+  /** Dropping onto a log or a rock: a short, squishy bounce. */
+  stomp(step = 0) {
+    this.note(hz(PENTA[step % 5] - 12), { len: 0.22, type: 'sine', gain: 0.2, slide: 1.9 })
+    this.note(hz(PENTA[step % 5] + 7), { at: 0.04, len: 0.12, type: 'triangle', gain: 0.06 })
   }
 
-  /** "What comes next?": two soft rising notes, a question. */
-  wonder() {
-    this.note(hz(4, 392), { len: 0.4, type: 'sine', gain: 0.08, attack: 0.03 })
-    this.note(hz(9, 392), { at: 0.22, len: 0.6, type: 'sine', gain: 0.08, attack: 0.03 })
+  /** Carrots tumbling out of the sky: a falling cascade of twinkles. */
+  shower() {
+    for (let i = 0; i < 9; i++) this.note(hz(24 - PENTA[i]), { at: 0.25 + i * 0.07, len: 0.16, type: 'triangle', gain: 0.06 })
+  }
+
+  /** A splash: a wet hiss and a couple of bubbly notes (bigger for hopping in). */
+  splash(big) {
+    this.hiss({ len: big ? 0.3 : 0.14, freq: 1400, q: 0.6, gain: big ? 0.22 : 0.1 })
+    for (let i = 0; i < (big ? 3 : 1); i++) this.note(hz(PENTA[(i * 3 + 2) % 8]), { at: 0.04 + i * 0.06, len: 0.1, type: 'sine', gain: 0.07, slide: 1.6 })
+  }
+
+  /** A soap bubble pops: a tiny pop and a bright note that climbs with each one in a row. */
+  bubble(step) {
+    this.hiss({ len: 0.03, freq: 4200, q: 1.2, gain: 0.12 })
+    this.note(hz(12 + PENTA[step % 8]), { at: 0.01, len: 0.18, type: 'sine', gain: 0.1, slide: 1.1 })
+  }
+
+  /** Grabbing a balloon: a soft rising whistle. */
+  float() {
+    this.note(hz(0), { len: 0.9, type: 'sine', gain: 0.1, slide: 2, attack: 0.05 })
+    this.note(hz(7), { at: 0.15, len: 0.7, type: 'triangle', gain: 0.05, slide: 1.5, attack: 0.05 })
+  }
+
+  /** The balloon pops: a soft pop and a little sparkle of notes. */
+  pop() {
+    this.hiss({ len: 0.07, freq: 1800, q: 0.8, gain: 0.25 })
+    ;[12, 16, 19].forEach((s, i) => this.note(hz(s), { at: 0.05 + i * 0.05, len: 0.15, type: 'triangle', gain: 0.06 }))
+  }
+
+  /** The 🐇 / 🐢 pace switch: two quick high notes, or two slow low ones. */
+  pace(gentle) {
+    const [a, b, gap] = gentle ? [0, -5, 0.28] : [12, 16, 0.08]
+    this.note(hz(a, 392), { len: 0.25, type: 'triangle', gain: 0.1 })
+    this.note(hz(b, 392), { at: gap, len: 0.3, type: 'triangle', gain: 0.1 })
   }
 
   /** Poked scenery: a rustle, a ting, a boing, a thud, a knock or a flutter. */
@@ -202,16 +237,6 @@ export class Sound {
   music(on) {
     this.musicOn = on
     if (on && this.ctx) this.nextBeat = Math.max(this.nextBeat, this.ctx.currentTime + 0.1)
-    if (!on) this.hushMusic(false)
-  }
-
-  /**
-   * While a pattern is being hopped (and asked about) the music fades right down, so the
-   * obstacles' own notes are the only tune to listen to; it comes back softly after.
-   */
-  hushMusic(on) {
-    this.musicHushed = on
-    if (this.ctx) this.musicBus.gain.setTargetAtTime(on ? 0.0001 : 0.32, this.ctx.currentTime, on ? 0.15 : 0.8)
   }
 
   schedule() {

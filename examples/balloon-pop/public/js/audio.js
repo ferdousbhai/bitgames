@@ -80,30 +80,65 @@ export class Audio {
     osc.stop(t + decay + 0.05)
   }
 
-  /**
-   * The pop: a soft snap, a rubbery thump and a note. `step` picks the note (each balloon
-   * colour has its own). Calm pass: the bright highpass snap is much quieter.
-   */
-  pop(step = 0, size = 1, soft = 1) {
-    this.burst({ freq: 1600, q: 0.7, gain: 0.16 * soft, decay: 0.06, type: 'bandpass' })
-    this.burst({ freq: 800, q: 1.2, gain: 0.22 * size * soft, decay: 0.12 })
-    this.tone({ freq: 180 / size, type: 'sine', gain: 0.28 * soft, decay: 0.12, slide: -110 })
-    this.tone({ freq: note(Math.min(step, 14)), type: 'triangle', gain: 0.14 * soft, decay: 0.3, delay: 0.02 })
+  /** The pop: a bright snap, a rubbery thump and a note. `step` picks the note, so quick pops climb the scale. */
+  pop(step = 0, size = 1) {
+    this.burst({ freq: 1800, q: 0.7, gain: 0.22, decay: 0.05, type: 'bandpass' })
+    this.burst({ freq: 800, q: 1.2, gain: 0.22 * size, decay: 0.12 })
+    this.tone({ freq: 180 / size, type: 'sine', gain: 0.28, decay: 0.12, slide: -110 })
+    this.tone({ freq: note(Math.min(step, 14)), type: 'triangle', gain: 0.14, decay: 0.3, delay: 0.02 })
   }
 
-  /** A counted balloon in the counting sky: one soft bell note that climbs with the count. */
-  count(n) {
-    this.tone({ freq: note(Math.min(n - 1, 14), 392), type: 'sine', gain: 0.1, decay: 0.7, delay: 0.08, attack: 0.02 })
+  /** A giant balloon swelling: a rubbery squeak that climbs with each poke. */
+  squeak(n = 1) {
+    this.tone({ freq: 260 + n * 90, type: 'triangle', gain: 0.16, decay: 0.22, slide: 240 + n * 60, attack: 0.01 })
+    this.tone({ freq: 520 + n * 180, type: 'sine', gain: 0.05, decay: 0.18, slide: 300, delay: 0.02 })
+    this.burst({ freq: 900 + n * 200, q: 4, gain: 0.05, decay: 0.15 })
   }
 
-  /** A balloon the friend did not ask for: one low, soft "boop", no words. */
-  boop() {
-    this.tone({ freq: 233, type: 'sine', gain: 0.08, decay: 0.22, delay: 0.1, slide: -40, attack: 0.02 })
+  /** A tap on empty sky: two tiny high notes. */
+  twinkle() {
+    const n = (Math.random() * 5) | 0
+    this.tone({ freq: note(10 + n), type: 'sine', gain: 0.06, decay: 0.25 })
+    this.tone({ freq: note(12 + n), type: 'sine', gain: 0.04, decay: 0.3, delay: 0.07 })
   }
 
-  /** A balloon let go from the basket: a soft rising whistle as it floats off. */
-  release() {
-    this.tone({ freq: note(2, 392), type: 'sine', gain: 0.07, decay: 0.5, slide: 260, attack: 0.03 })
+  /** Blowing up a balloon: a breathy puff and a note that climbs as it grows (`p` from 0 to 1). */
+  puff(p = 0) {
+    this.burst({ freq: 500 + p * 400, q: 0.6, gain: 0.07, decay: 0.16, type: 'lowpass' })
+    this.tone({ freq: 220 + p * 520, type: 'triangle', gain: 0.07, decay: 0.2, slide: 40, attack: 0.03 })
+  }
+
+  /** A balloon let go: a soft rising whistle as it floats off. */
+  letGo() {
+    this.tone({ freq: note(4, 392), type: 'sine', gain: 0.09, decay: 0.5, slide: 380, attack: 0.03 })
+  }
+
+  /** A surprise in the sky: a little rising toot. */
+  surprise() {
+    ;[0, 4, 7, 9].forEach((s, i) => this.tone({ freq: note(s, 523.25), type: 'triangle', gain: 0.09, decay: 0.3, delay: i * 0.08 }))
+  }
+
+  /** A friend landing on the grass: a soft, low thump and a rustle. */
+  thud() {
+    this.tone({ freq: 120, type: 'sine', gain: 0.24, decay: 0.18, slide: -55, attack: 0.005 })
+    this.burst({ freq: 700, q: 0.5, gain: 0.07, decay: 0.12, type: 'lowpass' })
+  }
+
+  /** A piglet on the meadow: a little snorty oink. */
+  oink() {
+    this.burst({ freq: 420, q: 6, gain: 0.12, decay: 0.14 })
+    this.tone({ freq: 240, type: 'sawtooth', gain: 0.04, decay: 0.14, slide: 60, attack: 0.01 })
+  }
+
+  /** A duck on the meadow: a soft, nasal quack. */
+  quack() {
+    this.tone({ freq: 520, type: 'square', gain: 0.05, decay: 0.16, slide: -180, attack: 0.01 })
+    this.burst({ freq: 1100, q: 3, gain: 0.06, decay: 0.12 })
+  }
+
+  /** A bunny on the meadow: a springy boing. */
+  boing() {
+    this.tone({ freq: 300, type: 'sine', gain: 0.16, decay: 0.35, slide: 500, attack: 0.01 })
   }
 
   sparkle() {
@@ -121,16 +156,11 @@ export class Audio {
     for (let i = 0; i < 8; i++) this.tone({ freq: note(i), type: 'triangle', gain: 0.13, decay: 0.3, delay: i * 0.045 })
   }
 
-  /** A finished level: a slow, gentle rising arpeggio (calm pass: triangle and sine, no square or hiss). */
+  /** A new balloon friend: a gentle rising arpeggio. */
   levelUp() {
     const tune = [0, 2, 4, 7]
     tune.forEach((s, i) => this.tone({ freq: note(s, 392), type: 'triangle', gain: 0.1, decay: 0.6, delay: i * 0.18, attack: 0.02 }))
     tune.forEach((s, i) => this.tone({ freq: note(s, 392) * 2, type: 'sine', gain: 0.04, decay: 0.6, delay: i * 0.18, attack: 0.02 }))
-  }
-
-  /** A finished mission: one soft major chord, played once. */
-  chord() {
-    ;[0, 2, 4].forEach((s, i) => this.tone({ freq: note(s, 392), type: 'sine', gain: 0.09, decay: 1.6, delay: i * 0.06, attack: 0.04 }))
   }
 
   click() {
@@ -207,7 +237,7 @@ export class Audio {
     while (this.nextBeat < ctx.currentTime + 0.25) {
       const b = this.beat++
       const t = this.nextBeat - ctx.currentTime
-      // Every other phrase is a rest, so the music box breathes and leaves room for the voice.
+      // Every other phrase is a rest, so the music box breathes and leaves room for the pops.
       if (Math.floor(b / 32) % 2 === 1) {
         this.nextBeat += 0.3
         continue

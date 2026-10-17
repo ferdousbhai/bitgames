@@ -1,17 +1,17 @@
 {
   "id": "bumper-ducks",
   "title": "Bumper Ducks",
-  "tagline": "Bonk, bounce and squeak! Up to 4 rubber ducks in bumper boats gather bubbles into tens together.",
-  "howToPlay": "Drag anywhere (or use the arrow keys) to paddle your duck. Tap 💨 (or Space) to dash and BONK! In 🫧 Together every duck fills one shared jar: two rows of five, colours to sort and compare (one more than), your own ways to make a number, then tens and ones with ten rafts (tens first, then crossing a ten). Bubbles that don't fit bob away, so look before you paddle. Bump a stuck bubble free; in the frog pond, bump the frogs from the smallest number to the biggest. Dash into a raft to break a ten into ten ones. 💥 Bumper play has no clock: bump and bounce while the team makes exactly 50, then 70, then a number like 47. A raft is ten at once, but near the end only ones fit. Nobody is ever out!",
+  "tagline": "Bonk, bounce and squeak! Rubber ducks in bumper boats chase bubbles, burst giant ones and splash each other out of the tub.",
+  "howToPlay": "Drag anywhere (or use the arrow keys) to paddle, and tap 💨 (or Space) to dash and bonk. Grab bubbles and stars, open 🎁 for a surprise power, bump mama duck, frogs or paper boats to shake bubbles loose, and bonk friends right out of the water. Nobody is ever out, and up to four can play on their own devices.",
   "emoji": "🦆",
   "color": "#ffca3a",
   "category": "animals",
   "together": true,
   "featured": false,
-  "url": "https://0980c081-bitgames-bumper-ducks.ferdousbd.workers.dev/",
+  "url": "https://eecfc984-bitgames-bumper-ducks.ferdousbd.workers.dev/",
   "ages": [
     3,
     8
   ],
-  "learning": "Counting to ten in rows of five, sorting by colour, one more than, number bonds, place value (tens and ones, adding tens, crossing a ten and regrouping), ordering numbers, cooperation and spatial awareness"
+  "learning": "Steering and spatial awareness, cause and effect, and playing together"
 }

@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Memory Match</title>
+<link rel="icon" href="data:,">
 <script type="importmap">
 { "imports": {
   "three": "https://bitgames.store/vendor/three/build/three.module.js",
@@ -18,64 +19,38 @@
 <div class="vignette"></div>
 
 <div id="loading" class="screen">
-  <div class="logo"><span>M</span><span>e</span><span>m</span><span>o</span><span>r</span><span>y</span> <span>M</span><span>a</span><span>t</span><span>c</span><span>h</span></div>
   <div class="paws">🐾</div>
-  <div id="loading-text">Waking up the animals…</div>
+  <div class="bar"><i id="loading-bar"></i></div>
+  <button id="reload" class="big-go oops" aria-label="Try again">🔁</button>
 </div>
 
 <div id="menu" class="overlay hidden">
-  <button id="book" class="round book-btn" aria-label="My animal book">📖</button>
-  <div class="menu-top">
-    <div class="logo"><span>M</span><span>e</span><span>m</span><span>o</span><span>r</span><span>y</span> <span>M</span><span>a</span><span>t</span><span>c</span><span>h</span></div>
-    <p id="menu-hint" class="hint">Find the animal twins! Tap an animal to say hello.</p>
-  </div>
+  <button id="menu-mute" class="round corner" aria-label="Sound">🔊</button>
   <div class="menu-bottom">
-    <div class="go-row">
-      <div class="modes" role="group" aria-label="What makes a pair">
-        <button class="mode" data-mode="twins" aria-label="Twins: two of the same animal"><span class="pic">🐶🐶</span><span class="word">Twins</span></button>
-        <button class="mode" data-mode="sound" aria-label="Sounds: an animal and its sound"><span class="pic">🐮<b>🔊</b></span><span class="word">Sounds</span></button>
-        <button class="mode" data-mode="baby" aria-label="Babies: an animal and its baby"><span class="pic">🐮<small>🐮</small></span><span class="word">Babies</span></button>
-        <button class="mode" data-mode="groups" aria-label="Homes: animals that live together"><span class="pic trio">🐮🐷🐥</span><span class="word">Homes</span></button>
-      </div>
-      <button id="play" class="big-go">▶ Play</button>
-    </div>
-    <div id="levels" class="levels"></div>
-  </div>
-</div>
-
-<div id="book-page" class="overlay book hidden" role="dialog" aria-label="My animal book">
-  <div class="book-card">
-    <h2>My animals</h2>
-    <p class="hint">What you found out about each animal</p>
-    <div id="book-grid" class="book-grid"></div>
-    <div class="row"><button id="book-close" class="big-go alt" aria-label="Back">◀</button></div>
+    <button id="play" class="play" aria-label="Play">▶</button>
+    <div id="levels" class="levels" role="group" aria-label="Board size"></div>
   </div>
 </div>
 
 <div id="hud" class="hidden">
   <div class="hud-left">
-    <button id="home" class="round" title="Home">🏠</button>
-    <button id="mute" class="round" title="Sound">🔊</button>
-    <button id="peek" class="round" title="Peek at one pair" aria-label="Peek at one matching pair">👀</button>
+    <button id="home" class="round" aria-label="Home">🏠</button>
+    <button id="mute" class="round" aria-label="Sound">🔊</button>
   </div>
   <div class="hud-center">
-    <div id="level-pill" class="pill">Level 1</div>
     <div id="pairs" class="pairs"></div>
   </div>
 </div>
 
-<div id="banner" class="banner"></div>
+<div id="hand" class="hand hidden" aria-hidden="true"><svg viewBox="-6 -6 92 108" width="1em" height="1.17em"><g fill="#5a3d7a" stroke="#5a3d7a" stroke-width="10" stroke-linejoin="round"><rect x="30" y="4" width="20" height="54" rx="10"/><rect x="47" y="30" width="17" height="30" rx="8.5"/><rect x="61" y="37" width="14" height="26" rx="7"/><rect x="20" y="42" width="55" height="50" rx="20"/><rect x="6" y="52" width="18" height="34" rx="9" transform="rotate(-28 15 69)"/></g><g fill="#fff"><rect x="30" y="4" width="20" height="54" rx="10"/><rect x="47" y="30" width="17" height="30" rx="8.5"/><rect x="61" y="37" width="14" height="26" rx="7"/><rect x="20" y="42" width="55" height="50" rx="20"/><rect x="6" y="52" width="18" height="34" rx="9" transform="rotate(-28 15 69)"/></g><path d="M36 14 v18" stroke="#ffd6e4" stroke-width="5" stroke-linecap="round"/></svg></div>
 
 <div id="win" class="overlay win hidden">
   <div class="win-card">
-    <h1 id="win-title">Hooray!</h1>
-    <div id="win-stars" class="stars" role="img"></div>
-    <p id="win-text" class="hint"></p>
-    <p id="win-next" class="hint next-note"></p>
+    <div id="win-stars" class="stars"></div>
     <div class="row">
-      <button id="next" class="big-go">Next ▶</button>
-      <button id="again" class="big-go alt">🔁</button>
-      <button id="win-home" class="big-go alt">🏠</button>
+      <button id="next" class="big-go" aria-label="Next">▶</button>
+      <button id="again" class="big-go alt" aria-label="Again">🔁</button>
+      <button id="win-home" class="big-go alt" aria-label="Home">🏠</button>
     </div>
   </div>
 </div>

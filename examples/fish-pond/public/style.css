@@ -22,7 +22,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .card {
   pointer-events: auto; background: rgba(255, 255, 255, 0.92); border-radius: 36px; padding: clamp(10px, 2.6vh, 20px) clamp(14px, 3vw, 26px);
-  box-shadow: 0 10px 0 rgba(31, 95, 153, 0.25), 0 20px 50px rgba(0, 0, 0, 0.15); max-width: min(620px, 100%);
+  box-shadow: 0 10px 0 rgba(31, 95, 153, 0.25), 0 20px 50px rgba(0, 0, 0, 0.15); max-width: min(680px, 100%);
   display: flex; flex-direction: column; align-items: center; gap: clamp(6px, 1.8vh, 12px); color: #1f5f99;
   animation: float-in .6s cubic-bezier(.2, 1.6, .4, 1);
 }
@@ -30,14 +30,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 
 .logo { font-size: clamp(30px, min(10vw, 11vh), 96px); font-weight: 900; letter-spacing: 1px; white-space: nowrap; line-height: 1; }
 .logo span { display: inline-block; -webkit-text-stroke: 2px rgba(0,0,0,0.08); text-shadow: 0 5px 0 rgba(31, 95, 153, 0.3); }
-.logo span:nth-child(4n+1) { color: #ff8a1f; } .logo span:nth-child(4n+2) { color: #3d8bff; animation-delay: .15s; }
-.logo span:nth-child(4n+3) { color: #2ec4b6; animation-delay: .3s; } .logo span:nth-child(4n) { color: #ff5f8f; animation-delay: .45s; }
-@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-9px) rotate(4deg); } }
+.logo span:nth-child(4n+1) { color: #ff8a1f; } .logo span:nth-child(4n+2) { color: #3d8bff; }
+.logo span:nth-child(4n+3) { color: #2ec4b6; } .logo span:nth-child(4n) { color: #ff5f8f; }
 .spinner { font-size: 72px; animation: rock 3s ease-in-out infinite; } /* a slow rock while loading only */
 @keyframes rock { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg) translateY(-8px); } }
-.tag { margin: 0; font-size: clamp(16px, min(3.6vw, 5vh), 24px); font-weight: 800; }
 
-.places { --pl: clamp(44px, min(16vw - 10px, 18vh), 108px); display: grid; grid-template-columns: repeat(5, var(--pl)); gap: clamp(8px, 1.6vh, 12px); justify-content: center; }
+.places { --pl: clamp(52px, min(16vw - 10px, 18vh), 104px); display: grid; grid-template-columns: repeat(5, var(--pl)); gap: clamp(8px, 1.6vh, 14px); justify-content: center; padding-bottom: calc(var(--pl) * .18); }
 .place {
   position: relative; width: var(--pl); height: var(--pl); border-radius: 24%; font-size: calc(var(--pl) * .5);
   display: flex; align-items: center; justify-content: center; box-shadow: 0 7px 0 rgba(0,0,0,.18); transition: transform .12s;
@@ -50,13 +48,16 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .place.ice { background: linear-gradient(#cfe6ff, #ffffff 60%, #bfe3ff); }
 .place.reef { background: linear-gradient(#7fe6ff, #3fd0c9 55%, #ffe3a6); }
 .place.last { outline: 5px solid #ffd23f; outline-offset: 2px; }
+/* Every creature of a place found: its button keeps a little trophy */
+.place.done::before { content: '🏆'; position: absolute; top: calc(var(--pl) * -.12); left: calc(var(--pl) * -.08); font-size: calc(var(--pl) * .3); filter: drop-shadow(0 2px 1px rgba(0,0,0,.2)); }
+/* The place played last wears a big play badge: tap to go fishing */
+.place.last::after {
+  content: '▶'; position: absolute; left: 50%; bottom: calc(var(--pl) * -.22); transform: translateX(-50%); width: calc(var(--pl) * .46); height: calc(var(--pl) * .46);
+  border-radius: 50%; background: #ffd23f; color: #fff; font-size: calc(var(--pl) * .22); line-height: calc(var(--pl) * .46); text-indent: .12em;
+  box-shadow: 0 4px 0 #d98a1c; text-shadow: 0 2px 0 rgba(0,0,0,.15);
+}
 
 .title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 12px; }
-#title .adventure-choice {
-  margin: 0; min-height: clamp(52px, 8vh, 66px); padding: 6px clamp(18px, 2.4vh, 26px); border-radius: 999px; border: 3px solid #fff; font: 900 18px/1.1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
-  background: linear-gradient(#f2fbff, #c7ecff); color: #1f5f99; box-shadow: 0 5px 0 rgba(31, 95, 153, .3); white-space: nowrap; font-size: clamp(18px, min(3.4vw, 3.6vh), 28px);
-}
-#title .adventure-choice:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(31, 95, 153, .3); }
 .book-big {
   background: linear-gradient(#ffd96b, #ffb43b); color: #7a4a12; font-size: clamp(22px, min(5vw, 7vh), 34px); font-weight: 900; padding: 6px 26px; min-height: clamp(52px, 8vh, 66px);
   border-radius: 999px; box-shadow: 0 7px 0 #d98a1c; text-shadow: 0 2px 0 rgba(255,255,255,.4);
@@ -69,83 +70,44 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 .round-btn { pointer-events: auto; position: relative; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.8); font-size: 26px; box-shadow: 0 4px 0 rgba(31,95,153,.3); }
 .round-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(31,95,153,.3); }
 .round-btn.off { opacity: .45; }
+/* Press and hold: a ring fills round the button (JS sets --hold from 0 to 1); a quick tap only wiggles */
+#hud .round-btn:not(.book-btn)::after {
+  content: ''; position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .15s;
+  background: conic-gradient(#ffd23f calc(var(--hold, 0) * 360deg), rgba(255, 255, 255, .35) 0);
+  -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  mask: radial-gradient(circle closest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+}
+#hud .round-btn.holding::after { opacity: 1; }
+.round-btn.wiggle { animation: wiggle .4s ease-in-out; }
 .book-btn { width: 60px; height: 60px; font-size: 30px; background: #ffd96b; }
 .book-btn.bump { animation: bump .5s ease-out; }
 @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
 .intro {
   position: absolute; left: 50%; top: 62%; transform: translate(-50%, -50%) scale(0); opacity: 0; text-align: center;
-  background: rgba(255,255,255,.9); color: #1f5f99; border-radius: 30px; padding: 14px 28px 18px; box-shadow: 0 8px 0 rgba(31,95,153,.25);
-  max-width: calc(100vw - 32px);
+  border-radius: 30px; padding: 14px 28px 18px; max-width: calc(100vw - 32px);
 }
-.intro.show { animation: intro 2.8s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+.intro.show { animation: intro 4.2s cubic-bezier(.2, 1.6, .4, 1) forwards; }
 @keyframes intro {
   0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
   15%, 80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   100% { transform: translate(-50%, -80%) scale(.9); opacity: 0; }
 }
-/* Trophies: a gold card that stays up longer than a place name */
-.intro.prize { background: linear-gradient(#fff8d6, #ffe58a); color: #8a5a00; border: 4px solid #fff; box-shadow: 0 8px 0 rgba(138, 90, 0, .3), 0 0 40px rgba(255, 214, 80, .7); }
-.intro.prize.show { animation-duration: 4.2s; }
-.intro.prize #intro-emoji { font-size: clamp(46px, 12vh, 90px); }
-#intro-emoji { font-size: clamp(34px, 8vh, 60px); line-height: 1.1; }
-#intro-title { font-size: clamp(24px, min(6vw, 8vh), 44px); font-weight: 900; }
-#intro-sub { font-size: clamp(16px, min(3.5vw, 5vh), 22px); font-weight: 800; opacity: .85; }
+/* The trophy for a full book: a gold card */
+.intro { background: linear-gradient(#fff8d6, #ffe58a); color: #8a5a00; border: 4px solid #fff; box-shadow: 0 8px 0 rgba(138, 90, 0, .3), 0 0 40px rgba(255, 214, 80, .7); }
+#intro-emoji { font-size: clamp(46px, 12vh, 90px); line-height: 1.1; }
+#intro-sub { font-size: clamp(22px, min(5vw, 6vh), 34px); font-weight: 900; }
 @media (max-height: 480px) { .intro { top: 70%; padding: 6px 20px 10px; border-radius: 22px; } }
-
-/* The "You caught …" name card under the show-off */
-.card-catch {
-  position: fixed; left: 50%; bottom: calc(5vh + env(safe-area-inset-bottom)); transform: translate(-50%, 0) scale(0); opacity: 0; pointer-events: none;
-  background: rgba(255,255,255,.94); color: #1f5f99; border-radius: 28px; padding: 10px 30px 14px; text-align: center;
-  box-shadow: 0 8px 0 rgba(31,95,153,.25); white-space: nowrap; transition: transform .35s cubic-bezier(.2, 1.7, .4, 1), opacity .25s;
-}
-.card-catch.show { transform: translate(-50%, 0) scale(1); opacity: 1; transition-delay: .15s; }
-.card-catch.stars3 { background: linear-gradient(#fff8d6, #ffe58a); color: #8a5a00; }
-.card-catch.back { background: rgba(232, 246, 255, .95); color: #1f5f99; }
-.cstars { font-size: clamp(22px, 5vw, 32px); letter-spacing: 4px; }
-.cstars:empty { display: none; }
-.cname { font-size: clamp(28px, 7vw, 46px); font-weight: 900; }
-/* Look closer: one line under the name that asks, then tells the fact */
-.clook {
-  margin-top: 4px; font-size: clamp(16px, 3.6vw, 22px); font-weight: 800; color: #2a6fa8; white-space: normal;
-  max-width: min(78vw, 520px); margin-inline: auto; line-height: 1.25;
-}
-/* The soft glow sitting on the creature's feature: tap it to hear about it */
-.look {
-  position: fixed; left: 0; top: 0; z-index: 5; width: 84px; height: 84px; margin: -42px 0 0 -42px; border-radius: 50%;
-  pointer-events: auto; background: radial-gradient(circle, rgba(255, 232, 150, .8) 0 22%, rgba(255, 196, 80, .5) 45%, rgba(255, 196, 80, 0) 70%);
-  box-shadow: 0 0 0 4px rgba(224, 138, 30, .9) inset, 0 0 0 7px rgba(255, 255, 255, .8) inset; opacity: 0; transition: opacity .8s ease;
-}
-/* The brighter heart of the glow fades in and out on its own layer (compositor-only, no filter) */
-.look::before {
-  content: ''; position: absolute; inset: 0; border-radius: 50%; opacity: 0; pointer-events: none;
-  background: radial-gradient(circle, rgba(255, 255, 240, .5) 0 30%, rgba(255, 245, 190, .25) 50%, rgba(255, 245, 190, 0) 70%);
-}
-.look.on { opacity: 1; }
-.look.on::before { animation: look-glow 1.6s ease-out .4s forwards; }
-.look.seen { opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
-.look-glass {
-  position: absolute; right: -10px; bottom: -10px; width: 42px; height: 42px; border-radius: 50%; background: #fff7d6; font-size: 26px; line-height: 42px; text-align: center;
-  box-shadow: 0 0 0 3px #e08a1e, 0 3px 4px rgba(0,0,0,.25);
-}
-.look:focus-visible { outline: 4px solid #ffd23f; outline-offset: 2px; }
-/* One slow, gentle brightening that then stays still (no pulse) */
-@keyframes look-glow { to { opacity: .85; } }
-@media (prefers-reduced-motion: reduce) { .look.on::before { animation: none; } }
-
-#card-new {
-  position: absolute; top: -22px; right: -18px; background: #ff5f8f; color: #fff; font-weight: 900; font-size: 22px; padding: 6px 14px;
-  border-radius: 16px; transform: rotate(12deg); box-shadow: 0 4px 0 rgba(0,0,0,.18);
-}
 
 .bang { position: fixed; left: 0; top: 0; pointer-events: none; }
 .bang span {
-  display: block; margin: -70px 0 0 -30px; width: 60px; height: 60px; border-radius: 50%; background: #ffd23f; color: #e0294b;
-  font-size: 46px; font-weight: 900; line-height: 60px; text-align: center; border: 4px solid #fff; box-shadow: 0 5px 0 rgba(0,0,0,.2);
-  animation: bang .5s cubic-bezier(.2, 1.6, .4, 1) both;
+  display: block; margin: -96px 0 0 -43px; width: 86px; height: 86px; border-radius: 50%; background: #ffd23f; color: #e0294b;
+  font-size: 64px; font-weight: 900; line-height: 86px; text-align: center; border: 5px solid #fff; box-shadow: 0 6px 0 rgba(0,0,0,.2), 0 0 0 8px rgba(255, 210, 63, .35);
+  animation: bang .5s cubic-bezier(.2, 1.6, .4, 1) both, bang-bob 1.4s ease-in-out .5s infinite;
 }
-/* One soft pop as the fish bites, then the ! stays still for the child to find */
+/* One soft pop as the fish bites, then a gentle bob (no flashing) so the ! is easy to find */
 @keyframes bang { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes bang-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
 #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .float {
@@ -174,49 +136,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   animation: float-in .45s cubic-bezier(.2, 1.6, .4, 1);
 }
 .book-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.book-head .field-guide { order: 5; flex: 1 1 100%; }
-.book-tabs { flex: 1; display: flex; gap: 8px; min-width: 0; }
-.book-tab {
-  font-size: clamp(20px, 4.4vw, 30px); font-weight: 900; white-space: nowrap; color: #1f5f99; background: #f0e2c4; border-radius: 18px;
-  padding: 4px 14px; min-height: 52px; box-shadow: 0 3px 0 rgba(122, 74, 18, .2);
-}
-.book-tab[aria-pressed="true"] { background: #fff; box-shadow: 0 0 0 3px #ffd96b inset; }
+.book-title { flex: 1; font-size: clamp(22px, 4.4vw, 32px); font-weight: 900; white-space: nowrap; padding-left: 6px; }
 .book-close { flex: none; background: #ffd96b; }
-.book-grid[hidden], .sort-page[hidden], .book-tab[hidden] { display: none; }
-
-/* Sorting page: catches in a tray, three baskets to put them in (book.js) */
-.sort-page { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
-.sort-tray {
-  flex: 1 1 40%; min-height: 0; overflow-y: auto; touch-action: pan-y; display: flex; flex-wrap: wrap; align-content: center; justify-content: center;
-  gap: 8px; padding: 6px; background: #f3ead6; border-radius: 22px;
-}
-.sort-tray:empty::before { content: '🐻👍'; font-size: clamp(40px, 9vw, 72px); opacity: .8; }
-.sort-tile {
-  position: relative; background: #fff; border-radius: 18px; padding: 4px 6px 6px; display: flex; flex-direction: column; align-items: center;
-  width: clamp(76px, 13vw, 116px); box-shadow: 0 4px 0 rgba(31,95,153,.18); color: #1f5f99; touch-action: none; transition: transform .2s;
-}
-.sort-tile img { width: 100%; aspect-ratio: 1; object-fit: contain; pointer-events: none; }
-.sort-tile.picked { transform: translateY(-6px); box-shadow: 0 0 0 4px #ffb23f, 0 8px 0 rgba(31,95,153,.18); }
-.sort-tile.lifted { opacity: .35; }
-.sort-ghost { position: fixed; left: 0; top: 0; width: clamp(70px, 12vw, 110px); pointer-events: none; z-index: 20; filter: drop-shadow(0 6px 6px rgba(0,0,0,.25)); }
-/* Baskets are only as tall as they need to be (an empty one is not a big blank box); the tray takes the rest */
-.sort-baskets { flex: 0 1 auto; height: clamp(150px, 22vh, 220px); min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.basket {
-  min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 6px; border-radius: 22px;
-  border: 4px dashed rgba(31,95,153,.35); color: #1f5f99; overflow: hidden; transition: border-color .2s, background-color .2s;
-}
-.basket.fresh { background: #dff3e6; }
-.basket.sea { background: #d9ecfb; }
-.basket.pretend { background: #f6e6f0; }
-.basket.over, .basket.hint { border: 4px solid #ffb23f; }
-.basket.over { background-color: #fff3d6; }
-.basket-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 6px; line-height: 1.1; }
-.basket-icon { font-size: clamp(26px, 5vw, 40px); }
-.basket-word { font-size: clamp(14px, 2.6vw, 22px); font-weight: 900; }
-.basket-places { flex-basis: 100%; text-align: center; font-size: clamp(14px, 2.4vw, 20px); letter-spacing: 2px; }
-.sort-baskets.recall .basket:not(.pretend) .basket-places { visibility: hidden; }
-.basket-in { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center; gap: 2px; overflow: hidden; }
-.basket-in img { width: clamp(36px, 7vw, 62px); aspect-ratio: 1; object-fit: contain; pointer-events: none; }
 .book-grid {
   flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(5, 1fr); align-content: center; gap: 8px; overflow-y: auto; touch-action: pan-y; padding: 4px;
 }
@@ -226,12 +147,22 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
 }
 .tile.missing { background: #e9eef8; }
 .tile img { width: var(--pic, 100%); max-width: 100%; aspect-ratio: 1; object-fit: contain; pointer-events: none; }
-.book-grid.compact .tile-name { display: none; }
-.book-grid.compact .tile-q { top: 50%; transform: translate(-50%, -50%); font-size: 28px; }
-.tile-name { font-size: clamp(12px, 2.2vw, 16px); font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .tile-q { position: absolute; top: 28%; left: 50%; transform: translateX(-50%); font-size: 40px; font-weight: 900; color: #fff; text-shadow: 0 3px 0 rgba(31,95,153,.4); pointer-events: none; }
+.tile-where { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; white-space: nowrap; font-size: clamp(9px, calc(var(--pic, 80px) * .14), 20px); pointer-events: none; }
+.tile-badges { position: absolute; top: 2px; right: 4px; font-size: clamp(14px, calc(var(--pic, 80px) * .24), 26px); line-height: 1; pointer-events: none; }
 .tile.wiggle { animation: wiggle .5s ease-in-out; }
 @keyframes wiggle { 25% { transform: rotate(-8deg) scale(1.08); } 75% { transform: rotate(8deg) scale(1.08); } }
+/* A caught sticker jumps for joy when tapped */
+.tile.hop { animation: hop .55s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes hop { 0% { transform: none; } 30% { transform: translateY(-14px) scale(1.12, .92); } 60% { transform: translateY(0) scale(.94, 1.08); } 100% { transform: none; } }
+
+/* A gold star for a creature new to the book: it pops in under the catch, then fades with it */
+.new-star {
+  position: fixed; left: 50%; bottom: calc(9vh + env(safe-area-inset-bottom)); font-size: clamp(56px, 11vmin, 96px); line-height: 1; pointer-events: none;
+  transform: translate(-50%, 0) scale(0); opacity: 0; filter: drop-shadow(0 5px 4px rgba(138, 90, 0, .35)); transition: opacity .3s;
+}
+.new-star.show { opacity: 1; animation: star-pop .7s cubic-bezier(.2, 1.8, .4, 1) .25s both; }
+@keyframes star-pop { from { transform: translate(-50%, 30px) scale(0) rotate(-40deg); } to { transform: translate(-50%, 0) scale(1) rotate(0); } }
 
 /* 320px-wide phones: the catch count stays clear of the music button */
 @media (max-width: 360px) {
@@ -246,119 +177,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; touch-action
   .round-btn { width: 66px; height: 66px; font-size: 33px; }
   .book-btn { width: 76px; height: 76px; font-size: 38px; }
 }
-@media (max-height: 520px) {
-  .book-tabs { flex: none; }
-  .book-tab { min-height: 44px; padding: 2px 10px; }
-  .book-head .field-guide { order: 0; flex: 1 1 0; min-width: 0; }
-  .sort-page { flex-direction: row; }
-  .sort-tray { flex: 1 1 38%; }
-  .sort-baskets { flex: 1 1 62%; height: auto; }
-  .sort-tile { width: 64px; }
-  .basket-places { display: none; }
-  .card-catch { padding: 4px 20px 8px; bottom: calc(8px + env(safe-area-inset-bottom)); }
-  .cname { font-size: 26px; }
-  .cstars { font-size: 18px; }
-  #card-new { font-size: 16px; top: -16px; }
-  .clook { font-size: 15px; margin-top: 0; }
-}
-
-.field-guide { font-size: clamp(13px, 2.4vh, 18px); font-weight: 800; line-height: 1.25; margin: 0; color: #5a3a10; background: #ffeec4; border-radius: 14px; padding: 6px 12px; text-align: center; }
-
-/* Learning mission: a row of fish to fill, under the sound buttons and clear of Bear */
-#hud .adventure-goal {
-  top: calc(72px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); bottom: auto; left: auto; transform: none;
-  display: flex; align-items: center; gap: 6px; padding: 4px 14px 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, .92);
-  color: #1f5f99; font: 900 18px/1.2 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; box-shadow: 0 4px 0 rgba(31, 95, 153, .3);
-}
-#hud .adventure-goal.adventure-done { background: linear-gradient(#fff8d6, #ffe58a); color: #8a5a00; }
-#hud .adventure-steps { font-size: 24px; }
-@media (max-height: 420px) { #hud .adventure-goal { top: calc(68px + env(safe-area-inset-top)); font-size: 15px; } #hud .adventure-steps { font-size: 20px; } }
-@media (min-width: 760px) and (min-height: 640px) {
-  #hud .adventure-goal { top: calc(90px + env(safe-area-inset-top)); font-size: 24px; padding: 6px 18px 6px 14px; }
-  #hud .adventure-steps { font-size: 32px; }
-}
-
 /* Calm pass: honour reduced motion everywhere */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-}
-
-/* Bear's riddle: what to look for, in a picture and a word. Tap to hear it again. Still, no pulse. */
-.riddle {
-  pointer-events: auto; position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 6px 20px 6px 12px; border-radius: 999px;
-  background: rgba(255, 255, 255, .93); color: #1f5f99; box-shadow: 0 4px 0 rgba(31, 95, 153, .3);
-  font: 900 clamp(18px, 3.2vw, 26px)/1.1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; white-space: nowrap;
-  transition: background-color .6s ease;
-}
-.riddle[hidden] { display: none; }
-.riddle:active { transform: translate(-50%, 3px); box-shadow: 0 1px 0 rgba(31, 95, 153, .3); }
-.riddle-bear { font-size: 1.15em; }
-.riddle-icon { font-size: 1.3em; }
-.riddle.two { background: rgba(236, 246, 255, .95); }
-/* A plain colour (a gradient would make the fade start from transparent: dark text on the night sky) */
-.riddle.solved { background-color: #e2f7d4; color: #2e7a2e; }
-/* Phones: under the round buttons, so it never squeezes between them */
-@media (max-width: 640px) {
-  .riddle { top: calc(72px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); transform: none; min-height: 48px; padding: 4px 14px 4px 10px; }
-  .riddle:active { transform: translateY(3px); }
-}
-@media (max-height: 420px) { .riddle { top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); min-height: 48px; } }
-
-/* Tap to count: a soft spot on each arm or stripe; a counted one keeps its number (no pulse) */
-.count-dot {
-  position: fixed; left: 0; top: 0; z-index: 5; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; pointer-events: auto;
-  background: radial-gradient(circle, rgba(255, 255, 240, .7) 0 30%, rgba(255, 245, 190, .35) 60%, rgba(255, 245, 190, 0) 72%);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, .9) inset; color: #1f5f99; font: 900 26px/54px ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
-  text-align: center; padding: 0; transition: background .4s ease;
-}
-.count-dot[hidden] { display: none; }
-.count-dot.counted { background: rgba(255, 255, 255, .92); box-shadow: 0 3px 0 rgba(31, 95, 153, .3); }
-@media (max-height: 560px), (max-width: 480px) { .count-dot { width: 40px; height: 40px; margin: -20px 0 0 -20px; font-size: 20px; line-height: 40px; } }
-/* "not a fish", "no bones": a soft slash across the picture (no red cross: it is a clue, not a mistake) */
-.riddle-icon { display: inline-flex; gap: 4px; }
-.riddle-icon .ri { position: relative; }
-.riddle-icon .ri.not::after {
-  content: ''; position: absolute; left: -2px; right: -2px; top: 50%; height: 4px; border-radius: 2px;
-  background: #1f5f99; transform: rotate(-35deg); opacity: .75;
-}
-
-/* Older children guess how many before counting: three calm number buttons above the name card */
-.guess {
-  position: fixed; left: 50%; bottom: calc(5vh + 178px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 6;
-  display: flex; gap: 14px; pointer-events: auto;
-}
-.guess[hidden] { display: none; }
-.guess button {
-  width: 76px; height: 76px; border-radius: 50%; background: rgba(255, 255, 255, .94); color: #1f5f99; box-shadow: 0 5px 0 rgba(31, 95, 153, .3);
-  font: 900 36px/76px ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif; padding: 0;
-}
-.guess button:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(31, 95, 153, .3); }
-@media (max-height: 560px) { .guess { bottom: calc(110px + env(safe-area-inset-bottom)); } .guess button { width: 60px; height: 60px; font-size: 28px; line-height: 60px; } }
-/* The narrowest phones: two-clue riddles still fit on one line */
-@media (max-width: 360px) { .riddle { font-size: 15px; gap: 5px; padding: 4px 10px 4px 8px; } }
-/* "Find two": a slot per animal, filled green when found (still, no count-up) */
-.riddle-icon .slots { display: inline-flex; gap: 4px; align-items: center; margin-left: 4px; }
-.riddle-icon .slots i { width: .5em; height: .5em; border-radius: 50%; border: 3px solid rgba(31, 95, 153, .55); }
-.riddle-icon .slots i.on { background: #4caf50; border-color: #4caf50; }
-/* A new riddle settles in once (no pulse), so a child notices the picture changed */
-.riddle.fresh { animation: riddle-in .5s ease-out; }
-@keyframes riddle-in { from { opacity: .3; translate: 0 -8px; } }
-.riddle.list { background: rgba(255, 246, 222, .96); }
-/* Bear's list on the title: what to find, in pictures. The child decides which water to fish in. */
-.bear-list {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 6px 14px; min-height: 52px; border-radius: 22px;
-  background: #fff6de; color: #7a4a12; box-shadow: 0 4px 0 rgba(217, 138, 28, .45); font: 900 clamp(16px, min(3vw, 3.4vh), 22px)/1.1 ui-rounded, "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
-}
-.bear-list[hidden] { display: none; }
-.bear-list:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(217, 138, 28, .45); }
-.bl-head { font-size: 1.3em; }
-.list-items { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.list-items .li { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; background: #fff; font-size: 1.15em; }
-.list-items .li small { font-size: .62em; color: #1f5f99; }
-.list-items .li.done { opacity: .6; }
-.list-items .ri { position: relative; }
-.list-items .ri.not::after {
-  content: ''; position: absolute; left: -2px; right: -2px; top: 50%; height: 4px; border-radius: 2px;
-  background: #1f5f99; transform: rotate(-35deg); opacity: .75;
 }

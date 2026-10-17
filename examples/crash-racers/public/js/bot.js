@@ -2,10 +2,12 @@ import { clamp, damp, wrap } from './util.js'
 
 /** Easy mode: metres ahead of the last child before a bot starts to ease off (so a child at the back still races among cars). */
 const EASY_EASE = 15
+/** Bumpers: seconds a bot drives on after a bump before it comes round for another. */
+const BUMP_REST = 1.6
 
 /**
  * Computer drivers. Racing, they chase a point a little way down the road,
- * slow for bends and line up for ramps. Smashing, they hunt the nearest car.
+ * slow for bends and line up for ramps. In Bumpers they come round for bumps with the children (see hunt).
  * Either way, a bot that gets wedged backs out and tries again.
  */
 export class Bot {
@@ -128,6 +130,72 @@ export class Bot {
       throttle: car.speed < safe ? 1 : 0.2,
       brake: car.speed > safe + (this.pace ? 3 : 6) ? 0.6 : 0,
     }
+  }
+
+  /**
+   * Bumper cars: comes round for a bump with `prey` (a child's car), always along the road so it never ploughs through
+   * the houses. Behind the prey it chases a little quicker than the prey goes; ahead of it, it dawdles (in the prey's
+   * line if it is the `first` robot ahead) so the child catches it up; close by, it steers straight in. After a bump
+   * (see bumped) it speeds off for a moment, then slows to be caught again, so the bumps keep coming every few seconds.
+   */
+  hunt(dt, proj, prey, preyProj, first = true) {
+    const car = this.car
+    const L = this.track.length
+    const ahead = wrap(preyProj.dist - proj.dist, L) // > 0: the prey is further on round the loop
+    const behind = L - ahead
+    const gap = prey.body.position.distanceTo(car.body.position)
+    const room = this.track.width / 2 - 1.3
+    this.rest = Math.max(0, (this.rest ?? 0) - dt)
+    // Speeds go by the prey's cruise, not its speed just now: a child slowed by a bump would otherwise slow every robot
+    // round it too, until nobody moved.
+    const pace = Math.max(prey.speed, 15)
+    let target, safe
+    const look = 8 + car.speed * 0.6
+    const s = this.track.sampleAt(proj.dist + look)
+    const onRoad = (lane) => ({ x: s.p.x + s.side.x * lane, z: s.p.z + s.side.z * lane })
+    // Pushed along nose to tail (no new bump in that, just a shove): it speeds off as if bumped, to come again.
+    this.pressed = gap < 5 ? (this.pressed ?? 0) + dt : 0
+    if (this.pressed > 0.6) {
+      this.pressed = 0
+      this.rest = BUMP_REST
+    }
+    const close = gap < 14 && ahead < 16 && !this.rest
+    if (close) {
+      // Right there: straight in, aiming a little ahead of where it is going.
+      const v = prey.body.velocity
+      target = { x: prey.body.position.x + v.x * 0.25, z: prey.body.position.z + v.z * 0.25 }
+      safe = pace + 5
+    } else if (this.rest) {
+      // Just bumped: off it goes, a little quicker than the prey, in its own line (a car pushed along in front never
+      // makes a new bump); the next bump comes when it slows to wait again.
+      target = onRoad(clamp(this.lane * 1.6, -room, room))
+      safe = pace + 6
+    } else if (ahead > behind) {
+      // The prey is behind: the nearest robot waits in its line at an easy pace, to be bumped from behind; any other
+      // robot waits in its own line a little slower than the prey, to be caught up and bumped alongside.
+      target = onRoad(clamp(first ? preyProj.lateral : this.lane * 1.6, -room, room))
+      safe = first ? pace - 8 : pace - 3
+    } else {
+      // Behind the prey: catch it up along the road, quicker the further away it is.
+      target = onRoad(clamp(preyProj.lateral, -room, room))
+      safe = clamp(pace + 4 + ahead / 8, 8, 28)
+    }
+    // Never faster than the road ahead allows.
+    safe = Math.min(safe, clamp(28 - this.track.bendAhead(proj.dist, look) * 50, 9, 28))
+    const angle = car.angleTo(target.x, target.z)
+    if (this.unstick(dt, angle)) return
+    const across = 0
+    car.speedCap = null
+    car.controls = {
+      steer: clamp(angle * 2.2 + across, -1, 1),
+      throttle: car.speed < safe ? 1 : 0.2,
+      brake: car.speed > safe + 3 ? 0.6 : 0,
+    }
+  }
+
+  /** Bumpers: this bot just bumped its prey, so it drives on for a moment before coming round again. */
+  bumped() {
+    this.rest = BUMP_REST
   }
 
   /**

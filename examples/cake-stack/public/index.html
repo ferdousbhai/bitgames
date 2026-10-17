@@ -13,61 +13,49 @@
 </script>
 <link rel="stylesheet" href="./style.css" />
 <link rel="stylesheet" href="./ipad.css" />
-<link rel="stylesheet" href="./adventure.css" />
-<link rel="stylesheet" href="./studio-dialog.css" />
 </head>
 <body>
 <canvas id="view"></canvas>
-<div id="labels"></div>
 
 <div id="loading" class="screen">
   <div class="logo"><span>C</span><span>A</span><span>K</span><span>E</span> <span>S</span><span>T</span><span>A</span><span>C</span><span>K</span></div>
   <div class="spinner">🎂</div>
-  <div id="loading-text">Warming up the oven…</div>
 </div>
 
 <div id="title" class="overlay hidden">
   <div class="title-top">
     <div class="logo"><span>C</span><span>A</span><span>K</span><span>E</span> <span>S</span><span>T</span><span>A</span><span>C</span><span>K</span></div>
-    <p class="tag">Stack a birthday cake for your animal friends!</p>
   </div>
   <div class="title-bottom">
-    <button id="recipe-open" class="chip" aria-label="Recipe studio" title="Recipe studio">🎂 📖</button>
-    <button id="play" class="big-go">▶ Play</button>
+    <button id="play" class="big-go" aria-label="Play">▶</button>
   </div>
 </div>
 
 <div id="hud" class="hidden">
   <div class="hud-left">
-    <button id="home" class="round-btn" title="Home (Esc)">🏠</button>
+    <button id="home" class="round-btn" aria-label="Home">🏠</button>
   </div>
   <div class="hud-right">
-    <button id="music" class="round-btn" title="Music">🎵</button>
-    <button id="sound" class="round-btn" title="Sound">🔊</button>
+    <button id="music" class="round-btn" aria-label="Music">🎵</button>
+    <button id="sound" class="round-btn" aria-label="Sound">🔊</button>
   </div>
   <div class="progress"><div id="pips" class="pips"></div></div>
-  <div id="pantry" class="pantry hidden" role="group" aria-label="Choose the next layer"></div>
-  <button id="done" class="done-btn hidden" title="Finish the cake">🕯️</button>
-  <div id="banner" class="banner"></div>
-  <div id="mover-tag" class="mover-tag hidden" aria-hidden="true"></div>
+  <div id="pantry" class="pantry hidden" role="group" aria-label="Flavours"></div>
+  <div id="toppings" class="pantry toppings hidden" role="group" aria-label="Toppings"></div>
+  <button id="done" class="done-btn hidden" aria-label="Candles">🕯️</button>
   <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div><div id="intro-sub"></div></div>
 </div>
 
 <div id="card" class="overlay card-wrap hidden">
   <div class="card">
     <div id="card-emoji" class="card-emoji">🐻</div>
-    <div class="card-title">Happy Birthday!</div>
-    <div class="card-cake" aria-label="The layers you stacked"><span id="card-cake"></span> <b id="card-count">0</b></div>
-    <div id="card-share" class="card-share"></div>
-    <div id="card-next" class="card-next"></div>
+    <div id="shelf" class="shelf" aria-label="Your cakes"></div>
     <div class="row">
-      <button id="next" class="big-go">Next ▶</button>
-      <button id="card-home" class="big-go alt" title="Home">🏠</button>
+      <button id="next" class="big-go" aria-label="Next cake">▶<span id="next-peek" class="next-peek"></span></button>
+      <button id="card-home" class="round-btn card-home" aria-label="Home">🏠</button>
     </div>
   </div>
 </div>
-
-<div id="share" class="overlay share-wrap hidden" aria-label="Share the cake"></div>
 
 <div id="hint" class="hint-finger hidden">👆</div>
 

@@ -14,93 +14,64 @@
 </script>
 <link rel="stylesheet" href="./style.css" />
 <link rel="stylesheet" href="./ipad.css" />
-<link rel="stylesheet" href="./prediction.css" />
 </head>
 <body>
 <canvas id="view"></canvas>
-<div id="labels"></div>
 
-<div id="loading" class="screen">
-  <div class="logo"><span>P</span><span>E</span><span>N</span><span>G</span><span>U</span><span>I</span><span>N</span><br /><span>B</span><span>O</span><span>W</span><span>L</span><span>I</span><span>N</span><span>G</span></div>
+<div id="loading" class="screen" aria-label="Loading">
   <div class="spinner">🐧</div>
-  <div id="loading-text">Polishing the ice…</div>
 </div>
 
 <div id="title" class="screen card-screen hidden">
   <div class="card">
-    <div class="logo"><span>P</span><span>E</span><span>N</span><span>G</span><span>U</span><span>I</span><span>N</span><br /><span>B</span><span>O</span><span>W</span><span>L</span><span>I</span><span>N</span><span>G</span></div>
+    <div class="logo" aria-label="Penguin Bowling"><span>P</span><span>E</span><span>N</span><span>G</span><span>U</span><span>I</span><span>N</span><br /><span>B</span><span>O</span><span>W</span><span>L</span><span>I</span><span>N</span><span>G</span></div>
     <div id="lanes" class="lanes">
-      <button data-theme="village" class="lane-btn"><span>🏠</span><small>Igloos</small></button>
-      <button data-theme="aurora" class="lane-btn"><span>🌌</span><small>Night</small></button>
-      <button data-theme="bay" class="lane-btn"><span>🐟</span><small>Fishy</small></button>
+      <button data-theme="village" class="lane-btn" aria-label="Igloo lane">🏠</button>
+      <button data-theme="aurora" class="lane-btn" aria-label="Night lane">🌌</button>
+      <button data-theme="bay" class="lane-btn" aria-label="Fishy lane">🐟</button>
     </div>
-    <div class="chips">
-      <button id="bumpers" class="chip on" title="Bumpers keep the penguin on the ice"><span class="chip-icon">🛟</span> Bumpers <b id="bumpers-state">ON</b></button>
-      <button id="level" class="chip on" title="Who is playing: 3–5 starts with counting the pins, 6–8 with working out the missing part"><span id="level-icon" class="chip-icon">🐣</span> Ages <b id="level-state">3–5</b></button>
-      <button id="frames" class="chip on" title="How many frames in a game"><span class="chip-icon">🎳</span> Frames <b id="frames-state">5</b></button>
+    <div id="wardrobe" class="wardrobe" aria-label="Hats">
+      <button data-hat="crown" aria-label="Crown">👑</button>
+      <button data-hat="party" aria-label="Party hat">🎉</button>
+      <button data-hat="tophat" aria-label="Top hat">🎩</button>
+      <button data-hat="fish" aria-label="Fish hat">🐟</button>
     </div>
-    <button id="play" class="big-go">▶ Play</button>
+    <div class="title-row">
+      <button id="bumpers" class="toggle on" aria-label="Bumpers" aria-pressed="true">🛟</button>
+      <button id="play" class="big-go" aria-label="Play">▶</button>
+    </div>
   </div>
 </div>
 
 <div id="hud" class="hidden">
   <div class="hud-top">
     <div class="hud-left">
-      <button id="home" class="round-btn" title="Home (Esc)">🏠</button>
+      <button id="home" class="round-btn hold-btn" aria-label="Home (hold)">🏠</button>
     </div>
-    <div id="card" class="scorecard"></div>
+    <div id="card" class="pips" aria-label="Frames"></div>
     <div class="hud-right">
-      <button id="predict-pins" class="round-btn" aria-label="Predict how many pins will fall">💭</button>
-      <button id="music" class="round-btn" title="Music">🎵</button>
-      <button id="sound" class="round-btn" title="Sound">🔊</button>
+      <button id="music" class="round-btn hold-btn" aria-label="Music (hold)">🎵</button>
+      <button id="sound" class="round-btn hold-btn" aria-label="Sound (hold)">🔊</button>
     </div>
   </div>
-  <div id="rack" class="rack"></div>
-  <div id="banner" class="banner"><div class="b-word"></div><div class="b-row"><span class="b-stars"></span><span class="b-plus"></span></div></div>
-  <div id="intro" class="intro"><div id="intro-emoji"></div><div id="intro-title"></div></div>
+  <div id="rack" class="rack" aria-hidden="true"></div>
   <div id="controls" class="controls">
     <div class="ctl-group">
-      <button id="left" class="ctl" title="Move left (A)">◀</button>
-      <button id="right" class="ctl" title="Move right (D)">▶</button>
+      <button id="left" class="ctl" aria-label="Move left">◀</button>
+      <button id="right" class="ctl" aria-label="Move right">▶</button>
     </div>
-    <div class="ctl-group">
-      <button id="curve" class="ctl small" title="Curve (C)">⬆️</button>
-      <button id="go" class="go" title="Slide! (Space)">🐧💨</button>
-    </div>
+    <button id="go" class="go" aria-label="Slide">🐧💨</button>
   </div>
-  <div id="howmany" class="howmany" role="group" aria-label="How many are still standing?" hidden></div>
-  <div id="bond" class="bond" role="status" aria-live="polite" hidden>
-    <div class="bond-group fallen"><div id="bond-fallen" class="bond-pins"></div><b id="bond-fallen-n">0</b></div>
-    <span class="bond-op">+</span>
-    <div class="bond-group standing"><div id="bond-standing" class="bond-pins"></div><b id="bond-standing-n">0</b></div>
-    <span class="bond-op">=</span>
-    <div class="bond-whole"><b>10</b></div>
-  </div>
-  <div id="where" class="where" hidden>
-    <div class="where-ask"><span aria-hidden="true">👀</span> <span id="where-text">Where are the pins?</span></div>
-    <div class="where-row">
-      <button data-side="left" aria-label="On the left"><span class="third"><i class="on"></i><i></i><i></i></span></button>
-      <button data-side="middle" aria-label="In the middle"><span class="third"><i></i><i class="on"></i><i></i></span></button>
-      <button data-side="right" aria-label="On the right"><span class="third"><i></i><i></i><i class="on"></i></span></button>
-    </div>
-  </div>
-  <div id="plan" class="where plan" hidden>
-    <div class="where-ask"><span aria-hidden="true">🎯</span> <span id="plan-text">How many will you knock down?</span></div>
-    <div id="plan-row" class="where-row"></div>
-    <button id="bumpers-down" class="plan-bumpers" hidden>🛟 Bumpers down?</button>
-  </div>
-  <div id="plan-pill" class="plan-pill" role="status" hidden></div>
-  <div id="hint" class="hint-swipe hidden">👆</div>
-  <div id="tap-hint" class="tap-hint" aria-hidden="true" hidden>👆</div>
+  <div id="hint" class="hint-swipe hidden" aria-hidden="true"><i class="trail"></i><span class="hand">👆</span></div>
 </div>
 
 <div id="results" class="screen card-screen hidden">
   <div class="card">
-    <div class="trophy">🐧</div>
-    <div class="bonds-box"><h2 id="bonds-title" class="bonds-title"></h2><p id="bonds-key" class="bonds-key" hidden><span id="bonds-key-self"><i class="key-self"></i> <b id="bonds-own"></b> worked out by you</span><span id="bonds-plan"> · 🎯 <b id="bonds-plans"></b> as planned</span></p><div id="bonds" class="bonds"></div></div>
+    <div class="trophy">🏆</div>
+    <div id="medals" class="medals" aria-hidden="true"></div>
     <div class="row">
-      <button id="again" class="big-go">🔁</button>
-      <button id="to-home" class="big-go alt">🏠</button>
+      <button id="again" class="big-go" aria-label="Play again">🔁</button>
+      <button id="to-home" class="big-go alt hold-btn" aria-label="Home (hold)">🏠</button>
     </div>
   </div>
 </div>

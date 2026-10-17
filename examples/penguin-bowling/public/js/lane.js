@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon'
-import { canvasTexture } from './effects.js'
+import { canvasTexture, softDot } from './effects.js'
 import { bakeColors } from './merge.js'
 
 /**
@@ -142,6 +142,45 @@ function cushionTexture() {
   })
 }
 
+/** The same curtain at night: a starry sky with a ribbon of northern lights and a crescent moon. */
+function nightCushionTexture() {
+  return canvasTexture(512, 256, (g, w, h) => {
+    const grad = g.createLinearGradient(0, 0, 0, h)
+    grad.addColorStop(0, '#070d33')
+    grad.addColorStop(1, '#1b2a6e')
+    g.fillStyle = grad
+    g.fillRect(0, 0, w, h)
+    for (const [c, y0, amp] of [['rgba(80,255,160,0.55)', 120, 30], ['rgba(190,110,255,0.4)', 95, 24]]) {
+      g.strokeStyle = c
+      g.lineWidth = 26
+      g.lineCap = 'round'
+      g.shadowColor = c
+      g.shadowBlur = 24
+      g.beginPath()
+      for (let x = -10; x <= w + 10; x += 8) g.lineTo(x, y0 + Math.sin(x / 70) * amp + Math.sin(x / 23) * 6)
+      g.stroke()
+    }
+    g.shadowBlur = 0
+    for (let i = 0; i < 70; i++) {
+      const x = (i * 97.3) % w
+      const y = (i * 53.7) % h
+      const r = i % 7 === 0 ? 3 : 1.4
+      g.fillStyle = `rgba(255,248,224,${0.6 + (i % 3) * 0.15})`
+      g.beginPath()
+      g.arc(x, y, r, 0, Math.PI * 2)
+      g.fill()
+    }
+    g.fillStyle = '#fff6cf'
+    g.beginPath()
+    g.arc(430, 62, 30, 0, Math.PI * 2)
+    g.fill()
+    g.fillStyle = '#0b1440'
+    g.beginPath()
+    g.arc(444, 54, 27, 0, Math.PI * 2)
+    g.fill()
+  })
+}
+
 // --- Lane -------------------------------------------------------------------------
 
 export class Lane {
@@ -239,10 +278,10 @@ export class Lane {
     )
     pit.position.set(0, -0.9, (LANE.deckEnd + LANE.back) / 2)
     r.add(pit)
-    const cushion = new THREE.Mesh(
-      new THREE.BoxGeometry((LANE.half + LANE.gutter + 0.8) * 2, 2.6, 0.5),
-      new THREE.MeshStandardMaterial({ map: cushionTexture(), roughness: 0.95 }),
-    )
+    this.dayCushion = cushionTexture()
+    this.nightCushion = nightCushionTexture()
+    this.cushionMat = new THREE.MeshStandardMaterial({ map: this.dayCushion, roughness: 0.95, emissive: '#ffffff', emissiveIntensity: 0 })
+    const cushion = new THREE.Mesh(new THREE.BoxGeometry((LANE.half + LANE.gutter + 0.8) * 2, 2.6, 0.5), this.cushionMat)
     cushion.position.set(0, 0.3, LANE.back - 0.25)
     r.add(cushion)
     // Snow banks along both sides, with a rounded top
@@ -310,6 +349,11 @@ export class Lane {
     this.iceMaterial.color.set(on ? '#9fb2ea' : '#ffffff')
     this.bankMat.color.set(on ? '#a3b2ea' : '#f4f9ff')
     this.gutterMat.color.set(on ? '#6f93d6' : '#8fd0f2')
+    // The curtain behind the pins becomes a glowing night sky, so the lane reads as night while aiming.
+    this.cushionMat.map = on ? this.nightCushion : this.dayCushion
+    this.cushionMat.emissiveMap = on ? this.nightCushion : null
+    this.cushionMat.emissiveIntensity = on ? 0.9 : 0
+    this.cushionMat.needsUpdate = true
   }
 
   setBumpers(on) {
@@ -319,14 +363,19 @@ export class Lane {
     for (const m of this.bumperMeshes) m.visible = on
   }
 
-  /** Show the aim dots along a predicted path: [{x, z}, ...]. */
-  showAim(points, color) {
+  /**
+   * Show the aim dots along a predicted path: [{x, z}, ...], in `color`. A soft wave runs down them
+   * towards the pins; `big` swells them (while a finger is dragging).
+   */
+  showAim(points, color, t = 0, big = 0) {
     const d = new THREE.Object3D()
     const n = Math.min(points.length, this.aimDots.instanceMatrix.count)
+    this.aimDots.material.color.set(color)
     for (let i = 0; i < n; i++) {
       const p = points[i]
       d.position.set(p.x, 0.07, p.z)
-      d.scale.setScalar(1 - (i / n) * 0.5)
+      const wave = Math.max(0, Math.sin(i * 0.7 - t * 6)) ** 4 * 0.45
+      d.scale.setScalar((1 - (i / n) * 0.5) * (1 + wave + big * 0.35))
       d.updateMatrix()
       this.aimDots.setMatrixAt(i, d.matrix)
     }
@@ -351,8 +400,29 @@ export class Lane {
 // --- Pins -------------------------------------------------------------------------
 
 const UP = new CANNON.Vec3(0, 1, 0)
-const FOOT = new CANNON.Sphere(0.05)
 const tmpUp = new CANNON.Vec3()
+
+/**
+ * Snowballs stacked like the pin itself (spheres are cheap and topple nicely), standing on a little
+ * ring of feet so it stays up until something hits it. `s` scales the whole pin (the giant snowman).
+ */
+function pinShapes(body, s) {
+  while (body.shapes.length) body.removeShape(body.shapes[0])
+  body.addShape(new CANNON.Sphere(0.19 * s), new CANNON.Vec3(0, -0.17 * s, 0))
+  body.addShape(new CANNON.Sphere(0.15 * s), new CANNON.Vec3(0, 0.04 * s, 0))
+  body.addShape(new CANNON.Sphere(0.12 * s), new CANNON.Vec3(0, 0.22 * s, 0))
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2
+    body.addShape(new CANNON.Sphere(0.05 * s), new CANNON.Vec3(Math.cos(a) * 0.13 * s, (-PIN_H / 2 + 0.05) * s, Math.sin(a) * 0.13 * s))
+  }
+  body.mass = 0.5 * s ** 3
+  body.updateMassProperties()
+}
+
+/** The golden pin: the same pin, shining gold. */
+const goldMat = new THREE.MeshStandardMaterial({ color: '#ffc63a', metalness: 0.45, roughness: 0.25, emissive: '#ff9d00', emissiveIntensity: 0.35, envMapIntensity: 1.4 })
+/** A warm glow around the golden pin, so it shines even from the back row. */
+const goldHalo = new THREE.SpriteMaterial({ map: softDot, color: '#ffd23f', transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
 
 export class Pins {
   constructor(lane, scene) {
@@ -429,17 +499,9 @@ export class Pins {
         sleepSpeedLimit: 0.12,
         sleepTimeLimit: 0.4,
       })
-      // Snowballs stacked like the pin itself (spheres are cheap and topple nicely),
-      // standing on a little ring of feet so it stays up until something hits it.
-      body.addShape(new CANNON.Sphere(0.19), new CANNON.Vec3(0, -0.17, 0))
-      body.addShape(new CANNON.Sphere(0.15), new CANNON.Vec3(0, 0.04, 0))
-      body.addShape(new CANNON.Sphere(0.12), new CANNON.Vec3(0, 0.22, 0))
-      for (let k = 0; k < 6; k++) {
-        const a = (k / 6) * Math.PI * 2
-        body.addShape(FOOT, new CANNON.Vec3(Math.cos(a) * 0.13, -PIN_H / 2 + 0.05, Math.sin(a) * 0.13))
-      }
+      pinShapes(body, 1)
       body.addEventListener('collide', (e) => this.onHit?.(pin, e))
-      const pin = { i, spot, mesh, body, color, standing: true, removed: false, drop: 0, dance: 0 }
+      const pin = { i, spot, mesh, body, color, standing: true, removed: false, fell: false, squish: 0, drop: 0, dance: 0, size: 1, special: null }
       return pin
     })
     this.reset()
@@ -448,6 +510,7 @@ export class Pins {
   /** Put every pin back on its spot (they drop in from above). */
   reset() {
     for (const p of this.list) {
+      if (p.special) this.setSpecial(p, null)
       if (!this.lane.world.bodies.includes(p.body)) this.lane.world.addBody(p.body)
       p.body.position.set(p.spot.x, PIN_H / 2 + 0.002, p.spot.z)
       p.body.quaternion.set(0, 0, 0, 1)
@@ -456,11 +519,42 @@ export class Pins {
       p.body.sleep()
       p.standing = true
       p.removed = false
+      p.fell = false
+      p.squish = 0
       p.mesh.visible = true
       p.mesh.scale.setScalar(1)
       p.drop = 1
       p.dance = 0
       p.vanish = undefined
+      p.jump = undefined
+      p.dodger = false
+    }
+  }
+
+  /**
+   * Make one pin of a fresh rack special: 'giant' (a big, heavy snowman, which only the front pin has room
+   * for), 'gold' (a shining golden pin), or null for a plain one again.
+   */
+  setSpecial(p, kind) {
+    p.special = kind
+    const size = kind === 'giant' ? 1.6 : 1
+    if (size !== p.size) {
+      p.size = size
+      pinShapes(p.body, size)
+      p.body.position.y = (PIN_H / 2) * size + 0.002
+    }
+    p.mesh.scale.setScalar(size)
+    p.mesh.traverse((o) => {
+      if (!o.isMesh) return
+      o.userData.plain ??= o.material
+      o.material = kind === 'gold' ? goldMat : o.userData.plain
+    })
+    p.halo?.removeFromParent()
+    p.halo = null
+    if (kind === 'gold') {
+      p.halo = new THREE.Sprite(goldHalo)
+      p.halo.scale.setScalar(2.2)
+      p.mesh.add(p.halo)
     }
   }
 
@@ -469,7 +563,7 @@ export class Pins {
     if (p.removed) return true
     const b = p.body
     b.quaternion.vmult(UP, tmpUp)
-    return tmpUp.y < 0.75 || b.position.y < PIN_H / 2 - 0.15 || b.position.z < LANE.deckEnd || Math.abs(b.position.x) > LANE.half
+    return tmpUp.y < 0.75 || b.position.y < (PIN_H / 2) * p.size - 0.15 || b.position.z < LANE.deckEnd || Math.abs(b.position.x) > LANE.half
   }
 
   countStanding() {
@@ -497,9 +591,15 @@ export class Pins {
         const y = t < 0.7 ? (1 - t / 0.7) ** 2 * 2.2 : Math.sin(((t - 0.7) / 0.3) * Math.PI) * 0.08
         p.mesh.position.y += y
       }
+      // A bumped or tapped snowman jiggles: a quick squash and stretch that settles.
+      if (p.squish > 0 && p.vanish === undefined) {
+        p.squish = Math.max(0, p.squish - dt * 2.5)
+        const w = Math.sin((1 - p.squish) * Math.PI * 6) * 0.16 * p.squish
+        p.mesh.scale.set((1 + w * 0.6) * p.size, (1 - w) * p.size, (1 + w * 0.6) * p.size)
+      }
       if (p.vanish !== undefined) {
         p.vanish -= dt * 3
-        p.mesh.scale.setScalar(Math.max(0.001, p.vanish))
+        p.mesh.scale.setScalar(Math.max(0.001, p.vanish) * p.size)
         if (p.vanish <= 0) {
           p.mesh.visible = false
           p.vanish = undefined
@@ -552,7 +652,7 @@ export class Pins {
       // Keep its turn about the upright axis; drop only the lean.
       const q = b.quaternion
       b.quaternion.setFromEuler(0, Math.atan2(2 * (q.w * q.y + q.x * q.z), 1 - 2 * (q.y ** 2 + q.x ** 2)), 0)
-      b.position.y = PIN_H / 2 + 0.002
+      b.position.y = (PIN_H / 2) * p.size + 0.002
       b.velocity.setZero()
       b.angularVelocity.setZero()
       b.sleep()
@@ -564,10 +664,52 @@ export class Pins {
     for (const p of this.list) {
       const ph = t * 9 + p.i * 0.7
       p.mesh.visible = true
-      p.mesh.scale.setScalar(1)
-      p.mesh.position.set(p.spot.x + Math.sin(ph * 0.5) * 0.05, PIN_H / 2 + Math.abs(Math.sin(ph)) * 0.35, p.spot.z)
+      p.mesh.scale.setScalar(p.size)
+      p.mesh.position.set(p.spot.x + Math.sin(ph * 0.5) * 0.05, (PIN_H / 2) * p.size + Math.abs(Math.sin(ph)) * 0.35, p.spot.z)
       p.mesh.rotation.set(0, Math.sin(t * 3 + p.i) * 0.9, Math.sin(ph) * 0.25)
     }
+  }
+
+  /** Spare party: every pin pops back up and follows the leader in a hopping conga round the deck. */
+  conga(t) {
+    const cz = LANE.headPin - 0.8
+    for (const p of this.list) {
+      const a = t * 1.6 - p.i * 0.42
+      const x = Math.sin(a) * 1.0
+      const z = cz + Math.cos(a) * 0.75
+      p.mesh.visible = true
+      p.mesh.scale.setScalar(p.size)
+      p.mesh.position.set(x, (PIN_H / 2) * p.size + Math.abs(Math.sin(t * 8 + p.i)) * 0.18, z)
+      p.mesh.rotation.set(0, a + Math.PI / 2, Math.sin(t * 8 + p.i) * 0.2)
+    }
+  }
+
+  /**
+   * The cheeky pin: as the penguin arrives, the head pin jumps right over it with a somersault and lands
+   * back on its spot. Its body leaves the world for the jump, so the penguin slides underneath.
+   */
+  dodge(p) {
+    if (this.lane.world.bodies.includes(p.body)) this.lane.world.removeBody(p.body)
+    p.jump = 0
+  }
+
+  /** Move a dodging pin along its jump; returns true as it lands. */
+  updateDodge(p, dt) {
+    if (p.jump === undefined) return false
+    p.jump += dt / 0.75
+    const k = Math.min(1, p.jump)
+    p.mesh.position.set(p.spot.x, (PIN_H / 2) * p.size + Math.sin(k * Math.PI) * 1.9, p.spot.z)
+    p.mesh.rotation.set(-k * Math.PI * 2, 0, 0)
+    if (k < 1) return false
+    p.jump = undefined
+    p.mesh.rotation.set(0, 0, 0)
+    p.body.position.set(p.spot.x, (PIN_H / 2) * p.size + 0.002, p.spot.z)
+    p.body.quaternion.set(0, 0, 0, 1)
+    p.body.velocity.setZero()
+    p.body.angularVelocity.setZero()
+    this.lane.world.addBody(p.body)
+    p.squish = 1
+    return true
   }
 
   removeAllBodies() {

@@ -1,6 +1,6 @@
 /**
- * Everything you can build with, and where you fly. `at` is the destination whose visit
- * unlocks a part (-1 = in the garage from the start). Models live in models/parts.glb.
+ * Everything you can build with, and where you fly. `at` is the destination that hands over a
+ * part (-1 = in the garage from the start). Models live in models/parts.glb.
  */
 
 export const DESTS = [
@@ -78,6 +78,9 @@ export const PARTS = {
   ],
 }
 
+// Each part knows its own slot, so a part on its own can be looked up in the gifts already found
+for (const slot in PARTS) for (const p of PARTS[slot]) p.slot = slot
+
 export const COLORS = ['#ff4f6d', '#ff9f43', '#ffd23f', '#5cd65c', '#2ec4b6', '#3bb5ff', '#9b5de5', '#ff8fc7', '#ffffff', '#4a4063']
 
 export const DEFAULT_ROCKET = {
@@ -108,19 +111,35 @@ export function reach(rocket) {
 /**
  * Two kinds of flight, plain to see: 0.05 is rock steady (no wobbly nose, tank or fins), and any
  * wobbly part starts at 0.5 so it always sways clearly, wobblier parts a little more. Boosters
- * never change the wobble: only the parts the notebook names do.
+ * never change the wobble, only the nose, tank and fins.
  */
 export function wobble(rocket) {
-  let extra = 0
-  for (const slot of ['nose', 'tank', 'fins']) extra += part(slot, rocket[slot]).wobble ?? 0
+  const extra = wobbliness(rocket)
   return extra ? Math.min(0.5 + extra * 0.6, 1) : 0.05
 }
 
-export function isUnlocked(p, visited) {
-  return p.at < 0 || !!visited[p.at]
+/** How wobbly the nose, tank and fins are together (0 is rock steady). */
+function wobbliness(rocket) {
+  let extra = 0
+  for (const slot of ['nose', 'tank', 'fins']) extra += part(slot, rocket[slot]).wobble ?? 0
+  return extra
 }
 
-/** Parts that become available when destination `d` is first visited. */
+/**
+ * Too wobbly for its boosters, a rocket flops: it sputters up, coughs and bounces back onto the
+ * pad. Each booster size carries a little more wobble (with none, any wobbly part flops).
+ */
+export function flops(rocket) {
+  const extra = wobbliness(rocket)
+  return extra > 0 && extra > (part('booster', rocket.booster).power ?? 0) * 0.2 + 1e-6
+}
+
+/** `got` is the Set of gifts found so far, as "slot:id". */
+export function isUnlocked(p, got) {
+  return p.at < 0 || got.has(`${p.slot}:${p.id}`)
+}
+
+/** Every gift that destination `d` hands over (landing there, or one at a time flying past). */
 export function unlocksAt(d) {
   const out = []
   for (const slot in PARTS) for (const p of PARTS[slot]) if (p.at === d) out.push({ slot, id: p.id })
@@ -128,12 +147,12 @@ export function unlocksAt(d) {
 }
 
 /** Make a saved rocket safe to use: unknown parts fall back to defaults. */
-export function sanitize(r, visited) {
+export function sanitize(r, got) {
   const out = { ...DEFAULT_ROCKET, colors: { ...DEFAULT_ROCKET.colors } }
   if (!r || typeof r !== 'object') return out
   for (const slot in PARTS) {
     const p = PARTS[slot].find((q) => q.id === r[slot])
-    if (p && isUnlocked(p, visited)) out[slot] = p.id
+    if (p && isUnlocked(p, got)) out[slot] = p.id
   }
   if (r.colors && typeof r.colors === 'object') {
     for (const k in out.colors) if (COLORS.includes(r.colors[k])) out.colors[k] = r.colors[k]
@@ -141,7 +160,7 @@ export function sanitize(r, visited) {
   return out
 }
 
-/** Steady means no wobbly nose, tank or fins: the parts the notebook says make the wobble. */
+/** Steady means no wobbly nose, tank or fins. */
 export function isSteady(rocket) {
   return ['nose', 'tank', 'fins'].every((slot) => !part(slot, rocket[slot]).wobble)
 }

@@ -10,14 +10,14 @@ export const PALETTE = ['#ff595e', '#ff9f1c', '#ffd23f', '#8ac926', '#2ec4b6', '
 export const COLORS = PALETTE.filter((c) => c !== '#ffd23f')
 
 export const KINDS = {
-  round: { model: 'balloon_round', points: 1, colors: COLORS, hit: 1.1 },
-  smile: { model: 'balloon_smile', points: 1, colors: COLORS, hit: 1.1 },
-  heart: { model: 'balloon_heart', points: 2, colors: ['#ff4d6d', '#ff6b9d', '#c77dff', '#ff8fab'], hit: 1.2 },
-  gold: { model: 'balloon_gold', points: 5, colors: ['#ffdb58'], gold: true, hit: 1.2 },
-  bunny: { model: 'balloon_bunny', points: 3, colors: ['#ffffff', '#ffd6e7', '#e0d4ff', '#d4f1ff'], hit: 1.2 },
-  star: { model: 'balloon_star', points: 3, colors: ['#ffd23f'], hit: 1.35, power: 'star' },
-  rainbow: { model: 'balloon_rainbow', points: 2, colors: ['#ff595e'], hit: 1.15, power: 'rainbow' },
-  mini: { model: 'balloon_round', points: 1, colors: COLORS, hit: 1.1, scale: 0.55 },
+  round: { model: 'balloon_round', colors: COLORS, hit: 1.1 },
+  smile: { model: 'balloon_smile', colors: COLORS, hit: 1.1 },
+  heart: { model: 'balloon_heart', colors: ['#ff4d6d', '#ff6b9d', '#c77dff', '#ff8fab'], hit: 1.2 },
+  gold: { model: 'balloon_gold', colors: ['#ffdb58'], gold: true, hit: 1.2 },
+  bunny: { model: 'balloon_bunny', colors: ['#ffffff', '#ffd6e7', '#e0d4ff', '#d4f1ff'], hit: 1.2 },
+  star: { model: 'balloon_star', colors: ['#ffd23f'], hit: 1.35, power: 'star' },
+  rainbow: { model: 'balloon_rainbow', colors: ['#ff595e'], hit: 1.15, power: 'rainbow' },
+  mini: { model: 'balloon_round', colors: COLORS, hit: 1.1, scale: 0.55 },
 }
 
 export class Balloons {
@@ -135,7 +135,7 @@ export class Balloons {
     group.scale.setScalar(s)
     const b = {
       group, kindName, kind, color, string, crown, scale: s,
-      speed: 1, phase: Math.random() * 10, age: 0, vx: 0, vy: 0, alive: true,
+      speed: 1, phase: Math.random() * 10, age: 0, vx: 0, vy: 0, alive: true, squish: 0, targetScale: s,
     }
     this.scene.add(group)
     this.list.push(b)
@@ -173,18 +173,22 @@ export class Balloons {
       // Flung balloons (rainbow babies) coast out, then float up
       b.vx *= Math.max(0, 1 - 2.5 * dt)
       b.vy *= Math.max(0, 1 - 2.5 * dt)
-      g.position.x += (b.vx + Math.sin(t * 1.3 + b.phase) * 0.35) * dt
+      g.position.x += (b.vx + (b.wind ?? 0) + Math.sin(t * 1.3 + b.phase) * 0.35) * dt
       g.position.y += (rise + b.vy) * dt
       g.rotation.z = Math.sin(t * 1.7 + b.phase) * 0.12 - b.vx * 0.05
       if (b.kindName === 'star') g.rotation.y = Math.sin(t * 1.5 + b.phase) * 0.5
       else g.rotation.y = Math.sin(t * 0.9 + b.phase) * 0.25
-      // Squash and stretch: the same slow, small breathing for every kind (hearts too: no heartbeat), and a pop-in when born
+      // A swelling giant eases up to its new size
+      if (b.targetScale !== b.scale) b.scale += (b.targetScale - b.scale) * Math.min(1, dt * 12)
+      // Squash and stretch: slow breathing, a pop-in when born, and a jelly wobble when poked or nudged by a pop
       const born = Math.min(1, b.age * 4)
       const grow = born < 1 ? 1 - (1 - born) ** 3 * 0.6 + Math.sin(born * Math.PI) * 0.12 : 1
       const breathe = Math.sin(t * 3 + b.phase) * 0.025
-      g.scale.set(b.scale * grow * (1 - breathe * 0.5), b.scale * grow * (1 + breathe), b.scale * grow)
+      b.squish = Math.max(0, b.squish - dt * 2.2)
+      const wobble = Math.sin(b.age * 26) * 0.16 * b.squish
+      g.scale.set(b.scale * grow * (1 - breathe * 0.5 + wobble), b.scale * grow * (1 + breathe - wobble), b.scale * grow)
       if (b.string) b.string.rotation.z = Math.sin(t * 2.1 + b.phase) * 0.18 + b.vx * 0.08
-      if (g.position.y > top + 2.5 * b.scale) this.remove(b)
+      if (g.position.y > top + 2.5 * b.scale || g.position.y < -top - 8 || Math.abs(g.position.x) > 40) this.remove(b)
     }
   }
 }

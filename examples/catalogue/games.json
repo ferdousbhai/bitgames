@@ -2,205 +2,205 @@
   {
     "id": "balloon-pop",
     "title": "Balloon Pop",
-    "tagline": "Pop smiley, heart, bunny and star balloons over a sunny countryside!",
-    "howToPlay": "A friend asks for balloons: pop the ones they want (4 blue ones, the hearts, 2 more for a friend who has 3, 3 red and 2 blue, or 3 balloons with 5 dots) and tap 🧺 Give when the basket is just right. Too many? Tap a balloon in the basket to let it go. Then choose a treat for the picnic. When all eight friends are at the picnic, everyone waves. Stuck? The friend helps with numbered slots and a hint. The first visit stays on numbered slots; after that, confident counters move on to plain slots and treat plates with one treat for each balloon, then ten-frames, the teens (10 and 3 more), one more / one less, making two bunches the same, finding which colour a friend has most of, and mixing purple, orange or green from two colours (the new balloon blends before your eyes). A small plant under the friend (🌱 🌿 🌳) shows the step the game has settled on. 🌱 Start easy goes back to the beginning. Three for friends asks every friend for exactly three; Hearts for friends grows from counting hearts to one more heart than Fox. Free popping, for the youngest, just meets the balloon friends with no tally and no levels to chase; now and then a friend would like one balloon (a heart, a bunny or a red one) to find among the others, with all the time in the world.",
+    "tagline": "Tap, swipe and pop a sky full of silly balloons!",
+    "howToPlay": "Tap or swipe balloons to pop them, or hold on the sky to blow up your own. Keep popping to meet new balloon friends and surprises.",
     "emoji": "🎈",
     "color": "#ff6b9d",
     "category": "pop",
     "together": false,
     "featured": true,
-    "url": "https://1a0b44d7-bitgames-balloon-pop.ferdousbd.workers.dev/",
+    "url": "https://f21ced6c-bitgames-balloon-pop.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
     ],
-    "learning": "Counting to 10 and into the teens, stopping at a number, one more and one less, making two bunches the same, adding on from ten, comparing which colour has most, colours and colour mixing, and matching dots to quantities"
+    "learning": "Hand–eye coordination, colours and shapes, and cause and effect"
   },
   {
     "id": "bumper-ducks",
     "title": "Bumper Ducks",
-    "tagline": "Bonk, bounce and squeak! Up to 4 rubber ducks in bumper boats gather bubbles into tens together.",
-    "howToPlay": "Drag anywhere (or use the arrow keys) to paddle your duck. Tap 💨 (or Space) to dash and BONK! In 🫧 Together every duck fills one shared jar: two rows of five, colours to sort and compare (one more than), your own ways to make a number, then tens and ones with ten rafts (tens first, then crossing a ten). Bubbles that don't fit bob away, so look before you paddle. Bump a stuck bubble free; in the frog pond, bump the frogs from the smallest number to the biggest. Dash into a raft to break a ten into ten ones. 💥 Bumper play has no clock: bump and bounce while the team makes exactly 50, then 70, then a number like 47. A raft is ten at once, but near the end only ones fit. Nobody is ever out!",
+    "tagline": "Bonk, bounce and squeak! Rubber ducks in bumper boats chase bubbles, burst giant ones and splash each other out of the tub.",
+    "howToPlay": "Drag anywhere (or use the arrow keys) to paddle, and tap 💨 (or Space) to dash and bonk. Grab bubbles and stars, open 🎁 for a surprise power, bump mama duck, frogs or paper boats to shake bubbles loose, and bonk friends right out of the water. Nobody is ever out, and up to four can play on their own devices.",
     "emoji": "🦆",
     "color": "#ffca3a",
     "category": "animals",
     "together": true,
     "featured": false,
-    "url": "https://0980c081-bitgames-bumper-ducks.ferdousbd.workers.dev/",
+    "url": "https://eecfc984-bitgames-bumper-ducks.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
     ],
-    "learning": "Counting to ten in rows of five, sorting by colour, one more than, number bonds, place value (tens and ones, adding tens, crossing a ten and regrouping), ordering numbers, cooperation and spatial awareness"
+    "learning": "Steering and spatial awareness, cause and effect, and playing together"
   },
   {
     "id": "bunny-hop",
     "title": "Bunny Hop",
-    "tagline": "Hop Pip the bunny home through meadows, mushrooms, autumn woods and snow!",
-    "howToPlay": "Tap the screen or press the space bar to hop, and tap again in the air to hop higher, up to a golden carrot. Pip needs carrots for winter: some hang at hop height (hop as each one comes) and some grow in the grass (stay down to munch them). Once Pip is catching whole rows, his basket asks for fewer carrots than the row holds: count them in, then let the rest go by. Too many, and the basket is too heavy: one rolls out for every carrot past full. Once a trip the path forks: add up each patch's two little groups and choose the one that makes Pip's number. Logs, rocks, pumpkins and carrots come in patterns with their own notes; when a ? appears, pick what comes next, then keep the pattern going through the mist: hop for the obstacles and stay down for the carrots. A wrong pick plays the pattern again for another go, and right answers lead on to three-part and growing patterns. At home, Pip's pantry shows each place's crates; answer his question about them (a line of carrots helps you count on), then see if there are enough for winter; older hoppers work out how many spare, or how many more Pip needs (a crate of ten helps past ten). After each pattern, wild flowers grow in the grass: stay down to pick them, and at home plant them by Pip's door in a pattern of your own, which Pip sings back (he wonders what comes next if it doesn't repeat yet). Choose 🐢 for a slower trip.",
+    "tagline": "Hop, flip and boing Pip home through meadows, mushrooms, autumn woods and snow!",
+    "howToPlay": "Tap anywhere to hop and tap again in the air to flip; hold to keep hopping. Pip runs home by himself, munching carrots and bouncing off springy mushrooms, with a surprise somewhere on every trip.",
     "emoji": "🐰",
     "color": "#8ac926",
     "category": "jump",
     "together": false,
     "featured": false,
-    "url": "https://edcd751e-bitgames-bunny-hop.ferdousbd.workers.dev/",
+    "url": "https://7d50b400-bitgames-bunny-hop.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
     ],
-    "learning": "Counting, comparing, adding and finding the difference, reading and making patterns, and timing"
+    "learning": "Mostly fun: timing hops and flips builds rhythm and hand–eye coordination"
   },
   {
     "id": "cake-stack",
     "title": "Cake Stack",
-    "tagline": "Stack yummy cake layers into a giant birthday cake for your animal friends!",
-    "howToPlay": "Each birthday friend orders a cake in pictures, from the bottom layer to the top. Wait for the layer the order needs (or, later, choose it), then tap, click or press Space to drop it when it lines up. A layer that is not in the order sits crooked until you tap it off. Later friends ask for patterns to finish, orders to remember, or a pattern you make up. In the counting missions, tap the candle when the cake has the friend's number of layers; if it has too many, tap the cake to take layers off. Blow out the candles, then share the cake fairly: tap a plate to give it a slice, and when the cake is empty, tap a slice to put it back if the plates are not the same. The 🎂 📖 studio has picture recipes to build, and a cake to cut into 4, 6, 8 or 12 slices and share between two or three friends, with any slices that cannot go round on the baker's plate.",
+    "tagline": "Stack a wobbly giant cake and throw an animal birthday party!",
+    "howToPlay": "Tap to drop each sliding layer and build a towering cake, then tap the cake to decorate it, blow out the candles and pop the party balloons.",
     "emoji": "🎂",
     "color": "#ff8fab",
-    "category": "puzzle",
+    "category": "pop",
     "together": false,
     "featured": false,
-    "url": "https://d194b94a-bitgames-cake-stack.ferdousbd.workers.dev/",
+    "url": "https://6b9b868a-bitgames-cake-stack.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
     ],
-    "learning": "Sequencing, patterns, counting and comparing, and equal sharing"
+    "learning": "Timing and a steady hand, with decorating just for fun"
   },
   {
     "id": "crash-racers",
     "title": "Crash Racers",
-    "tagline": "Race the robot cars through Ubud, Helsinki and Montreal. The right present gives you a boost!",
-    "howToPlay": "🏁 Race: beat the three robot cars to the finish. The pill at the top shows your place (like 2nd of 4) and the cars in order. At each present gate, tap (or steer with ◀ ▶) to the present the house would like: the right present gives you a burst of speed to pass, a wrong one simply gives none, so thinking at the gates is how you win. Three right in a row bring three lanes of harder presents; two more and the gate shows 🗺️, so you find whose gate is next from the pins on the map. The step you reach carries into the next race. At the finish, the podium shows everyone's place, and the results show what each missed house wanted. In 🧸 Easy mode the car drives itself, bumps are soft and the robots race at your speed; turn Easy off for faster robots, 🔥 turbo and coloured lanes on the road. 🎪 Bumpers: gentle bumper cars with the same present gates, park when you like. 🔊 turns the sound off.",
+    "tagline": "Race the robot cars, zoom through rainbows and bump for fun!",
+    "howToPlay": "🏁 Race three robot cars round Ubud, Helsinki, Montreal, Dino Valley or Stunt Park: drive through the rainbow arch (tap the big ⚡ button, or steer into it with ◀ ▶) for a burst of speed, sweep up a whole line of stars for a little one, and see where you finish on the podium. 🎪 Bumpers is bumper cars with the robots coming round to bump you; hold 🅿️ to park and see everyone's 💥. Grown-ups: hold 🧸 to switch Easy mode off or on. Up to four friends can join from their own devices.",
     "emoji": "🏎️",
     "color": "#ff595e",
     "category": "race",
     "together": true,
     "featured": false,
-    "url": "https://0cab3d1e-bitgames-crash-racers.ferdousbd.workers.dev/",
+    "url": "https://3fbd5241-bitgames-crash-racers.ferdousbd.workers.dev/",
     "ages": [
       5,
       8
     ],
-    "learning": "Matching things by kind (who would like which present) and reading a map"
+    "learning": "Steering, timing and reading a race map"
   },
   {
     "id": "dragon-glide",
     "title": "Dragon Glide",
-    "tagline": "Fly Ember the baby dragon through floating sky islands, cloud rings and rainbow waterfalls!",
-    "howToPlay": "Drag anywhere (or use the arrow keys) to steer Ember the dragon home through four sky worlds. Each world has one goal, shown as a picture and spoken: fly through the number that comes next (counting up, down, on, or by twos, threes and fives), or gather the hearts, stars or moons asked for. In the gathering worlds, line Ember up with the bubble holding a treasure you need and tap 🔥 to pop it. Missed a ring? It waits for you. At each nest you finish the lesson with Ember's family: take out any number flown by mistake, fill the missing numbers (and say which comes next), give back what wasn't asked for, sort onto shelves and say how many. The family waits until you tap to fly on.",
+    "tagline": "Swoop baby dragon Ember through cloud rings, sparkly treasures and rainbow skies!",
+    "howToPlay": "Touch or drag anywhere (or use the arrow keys) and Ember flies there, through four sky worlds of cloud rings, gems, hearts, stars and moons; tap or hold 🔥 (or Space) to puff fire that pops bubbles, wakes lanterns, launches fireworks and lights up night stars. Each world has its own surprise, and at each nest the treasures land with Ember's family before a tap on ▶ flies on.",
     "emoji": "🐉",
     "color": "#3fbf7f",
     "category": "jump",
     "together": false,
     "featured": false,
-    "url": "https://a8c45180-bitgames-dragon-glide.ferdousbd.workers.dev/",
+    "url": "https://d2e9709c-bitgames-dragon-glide.ferdousbd.workers.dev/",
     "ages": [
       4,
       8
     ],
-    "learning": "Number order, counting on and back (into the teens), skip counting, counting to 10 with a ten-frame, sorting by colour and shape, adding two small groups, comparing \"how many more\", and steering"
+    "learning": "Mostly pure flying fun: steering and hand-eye coordination, with colours, shapes and cause and effect along the way"
   },
   {
     "id": "fish-pond",
     "title": "Fish Pond",
-    "tagline": "Go fishing with Bear and fill your book with fish, a puffer, a whale and treasure!",
-    "howToPlay": "Pick a place: sunny lake, sunset river, starry night, icy sea or coral reef. Bear asks a riddle (\"something with a hard shell\"): tap the animal that fits, and it comes to your line. When the bobber dips and a ! pops up, tap to reel it in. An animal that fits goes in your 📖 book; one that doesn't is put back gently, with the reason why. Can you find all 20? Older players get trickier riddles (is it a real fish? does it breathe air?), two clues at once, then two different animals that fit both, and Bear's list: animals to find in other waters, so you choose where to fish. Each trip, sort your catches in the book: fresh water, the sea, or not a real animal.",
+    "tagline": "Feel the tug, see the splash, find out what you caught!",
+    "howToPlay": "Tap the water near a fish to cast, tap again when the bobber dips and the ! pops up, and tickle your catch before it flies into the picture book. Five places, 23 creatures, and surprises to find: big ones, sparkly shiny ones, a golden fish, a whale and treasure.",
     "emoji": "🎣",
     "color": "#3fa7e0",
     "category": "animals",
     "together": false,
     "featured": false,
-    "url": "https://a242ad8c-bitgames-fish-pond.ferdousbd.workers.dev/",
+    "url": "https://788017d0-bitgames-fish-pond.ferdousbd.workers.dev/",
     "ages": [
       2,
       8
     ],
-    "learning": "Observation, animal habitats (fresh water and sea), real or pretend, and counting"
+    "learning": "Fun first: watching for the bite and tapping at just the right moment, and noticing who lives in which water"
   },
   {
     "id": "memory-match",
     "title": "Memory Match",
-    "tagline": "Flip the cards and find the matching animal twins!",
-    "howToPlay": "Tap two cards to turn them over and hear each animal's name. Find all the matching pairs! Choose how they match: 🐶🐶 twins (on the big boards some twins wear a 🎀 bow or a 🧢 hat, so look closely), 🐮🔊 an animal and its sound (the speaker card says \"Moo!\": who says that?), 🐮 and its baby (a cow's baby is a calf; on the bigger boards the babies sleep in baskets and you only hear and see their name, so find whose baby it is), or 🐮🐷🐥 Homes for older children: keep turning over the animals that live together on the farm, at home, wild on land or in the water. Tap 👀 once a round to peek. Boards grow from 2 pairs to 10, and the next board follows how carefully you remembered. 📖 My animals keeps what you found out about each animal: its sound, its baby and its home.",
+    "tagline": "Flip the cards and wake up the animal twins!",
+    "howToPlay": "Tap a card to flip it and meet the animal hiding underneath, then find its twin: matched animals turn to each other, call out together and do their own trick, and a full board ends in a party (a conga, a ring dance or a musical wave). Every board is a new place (garden, farm, sea, night, snow, savanna, autumn wood) and may hide a surprise: a golden crowned pair, babies whose parents pop up, party hats or a peekaboo. Pick a board size by its picture of cards, from 4 up to 16; hold 🏠 to leave a board and hold 🔊 to mute (a tap turns the sound back on).",
     "emoji": "🧩",
     "color": "#2ec4b6",
     "category": "puzzle",
     "together": false,
     "featured": false,
-    "url": "https://daad1bae-bitgames-memory-match.ferdousbd.workers.dev/",
+    "url": "https://12d333c2-bitgames-memory-match.ferdousbd.workers.dev/",
     "ages": [
       2,
       8
     ],
-    "learning": "Visual and auditory memory, looking closely, animal names and the sounds they make, baby animal words (and which parent each belongs to), and sorting animals by where they live (including that some fit more than one home)"
+    "learning": "Mostly giggles: flipping, finding and watching animals do their tricks. Remembering where things are comes along with the play"
   },
   {
     "id": "paint-splash",
     "title": "Paint Splash",
-    "tagline": "Roll giant paint rollers with up to 4 friends and paint a picture together!",
-    "howToPlay": "Drag anywhere (or use the arrow keys) to roll your animal's paint roller. A dashed chalk shape asks for a colour (\"Paint the fish green!\"), but the pots only hold 🔴🟡🔵, so work out the mix and paint it like a painter, in coats: one paint all over inside the lines, then the other on top while it is still wet and shiny. Swapping pots back and forth still mixes, but careful coats are what move the puzzles on. Red and yellow make orange, yellow and blue make green, red and blue make purple, all three make brown. Painted shapes are inked and kept safe while robot friends paint a frame round the page. The recipe is pictured at first; as you paint carefully it hides behind ❓, two-part shapes (a tree's leaves and trunk) arrive, then puzzles with more than one answer (\"a mix of blue and one more paint\"), then puzzles on two-part shapes and with two conditions (\"a mix with blue but no red\"), and at the top a ⚪ white pot for light colours (\"Paint the heart pink!\": red and white) — but white spoils a colour that should not be light, so you decide when it belongs. At the very top come ratios: \"Paint the sun yellowish orange!\" means more yellow than red, so you lay yellow, then red, then yellow again on top while it shines. After each shape you pick the next one from the card, and every few shapes you choose the colour yourself. Stuck? A ring shows the pot to try, then a still picture of the mix, and if a shape is still too tricky the card offers 🔄 another, easier one. When the page is full, keep painting on a fresh page. There is no clock: tap 🖼️ Finished! when your picture is done, and it is kept in My pictures by itself. Choose ⏳ Quick for a sand timer of free painting with 🌈 rainbow and 💧 water puddles, or open Mix my colours for the colour studio, where older painters get mixing goals (a 🎯 on its button says so).",
+    "tagline": "Roll, throw and splat paint everywhere with up to 4 friends!",
+    "howToPlay": "Drag anywhere to roll your animal's paint roller, tap a pot (red, yellow, blue or rainbow) to change colour, and tap anywhere on the ground to throw a paint ball there. Each round hides surprises such as star, heart and paw stamps, a giant tipping bucket, rainbow and water puddles; tap 🖼️ when the picture is done, or pick ⏳ on the menu for a quick sand-timer round.",
     "emoji": "🎨",
     "color": "#9b5de5",
     "category": "pop",
     "together": true,
     "featured": false,
-    "url": "https://ae3cc8e4-bitgames-paint-splash.ferdousbd.workers.dev/",
+    "url": "https://cd2d8f94-bitgames-paint-splash.ferdousbd.workers.dev/",
     "ages": [
       2,
       8
     ],
-    "learning": "Colour mixing with primaries (secondary colours and brown), tints with white (pink, light blue), ratios (more yellow than red makes a yellowish orange, painted in play and mixed by drops in the colour studio), reasoning from a rule to a colour (including two conditions and elimination), planning in coats while the paint is wet, staying inside the lines, and cooperation"
+    "learning": "Colour mixing by discovery: two wet paints blend where they cross (red and yellow make orange, yellow and blue make green, red and blue make purple), plus playing together"
   },
   {
     "id": "penguin-bowling",
     "title": "Penguin Bowling",
-    "tagline": "Belly-slide a chubby penguin down the ice and knock over snowmen and fish!",
-    "howToPlay": "Swipe up (or pull back and let go) to slide the penguin down the ice. A curvy swipe makes it curve! On a keyboard, ← → aim and Space slides; ◀ ▶ move the penguin. Bumpers 🛟 keep the penguin out of the gutters. Each fresh rack starts with a plan: the youngest pick 'a few' or 'a lot' from two pictures, and stand near the edge or in the middle to make it happen. After every roll, tap each pin still standing to count it (fallen ones don't count), then say how many: the last number counted tells how many, and fallen and standing always make 10. Children who count carefully work out the missing part instead while a snow cloud hides the pins (7 + ? = 10, or ? + 2 = 10), first from three numbers, later from a 1–10 strip. Their plans use numbers: 'knock down 8' (for the first two plans of a game, footprints and a number show where to stand; then the child finds the spot: the middle knocks many, the edge just one), and later 'leave 2 standing', which takes the bond to turn into where to stand, or a curved plan like 'leave 7 ↪' that sets the curve. A plan that comes out just right asks for the other part. Before a second roll, say where the pins are or which side has more: footprints show where to walk, fewer as the child grows, until the spare is their own plan. Tap 💭 to guess how many will fall first. Pick Ages 3–5 to start with counting, or 6–8 to start with missing parts; either way the game adapts as the child plays. Games are 5 frames; pick 10 for a longer one.",
+    "tagline": "Belly-slide a chubby penguin into wobbly snowmen and watch them tumble!",
+    "howToPlay": "Swipe up from the penguin to send it whooshing down the ice (a curvy swipe curves it), or tap the big yellow slide button for a lucky-dip slide; ◀ ▶ move it, and it lines itself up with the pins left for the second slide. Five frames full of surprises (giant snowmen, golden pins, a cheeky pin that jumps the penguin, conga lines), strikes win hats you can pick on the title card, and 🏠, 🎵 and 🔊 need a short hold during play.",
     "emoji": "🐧",
     "color": "#4cc9f0",
     "category": "pop",
     "together": false,
     "featured": false,
-    "url": "https://b9d371ec-bitgames-penguin-bowling.ferdousbd.workers.dev/",
+    "url": "https://33e1f339-bitgames-penguin-bowling.ferdousbd.workers.dev/",
     "ages": [
       4,
       8
     ],
-    "learning": "Number bonds to 10, counting, predictions and spatial reasoning"
+    "learning": "Aiming, cause and effect, and a feel for the pins left standing"
   },
   {
     "id": "rocket-garage",
     "title": "Rocket Garage",
-    "tagline": "Snap together a silly rocket, then blast your animal pilot off to the Moon and beyond!",
-    "howToPlay": "Tap or drag parts from the tray to build your rocket: nose cones, windows, fuel tanks, fins, boosters and stickers (tap the rocket to swap a part, tap a colour to paint it). Press the big red button to launch! When you change a part, guess first: will it go farther, the same, or less far? (Later, name the very planet.) Watch last time's rocket fly beside yours, then hear what your change did. A wobbly rocket rocks on the pad and sways in flight; a steady one stands still. Every discovery goes into your 📓 notebook, which remembers where each booster landed and which noses, tanks and fins you found wobbly 〰️ or steady ━ (the tray marks them too), and its 🧪 workshop races rocket A against rocket B. Steer to the stars out at the sides: fifteen make the ⚡ turbo ready, and you choose whether to zoom one planet farther. After a few flights Robot hands you mission cards. First guess where the rocket on the pad lands as it is, then change parts to reach his planet. Missions grow from landing on a planet, to landing there steady or wobbly, to fixing Robot's own rocket with just one change, to his rocket with two faults (or two wobbly parts), fixed one change per flight. Then the workshop holds a race challenge: one steady and one wobbly rocket to the same planet.",
+    "tagline": "Snap together a silly rocket and blast it to the Moon, or watch it flop!",
+    "howToPlay": "Tap parts to build a silly rocket, tap a planet on the top bar to choose where to go, press the big red 🚀, then tap or tilt to steer for stars. Wobbly rockets need bigger boosters, or they flop back onto the pad.",
     "emoji": "🚀",
     "color": "#ff5a5f",
     "category": "space",
     "together": false,
     "featured": false,
-    "url": "https://45949e12-bitgames-rocket-garage.ferdousbd.workers.dev/",
+    "url": "https://7c75a878-bitgames-rocket-garage.ferdousbd.workers.dev/",
     "ages": [
       4,
       8
     ],
-    "learning": "Design comparisons, predictions, experimentation and planning with two variables"
+    "learning": "Just for fun: building, steering and silly surprises (boosters and wobbly parts change the flight)"
   },
   {
     "id": "star-catcher",
     "title": "Star Catcher",
-    "tagline": "Fly Kitty’s rocket past friendly planets and catch the falling stars!",
-    "howToPlay": "Drag your finger or mouse, or use the arrow keys, to fly Kitty's rocket. Stars fall in little rows, each carrying a number: steer to the one that comes next to light the next star of a real constellation. The rule stays under the sky panel with the numbers in order. A wrong pick floats away and the right star shows itself, so careful choices build the sky sooner. At each planet your child joins the dots in counting order (tap, or arrow keys and Enter); above the first level a number or two hides as \"?\" and your child picks the missing one. Then they choose the next shape, and each card carries its own way of counting, so they choose to stay steady or take a stretch. Each sequence starts somewhere new, and as your child gets steady the numbers move from matching to counting on and back, twos, fives, big numbers where 13 sits beside 31, jumps of ten, finding the pattern, and big jumps like 9 or 11. At home, find each constellation again by its shape or by how it was counted.",
+    "tagline": "Fly Kitty's rocket, catch falling stars, and watch your star pictures come alive!",
+    "howToPlay": "Drag a finger (or use the arrow keys) to fly Kitty's rocket into the falling stars, and each planet sends its own kind, from bouncy candies to stars in bubbles. Every finished star picture wakes up as a bear, fish, bird, bunny, butterfly or cat that plays, follows the rocket and does a trick when tapped (hold 🏠 to leave a trip).",
     "emoji": "⭐",
     "color": "#6c63ff",
     "category": "space",
     "together": false,
     "featured": false,
-    "url": "https://4e6383f0-bitgames-star-catcher.ferdousbd.workers.dev/",
+    "url": "https://2ea8ecd9-bitgames-star-catcher.ferdousbd.workers.dev/",
     "ages": [
       3,
       8
     ],
-    "learning": "Number order, counting on and back, skip counting, missing numbers in a sequence, place value with tens, number patterns and two-digit jumps, reading two-digit numbers, real constellations and star patterns"
+    "learning": "Hand-eye coordination, tracking moving things, and spotting shapes in the stars"
   }
 ]

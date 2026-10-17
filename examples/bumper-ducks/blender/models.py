@@ -751,8 +751,8 @@ def build_puddle():
         for k in range(3):
             parts.append((ico(1.3 * s * (1 - k * 0.15), (x + rnd.uniform(-0.6, 0.6) * s, y + rnd.uniform(-0.6, 0.6) * s, ground + (3.1 + k * 0.9) * s), subd=1, jitter=0.25, seed=k),
                           ("leaf_orange", "leaf_yellow", "leaf_red")[(k + int(a * 3)) % 3]))
-    # Wellies on the left rim
-    a = math.radians(160)
+    # Wellies on the near left rim (clear of the game's corner buttons at the top left)
+    a = math.radians(200)
     bx, by = (R + 1.6) * math.cos(a), (R + 1.6) * math.sin(a)
     for s in (-1, 1):
         x, y = bx + s * 0.55, by + 0.3 * s

@@ -32,23 +32,74 @@ const center = new THREE.Vector3()
 const size = new THREE.Vector3()
 const tmp = new THREE.Vector3()
 
-/** A tall, thin strip: the sky only changes from top to bottom. */
-const skyTexture = () =>
-  canvasTexture(4, 256, (g, w, h) => {
+/**
+ * Sky moods: the top, middle and horizon of the sky, the clouds' tint and how many stars show. A themed sky
+ * eases into its own mood: warm gold, a lilac bunny sky, pink clouds for hearts, a minty day of giants, a dusk.
+ */
+export const MOODS = {
+  day: { sky: ['#5fb8f5', '#a9dcff', '#fdeccf'], cloud: '#ffffff', stars: 0 },
+  gold: { sky: ['#f2b84b', '#ffe3a1', '#fff3d9'], cloud: '#ffe7b8', stars: 0 },
+  bunny: { sky: ['#a991ee', '#d9ccff', '#fde8f3'], cloud: '#f4eeff', stars: 0 },
+  heart: { sky: ['#ff8fbd', '#ffcfe2', '#fff0e8'], cloud: '#ffc4dc', stars: 0 },
+  giant: { sky: ['#52c7c0', '#bdeee4', '#fdf6dc'], cloud: '#ffffff', stars: 0 },
+  dusk: { sky: ['#343a8a', '#9a7fd0', '#ffc59c'], cloud: '#d6c8ff', stars: 1 },
+}
+
+/** A tall, thin strip: the sky only changes from top to bottom. `paint` redraws it in new colours. */
+function skyTexture() {
+  const paint = (g, w, h, [top, mid, low]) => {
     const grad = g.createLinearGradient(0, 0, 0, h)
-    grad.addColorStop(0, '#5fb8f5')
-    grad.addColorStop(0.55, '#a9dcff')
-    grad.addColorStop(1, '#fdeccf')
+    grad.addColorStop(0, top)
+    grad.addColorStop(0.55, mid)
+    grad.addColorStop(1, low)
     g.fillStyle = grad
     g.fillRect(0, 0, w, h)
+  }
+  const tex = canvasTexture(4, 256, (g, w, h) => paint(g, w, h, MOODS.day.sky))
+  tex.paint = (stops) => {
+    paint(tex.image.getContext('2d'), tex.image.width, tex.image.height, stops)
+    tex.needsUpdate = true
+  }
+  return tex
+}
+
+const starTexture = () =>
+  canvasTexture(32, 32, (g, s) => {
+    g.translate(s / 2, s / 2)
+    g.fillStyle = '#fff6c8'
+    g.beginPath()
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 - Math.PI / 2
+      const r = i % 2 ? s * 0.18 : s * 0.48
+      g.lineTo(Math.cos(a) * r, Math.sin(a) * r)
+    }
+    g.fill()
   })
 
 export class World {
   constructor(scene, camera) {
     this.scene = scene
     this.camera = camera
-    scene.background = skyTexture()
+    this.sky = skyTexture()
+    scene.background = this.sky
     scene.fog = new THREE.Fog('#cfeaff', 55, 140)
+    // The colours the sky is easing between, and the mood it is easing to
+    const colours = (mood) => ({ sky: mood.sky.map((c) => new THREE.Color(c)), cloud: new THREE.Color(mood.cloud), stars: mood.stars })
+    this.now = colours(MOODS.day)
+    this.moods = Object.fromEntries(Object.entries(MOODS).map(([k, m]) => [k, colours(m)]))
+    this.mood = this.moods.day
+    this.cloudMats = new Set()
+    // A few soft stars, high up, that come out for the dusk sky
+    const starMat = new THREE.MeshBasicMaterial({ map: starTexture(), transparent: true, opacity: 0, depthWrite: false, fog: false, toneMapped: false })
+    this.stars = Array.from({ length: 14 }, (_, i) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), starMat.clone())
+      m.position.set((((i * 53) % 29) / 29 - 0.5) * 70, 6 + ((i * 37) % 17) * 0.75, -40)
+      m.scale.setScalar(0.9 + ((i * 7) % 5) * 0.25)
+      m.userData.phase = i * 1.7
+      m.visible = false
+      scene.add(m)
+      return m
+    })
     this.clouds = []
     this.sheep = []
     this.sunSpin = 0
@@ -114,6 +165,7 @@ export class World {
       root?.traverse((o) => {
         if (!o.isMesh) return
         o.material.envMapIntensity = 0.25
+        if (o.material.name === 'cloud') this.cloudMats.add(o.material)
         if (o.material.name === 'cloud' || o.material.name === 'wool') {
           o.material.emissive.set('#ffffff')
           o.material.emissiveIntensity = 0.35
@@ -124,11 +176,9 @@ export class World {
   }
 
   /**
-   * Places the sun in screen pixels, tucked under the home button. `avoid` (a screen rect such as the
-   * counting sky's card) pushes it down below that rect when they would overlap; the sun drifts there gently.
+   * Places the sun in screen pixels, tucked under the home button.
    */
-  layout(avoid = this.avoid) {
-    this.avoid = avoid
+  layout() {
     // Clouds wrap just past the screen edge at their own depth.
     for (const c of this.clouds) c.userData.wrap = halfSize(this.camera, c.position.z).w + 8
     if (!this.sun) return
@@ -138,8 +188,7 @@ export class World {
     const px = H / (2 * h) // pixels per unit at the sun's depth
     const r = Math.min(80, Math.max(30, Math.min(W, H) * 0.1))
     const x = 18 + r
-    let y = 66 + r * 1.08
-    if (avoid && avoid.left < x + r + 6 && avoid.right > x - r && avoid.top < y + r) y = avoid.bottom + 6 + r
+    const y = 66 + r * 1.08
     this.sunScale = r / (SUN_RADIUS * px)
     this.sunAt = new THREE.Vector3(-w + x / px, h - y / px, SUN_Z)
     if (!this.sunPlaced) this.placeSun(this.sunAt)
@@ -210,6 +259,47 @@ export class World {
     return Math.hypot((x - sx) / rx, (y - sy) / ry)
   }
 
+  /** Eases the sky into one of the MOODS. */
+  setMood(name) {
+    this.mood = this.moods[name] ?? this.moods.day
+  }
+
+  /** A fresh copy of a sheep for a balloon bunch to carry, or null if the landscape did not load. */
+  sheepCopy() {
+    const s = this.sheep[(Math.random() * this.sheep.length) | 0]
+    if (!s) return null
+    const copy = s.clone(true)
+    copy.position.set(0, 0, 0)
+    copy.rotation.set(0, 0, 0)
+    copy.scale.setScalar(1)
+    return copy
+  }
+
+  /** The world scale that makes something at depth z look the size of the meadow's own sheep. */
+  sheepSizeAt(z) {
+    const s = this.sheep[0]
+    if (!s) return 0.5
+    const at = s.getWorldPosition(tmp)
+    const cam = this.camera.position.z
+    return (s.getWorldScale(new THREE.Vector3()).x * (cam - z)) / (cam - at.z)
+  }
+
+  /** A visible cloud's screen position (for a shower of babies), or null when none is on screen. */
+  cloudOnScreen() {
+    const seen = this.clouds
+      .map((c) => tmp.copy(c.position).project(this.camera) && { x: ((tmp.x + 1) / 2) * innerWidth, y: ((1 - tmp.y) / 2) * innerHeight })
+      .filter((p) => p.x > 60 && p.x < innerWidth - 60 && p.y > 40 && p.y < innerHeight * 0.45)
+    return seen[(Math.random() * seen.length) | 0] ?? null
+  }
+
+  /** The hot-air balloon's screen position, or null when it is off screen. */
+  habOnScreen() {
+    if (!this.hab) return null
+    tmp.copy(this.habCenter()).project(this.camera)
+    const p = { x: ((tmp.x + 1) / 2) * innerWidth, y: ((1 - tmp.y) / 2) * innerHeight }
+    return p.x > 40 && p.x < innerWidth - 40 && p.y > 0 && p.y < innerHeight * 0.6 ? p : null
+  }
+
   /** Just above the basket, where the burner flame would be. */
   habCenter() {
     return this.hab.getWorldPosition(new THREE.Vector3()).add(tmp.set(0, 1.4 * this.hab.scale.y, 0))
@@ -217,7 +307,7 @@ export class World {
 
   /**
    * How far the hot-air balloon (its origin at x, y in the world root) rises or sinks to pass the sun, which sits
-   * just in front of it: in portrait the sun drops below the counting card, into the balloon's lane. It eases in as
+   * just in front of it, so their paths can cross on narrow screens. It eases in as
    * the two draw near, so the balloon drifts over or under the sun (whichever is nearer) instead of crossing it.
    */
   sunDodge(x, y) {
@@ -234,7 +324,30 @@ export class World {
     return (dy >= 0 ? 1 : -1) * gap * near * near * (3 - 2 * near)
   }
 
+  /** Eases the sky's colours, the clouds' tint and the stars toward the chosen mood. */
+  updateMood(dt, t) {
+    const k = 1 - Math.exp(-dt * 0.9)
+    let moved = false
+    this.mood.sky.forEach((to, i) => {
+      const from = this.now.sky[i]
+      if (Math.abs(from.r - to.r) + Math.abs(from.g - to.g) + Math.abs(from.b - to.b) < 0.003) return
+      from.lerp(to, k)
+      moved = true
+    })
+    if (moved) this.sky.paint(this.now.sky.map((c) => `#${c.getHexString()}`))
+    this.now.cloud.lerp(this.mood.cloud, k)
+    for (const m of this.cloudMats) m.color.copy(this.now.cloud)
+    this.now.stars += (this.mood.stars - this.now.stars) * k
+    for (const star of this.stars) {
+      star.visible = this.now.stars > 0.01
+      if (!star.visible) continue
+      star.material.opacity = this.now.stars * (0.65 + Math.sin(t * 1.3 + star.userData.phase) * 0.3)
+      star.lookAt(this.camera.position)
+    }
+  }
+
   update(dt, t) {
+    this.updateMood(dt, t)
     this.sailSpin = Math.max(0, this.sailSpin - dt * 0.35)
     if (this.sails) this.sails.rotation.z -= dt * (0.8 + 9 * this.sailSpin * this.sailSpin)
     if (this.hab) {

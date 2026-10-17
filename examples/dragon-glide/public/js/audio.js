@@ -7,25 +7,11 @@ const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28]
 const MAJOR = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16]
 const hz = (semitones, base = 523.25) => base * 2 ** (semitones / 12)
 
-const load = (key, fallback) => {
-  try {
-    const v = localStorage.getItem(key)
-    return v === null ? fallback : v === '1'
-  } catch {
-    return fallback
-  }
-}
-const save = (key, on) => {
-  try {
-    localStorage.setItem(key, on ? '1' : '0')
-  } catch {}
-}
-
 export class Sound {
   constructor() {
     this.ctx = null
-    this.muted = load('dragon-glide.muted', false)
-    this.musicOn = load('dragon-glide.music', true)
+    this.muted = false
+    this.musicOn = true
     this.playing = false
     this.song = null
     this.nextBeat = 0
@@ -72,13 +58,11 @@ export class Sound {
 
   setMuted(muted) {
     this.muted = muted
-    save('dragon-glide.muted', muted)
     if (this.ctx) this.sfx.gain.setTargetAtTime(muted ? 0 : 1, this.ctx.currentTime, 0.05)
   }
 
   setMusic(on) {
     this.musicOn = on
-    save('dragon-glide.music', on)
     if (this.ctx) this.musicBus.gain.setTargetAtTime(on ? 0.3 : 0, this.ctx.currentTime, 0.1)
   }
 
@@ -163,9 +147,10 @@ export class Sound {
     if (big) [7, 12, 16].forEach((s, i) => this.note(hz(step + s), { at: 0.06 + i * 0.05, len: 0.3, type: 'triangle', gain: 0.08, echo: true }))
   }
 
-  hoop(combo) {
+  /** Through a cloud ring: a whoosh and a little arpeggio, a step higher for each ring of the same run. */
+  hoop(n = 0) {
     this.hiss({ len: 0.45, freq: 800, q: 0.9, gain: 0.12, sweep: 3 })
-    const base = Math.min(combo, 6) * 2
+    const base = MAJOR[Math.min(n, 5)]
     ;[0, 4, 7, 12].forEach((s, i) => this.note(hz(s + base, 392), { at: 0.04 + i * 0.06, len: 0.35, type: 'triangle', gain: 0.1, echo: true }))
   }
 
@@ -202,10 +187,75 @@ export class Sound {
     for (let i = 0; i < 3; i++) this.note(2200 + i * 200, { at: 0.35 + i * 0.12, len: 0.07, gain: 0.03, slide: 1.3 })
   }
 
-  /** "Not that one": two low, soft notes stepping down. No buzzer. */
-  nope() {
-    this.note(hz(-5, 392), { len: 0.18, type: 'sine', gain: 0.08 })
-    this.note(hz(-8, 392), { at: 0.14, len: 0.28, type: 'sine', gain: 0.07 })
+  /** The rainbow star: a sparkly run up the scale. */
+  power() {
+    for (let i = 0; i < 10; i++) this.note(hz(PENTA[i]), { at: i * 0.045, len: 0.25, type: 'triangle', gain: 0.09, echo: true })
+    this.hiss({ len: 0.8, freq: 1500, q: 0.6, gain: 0.08, sweep: 3 })
+  }
+
+  powerDown() {
+    ;[12, 7, 4, 0].forEach((s, i) => this.note(hz(s), { at: i * 0.07, len: 0.2, type: 'triangle', gain: 0.06 }))
+  }
+
+  /** A big swoop of the wings: an airy whoosh that rises when climbing and falls when diving. */
+  swoosh(up) {
+    this.hiss({ len: 0.4, freq: up ? 500 : 1400, q: 1.2, gain: 0.07, sweep: up ? 2.6 : 0.4 })
+  }
+
+  /** A lollipop boop: a springy boing. */
+  boing() {
+    const o = this.note(220, { len: 0.45, type: 'triangle', gain: 0.16, slide: 2.2 })
+    if (o) {
+      const lfo = this.ctx.createOscillator()
+      const depth = this.ctx.createGain()
+      lfo.frequency.value = 16
+      depth.gain.value = 40
+      lfo.connect(depth).connect(o.frequency)
+      lfo.start()
+      lfo.stop(this.ctx.currentTime + 0.5)
+    }
+    this.note(880, { at: 0.05, len: 0.15, type: 'sine', gain: 0.05, slide: 1.5 })
+  }
+
+  /** A little bird: two quick tweets (softer for a wave). */
+  chirp(gain = 1) {
+    for (let i = 0; i < 2; i++) this.note(2300 + i * 350 + Math.random() * 200, { at: i * 0.11, len: 0.08, type: 'sine', gain: 0.05 * gain, slide: 1.35 })
+  }
+
+  /** A gumdrop brushed: a rubbery squeak. */
+  squeak() {
+    this.note(900, { len: 0.16, type: 'sine', gain: 0.1, slide: 1.8 })
+    this.note(1500, { at: 0.12, len: 0.12, type: 'sine', gain: 0.06, slide: 0.7 })
+  }
+
+  /** Butterflies scattering, or a pennant flapping: a papery flutter and a soft sparkle. */
+  flutter(sparkle = true) {
+    for (let i = 0; i < 5; i++) this.hiss({ at: i * 0.045, len: 0.04, freq: 3200, q: 2, gain: 0.04 })
+    if (sparkle) this.note(hz(PENTA[6 + ((Math.random() * 5) | 0)]), { at: 0.05, len: 0.3, type: 'sine', gain: 0.05, echo: true })
+  }
+
+  /** A shooting star across the night: a high, soft glide down. */
+  shoot() {
+    this.note(2600, { len: 0.9, type: 'sine', gain: 0.035, slide: 0.45, attack: 0.08, echo: true })
+  }
+
+  /** A rocket whizzing up. */
+  whizz() {
+    this.hiss({ len: 0.7, freq: 700, q: 3, gain: 0.07, sweep: 4 })
+    this.note(500, { len: 0.7, type: 'sine', gain: 0.04, slide: 3 })
+  }
+
+  /** The firework opens: a soft thump and a sprinkle of high notes (no bang). */
+  boom() {
+    this.note(110, { len: 0.5, type: 'sine', gain: 0.22, slide: 0.5 })
+    this.hiss({ len: 0.6, freq: 600, q: 0.5, gain: 0.1, type: 'lowpass', sweep: 0.4 })
+    for (let i = 0; i < 6; i++) this.note(hz(PENTA[4 + ((Math.random() * 8) | 0)]), { at: 0.15 + i * 0.07, len: 0.25, type: 'triangle', gain: 0.05, echo: true })
+  }
+
+  /** A night star lighting up, each a step higher; `all` adds a shimmering chord as the picture joins up. */
+  twinkle(n, all) {
+    this.note(hz(PENTA[Math.min(n, PENTA.length - 1)] + 12), { len: 0.5, type: 'sine', gain: 0.1, echo: true })
+    if (all) [0, 4, 7, 12, 16].forEach((s, i) => this.note(hz(s), { at: 0.2 + i * 0.09, len: 1.2, type: 'triangle', gain: 0.07, echo: true }))
   }
 
   fanfare() {
@@ -226,22 +276,12 @@ export class Sound {
     ;[0, 7, 12].forEach((s) => this.note(hz(s, 196), { at: 0.9, len: 1.4, type: 'sine', gain: 0.1 }))
   }
 
-  /** A numbered ring: one soft note per number, climbing a major scale, so counting up sounds like going up. */
-  number(n) {
-    this.hiss({ len: 0.4, freq: 800, q: 0.9, gain: 0.08, sweep: 3 })
-    const step = MAJOR[Math.max(0, Math.min(MAJOR.length - 1, n - 1))]
-    this.note(hz(step, 392), { at: 0.03, len: 0.45, type: 'triangle', gain: 0.13, echo: true })
-    this.note(hz(step + 12, 392), { at: 0.06, len: 0.3, type: 'sine', gain: 0.05 })
-  }
-  /** A treasure into the basket (n > 0: the n-th of the wanted kind, a step higher each time). */
+  /** A treasure caught: each one of a little arc a step higher, so a whole arc plays a tune. */
   treasure(n = 0) {
-    const step = n > 0 ? MAJOR[Math.min(MAJOR.length - 1, n + 1)] : 0
+    const step = MAJOR[n % MAJOR.length]
     this.note(hz(step, 523.25), { len: 0.3, type: 'triangle', gain: 0.14, echo: true })
     this.note(hz(step + 7, 523.25), { at: 0.07, len: 0.25, type: 'sine', gain: 0.06 })
-  }
-  /** The counting mission is done: one soft rising pair of notes (a quiet "yes", not a party). */
-  counted() {
-    ;[0, 7].forEach((s, i) => this.note(hz(s, 523.25), { at: 0.1 + i * 0.18, len: 0.45, type: 'sine', gain: 0.09, echo: true }))
+    this.note(hz(step + 12, 523.25), { at: 0.12, len: 0.2, type: 'sine', gain: 0.04, echo: true })
   }
 
   click() {

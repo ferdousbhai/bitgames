@@ -4,15 +4,15 @@ The twelve original games, preserved after the generated batch was retired. Qual
 
 | Game | Ages | Learning |
 | --- | --- | --- |
-| [🎈 Balloon Pop](./balloon-pop/public/index.html) | 3–8 | Counting to 10 and into the teens, stopping at a number, one more and one less, making two bunches the same, adding on from ten, comparing which colour has most, colours and colour mixing, and matching dots to quantities |
-| [🦆 Bumper Ducks](./bumper-ducks/public/index.html) | 3–8 | Counting to ten in rows of five, sorting by colour, one more than, number bonds, place value (tens and ones, adding tens, crossing a ten and regrouping), ordering numbers, cooperation and spatial awareness |
-| [🐰 Bunny Hop](./bunny-hop/public/index.html) | 3–8 | Counting, comparing, adding and finding the difference, reading and making patterns, and timing |
-| [🎂 Cake Stack](./cake-stack/public/index.html) | 3–8 | Sequencing, patterns, counting and comparing, and equal sharing |
-| [🏎️ Crash Racers](./crash-racers/public/index.html) | 5–8 | Matching things by kind (who would like which present) and reading a map |
-| [🐉 Dragon Glide](./dragon-glide/public/index.html) | 4–8 | Number order, counting on and back (into the teens), skip counting, counting to 10 with a ten-frame, sorting by colour and shape, adding two small groups, comparing "how many more", and steering |
-| [🎣 Fish Pond](./fish-pond/public/index.html) | 2–8 | Observation, animal habitats (fresh water and sea), real or pretend, and counting |
-| [🧩 Memory Match](./memory-match/public/index.html) | 2–8 | Visual and auditory memory, looking closely, animal names and the sounds they make, baby animal words (and which parent each belongs to), and sorting animals by where they live (including that some fit more than one home) |
-| [🎨 Paint Splash](./paint-splash/public/index.html) | 2–8 | Colour mixing with primaries (secondary colours and brown), tints with white (pink, light blue), ratios (more yellow than red makes a yellowish orange, painted in play and mixed by drops in the colour studio), reasoning from a rule to a colour (including two conditions and elimination), planning in coats while the paint is wet, staying inside the lines, and cooperation |
-| [🐧 Penguin Bowling](./penguin-bowling/public/index.html) | 4–8 | Number bonds to 10, counting, predictions and spatial reasoning |
-| [🚀 Rocket Garage](./rocket-garage/public/index.html) | 4–8 | Design comparisons, predictions, experimentation and planning with two variables |
-| [⭐ Star Catcher](./star-catcher/public/index.html) | 3–8 | Number order, counting on and back, skip counting, missing numbers in a sequence, place value with tens, number patterns and two-digit jumps, reading two-digit numbers, real constellations and star patterns |
+| [🎈 Balloon Pop](./balloon-pop/public/index.html) | 3–8 | Hand–eye coordination, colours and shapes, and cause and effect |
+| [🦆 Bumper Ducks](./bumper-ducks/public/index.html) | 3–8 | Steering and spatial awareness, cause and effect, and playing together |
+| [🐰 Bunny Hop](./bunny-hop/public/index.html) | 3–8 | Mostly fun: timing hops and flips builds rhythm and hand–eye coordination |
+| [🎂 Cake Stack](./cake-stack/public/index.html) | 3–8 | Timing and a steady hand, with decorating just for fun |
+| [🏎️ Crash Racers](./crash-racers/public/index.html) | 5–8 | Steering, timing and reading a race map |
+| [🐉 Dragon Glide](./dragon-glide/public/index.html) | 4–8 | Mostly pure flying fun: steering and hand-eye coordination, with colours, shapes and cause and effect along the way |
+| [🎣 Fish Pond](./fish-pond/public/index.html) | 2–8 | Fun first: watching for the bite and tapping at just the right moment, and noticing who lives in which water |
+| [🧩 Memory Match](./memory-match/public/index.html) | 2–8 | Mostly giggles: flipping, finding and watching animals do their tricks. Remembering where things are comes along with the play |
+| [🎨 Paint Splash](./paint-splash/public/index.html) | 2–8 | Colour mixing by discovery: two wet paints blend where they cross (red and yellow make orange, yellow and blue make green, red and blue make purple), plus playing together |
+| [🐧 Penguin Bowling](./penguin-bowling/public/index.html) | 4–8 | Aiming, cause and effect, and a feel for the pins left standing |
+| [🚀 Rocket Garage](./rocket-garage/public/index.html) | 4–8 | Just for fun: building, steering and silly surprises (boosters and wobbly parts change the flight) |
+| [⭐ Star Catcher](./star-catcher/public/index.html) | 3–8 | Hand-eye coordination, tracking moving things, and spotting shapes in the stars |

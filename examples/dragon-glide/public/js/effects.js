@@ -204,14 +204,6 @@ export class Rings {
     this.next = 0
   }
 
-  /** On a dark sky the rings shine (added light) instead of fading to grey. */
-  setGlow(on) {
-    for (const r of this.items) {
-      r.m.material.blending = on ? THREE.AdditiveBlending : THREE.NormalBlending
-      r.m.material.needsUpdate = true
-    }
-  }
-
   spawn(pos, color = '#fff3a0', size = 2.2, life = 0.4) {
     const r = this.items[this.next]
     this.next = (this.next + 1) % this.items.length
@@ -237,12 +229,11 @@ export class Rings {
   }
 }
 
-/** "+1" bubbles that float up from where something was caught. */
+/** A little picture (💫 after a bump) that floats up from where something happened. */
 export class Popups {
-  constructor(el, camera, avoid = () => null) {
+  constructor(el, camera) {
     this.el = el
     this.camera = camera
-    this.avoid = avoid // the big banner's box while it shows: numbers start under it, never over it
     this.v = new THREE.Vector3()
   }
 
@@ -252,23 +243,10 @@ export class Popups {
     const d = document.createElement('div')
     d.className = `pop ${kind}`
     d.textContent = text
-    const left = Math.min(92, Math.max(8, (this.v.x * 0.5 + 0.5) * 100))
-    d.style.left = `${left}%`
-    // on phones they start below the trip bar and 'N rings in a row!'
+    d.style.left = `${Math.min(92, Math.max(8, (this.v.x * 0.5 + 0.5) * 100))}%`
+    // on phones they start below the trip bar
     const minTop = innerHeight <= 480 ? Math.min(42, 12000 / innerHeight) : innerWidth <= 520 ? Math.min(45, 24000 / innerHeight) : 12
-    let top = Math.min(90, Math.max(minTop, (-this.v.y * 0.5 + 0.5) * 100))
-    const box = this.avoid()
-    if (box) {
-      const x = (left / 100) * innerWidth
-      const y = (top / 100) * innerHeight
-      // a number rising into a banner or the counting party starts below it, rise and all
-      const rise = innerHeight <= 480 || innerWidth <= 520 ? 70 : 120
-      if (x > box.left - 90 && x < box.right + 90 && y > box.top - 40 && y < box.bottom + rise) {
-        top = ((box.bottom + rise) / innerHeight) * 100
-        if (top > 90) return // no room left: the gem counter still counts it
-      }
-    }
-    d.style.top = `${top}%`
+    d.style.top = `${Math.min(90, Math.max(minTop, (-this.v.y * 0.5 + 0.5) * 100))}%`
     this.el.appendChild(d)
     setTimeout(() => d.remove(), 1000)
   }

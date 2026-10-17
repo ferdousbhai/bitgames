@@ -1,11 +1,9 @@
 /**
- * Ten frames of bowling (or five, for a short game). Each frame is a list of how many pins each roll knocked
- * over. There is no running score: a frame shows its slides and the pins they made.
- * The tenth frame keeps its fresh rack and extra slide after a strike or spare.
+ * A short game of bowling: five frames, each a list of how many pins each slide knocked over.
+ * There is no running score. The last frame keeps a real tenth frame's fresh rack and extra slide
+ * after a strike or spare.
  */
-export const FRAMES = 10
-/** A short game for the youngest bowlers: five frames, the last one with the tenth frame's bonus rules. */
-export const SHORT_FRAMES = 5
+export const FRAMES = 5
 
 export class ScoreCard {
   constructor() {

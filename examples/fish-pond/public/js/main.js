@@ -1,4 +1,3 @@
-import { createAdventure } from './adventure.js'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -8,11 +7,8 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { Audio } from './audio.js'
 import { AMBIENT, BY_ID, CREATURES, Creatures, SWIM_SCALE, roll } from './creatures.js'
 import { Effects, softDot } from './effects.js'
-import { HOLES, PLACES, RIG, World } from './world.js'
+import { PLACES, RIG, World } from './world.js'
 import { Book } from './book.js'
-import { LOOK, factsOf, lookFor } from './look.js'
-import { TRAITS, answersHere, fits, listRiddle, lower, makeList, makeRiddle, missReason, more, twoOf, verdict } from './riddles.js'
-import { createVoice } from './speech.js'
 
 const $ = (id) => document.getElementById(id)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -51,9 +47,8 @@ scene.environmentIntensity = 0.6
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 400)
 scene.add(camera)
 
+
 const audio = new Audio()
-// Says each creature's name and fact out loud, so nobody needs to read
-const voice = createVoice({ muted: audio.muted, rate: 0.95, pitch: 1.25 })
 const world = new World(scene, camera, renderer)
 const creatures = new Creatures(scene)
 const effects = new Effects(scene, camera)
@@ -65,41 +60,27 @@ const game = {
   place: PLACES[store.get('fish-pond-place', 'lake')] ? store.get('fish-pond-place', 'lake') : 'lake',
   phase: 'idle', // idle | cast | wait | bite | catch | show | toBook
   book: store.get('fish-pond-book', {}),
+  // The big ones and shiny ones found of each creature: { id: { big: 1, shiny: 1 } } (book.js badges)
+  extra: store.get('fish-pond-extra', {}),
+  // Places whose every creature is in the book (a 🏆 on their title button)
+  done: store.get('fish-pond-done', []),
   luck: store.get('fish-pond-luck', 0),
-  looks: Number(store.get('fish-pond-looks', 0)) || 0, // features looked at closely (the finger helps until the first)
-  // Bear's riddle (riddles.js). Tier 1 asks for something you can see, tier 2 for an idea (fish or not,
-  // breathes air, no bones), tier 3 for two clues at once. See answer() for how it adapts.
-  riddle: null,
-  tier: 1,
-  // The highest tier reached before (saved): a trip starts one below it, and climbs back quickly
-  best: clamp(Number(store.get('fish-pond-best', store.get('fish-pond-tier', 1))) || 1, 1, 3),
-  streak: [], // the clues answered with the first catch, in a row
-  said: new Set(), // "why" lines said this trip, so each reason is fresh
-  recent: [], // the last few riddles asked, so they vary
-  listTick: '', // "One for Bear's list!", said as the lead of the next riddle
-  asked: [], // every riddle asked this trip (riddles.js makeRiddle: one way to ask for each answer)
-  answered: [], // the animals that solved the last few riddles, so the answers vary too
-  counted: new Set(), // animals counted this trip: a second count is quiet (numbers by tick, the total said)
-  lookAsks: 0, // "Look closer!" is said for the first catch of a trip; after that the glow is enough
-  factAt: -1e9, // when the last fact was heard (game clock)
-  // Bear's list (riddles.js makeList): three animals to find across the places, for children who reached
-  // two-clue riddles. Saved, so a child can plan which water to fish in from the title screen.
-  list: validList(store.get('fish-pond-list', null)),
-  listSaid: false, // "Nothing on Bear's list lives here" is said once a trip
-  riddleSaidAt: 0, // a new riddle after the first is shown, and said only after a quiet look (RIDDLE_QUIET)
-  riddleTier: 0, // the tier of the last riddle said aloud: a new kind of riddle is always said
-  tierNote: '', // "Now two clues at once!": said with the next riddle, not on top of the catch (setTier)
-  listNote: false, // a new Bear's list with nothing on it here: Bear mentions it at home instead
   casts: 0,
   phaseT: 0,
   misses: 0,
   idleT: 0,
 }
 if (typeof game.book !== 'object' || !game.book) game.book = {}
-function validList(l) {
-  return Array.isArray(l) && l.length && l.every((it) => listRiddle(it)) ? l : null
+if (typeof game.extra !== 'object' || !game.extra) game.extra = {}
+if (!Array.isArray(game.done)) game.done = []
+// Saved by the old riddles, missions and look-closer facts (removed 2026-10-16)
+// and by the old saved sound and music switches (sound and music now start on with every visit)
+for (const key of ['fish-pond-best', 'fish-pond-tier', 'fish-pond-list', 'fish-pond-looks', 'fish-pond-sorted', 'fish-pond:adventure', 'fish-pond-sound', 'fish-pond-music']) {
+  try {
+    localStorage.removeItem(key)
+  } catch {}
 }
-const debug = { force: null }
+const debug = { force: null, variant: null } // variant: 'giant' or 'shiny' for the next catch
 const caughtKinds = () => CREATURES.filter((c) => game.book[c.id] > 0).length
 const totalCaught = () => Object.values(game.book).reduce((a, b) => a + (Number(b) || 0), 0)
 
@@ -177,7 +158,7 @@ function resize() {
   stage.position.y = h < 560 ? 0.55 : 0.15
 }
 
-/** Half the visible water width at depth z (for keeping fish and casts on screen). */
+/** Where a point on the screen meets the water (for the visible bounds, casting and taps). */
 const ray = new THREE.Raycaster()
 const ndc = new THREE.Vector2()
 const waterPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
@@ -263,40 +244,12 @@ function stageScale() {
   const h = 2 * Math.tan((camera.fov * Math.PI) / 360) * 5
   return Math.min(2.5, h * camera.aspect * 0.62, h * 0.5)
 }
-
 // --- Fishing ------------------------------------------------------------------------
-
-// Optional learning missions. A pace below 1 gives a much longer bite window.
-const adventure = createAdventure({
-  id: 'fish-pond',
-  anchor: $('title-book'),
-  hud: $('hud'),
-  voice,
-  // The mission speaks its own reward once a trip, with a calm card (no trophy, no star): the count
-  // is the lesson, so after three it rests until the next trip (start() begins it afresh)
-  celebrate: () => {
-    showIntro('🐟', '1, 2, 3!', '🐟 🐟 🐟')
-    softMoment()
-  },
-  // Three fish pictures, lit one per kept catch, and nothing else: no tally, no star
-  renderProgress: (goal, option, count) => {
-    const row = document.createElement('span')
-    row.className = 'adventure-steps'
-    row.setAttribute('aria-hidden', 'true')
-    for (let i = 0; i < option.target; i++) row.append(Object.assign(document.createElement('span'), { className: `adventure-step${i < count ? ' adventure-got' : ''}`, textContent: option.icon }))
-    goal.replaceChildren(row)
-  },
-  // The counting mission fills in a fish per catch, so a child who can't read can follow along
-  options: [
-    { emoji: '🎣', label: 'Free fishing' },
-    { emoji: '🐢', label: 'Extra time to reel', pace: 0.6 },
-    { emoji: '🐟', label: 'Count to 3', icon: '🐟', pace: 0.6, goal: 'Count 3 catches', target: 3, reward: 'One, two, three! You counted three catches!' },
-  ],
-})
 
 const fish = {
   pick: null, // the creature info coming to bite
   who: null, // its swimmer (or a bubble "ghost" for things in the deep)
+  aim: null, // the swimmer the child cast at
   timer: 0,
   nibbles: 0,
   nibbleT: 0,
@@ -336,16 +289,15 @@ function castTo(point, chosen = null) {
   // The swimmer the child aimed at is the one who comes, even if it drifts a little while the line flies.
   // A tap on a swimmer's body chooses it (pickAt); otherwise aim from where the child tapped, not where
   // the bobber lands: at the ice the line snaps to the nearest hole, and the swimmer tapped swims over to it.
-  fish.aim = chosen ?? nearestSwimmer(point, CHOOSE_R) ?? nearestSwimmer(castSpot, PLACES[game.place].ice ? CHOOSE_R + 0.8 : CHOOSE_R)
-  game.riddleSaidAt = 0
+  // A cast into the bubbling patch brings up one of the rare finds instead of a swimmer
+  fish.rare = !!patch && Math.hypot(castSpot.x - patch.pos.x, castSpot.z - patch.pos.z) < PATCH_R
+  fish.aim = fish.rare ? null : chosen ?? nearestSwimmer(point, CHOOSE_R) ?? nearestSwimmer(castSpot, PLACES[game.place].ice ? CHOOSE_R + 0.8 : CHOOSE_R)
+  if (fish.rare) patch.until = Math.min(patch.until, clock + 0.8)
   setPhase('cast')
   game.casts++
   bob.fly = { from: new THREE.Vector3(), to: castSpot.clone(), t: 0, dur: 0.6 }
   audio.cast()
-  hint(false)
   game.idleT = 0
-  // The place's name card steps aside once fishing starts (a trophy stays up)
-  if (introIsPlace) $('intro').classList.remove('show')
 }
 
 /** The bobber lands: something will come and have a look soon. */
@@ -355,7 +307,7 @@ function landed() {
   effects.plop(castSpot)
   audio.plop()
   setPhase('wait')
-  fish.timer = rand(0.5, 1.1)
+  fish.timer = rand(0.2, 0.4)
   fish.pick = null
   fish.who = null
 }
@@ -366,14 +318,13 @@ function sendBiter() {
   // Open water far from everyone brings a surprise from the deep (the rare finds live there).
   const aim = fish.aim
   fish.aim = null
-  const near = debug.force ? null : aim && aim.mode === 'wander' && creatures.swimmers.includes(aim) ? aim : nearestSwimmer(bob.pos, CHOOSE_R)
-  // The deep leans toward a surprise that fits Bear's riddle (a golden fish for "something yellow", the whale for
-  // "breathes air"): it is put back if it doesn't fit, so open water rewards thinking, not random casts
-  const boost = (c) => (game.riddle && !AMBIENT[game.place].includes(c.id) && fits(game.riddle, c.id) ? 3 : 1)
-  const pick = near ? near.info : BY_ID[debug.force] ?? roll(game.place, game.book, game.luck, boost)
+  const rare = fish.rare
+  fish.rare = false
+  const near = debug.force || rare ? null : aim && aim.mode === 'wander' && creatures.swimmers.includes(aim) ? aim : nearestSwimmer(bob.pos, CHOOSE_R)
+  const pick = near ? near.info : BY_ID[debug.force] ?? (rare ? rareFind() : roll(game.place, game.book, game.luck))
   fish.pick = pick
-  // Slow bobs to watch before the real bite: one or two for the swimmer you chose, more for a surprise
-  fish.nibbles = (near ? 1 : 2) + ((Math.random() * 2) | 0)
+  // A bob to watch before the real bite: one for the swimmer you chose, two for a surprise
+  fish.nibbles = near ? 1 : 2
   fish.nibbleT = 0
   const spot = bob.pos
   if (near) {
@@ -391,7 +342,7 @@ function sendBiter() {
     return v
   }
   if (pick.how === 'deep') {
-    fish.who = { ghost: true, pos: away(4).setY(-1.6), bubbleIn: 0 }
+    fish.who = { ghost: true, pos: away(3).setY(-1.6), bubbleIn: 0 }
     return
   }
   if (pick.how === 'swim') {
@@ -405,7 +356,7 @@ function sendBiter() {
       fish.who = best
       return
     }
-    fish.who = creatures.spawnSwimmer(pick.id, away(4.2), { mode: 'approach', y: -1.9, depth: -0.8 })
+    fish.who = creatures.spawnSwimmer(pick.id, away(3.2), { mode: 'approach', y: -1.9, depth: -0.8 })
     fish.who.spawned = true
     return
   }
@@ -467,7 +418,7 @@ function pickAt(x, y) {
 }
 const camRight = new THREE.Vector3(1, 0, 0)
 
-/** Whoever was coming swims off (a soft ripple if they got away: no teasing). */
+/** Whoever was coming swims off (a giggle and a ripple if they got away: no teasing). */
 function letGo(giggle) {
   const w = fish.who
   fish.who = null
@@ -484,7 +435,8 @@ function letGo(giggle) {
   w.target.z = clamp(w.target.z, bounds.zMin - 6, bounds.zMax + 6)
   if (giggle) {
     effects.ripple(bob.pos, 1.0, 0.6)
-    effects.bubble(new THREE.Vector3(w.pos.x, w.pos.y + 0.2, w.pos.z), 4, 0.3)
+    effects.bubble(new THREE.Vector3(w.pos.x, w.pos.y + 0.2, w.pos.z), 6, 0.3)
+    audio.giggle()
   }
 }
 
@@ -500,8 +452,8 @@ function updateWait(dt, t) {
     // Bubbles trail in from the deep
     const d = Math.hypot(spot.x - w.pos.x, spot.z - w.pos.z)
     if (d > 0.3) {
-      w.pos.x += ((spot.x - w.pos.x) / d) * Math.min(d, dt * 2)
-      w.pos.z += ((spot.z - w.pos.z) / d) * Math.min(d, dt * 2)
+      w.pos.x += ((spot.x - w.pos.x) / d) * Math.min(d, dt * 3.4)
+      w.pos.z += ((spot.z - w.pos.z) / d) * Math.min(d, dt * 3.4)
       w.bubbleIn -= dt
       if (w.bubbleIn <= 0) {
         w.bubbleIn = 0.12
@@ -515,13 +467,13 @@ function updateWait(dt, t) {
   if (w.mode === 'approach') {
     // A swimmer that can't turn tightly enough to reach the bobber turns harder, then simply arrives
     w.coming = (w.coming ?? 0) + dt
-    const d = creatures.steer(w, spot, dt, w.id === 'whale' ? 1.6 : w.id === 'snail' ? 1.5 : 2.2, w.coming > 4 ? 8 : 3.5)
+    const d = creatures.steer(w, spot, dt, w.id === 'whale' ? 2.4 : w.id === 'snail' ? 2.2 : 3.6, w.coming > 2 ? 9 : 5.5)
     const depth = w.info.how === 'surface' ? 0.02 : w.id === 'whale' ? -1.5 : -0.45
-    w.pos.y += (depth - w.pos.y) * Math.min(1, dt * 1.8)
-    if (d < reach || w.coming > 9) {
+    w.pos.y += (depth - w.pos.y) * Math.min(1, dt * 2.6)
+    if (d < reach || w.coming > 5) {
       w.coming = 0
       w.mode = 'nibble'
-      fish.nibbleT = 0.35
+      fish.nibbleT = 0.25
     }
     return
   }
@@ -537,7 +489,7 @@ function nibbleStep(dt) {
   if (fish.nibbleT > 0) return
   if (fish.nibbles > 0) {
     fish.nibbles--
-    fish.nibbleT = rand(0.8, 1.2)
+    fish.nibbleT = rand(0.4, 0.6)
     bob.dip = 0.12
     effects.ripple(bob.pos, 0.6, 0.6)
     audio.nibble()
@@ -547,14 +499,18 @@ function nibbleStep(dt) {
   bite()
 }
 
+/** Bite window in seconds: long enough to see the bobber go under and tap, with no rush. */
+const BITE_WINDOW = 4.5
+
 function bite() {
   setPhase('bite')
-  // A patient window by default: there is time to look, then tap (BITE_WINDOW)
-  fish.window = (adventure.pace < 1 ? 6 : BITE_WINDOW) + Math.min(1.5, game.misses * 0.5) + (totalCaught() < 3 ? 0.6 : 0)
+  // More time after a miss, and for a brand-new player
+  fish.window = BITE_WINDOW + Math.min(1.5, game.misses * 0.5) + (totalCaught() < 3 ? 0.6 : 0)
   bob.shake = 1
   audio.bite()
   effects.ripple(bob.pos, 1.4, 0.8)
   effects.ripple(bob.pos, 0.8, 0.5)
+  effects.splash(bob.pos, 0.35)
   try {
     navigator.vibrate?.(80)
   } catch {}
@@ -576,7 +532,8 @@ function updateBite(dt) {
   }
 }
 
-/** Tap during the bite: reel it in! */
+/** Tap during the bite: a short tug-of-war at the bobber, then it leaps out of the water. */
+const TUG = 0.5
 function reel() {
   hideBang()
   game.misses = 0
@@ -594,14 +551,22 @@ function reel() {
     c.group.position.set(bob.pos.x, -0.4, bob.pos.z)
     scene.add(c.group)
   }
+  // A repeat catch may be a big one (or the sparkly swimmer is a shiny one): something fresh to see
+  const seen = Number(game.book[pick.id]) > 0
+  const shiny = debug.variant === 'shiny' || !!w?.shiny || (seen && (!w || w.ghost || w.spawned) && Math.random() < 0.1)
+  const giant = debug.variant === 'giant' || (!shiny && seen && pick.id !== 'whale' && Math.random() < (game.extra[pick.id]?.big ? 0.2 : 0.35))
+  debug.variant = null
+  if (shiny && !w?.shiny) shine(c.group)
   // The whale stays big as it leaps
-  const from = c.group.position.clone()
-  const big = pick.id === 'whale' ? 2 : pick.stars >= 3 ? 1.5 : 1
-  effects.splash(bob.pos, big)
-  // No camera shake: the splash and the leap carry the moment
-  audio.splash(big > 1 ? 1.3 : 1)
+  const big = (pick.id === 'whale' ? 2 : pick.stars >= 3 ? 1.5 : 1) * (giant ? 1.6 : 1)
+  effects.splash(bob.pos, 0.6)
   audio.reel()
-  fish.catch = { c, pick, from, t: 0, dur: 0.95, startScale: c.group.scale.x, spin: rand(-1, 1) > 0 ? 1 : -1 }
+  audio.tug()
+  try {
+    navigator.vibrate?.([30, 40, 30])
+  } catch {}
+  if (shiny && w?.shiny) shine(c.group)
+  fish.catch = { c, pick, big, giant, shiny, from: c.group.position.clone(), t: 0, dur: 0.95, startScale: c.group.scale.x, spin: rand(-1, 1) > 0 ? 1 : -1, leapt: false }
   setPhase('catch')
 }
 
@@ -609,171 +574,162 @@ const stageWorld = new THREE.Vector3()
 /** Scratch vectors for effects around the stage, so the show allocates nothing per frame. */
 const stageFx = new THREE.Vector3()
 const stageVel = new THREE.Vector3()
-function updateCatch(dt) {
+function updateCatch(dt, t) {
   const k = fish.catch
   k.t += dt
-  const e = Math.min(1, k.t / k.dur)
-  stage.getWorldPosition(stageWorld)
   const g = k.c.group
+  if (k.t < TUG) {
+    // The tug: it thrashes at the bobber, spraying drops, while Bear's rod bends
+    g.position.copy(k.from)
+    g.position.x += Math.sin(t * 31) * 0.12
+    g.position.y = Math.max(k.from.y, -0.5) + Math.abs(Math.sin(t * 17)) * 0.18
+    g.rotation.z = Math.sin(t * 23) * 0.35
+    bob.pos.set(k.from.x + Math.sin(t * 29) * 0.15, -0.2 + Math.sin(t * 19) * 0.08, k.from.z)
+    if (Math.random() < dt * 30) effects.drops.spawn(stageFx.set(k.from.x + rand(-0.4, 0.4), 0.05, k.from.z + rand(-0.4, 0.4)), stageVel.set(rand(-1.5, 1.5), rand(2, 4), rand(-1.5, 1.5)), { life: 0.8, size: rand(0.05, 0.1), color: '#e6f8ff' })
+    if (Math.random() < dt * 8) effects.ripple(bob.pos, 0.8, 0.5)
+    return
+  }
+  if (!k.leapt) {
+    // Out it comes!
+    k.leapt = true
+    k.from.copy(g.position)
+    effects.splash(bob.pos, k.big)
+    audio.splash(k.big > 1 ? 1.3 : 1)
+    if (k.giant) {
+      audio.bigOne()
+      effects.shake = 0.5
+    }
+  }
+  const e = Math.min(1, (k.t - TUG) / k.dur)
+  stage.getWorldPosition(stageWorld)
   const sm = e * e * (3 - 2 * e)
   g.position.lerpVectors(k.from, stageWorld, sm)
   g.position.y += Math.sin(e * Math.PI) * 2.6
   g.rotation.set(0, k.c.heading ?? 0, 0)
   g.rotation.y += k.spin * e * Math.PI * 2
   g.rotation.z = Math.sin(e * Math.PI) * 0.5 * k.spin
-  const end = stageScale() * k.c.unit * showSize(k.pick.id)
+  const end = stageScale() * k.c.unit * showSize(k.pick.id) * (k.giant ? GIANT : 1)
   g.scale.setScalar(lerp(k.startScale, end, sm))
   // The bobber comes along on the line
   bob.pos.copy(g.position).y -= 0.2
   if (e >= 1) startShow()
 }
 
-/** Bite window in seconds: long enough to watch the bobber and then tap, with no rush. */
-const BITE_WINDOW = 4.5
-
-/** The one soft moment for a catch or a prize: a few slow bubbles rising behind the stage. */
-function softMoment() {
+/** The soft moment for a catch or a prize: a few slow bubbles rising behind the stage. */
+function softMoment(n = 8) {
   stage.getWorldPosition(stageWorld)
-  for (let i = 0; i < 8; i++) effects.bubble(stageFx.set(rand(-1.4, 1.4), rand(-0.8, 0.2), -1.2).add(stageWorld), 1, 0.3)
+  for (let i = 0; i < n; i++) effects.bubble(stageFx.set(rand(-1.4, 1.4), rand(-0.8, 0.2), -1.2).add(stageWorld), 1, 0.3)
 }
 
-/** The parts of a creature (look.js LOOK) that show each clue: what the child looked for. */
-const CLUE_PARTS = {
-  stripes: ['stripes'],
-  spots: ['spots'],
-  shell: ['shell'],
-  claws: ['claws'],
-  arms: ['arms'],
-  tentacles: ['tentacles'],
-  tusk: ['tusk'],
-  spikes: ['spikes'],
-  air: ['blowhole', 'skin', 'flippers'],
-  // gills (the fish), the shell they are tucked under (crab, crayfish), an octopus's head, a jellyfish's thin skin
-  water: ['gills', 'shell', 'head', 'bell'],
-  // what it has instead of fins (legs, flippers, arms, tentacles), a narwhal's blowhole, a shell
-  notfish: ['back legs', 'flippers', 'blowhole', 'arms', 'tentacles', 'shell'],
-  nobones: ['tentacles', 'arms', 'shell'],
-  fish: ['fins', 'back fin', 'back fins', 'side fins'],
-}
-/** The look that matches a clue the catch answered (a thing to see first, then the idea), or null. */
-function clueLook(r, id) {
-  if (!r) return null
-  const clues = [...r.clues].filter((c) => !c.neg).sort((a, b) => TRAITS[a.t].tier - TRAITS[b.t].tier)
-  for (const c of clues) {
-    const l = LOOK[id]?.find((x) => CLUE_PARTS[c.t]?.includes(x.part))
-    if (l) return l
-  }
-  return null
-}
-
-/** Boxy or round things look bigger than fish of the same length. */
 /** In portrait the crayfish's long feelers would run off the side and cover Bear, so it shows smaller. */
 const showSize = (id) => (id === 'crayfish' && innerWidth < innerHeight ? 0.9 : SHOW_SIZE[id] ?? 1)
-/**
- * Shown a little lower (in stage units), clear of Bear: the crayfish's bulk sat over Bear and the boat in
- * portrait, and the cod's back fins (counted, with a dot on each) sat on Bear's face.
- */
+/** Shown a little lower (in stage units), so the crayfish's bulk and the cod's back fins sit clear of Bear's face. */
 const SHOW_DROP = { cod: -0.5, crayfish: -0.45 }
 const SHOW_SIZE = { chest: 0.78, pufferfish: 0.85, boot: 0.9, duck: 0.9, frog: 0.8, crayfish: 1.15, snail: 0.85, octopus: 1.15 }
 
-/** Not animals: they are always kept, whatever Bear asked (a joke, never an answer). */
-const JOKES = new Set(['boot', 'duck', 'chest'])
+/** Seconds a catch shows off before it flies into the book (each tickle adds a little, up to SHOW_MAX). */
+const SHOW_TIME = 3.8
+const SHOW_MAX = 6.5
+const newStar = $('new-star')
 
-const SAY = {
-  boot: 'Silly! An old boot!',
-  chest: 'A treasure chest!',
-  whale: 'A friendly whale!',
-  goldenfish: 'A golden fish!',
-  duck: 'Quack! A rubber duck!',
-}
-/**
- * A joke caught while Bear's riddle is out is kept, but quietly: it is not an answer, so a cast into open
- * water gets no bigger welcome than a careful one (no "Wow", the smallest tune, no bubbles).
- */
-const JOKE_SAY = { boot: 'An old boot! Not an animal.', chest: 'A treasure chest! Not an animal.', duck: 'A rubber duck! Not an animal.' }
+/** How much bigger a big one shows off. */
+const GIANT = 1.38
 
 function startShow() {
-  const { c, pick } = fish.catch
+  const { c, pick, giant, shiny } = fish.catch
   stage.attach(c.group)
   c.group.position.set(0, 0, 0)
-  // Bear's riddle decides what is kept. An animal that fits goes in the book; one that doesn't is looked
-  // at, told why not, and put back in the water (no book, no fanfare). That includes the golden fish and
-  // the whale from the open water, so the rare tiles come from thinking, not from casting anywhere.
-  // Only the jokes (the boot, the rubber duck, treasure) are always kept: they aren't animals.
-  const r = game.riddle
-  const right = fits(r, pick.id)
-  const surprise = JOKES.has(pick.id)
-  const keep = !r || right || surprise
   const before = Number(game.book[pick.id]) || 0
-  if (keep) {
-    game.book[pick.id] = before + 1
-    store.set('fish-pond-book', game.book)
-    game.luck = pick.stars === 3 ? 0 : game.luck + 1
-    store.set('fish-pond-luck', game.luck)
+  game.book[pick.id] = before + 1
+  store.set('fish-pond-book', game.book)
+  game.luck = pick.stars === 3 ? 0 : game.luck + 1
+  store.set('fish-pond-luck', game.luck)
+  const isNew = before === 0
+  // A first big one or shiny one earns its badge in the book
+  const badge = (giant && !game.extra[pick.id]?.big) || (shiny && !game.extra[pick.id]?.shiny)
+  if (giant || shiny) {
+    game.extra[pick.id] = { ...game.extra[pick.id], ...(giant ? { big: 1 } : {}), ...(shiny ? { shiny: 1 } : {}) }
+    store.set('fish-pond-extra', game.extra)
   }
-  const isNew = keep && before === 0
-  // A catch that answered a riddle glows on the part the child reasoned with ("Yes! A rainbow trout has
-  // spots!" glows on its spots, not its stripe), so the look confirms the clue; otherwise the next feature
-  const clue = right ? clueLook(r, pick.id) : null
-  // A feature whose facts were all heard this trip doesn't glow again (counting always may)
-  let look = keep ? clue ?? lookFor(pick.id, game.book[pick.id]) : null
-  // and between facts there is a calm gap (FACT_GAP), so a trip is mostly looking and fishing, not listening.
-  // A new animal always has its glow, and so does the first count of an animal in a trip, and so does the
-  // clue just used (if it still has a fact to tell).
-  if (look && !isNew && (look.count ? game.counted.has(pick.id) : !lookFact(look) || (look !== clue && clock - game.factAt < FACT_GAP))) look = null
-  fish.show = { c, pick, t: 0, strays: 0, isNew, right, back: !keep, puffed: false, all: isNew && caughtKinds() === CREATURES.length, look, lookAt: look ? creatures.featurePoint(pick.id, look.at) : null }
+  const placeDone = !game.done.includes(game.place) && CREATURES.every((x) => !x.places[game.place] || game.book[x.id] > 0)
+  if (placeDone) {
+    game.done.push(game.place)
+    store.set('fish-pond-done', game.done)
+  }
+  fish.show = { c, pick, t: 0, until: SHOW_TIME + (giant || shiny ? 1 : 0), tickle: 0, tickles: 0, isNew, giant, shiny, puffed: false, placeDone, all: isNew && caughtKinds() === CREATURES.length }
+  // A plain repeat still arrives with a trick: a cartwheel or a happy shake
+  if (!isNew && !giant && !shiny) {
+    fish.show.tickle = 1
+    fish.show.tickles = Math.random() < 0.5 ? 3 : 1
+  }
   setPhase('show')
   bob.state = 'hang'
-  // Card under the creature: its name and a NEW sticker, with no rarity stars (a put-back shows a wave)
-  $('card-stars').textContent = keep ? '' : '🌊'
-  $('card-name').textContent = pick.name
-  $('card-new').classList.toggle('hidden', !isNew)
-  $('card').className = `card-catch show stars${pick.stars}${keep ? '' : ' back'}`
-  // One line: its name, whether it answers Bear's riddle, and why (a repeat miss is just the short reason)
-  const line = surprise && !right ? null : verdict(r, pick.id, pick.name, game.said)
-  const wow = !keep && SAY[pick.id] ? `${SAY[pick.id]} ` : '' // "A golden fish! It isn't orange."
-  // After four misses on one riddle the ringed animal has come close: further misses are a soft plip and
-  // the card's words, with no voice at all. A short reason already said on this riddle (r.mute) rests too.
-  const hush = !keep && r && (r.misses >= 4 || r.mute) && !wow
-  const quiet = surprise && !right && !!r
-  if (!hush) voice.sayNow(keep ? line ?? (quiet ? JOKE_SAY[pick.id] : SAY[pick.id]) ?? `You caught ${/^[aeiou]/i.test(pick.name) ? 'an' : 'a'} ${lower(pick.name)}!` : wow + (wow ? (r?.mute ? '' : line.replace(/^An? [^.]*\. /, '')) : line))
-  if (r && (right || !surprise)) fish.show.solved = answer(r, right, pick.id)
-  if (fish.show.solved && r.list) fish.show.listDone = tickList(r)
-  // Look closer: one feature to notice, asked right after the name (it is optional).
-  // A put-back shows why not instead, in words, for children who read.
-  $('card-look').classList.toggle('hidden', !look && keep)
-  if (!keep) $('card-look').textContent = r.reason || missReason(line)
-  if (look) {
-    $('card-look').textContent = `🔍 ${look.part}?`
-    if (game.lookAsks++ < 1) voice.say(`Look closer! See its ${look.part}?`)
+  // A new one for the book gets a gold star sticker, a first big one a medal, a first shiny one sparkles (no words)
+  newStar.classList.remove('show')
+  if (isNew || badge) {
+    newStar.textContent = isNew ? '⭐' : shiny ? '✨' : '🏅'
+    void newStar.offsetWidth
+    newStar.classList.add('show')
   }
-  if (keep) {
-    audio.fanfare(quiet ? 1 : pick.stars)
-    if (!quiet) softMoment()
-    stageLight.intensity = 6
-  } else {
-    audio.nibble()
-    stageLight.intensity = 3
-  }
-  updateHud()
+  audio.fanfare(pick.stars + (giant || shiny ? 1 : 0))
+  if (isNew || badge) audio.newOne(0.55)
+  if (shiny) audio.sparkle(0.3)
+  softMoment(isNew ? 12 : 8)
+  if (pick.stars >= 3) for (let i = 0; i < 3; i++) effects.sparkleAt(stageFx.set(rand(-1.2, 1.2), rand(-0.4, 0.8), 0.4).add(stageWorld), '#fff3a0', 3, 1.6, 0.35)
+  stageLight.intensity = 6
+}
+
+/** A tap on the catch while it shows off: it jumps and squeaks (the duck quacks, the puffer puffs again). */
+function tickle() {
+  const s = fish.show
+  if (!s || game.phase !== 'show') return
+  s.tickle = 1
+  s.tickles++
+  s.until = Math.min(SHOW_MAX, Math.max(s.until, s.t + 1.6))
+  const id = s.pick.id
+  if (id === 'duck') audio.quack()
+  else if (id === 'pufferfish') {
+    s.puffed = false
+    s.puffAt = s.t
+  } else if (id === 'whale') {
+    s.spoutAt = s.t
+    audio.whale()
+  } else audio.boing(1.25 - Math.min(0.6, s.pick.size * 0.25) + (s.tickles % 3) * 0.12)
+  stage.getWorldPosition(stageWorld)
+  effects.bubble(stageFx.set(rand(-0.5, 0.5), rand(-0.4, 0.2), 0.2).add(stageWorld), 4, 0.5)
+  if (id === 'chest' || id === 'goldenfish') effects.sparkleAt(stageFx.set(0, 0.4, 0.4).add(stageWorld), '#ffe066', 6, 2.2, 0.35)
+}
+
+const tickleP = new THREE.Vector3()
+/** Is a tap at (x, y) on the creature showing off? */
+function onShowCreature(x, y) {
+  stage.getWorldPosition(tickleP).project(camera)
+  const sx = ((tickleP.x + 1) / 2) * innerWidth
+  const sy = ((1 - tickleP.y) / 2) * innerHeight
+  return Math.hypot(x - sx, y - sy) < Math.min(innerWidth, innerHeight) * 0.24
 }
 
 function updateShow(dt, t) {
   const s = fish.show
   s.t += dt
+  s.tickle = Math.max(0, s.tickle - dt * 2.2)
   const g = s.c.group
-  const base = stageScale() * s.c.unit * showSize(s.pick.id)
+  const base = stageScale() * s.c.unit * showSize(s.pick.id) * (s.giant ? GIANT : 1)
   const pop = s.t < 0.5 ? 1 + Math.sin((s.t / 0.5) * Math.PI) * 0.15 : 1
+  // A tickle squashes and stretches it, like a jelly
+  const jig = Math.sin((1 - s.tickle) * Math.PI * 3) * s.tickle * 0.18
   let scale = base * pop
   const id = s.pick.id
   // Each creature shows off in its own way
   if (id === 'pufferfish') {
-    const k = clamp((s.t - 0.6) / 0.35, 0, 1)
+    const from = s.puffAt ?? 0
+    const k = clamp((s.t - from - (s.puffAt == null ? 0.6 : 0.05)) / 0.35, 0, 1)
     if (k > 0 && !s.puffed) {
       s.puffed = true
       audio.puff()
     }
-    const puff = 1 + 0.32 * ease(k) + (k >= 1 ? Math.sin(s.t * 6) * 0.03 : Math.sin(k * Math.PI) * 0.12)
+    const deflate = s.puffAt == null ? 1 : clamp((s.t - from) / 0.15, 0, 1)
+    const puff = 1 + 0.32 * ease(k) * deflate + (k >= 1 ? Math.sin(s.t * 6) * 0.03 : Math.sin(k * Math.PI) * 0.12)
     scale *= puff
     if (s.c.parts.spikes) s.c.parts.spikes.scale.setScalar(1 + 0.12 * ease(k))
   }
@@ -783,646 +739,87 @@ function updateShow(dt, t) {
       s.opened = true
       audio.creak()
     }
-    s.c.parts.lid.rotation.z = ease(k) * 1.3
+    s.c.parts.lid.rotation.z = ease(k) * 1.3 + s.tickle * 0.3
     if (k > 0 && Math.random() < dt * 6) effects.sparkleAt(stageFx.set(rand(-0.6, 0.6), 0.6, 0.4).add(stageWorld), '#ffe066', 1, 2.5, 0.35)
   }
+  if (s.shiny && Math.random() < dt * 7) effects.sparkleAt(stageFx.set(rand(-1.1, 1.1), rand(-0.7, 0.7), 0.5).add(stageWorld), Math.random() < 0.5 ? '#fff3a0' : '#bff4ff', 1, 1.0, 0.22)
   if (id === 'goldenfish' && Math.random() < dt * 5) effects.sparkleAt(stageFx.set(rand(-1, 1), rand(-0.6, 0.6), 0.5).add(stageWorld), '#fff3a0', 1, 1, 0.3)
-  if (id === 'whale' && s.t > 0.4 && s.t < 2.2 && Math.random() < dt * 40) {
+  const spout = s.t - (s.spoutAt ?? 0)
+  if (id === 'whale' && spout > 0.4 && spout < 2.2 && Math.random() < dt * 40) {
     // The spout sits on top of the whale
     const p = stageFx.set(0.2, 0.55, 0.3).multiplyScalar(base / s.c.unit).add(stageWorld)
     effects.drops.spawn(p, stageVel.set(rand(-0.8, 0.8), rand(3, 5), rand(-0.3, 0.6)), { life: 1.2, size: rand(0.05, 0.1), color: '#d9f3ff' })
   }
   if (id === 'jellyfish') scale *= 1 + Math.sin(s.t * 5) * 0.05
-  g.scale.setScalar(scale)
+  g.scale.set(scale * (1 + jig), scale * (1 - jig), scale * (1 + jig))
   // A happy wiggle, turned so you can see its face
   // The octopus faces you square on: its arms fan round it like a star, so all eight tips show, clear of its face
   // The crayfish turns a little side-on, so its big claws reach out to the side instead of pointing at you
   const face = id === 'octopus' ? -1.45 : id === 'crayfish' ? -0.6 : id === 'pufferfish' || id === 'jellyfish' || id === 'duck' || id === 'chest' || id === 'boot' || id === 'crab' || id === 'frog' ? -1.05 : -0.45
-  // Held quite still while arms or stripes are counted, so each dot stays under the finger: the sway and bob
-  // ease out to nothing from where they were (no jump) and the count dots sit still
-  s.still = damp(s.still ?? 0, s.counting || s.guessing ? 1 : 0, 4, dt)
-  const move = 1 - s.still
   const sway = id === 'octopus' ? 0.2 : 0.35
-  g.rotation.set(Math.sin(s.t * 2.2) * 0.12 * move, face + Math.sin(s.t * 1.6) * sway * move, Math.sin(s.t * 3.1) * 0.08 * move)
-  g.position.y = Math.sin(s.t * 2.8) * 0.08 * move + (SHOW_DROP[id] ?? 0) * Math.min(1, s.t * 2)
-  if (s.c.parts.tail) s.c.parts.tail.rotation[id === 'whale' || id === 'narwhal' ? 'z' : 'y'] = Math.sin(s.t * 6) * 0.5 * move
-  // Rays and glow behind
-  const a = Math.min(1, s.t * 3)
+  const hop = Math.sin(s.tickle * Math.PI) * 0.45
+  // A tickle makes it jump and shake with giggles; every third one it does a happy flip
+  const flip = s.tickles % 3 === 0 && s.tickles ? (1 - s.tickle) * Math.PI * 2 * (s.tickle > 0 ? 1 : 0) : 0
+  g.rotation.set(Math.sin(s.t * 2.2) * 0.12, face + Math.sin(s.t * 1.6) * sway, Math.sin(s.t * 3.1) * 0.08 + Math.sin(s.tickle * Math.PI * 5) * 0.35 * s.tickle + flip)
+  g.position.y = Math.sin(s.t * 2.8) * 0.08 + hop + (SHOW_DROP[id] ?? 0) * Math.min(1, s.t * 2)
+  if (s.c.parts.tail) s.c.parts.tail.rotation[id === 'whale' || id === 'narwhal' ? 'z' : 'y'] = Math.sin(s.t * (6 + s.tickle * 10)) * 0.5
   // A still, soft glow behind the catch (no spinning rays)
-  glow.material.opacity = a * (s.back ? 0.15 : 0.4)
+  glow.material.opacity = Math.min(1, s.t * 3) * 0.4
   glow.material.color.set(s.pick.stars >= 3 ? '#ffe680' : '#fffbe6')
-  updateLook(s)
-  updateDots(s)
-  // Untouched, the catch flies to the book after a calm pause. After a look, it waits for the fact.
-  // While the child is counting there is no clock, but a count or guess nobody is doing ends gently
-  // (a stray tap on the glow must not hold a little one on the stage): a few quiet seconds before the
-  // first tap, longer once counting has begun.
-  if (s.guessing) {
-    if (s.t - s.guessing.last > IDLE_COUNT) finishShow()
-  } else if (s.counting && !s.looked) {
-    const c = s.counting
-    // Some counted, then a long rest: Bear says the count so far and how many are left, once ("Two! One
-    // more stripe to find."); a second rest ends it with the total, so a count never ends in silence
-    if (c.n && s.t - c.last > (c.nudged ? 8 : 10)) {
-      if (!c.nudged) {
-        c.nudged = true
-        c.last = s.t
-        const left = c.pts.length - c.n
-        const one = s.look.part.replace(/s$/, '')
-        voice.sayNow(`${NUMBER[c.n]}! ${left === 1 ? `One more ${one}` : `${NUMBER[left]} more ${s.look.part}`} to find.`)
-      } else {
-        voice.sayNow(`${NUMBER[c.pts.length]} ${s.look.part} in all.`)
-        finishShow()
-      }
-    } else if (!c.n && s.t - c.last > IDLE_COUNT) finishShow()
-  } else if (s.looked) {
-    const heard = s.factDone ? s.t - s.factDone > 1.2 && s.t - s.looked > s.factFor * 0.6 : s.t - s.looked > s.factFor
-    if (heard || s.t - s.looked > 14) finishShow()
-  } else if (s.t > (s.back ? BACK_WAIT : s.look ? LOOK_WAIT : 4.6)) finishShow()
+  if (s.t > s.until) finishShow()
 }
-
-// --- Look closer -----------------------------------------------------------------------
-
-/** Seconds a guess or a count may wait for its first tap before the catch carries on. */
-const IDLE_COUNT = 7
-/** Seconds a catch waits on the stage for a look before flying to the book. */
-const LOOK_WAIT = 7.5
-/** Seconds a catch that didn't fit the riddle stays up (for its "why not") before going back in the water. */
-const BACK_WAIT = 3.6
-/** When the glow appears: once the name has been said. */
-const LOOK_FROM = 1.3
-const lookBtn = $('look')
-const lookPos = new THREE.Vector3()
-const lookScreen = { x: 0, y: 0, on: false }
-
-/** Keep the glow on the creature's feature as it wiggles on the stage. */
-function updateLook(s) {
-  lookScreen.on = false
-  if (!s.look || s.looked || s.counting || s.guessing || s.t < LOOK_FROM) return
-  s.c.group.updateWorldMatrix(true, false)
-  lookPos.copy(s.lookAt)
-  s.c.group.localToWorld(lookPos)
-  lookPos.project(camera)
-  lookScreen.x = ((lookPos.x + 1) / 2) * innerWidth
-  lookScreen.y = ((1 - lookPos.y) / 2) * innerHeight
-  lookScreen.on = true
-  lookBtn.style.transform = `translate(${lookScreen.x}px, ${lookScreen.y}px)`
-  if (lookBtn.classList.contains('hidden')) {
-    lookBtn.className = 'look'
-    lookBtn.setAttribute('aria-label', `Look closer: ${s.look.part}`)
-    void lookBtn.offsetWidth
-    lookBtn.classList.add('on')
-  }
-}
-
-/** The child tapped the glowing feature: count it if it can be counted, else say its one true fact. */
-function lookCloser() {
-  const s = fish.show
-  if (game.phase !== 'show' || !s?.look || s.looked || s.t < LOOK_FROM) return
-  if (s.guessing) return
-  if (s.counting) return countNext()
-  // From tier 2, a guess comes first ("How many arms?"), and counting checks it (only the first count in a trip)
-  if (s.look.count) return game.tier >= 2 && s.guess == null && !game.counted.has(s.pick.id) ? askGuess(s) : startCount(s)
-  readFact(s, takeFact(s.look) ?? factsOf(s.look)[0])
-}
-
-/** A fact about this feature not yet heard this trip, or null when they all have been. */
-function lookFact(look) {
-  return factsOf(look).find((f) => !game.said.has(f)) ?? null
-}
-function takeFact(look) {
-  const f = lookFact(look)
-  if (f) game.said.add(f)
-  return f
-}
-
-/** Seconds between glows on animals already in the book, so facts come now and then, not with every catch. */
-const FACT_GAP = 40
-
-function readFact(s, fact) {
-  game.factAt = clock
-  s.looked = s.t
-  s.factDone = 0
-  // A muted game shows the words only, so allow reading time instead of waiting for the voice
-  s.factFor = 1.5 + fact.split(' ').length * 0.42
-  if (!audio.muted) voice.sayNow(fact, { onend: () => fish.show === s && (s.factDone = s.t) })
-  $('card-look').textContent = fact
-  lookBtn.classList.remove('on')
-  lookBtn.classList.add('seen')
-  audio.nibble()
-  game.looks++
-  store.set('fish-pond-looks', game.looks)
-  hint(false)
-}
-
-function hideLook() {
-  lookBtn.className = 'look hidden'
-  lookScreen.on = false
-  $('card-look').classList.add('hidden')
-  guessBox.hidden = true
-  for (const d of dots) d.hidden = true
-}
-
-// --- Tap to count (octopus arms, clownfish stripes) ---------------------------------------
-// Each arm gets a soft spot to tap. A tap counts it once (tapping it again does nothing), so the
-// child touches each one exactly once: one-to-one counting. Every number is said, because here
-// counting is the lesson. The fact comes once all are counted.
-
-const dotBox = $('dots')
-const dots = []
-const dotPos = new THREE.Vector3()
-function startCount(s) {
-  const pts = s.look.count.map((p) => creatures.featurePoint(s.pick.id, p))
-  // A second count of the same animal in a trip is quiet: the numbers show and tick, and only the total is said
-  s.counting = { pts, done: pts.map(() => false), n: 0, last: s.t, quiet: game.counted.has(s.pick.id) }
-  $('card-new').classList.add('hidden')
-  while (dots.length < pts.length) {
-    const d = document.createElement('button')
-    d.type = 'button'
-    d.className = 'count-dot'
-    const i = dots.length
-    d.addEventListener('pointerdown', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      if (!countNear(e.clientX, e.clientY)) countAt(i)
-    })
-    dotBox.append(d)
-    dots.push(d)
-  }
-  dots.forEach((d, i) => {
-    d.hidden = i >= pts.length
-    d.textContent = ''
-    d.classList.remove('counted')
-    d.setAttribute('aria-label', `Count this ${s.look.part.replace(/s$/, '')}`)
-  })
-  lookBtn.classList.remove('on')
-  lookBtn.classList.add('seen')
-  lookScreen.on = false
-  $('card-look').textContent = `🔍 ${s.look.part}: 0`
-  if (!s.counting.quiet) voice.sayNow(s.guess == null ? `Count its ${s.look.part}! Tap each one.` : `You said ${s.guess}. Now count them!`)
-  audio.nibble()
-}
-
-/** Guess first, then count: three numbers in order (a little number line), with no clock and no wrong buzz. */
-const guessBox = $('guess')
-function askGuess(s) {
-  const n = s.look.count.length
-  const step = n > 4 ? 2 : 1
-  s.guessing = { last: s.t }
-  $('card-new').classList.add('hidden')
-  lookBtn.classList.remove('on')
-  lookBtn.classList.add('seen')
-  lookScreen.on = false
-  guessBox.textContent = ''
-  for (const v of [n - step, n, n + step]) {
-    const b = document.createElement('button')
-    b.type = 'button'
-    b.textContent = v
-    b.setAttribute('aria-label', `${v} ${s.look.part}`)
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      if (fish.show !== s || !s.guessing) return
-      s.guess = v
-      s.guessing = null
-      guessBox.hidden = true
-      startCount(s)
-    })
-    guessBox.append(b)
-  }
-  guessBox.hidden = false
-  $('card-look').textContent = `🔍 ${s.look.part}: ?`
-  voice.sayNow(`How many ${s.look.part}? Guess first!`)
-  audio.nibble()
-}
-
-function countAt(i) {
-  const s = fish.show
-  const c = s?.counting
-  if (game.phase !== 'show' || !c || s.looked || c.done[i]) return
-  c.done[i] = true
-  c.n++
-  c.last = s.t
-  dots[i].textContent = c.n
-  dots[i].classList.add('counted')
-  audio.nibble()
-  $('card-look').textContent = `🔍 ${s.look.part}: ${c.n}`
-  // The first count says the numbers up to five (the shared COUNT_ALOUD); past that the ticks and the numbered
-  // dots carry on, and the total is said ("Eight arms!"). A repeat lets the ticks count.
-  voice.count(c.n, c.quiet ? { aloud: 0 } : undefined)
-  if (c.n < c.pts.length) return
-  // All counted: say the total, with a fact not yet heard this trip
-  game.counted.add(s.pick.id)
-  const words = NUMBER[c.n] ?? String(c.n)
-  const check = s.guess == null ? '' : s.guess === c.n ? ' Just as you guessed!' : ' Counting tells us for sure!'
-  readFact(s, `${words} ${s.look.part}!${check} ${takeFact(s.look) ?? ''}`.trim())
-}
-
-const NUMBER = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight']
-
-/**
- * A tap counts the nearest arm or stripe not yet counted, within a finger's reach of its dot, so a tap
- * between two close stripes (the clownfish's are about 60 px apart) still counts one, never nothing.
- */
-function countNear(x, y, reach = 64) {
-  const s = fish.show
-  const c = s?.counting
-  if (!c) return false
-  let best = -1
-  let bd = reach
-  c.pts.forEach((_, i) => {
-    if (c.done[i] || dots[i].hidden) return
-    const [dx, dy] = dotXY(dots[i])
-    const d = Math.hypot(dx - x, dy - y)
-    if (d < bd) [best, bd] = [i, d]
-  })
-  if (best < 0) return false
-  countAt(best)
-  return true
-}
-
-/** Keyboard: Enter or L counts the next one still to count. */
-function countNext() {
-  const i = fish.show.counting.done.indexOf(false)
-  if (i >= 0) countAt(i)
-}
-
-/** A count dot's centre on the screen. */
-const dotXY = (d) => {
-  const r = d.getBoundingClientRect()
-  return [r.left + r.width / 2, r.top + r.height / 2]
-}
-
-function updateDots(s) {
-  const c = s.counting
-  if (!c) return
-  s.c.group.updateWorldMatrix(true, true)
-  c.pts.forEach((p, i) => {
-    dotPos.copy(p)
-    s.c.group.localToWorld(dotPos)
-    dotPos.project(camera)
-    dots[i].style.transform = `translate(${((dotPos.x + 1) / 2) * innerWidth}px, ${((1 - dotPos.y) / 2) * innerHeight}px)`
-  })
-}
-
-lookBtn.addEventListener('pointerdown', (e) => {
-  e.preventDefault()
-  e.stopPropagation()
-  audio.unlock()
-  lookCloser()
-})
-lookBtn.addEventListener('click', (e) => {
-  e.stopPropagation()
-  lookCloser()
-})
 
 /** The creature flies into the book. */
 function finishShow() {
   const s = fish.show
   if (!s || game.phase !== 'show') return
   setPhase('toBook')
-  $('card').className = 'card-catch'
-  hideLook()
-  let target
-  if (s.back) {
-    // Back into the water, a little way from the boat
-    s.splash = castSpot.clone().setY(0)
-    target = s.splash.clone().setY(-0.3)
-  } else {
-    const r = $('book-btn').getBoundingClientRect()
-    const p = new THREE.Vector3(((r.left + r.width / 2) / innerWidth) * 2 - 1, -((r.top + r.height / 2) / innerHeight) * 2 + 1, 0.5).unproject(camera)
-    const dir = p.sub(camera.position).normalize()
-    target = camera.position.clone().addScaledVector(dir, 4.6)
-  }
+  newStar.classList.remove('show')
+  const r = $('book-btn').getBoundingClientRect()
+  const p = new THREE.Vector3(((r.left + r.width / 2) / innerWidth) * 2 - 1, -((r.top + r.height / 2) / innerHeight) * 2 + 1, 0.5).unproject(camera)
+  const dir = p.sub(camera.position).normalize()
+  const target = camera.position.clone().addScaledVector(dir, 4.6)
   s.from = s.c.group.position.clone()
   s.to = stage.worldToLocal(target.clone())
   s.fromScale = s.c.group.scale.x
   s.fly = 0
+  audio.whoosh()
 }
 
 function updateToBook(dt) {
   const s = fish.show
-  s.fly += dt / (s.back ? 0.8 : 0.6)
+  s.fly += dt / 0.6
   const e = Math.min(1, s.fly)
   const g = s.c.group
   g.position.lerpVectors(s.from, s.to, e * e)
-  if (s.back) g.position.y += Math.sin(e * Math.PI) * 0.6
-  g.scale.setScalar(s.fromScale * (1 - (s.back ? 0.7 : 0.88) * e))
-  g.rotation.y += dt * (s.back ? 2 : 8)
+  g.scale.setScalar(s.fromScale * (1 - 0.88 * e))
+  g.rotation.y += dt * 8
   glow.material.opacity *= 0.85
-  if (e >= 1 && s.back) {
-    // A soft plop, and it swims off with the others again
-    g.removeFromParent()
-    glow.material.opacity = 0
-    stageLight.intensity = 0
-    effects.splash(s.splash, 0.6)
-    audio.plop()
-    fish.show = null
-    setPhase('idle')
-    const id = s.pick.id
-    const want = AMBIENT[game.place].filter((k) => k === id).length
-    if (creatures.swimmers.filter((w) => w.id === id && !w.spawned).length < want) spawnAmbient(id).pos.set(s.splash.x, -0.5, s.splash.z)
-    refillAmbient()
-    updateHud()
-    if (game.riddle?.misses >= EASIER_AFTER && !game.riddle.easy && !game.riddle.list) easierRiddle()
-    return
+  if (e < 1) return
+  g.removeFromParent()
+  glow.material.opacity = 0
+  stageLight.intensity = 0
+  audio.thump()
+  const b = $('book-btn')
+  b.classList.remove('bump')
+  void b.offsetWidth
+  b.classList.add('bump')
+  fish.show = null
+  setPhase('idle')
+  refillAmbient()
+  updateHud()
+  // Finding everything is the big prize: a trophy, a chord, and the full book.
+  // Every creature of one place found: a trophy for that place (it stays on its title button)
+  if (s.placeDone && !s.all) {
+    showIntro('🏆', PLACES[game.place].emoji)
+    softMoment(10)
+    audio.chord()
   }
-  if (e >= 1) {
-    g.removeFromParent()
-    glow.material.opacity = 0
-    stageLight.intensity = 0
-    audio.thump()
-    const b = $('book-btn')
-    b.classList.remove('bump')
-    void b.offsetWidth
-    b.classList.add('bump')
-    fish.show = null
-    setPhase('idle')
-    refillAmbient()
-    updateHud()
-    // Counted once the catch is in the book, so the number never talks over its name.
-    // Three is the whole mission: once counted it rests for the trip (no new count, no reward loop).
-    adventure.event(s.pick)
-    // Bear's list finished: one thank-you and a calm card, then the list is put away (a new one next trip)
-    if (s.listDone === 'all') {
-      voice.say("That's everything on Bear's list. Thank you!")
-      showIntro('📜', "Bear's list", '✅ ✅ ✅', false, true)
-      game.list = null
-      store.set('fish-pond-list', null)
-      renderList()
-    } else if (s.listDone) game.listTick = "One for Bear's list!"
-    // A riddle answered: Bear asks the next one once the catch is safely in the book (a list tick leads it,
-    // in one line: "One for Bear's list! Next: an animal that breathes air.")
-    if (s.solved) newRiddle()
-    if (game.listTick) {
-      voice.say(game.listTick)
-      game.listTick = ''
-    }
-    else if (game.riddle?.misses >= EASIER_AFTER && !game.riddle.easy && !game.riddle.list) easierRiddle()
-    // Finding all 15 is the bigger prize: its card goes up last so nothing covers it
-    if (s.all) {
-      showIntro('🏆', 'You found them all!', `📖 ${CREATURES.length} / ${CREATURES.length}`, false, true)
-      softMoment()
-      audio.chord()
-    }
+  if (s.all) {
+    showIntro('🏆', `📖 ${CREATURES.length} / ${CREATURES.length}`)
+    softMoment(14)
+    audio.chord()
   }
-}
-
-// --- Bear's riddle -------------------------------------------------------------------------
-
-const riddleBtn = $('riddle')
-/** Which places are fresh water and which are sea: Bear's list is planned by habitat. */
-const WATER = { lake: 'fresh', river: 'fresh', night: 'fresh', ice: 'sea', reef: 'sea' }
-/** Seconds a new riddle sits quietly on the chip before Bear reads it out (if no cast came first). */
-const RIDDLE_QUIET = 6
-
-/** Bear asks for an animal by what it has; the child finds one swimming and casts near it. */
-function newRiddle(first = false) {
-  // Only animals the child can see now: a phone or a wide screen crops the water differently
-  const seen = [...new Set(visibleKinds())]
-  const kinds = seen.length >= 3 ? seen : AMBIENT[game.place]
-  // Bear's list comes in every other riddle while something on it swims here, in view
-  // (and not when only the animal that answered last could answer it: the same one twice running is no riddle;
-  // nor straight after a move up a tier, whose line leads the riddle and has no room for "From Bear's list")
-  const others = kinds.filter((id) => id !== game.answered[0])
-  const item = game.tier >= 2 && !game.riddle?.list && !game.tierNote ? game.list?.find((it) => !it.done && answersHere(it, others) && listRiddle(it).key !== game.riddle?.key.replace(/\*2$/, '')) : null
-  // (an ordinary riddle never asks what an item still on the list asks: that one is the list's)
-  const listKeys = (game.list ?? []).filter((it) => !it.done).map((it) => listRiddle(it).key)
-  // Past two clues: after three two-clue riddles in a row answered with the first catch, Bear asks for
-  // two different animals that fit both clues (tier 4 on the chip). One slow riddle ends the run.
-  const deep = game.tier === 3 && game.streak.length >= 3
-  game.riddle = item ? listRiddle(item) : makeRiddle(kinds, game.tier, game.riddle, game.recent, game.answered, { two: deep, avoid: listKeys, trip: game.asked })
-  const r = game.riddle
-  const pair = () => new Set(seen.filter((id) => fits(r, id))).size >= 2
-  if (item) r.item = game.list.indexOf(item)
-  // Tier 2 sorts a group: "find two different animals that breathe air", when two such kinds are in view
-  else if (r && game.tier === 2 && r.clues.length === 1 && TRAITS[r.clues[0].t].ask2 && pair()) game.riddle = twoOf(r)
-  else if (r && deep && r.clues.length > 1 && pair()) game.riddle = { ...twoOf(r), tier: 4 }
-  drawRiddle()
-  if (!game.riddle) return
-  // The last five riddles are left out while there are others (a one-answer riddle twice in six was samey)
-  game.recent = [game.riddle.key, ...game.recent].slice(0, 5)
-  game.asked.push(game.riddle.key.replace(/\*2$/, ''))
-  // The first riddle of a trip, one from Bear's list and a new kind of riddle are read out. Otherwise the
-  // chip shows the new picture, and Bear reads it only after a quiet look with no cast (or on a chip tap).
-  // Two clues are read out too (once per riddle in a trip, by sayRiddle): the chip's slashed pictures
-  // ("fish + no yellow") are hard to decode for a six-year-old who casts quickly.
-  if (first || game.tierNote || game.riddle.list || game.riddle.tier !== game.riddleTier || game.riddle.clues.length > 1) sayRiddle(first)
-  else game.riddleSaidAt = clock
-}
-
-/** Misses on one riddle before Bear swaps it for one the swimmer by the bobber answers. */
-const EASIER_AFTER = 6
-
-/**
- * A little one tapping anywhere can miss one riddle many times. After six misses Bear swaps it for a riddle
- * that the swimmer nearest where they last cast answers (one simple thing to see), with the soft ring on it
- * and that swimmer drifting in front of the boat, so the loop still closes. Careful play never gets here:
- * a riddle is only swapped after six misses, and only once.
- */
-function easierRiddle() {
-  const r = game.riddle
-  const inView = (s) => {
-    seenP.copy(s.pos).setY(0).project(camera)
-    return Math.abs(seenP.x) < 0.9 && seenP.y > -0.9 && seenP.y < 0.72 && !JOKES.has(s.id) && !TOYS.has(s.id)
-  }
-  const near = nearestSwimmer(castSpot, 99, inView)
-  if (!near) return
-  const kinds = [...new Set(visibleKinds())]
-  const next = makeRiddle(kinds.length >= 3 ? kinds : AMBIENT[game.place], 1, r, game.recent, [], { want: near.id })
-  if (!next || !fits(next, near.id)) return
-  next.easy = true
-  next.misses = 4 // the ring and the drift to the front start at once (see updateHelp)
-  game.riddle = next
-  game.recent = [next.key, ...game.recent].slice(0, 5)
-  helpFor = near
-  drawRiddle()
-  sayRiddle()
-}
-/** Pretend friends answer only colours: the swap picks a real animal near the bobber when there is one. */
-const TOYS = new Set(['bluefish', 'goldenfish'])
-
-function sayRiddle(first = false) {
-  const r = game.riddle
-  game.riddleTier = r.tier
-  game.riddleSaidAt = 0
-  const who = r.list ? "From Bear's list" : first ? "Bear's riddle" : 'Next riddle'
-  // A move up a tier leads the riddle in one line: "Now two clues at once! Find an animal that..."
-  const note = game.tierNote
-  game.tierNote = ''
-  // and so does a tick on Bear's list ("One for Bear's list! Next: ...")
-  const done = game.listTick
-  game.listTick = ''
-  if (note) {
-    game.said.add(note)
-    voice.say(`${done ? `${done} ` : ''}${note} Find ${r.ask}.`)
-    return
-  }
-  const line = first ? `${who}: find ${r.ask}. Cast near ${r.need > 1 ? 'them' : 'it'}!` : `${who}: ${r.ask}.`
-  // A riddle that comes round again in a trip is shown on the chip, not read again (a tap on it reads it)
-  if (game.said.has(line)) {
-    if (done) voice.say(done)
-    return
-  }
-  game.said.add(line)
-  voice.say(done && !first && !r.list ? `${done} Next: ${r.ask}.` : `${done ? `${done} ` : ''}${line}`)
-}
-
-/** An item on Bear's list was found: tick it (saved). Returns 'all' when the list is finished. */
-function tickList(r) {
-  const it = game.list?.[r.item]
-  if (!it) return false
-  it.done = true
-  store.set('fish-pond-list', game.list)
-  renderList()
-  return game.list.every((x) => x.done) ? 'all' : true
-}
-
-/** Children who have reached two-clue riddles get a list from Bear, kept until it is done. */
-function ensureList() {
-  if (game.list || game.best < 3) return false
-  game.list = makeList(AMBIENT, WATER)
-  store.set('fish-pond-list', game.list)
-  renderList()
-  return true
-}
-
-/** The list on the title screen: one still chip per item, ticked when found. Tap it to hear the list. */
-const listBtn = $('bear-list')
-function renderList() {
-  listBtn.hidden = !game.list
-  if (!game.list) return
-  const box = $('list-items')
-  box.textContent = ''
-  for (const it of game.list) {
-    const r = listRiddle(it)
-    const li = document.createElement('span')
-    li.className = it.done ? 'li done' : 'li'
-    for (const { icon, not } of it.done ? [{ icon: '✅' }] : r.icons) li.append(Object.assign(document.createElement('span'), { className: not ? 'ri not' : 'ri', textContent: icon }))
-    li.append(Object.assign(document.createElement('small'), { textContent: r.word }))
-    box.append(li)
-  }
-  listBtn.setAttribute('aria-label', `Bear's list: ${game.list.map((it) => listRiddle(it).ask).join('; ')}`)
-}
-listBtn.addEventListener('click', (e) => {
-  e.stopPropagation()
-  audio.unlock()
-  audio.click()
-  const left = (game.list ?? []).filter((it) => !it.done).map((it) => listRiddle(it).ask.replace(/^./, (c) => c.toUpperCase()))
-  if (left.length) voice.sayNow(`Bear's list: ${left.join('. ')}. Which water do they live in?`)
-})
-
-function drawRiddle(solved = false) {
-  const r = game.riddle
-  riddleBtn.hidden = !r || game.state !== 'play'
-  if (!r) return
-  riddleBtn.classList.toggle('solved', solved)
-  riddleBtn.classList.toggle('two', r.tier >= 2)
-  riddleBtn.classList.toggle('list', !!r.list)
-  riddleBtn.querySelector('.riddle-bear').textContent = r.list ? '📜' : '🐻'
-  // A new riddle settles in once (no pulse), so a child sees the picture has changed
-  if (!solved && riddleBtn.dataset.key !== r.key + r.found.length) {
-    riddleBtn.dataset.key = r.key + r.found.length
-    riddleBtn.classList.remove('fresh')
-    void riddleBtn.offsetWidth
-    riddleBtn.classList.add('fresh')
-  }
-  // One picture per clue; a "not" clue gets a soft slash across its picture
-  const icons = $('riddle-icon')
-  icons.textContent = ''
-  for (const { icon, not } of solved ? [{ icon: '✅' }] : r.icons) {
-    const i = document.createElement('span')
-    i.className = not ? 'ri not' : 'ri'
-    i.textContent = icon
-    icons.append(i)
-  }
-  // "Find two": a little slot for each, filled as they are found (no numbers, no score)
-  if (r.need > 1 && !solved) {
-    const slots = document.createElement('span')
-    slots.className = 'slots'
-    for (let k = 0; k < r.need; k++) slots.append(Object.assign(document.createElement('i'), { className: k < r.found.length ? 'on' : '' }))
-    icons.append(slots)
-  }
-  $('riddle-word').textContent = r.word
-  riddleBtn.setAttribute('aria-label', `Bear's riddle: find ${r.ask}. Tap to hear it again.`)
-}
-
-/**
- * A catch of a swimmer reached the stage: count the try, and adapt the riddles to how it is going.
- * Up a tier after four riddles in a row answered with the first catch (only two to climb back to a
- * tier reached before). Down a tier, quietly, as soon as one riddle takes four catches.
- */
-function answer(r, right, id) {
-  r.tries++
-  if (!right) {
-    r.misses++
-    if (r.misses === 4 && game.tier > 1) setTier(game.tier - 1)
-    return false
-  }
-  r.found.push(id)
-  game.answered = [id, ...game.answered].slice(0, 4)
-  // One of two found: the riddle stays, with its first slot filled
-  if (r.found.length < r.need) {
-    drawRiddle()
-    return false
-  }
-  game.streak = r.tries === r.need ? [...game.streak, r.key] : []
-  drawRiddle(true)
-  const need = game.tier < game.best ? 2 : game.tier === 2 ? 3 : 4 // a tier-2 riddle is two catches, so three of them
-  if (game.tier < 3 && game.streak.length >= need && new Set(game.streak).size >= 2) setTier(game.tier + 1)
-  return true
-}
-
-function setTier(n) {
-  const up = n > game.tier
-  game.tier = n
-  game.streak = []
-  // Remember the highest tier, but let it drift down after a slow riddle (a younger sibling may be playing)
-  game.best = up ? Math.max(game.best, n) : Math.max(n, game.best - 1)
-  store.set('fish-pond-best', game.best)
-  // Moving up is worth a word, said with the next riddle (not stacked on the catch's own line, which this
-  // follows), once a trip; moving back down happens quietly
-  game.tierNote = up && n <= 3 ? ['', '', 'Trickier riddles now!', 'Now two clues at once!'][n] : ''
-  if (game.said.has(game.tierNote)) game.tierNote = ''
-  // and a list of animals to find, some of them in other waters (one with nothing here is told of at home)
-  if (up && n === 3 && ensureList() && !game.list.some((it) => answersHere(it, AMBIENT[game.place]))) game.listNote = true
-}
-
-riddleBtn.addEventListener('click', (e) => {
-  e.stopPropagation()
-  audio.unlock()
-  game.riddleSaidAt = 0
-  if (game.riddle && game.phase !== 'show') voice.sayNow(game.riddle.found.length ? more(game.riddle) : `Find ${game.riddle.ask}.`)
-})
-
-/**
- * After two catches that didn't fit, a soft still ring sits on the water over one that does,
- * so a little one is shown where to look without the riddle being answered for them.
- */
-const helpRing = new THREE.Mesh(
-  new THREE.RingGeometry(0.75, 0.95, 40).rotateX(-Math.PI / 2),
-  new THREE.MeshBasicMaterial({ color: '#fffbe0', transparent: true, opacity: 0, depthWrite: false, toneMapped: false }),
-)
-helpRing.renderOrder = 3
-scene.add(helpRing)
-let helpFor = null
-function updateHelp(dt) {
-  const r = game.riddle
-  const want = game.state === 'play' && r && r.misses >= 2 && (game.phase === 'idle' || game.phase === 'wait' || game.phase === 'cast')
-  if (want && (!helpFor || !creatures.swimmers.includes(helpFor) || helpFor.mode !== 'wander')) {
-    helpFor = nearestSwimmer(RIG, 99, (s) => fits(r, s.id))
-    if (helpFor && r.misses === 2) voice.sayOnce('Look for the soft ring.')
-  }
-  if (!want) helpFor = null
-  // Still not found after four catches: the ringed one drifts over in front of the boat, where little ones look
-  if (helpFor && r.misses >= 4 && helpFor.mode === 'wander') {
-    helpFor.target.set(clamp(helpFor.target.x, -2.5, 2.5), 0, 2)
-    helpFor.retarget = 5
-  }
-  const on = want && helpFor
-  helpRing.material.opacity = damp(helpRing.material.opacity, on ? 0.6 : 0, 3, dt)
-  if (helpFor) helpRing.position.set(helpFor.pos.x, 0.05, helpFor.pos.z)
-  helpRing.visible = helpRing.material.opacity > 0.01
 }
 
 /** A small still ring under the swimmer the child chose, while the line flies and it swims over. */
@@ -1440,19 +837,115 @@ function updatePickRing(dt) {
   pickRing.visible = pickRing.material.opacity > 0.01
 }
 
-// --- Swimmers about the place ----------------------------------------------------------
+// --- Bubbling patch ------------------------------------------------------------------------
+// Now and then a patch of open water bubbles for a while. Cast into it and something rare comes up:
+// the golden fish, the treasure chest, or (in the Icy Sea) the whale. No words: the bubbles invite.
+
+const PATCH_R = 1.8
+let patch = null
+let patchIn = rand(14, 22)
+function updatePatch(dt) {
+  const playing = game.state === 'play'
+  if (patch && (clock > patch.until || !playing)) {
+    patch = null
+    patchIn = rand(18, 30)
+  }
+  if (!playing) return
+  if (!patch) {
+    patchIn -= dt
+    if (patchIn > 0 || (game.phase !== 'idle' && game.phase !== 'wait')) return
+    const pos = openWater()
+    if (!pos) return void (patchIn = 3)
+    patch = { pos, until: clock + 9, puff: 0 }
+    audio.bubbles()
+  }
+  patch.puff -= dt
+  if (patch.puff <= 0) {
+    patch.puff = 0.1
+    effects.bubble(tmp.set(patch.pos.x + rand(-0.6, 0.6), -0.4, patch.pos.z + rand(-0.45, 0.45)), 3, 0.35)
+    if (Math.random() < 0.5) effects.ripple(tmp.set(patch.pos.x + rand(-0.4, 0.4), 0, patch.pos.z + rand(-0.3, 0.3)), 1.1, 1.1)
+    if (Math.random() < 0.12) effects.sparkleAt(tmp.set(patch.pos.x + rand(-0.5, 0.5), 0.2, patch.pos.z + rand(-0.4, 0.4)), '#fff3a0', 1, 0.6, 0.3)
+  }
+}
+
+/** A spot in view, clear of the boat, the bobber and every swimmer (at the ice, one of the holes). */
+function openWater() {
+  for (let i = 0; i < 16; i++) {
+    const z = rand(bounds.zMin + 1, bounds.zMax - 1.5)
+    let p = new THREE.Vector3(rand(-1, 1) * (bounds.halfAt(z) - 1.5), 0, z)
+    if (PLACES[game.place].ice) p = world.nearestHole(p).clone()
+    seenP.copy(p).project(camera)
+    if (Math.abs(seenP.x) > 0.8 || seenP.y < -0.8 || seenP.y > 0.6) continue
+    if (p.distanceTo(RIG) < 4 || (game.phase === 'wait' && p.distanceTo(castSpot) < 3)) continue
+    if (creatures.swimmers.some((s) => Math.hypot(s.pos.x - p.x, s.pos.z - p.z) < 2)) continue
+    return p
+  }
+  return null
+}
+
+/** One of the rare (3★) finds that live here, leaning toward one not yet in the book. */
+function rareFind() {
+  const list = CREATURES.filter((c) => c.stars === 3 && c.places[game.place])
+  const fresh = list.filter((c) => !game.book[c.id])
+  const from = fresh.length && Math.random() < 0.7 ? fresh : list
+  return from[(Math.random() * from.length) | 0]
+}
+
+// --- Leaping fish ------------------------------------------------------------------------
+// Now and then a swimmer jumps clean out of the water with a splash: the pond feels alive, and it
+// shows where the fish are. Rare enough to be a nice surprise, never a flashing call for attention.
+
+const HOPPERS = new Set(['goldfish', 'bluefish', 'trout', 'clownfish', 'cod', 'frog', 'narwhal', 'seal', 'goldenfish', 'sunfish', 'salmon', 'catfish'])
+let hopIn = 5
+function updateHops(dt) {
+  hopIn -= dt
+  const calm = game.state === 'title' || game.phase === 'idle' || game.phase === 'wait'
+  if (hopIn <= 0 && calm && !PLACES[game.place].ice) {
+    hopIn = rand(6, 12)
+    const pool = creatures.swimmers.filter((s) => s.mode === 'wander' && !s.spawned && !s.hop && s !== fish.aim && HOPPERS.has(s.id) && inView(s))
+    const s = pool[(Math.random() * pool.length) | 0]
+    if (s) s.hop = { t: 0, dur: s.id === 'narwhal' || s.id === 'seal' ? 1.2 : 0.9, splashed: 0 }
+  }
+  for (const s of creatures.swimmers) {
+    const h = s.hop
+    if (!h) continue
+    if (s.mode !== 'wander') {
+      s.hop = null
+      continue
+    }
+    h.t += dt
+    const k = h.t / h.dur
+    if (k >= 1) {
+      s.hop = null
+      continue
+    }
+    // Up out of the water and back, nose first, and a splash going in and coming out
+    // Salmon leap the highest (they jump waterfalls on the way home)
+    const lift = -s.pos.y + (s.id === 'salmon' ? 2.2 : s.id === 'frog' ? 1.6 : 1.2)
+    s.group.position.y = s.pos.y + Math.sin(k * Math.PI) * lift
+    s.group.rotation.z = Math.cos(k * Math.PI) * 0.9
+    const at = tmp.set(s.pos.x, 0, s.pos.z)
+    if (h.splashed === 0 && k > 0.2) {
+      h.splashed = 1
+      effects.splash(at, 0.45)
+      audio.blip(0.9)
+    } else if (h.splashed === 1 && k > 0.82) {
+      h.splashed = 2
+      effects.splash(at, 0.5)
+      effects.ripple(at, 1.2, 1)
+      audio.plop()
+    }
+  }
+}
 
 const seenP = new THREE.Vector3()
-/** The kinds swimming where the child can see them now (under the riddle chip and the name card is still in view). */
-function visibleKinds() {
-  const out = []
-  for (const s of creatures.swimmers) {
-    if (s.spawned || s.mode === 'flee') continue
-    seenP.copy(s.pos).setY(0).project(camera)
-    if (Math.abs(seenP.x) < 0.9 && seenP.y > -0.9 && seenP.y < 0.72) out.push(s.id)
-  }
-  return out
+/** On screen, clear of the round buttons along the top. */
+function inView(s) {
+  seenP.copy(s.pos).setY(0).project(camera)
+  return Math.abs(seenP.x) < 0.9 && seenP.y > -0.9 && seenP.y < 0.72
 }
+
+// --- Swimmers about the place ----------------------------------------------------------
 
 /**
  * The lily pad the pond snail lives under (real pond snails graze the green slime under lily pads).
@@ -1480,8 +973,35 @@ function refillAmbient() {
   for (const id of missing) spawnAmbient(id).pos.y = -2
 }
 
-/** One of the place's swimmers. On the reef, clownfish keep close to an anemone home. */
+/**
+ * A shiny one: the same creature with a soft golden glow (its own materials, so the others stay plain).
+ * Now and then a swimmer is shiny and trails sparkles in the water, so there is something special to aim at.
+ */
+function shine(group) {
+  group.traverse((o) => {
+    if (!o.isMesh || !o.material.emissive) return
+    o.material = o.material.clone()
+    o.material.emissive.copy(o.material.color).lerp(SHINE, 0.35)
+    o.material.emissiveIntensity = 0.22
+    o.material.metalness = Math.max(o.material.metalness, 0.35)
+    o.material.roughness = Math.min(o.material.roughness, 0.25)
+  })
+}
+const SHINE = new THREE.Color('#fff1a8')
+/** Chance a new swimmer (not the snail under its pad) is a shiny one. */
+const SHINY_CHANCE = 0.07
+
 function spawnAmbient(id) {
+  const s = spawnHome(id)
+  if (id !== 'snail' && !creatures.swimmers.some((o) => o.shiny) && Math.random() < SHINY_CHANCE) {
+    s.shiny = true
+    shine(s.group)
+  }
+  return s
+}
+
+/** One of the place's swimmers. On the reef, clownfish keep close to an anemone home. */
+function spawnHome(id) {
   if (id === 'snail' && snailPad) {
     const s = creatures.spawnSwimmer(id, snailPad.position.clone().setY(0), { home: snailPad.position, depth: -0.62 })
     s.homeR = 1.1
@@ -1556,7 +1076,12 @@ function updateBear(dt, t) {
     else if (ph === 'bite') {
       rx = 0.55 + Math.sin(t * 9) * 0.05
       rz = Math.sin(t * 7) * 0.04
-    } else if (ph === 'catch') rx = -0.9
+    } else if (ph === 'catch') {
+      // Bent hard toward the water during the tug, then the big yank
+      const tug = fish.catch && fish.catch.t < TUG
+      rx = tug ? 0.75 + Math.sin(t * 21) * 0.12 : -0.9
+      rz = tug ? Math.sin(t * 13) * 0.08 : 0
+    }
     else if (cheering) rx = -0.6
     world.rod.rotation.x = damp(world.rod.rotation.x, rx, ph === 'cast' || ph === 'catch' ? 30 : 8, dt)
     world.rod.rotation.z = rz
@@ -1595,14 +1120,14 @@ function updateBobber(dt, t) {
     let y = Math.sin(t * 2.4) * 0.035 - bob.dip * 1.4
     if (ph === 'bite') {
       // A slow, steady bob under: noticeable, never a frantic jiggle
-      y = -0.3 + Math.sin(t * 9) * 0.05
+      y = -0.12 + Math.sin(t * 9) * 0.05
       bob.pos.x += Math.sin(t * 7) * 0.03
       sag = 0.0
     }
     bob.pos.y = damp(bob.pos.y, y, ph === 'bite' ? 20 : 12, dt)
     sag = ph === 'bite' ? 0.0 : 0.35
   } else if (ph === 'catch') {
-    sag = 0.02
+    sag = fish.catch && fish.catch.t < TUG ? 0 : 0.02
   } else {
     // Hanging from the rod tip, swinging a little
     bob.swing += dt
@@ -1622,7 +1147,6 @@ function updateBobber(dt, t) {
 // --- HUD & screens ---------------------------------------------------------------------
 
 function updateHud() {
-  // (no count on the in-play book button: fishing is about Bear's riddle, not filling the book)
   $('title-count').textContent = `${caughtKinds()}/${CREATURES.length}`
 }
 
@@ -1636,25 +1160,22 @@ function hideBang() {
 function updateBang() {
   if (bang.classList.contains('hidden')) return
   tmp.copy(bob.pos)
-  tmp.y += 0.9
+  tmp.y += 1.0
   tmp.project(camera)
   bang.style.transform = `translate(${((tmp.x + 1) / 2) * innerWidth}px, ${((1 - tmp.y) / 2) * innerHeight}px)`
 }
 
+/** The trophy card: a big picture and the full book, no words. */
 let introTimer = 0
-let introIsPlace = false
-function showIntro(emoji, title, sub, place = false, prize = false) {
-  introIsPlace = place
+function showIntro(emoji, sub) {
   $('intro-emoji').textContent = emoji
-  $('intro-title').textContent = title
   $('intro-sub').textContent = sub
   const el = $('intro')
   el.classList.remove('show')
-  el.classList.toggle('prize', prize)
   void el.offsetWidth
   el.classList.add('show')
   clearTimeout(introTimer)
-  introTimer = setTimeout(() => el.classList.remove('show'), prize ? 4200 : 2800)
+  introTimer = setTimeout(() => el.classList.remove('show'), 4200)
 }
 
 function show(screen) {
@@ -1663,32 +1184,21 @@ function show(screen) {
   $('hud').classList.toggle('hidden', screen !== 'play')
 }
 
-/** The pointing finger: where to tap first, then when to reel. */
+/**
+ * The pointing finger, only for someone who seems stuck: a new player who hasn't cast yet, anyone
+ * idle for a while (it points at a fish), and a bite left waiting (it points at the bobber).
+ */
 const hintEl = $('hint')
-let hintOn = false
 let hintFor = null
-function hint(on) {
-  hintOn = on
-  hintEl.classList.toggle('hidden', !on)
-}
 function updateHint() {
   if (game.state !== 'play' || book.open) return hintEl.classList.add('hidden')
   let target = null
-  // First cast, or a little one who has stopped: point at the water again
-  // (after the place's name card has gone, so the finger never covers its words)
-  const placeCardUp = introIsPlace && $('intro').classList.contains('show')
-  if (game.phase === 'show' && lookScreen.on && game.looks === 0 && fish.show.t > LOOK_FROM + 2) {
-    hintEl.classList.remove('hidden')
-    hintEl.style.transform = `translate(${lookScreen.x}px, ${lookScreen.y + 30}px)`
-    return
-  }
-  // A brand-new player's first cast, or a child who has stopped: point at a swimmer that answers the riddle
-  // (never at a fixed spot, where a wrong answer may be swimming)
-  const showMe = game.phase === 'idle' && !placeCardUp && ((game.casts === 0 && totalCaught() < 3) || game.idleT > 30)
-  if (!showMe) hintFor = null
-  else if (!hintFor || !creatures.swimmers.includes(hintFor) || hintFor.mode !== 'wander') hintFor = game.riddle ? nearestSwimmer(RIG, 99, (w) => fits(game.riddle, w.id)) : null
-  if (showMe && hintFor) target = tmp.copy(hintFor.pos).setY(0)
-  else if (game.phase === 'bite' && (totalCaught() < 2 || game.misses > 0)) target = tmp.copy(bob.pos).setY(0)
+  const ph = game.phase
+  const stuck = ph === 'idle' && (game.idleT > (totalCaught() < 3 && game.casts === 0 ? 2.5 : 12))
+  if (!stuck) hintFor = null
+  else if (!hintFor || !creatures.swimmers.includes(hintFor) || hintFor.mode !== 'wander' || !inView(hintFor)) hintFor = nearestSwimmer(RIG, 99, inView)
+  if (stuck && hintFor) target = tmp.copy(hintFor.pos).setY(0)
+  else if (ph === 'bite' && game.phaseT > (totalCaught() < 2 || game.misses > 0 ? 0.8 : 2.2)) target = tmp.copy(bob.pos).setY(0)
   if (!target) return hintEl.classList.add('hidden')
   hintEl.classList.remove('hidden')
   target.project(camera)
@@ -1696,9 +1206,7 @@ function updateHint() {
 }
 
 function toTitle() {
-  voice.hush()
-  // A catch on stage or flying to the book is already in the book (startShow). The mission count
-  // needs no settling: start() begins it afresh. The 15/15 trophy card lives in the hidden HUD.
+  // A catch on stage or flying to the book is already in the book (startShow)
   if (fish.show) {
     fish.show.c.group.removeFromParent()
     fish.show = null
@@ -1706,89 +1214,160 @@ function toTitle() {
   if (fish.catch && game.phase === 'catch') fish.catch.c.group.removeFromParent()
   letGo(false)
   hideBang()
-  hideLook()
-  $('card').className = 'card-catch'
+  newStar.classList.remove('show')
   glow.material.opacity = 0
   stageLight.intensity = 0
   setPhase('idle')
   game.state = 'title'
   bob.state = 'hang'
-  riddleBtn.hidden = true
   updateHud()
   markPlace()
-  ensureList()
-  renderList()
   show('title')
-  // A list made on the water with nothing on it there: Bear points to it here, where it sits
-  if (game.listNote && game.list) voice.say("Bear has a list for you! Tap it to hear it.")
-  game.listNote = false
 }
 
 function start(place) {
-  adventure.begin()
   audio.unlock()
   audio.click()
   if (place !== game.place || game.state === 'loading') setupPlace(place)
   else audio.setPlace(place)
   game.state = 'play'
   game.casts = 0
+  game.idleT = 0
   setPhase('idle')
   show('play')
   audio.setAmbient(true)
   updateHud()
-  const P = PLACES[place]
-  showIntro(P.emoji, P.name, P.ice ? 'Tap a hole to fish!' : 'Tap the water to fish!', true)
-  voice.newRound()
-  // The sorting page comes back each trip: the catches wait in the tray to be sorted again
-  book.newTrip()
-  game.lookAsks = 0
-  game.said.clear()
-  game.recent = []
-  game.asked = []
-  game.answered = []
-  game.counted.clear()
-  // Each trip starts a tier below the best reached, and climbs back after two quick answers
-  game.tier = Math.max(1, game.best - 1)
-  game.streak = []
-  game.riddle = null
-  game.riddleTier = 0
-  game.tierNote = ''
-  newRiddle(true)
-  // Bear's list is planned on the title: fishing where none of it lives gets one quiet word
-  if (game.list && !game.list.some((it) => !it.done && answersHere(it, AMBIENT[place]))) voice.say("Nothing on Bear's list lives here.")
+  // A fish says hello straight away, so the water is plainly full of things to catch
+  hopIn = 1.2
 }
 
 function markPlace() {
-  for (const b of document.querySelectorAll('.place')) b.classList.toggle('last', b.dataset.place === game.place)
+  for (const b of document.querySelectorAll('.place')) {
+    b.classList.toggle('last', b.dataset.place === game.place)
+    b.classList.toggle('done', game.done.includes(b.dataset.place))
+  }
 }
 
 for (const b of document.querySelectorAll('.place')) {
   b.addEventListener('click', () => start(b.dataset.place))
-  b.addEventListener('pointerenter', () => {
-    // Peek at a place from the title screen
-    if (game.state === 'title' && b.dataset.place !== game.place) {
-      setupPlace(b.dataset.place)
-      markPlace()
+}
+/**
+ * The play buttons (home, music, sound) work by press-and-hold, so a little one mashing the screen never
+ * leaves the pond or goes quiet by accident: a ring fills round the button for HOLD seconds, and a quick
+ * tap only wiggles it. A keyboard press (Enter or Space on the button) acts at once, and so does Escape.
+ */
+const HOLD = 0.7
+/**
+ * Every finger down anywhere on the page. A hold starts only with one finger down in the whole page; any
+ * other finger landing (a resting palm on the water, or mashing) cancels it, and no hold can start again
+ * until every finger has lifted.
+ */
+const fingers = new Set()
+const holdCancels = []
+let spoiled = false
+document.addEventListener('pointerdown', (e) => {
+  fingers.add(e.pointerId)
+  if (fingers.size > 1) {
+    spoiled = true
+    for (const cancel of holdCancels) cancel()
+  }
+}, true)
+/**
+ * Ghost clicks: a hold that fires while the finger is still down changes the screen (🏠 shows the title),
+ * and the lift's click would land on whatever is now under the finger, such as a place button. So after a
+ * hold fires, the next click is swallowed: until that finger lifts, and for half a second after.
+ */
+let ghostFinger = null
+let swallowUntil = 0
+document.addEventListener('click', (e) => {
+  if (performance.now() > swallowUntil) return
+  swallowUntil = 0
+  e.preventDefault()
+  e.stopPropagation()
+}, true)
+const lifted = (e) => {
+  fingers.delete(e.pointerId)
+  if (!fingers.size) spoiled = false
+  if (e.pointerId === ghostFinger) {
+    ghostFinger = null
+    swallowUntil = performance.now() + 500
+  }
+}
+document.addEventListener('pointerup', lifted, true)
+document.addEventListener('pointercancel', lifted, true)
+
+function holdButton(btn, act) {
+  let start = 0
+  let raf = 0
+  let finger = null // the pointer that began the hold: only it can finish or end it
+  const stop = () => {
+    cancelAnimationFrame(raf)
+    raf = 0
+    finger = null
+    btn.style.setProperty('--hold', '0')
+    btn.classList.remove('holding')
+  }
+  const tick = () => {
+    if (!start) return
+    const k = (performance.now() - start) / 1000 / HOLD
+    btn.style.setProperty('--hold', String(Math.min(1, k)))
+    if (k >= 1) {
+      ghostFinger = finger
+      swallowUntil = Infinity
+      start = 0
+      stop()
+      act()
+      return
     }
+    raf = requestAnimationFrame(tick)
+  }
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    audio.unlock()
+    // A second finger while a hold is running (a palm, or mashing) cancels it: a hold is one finger
+    if (start) return release()
+    if (spoiled || fingers.size !== 1) return
+    cancelAnimationFrame(raf)
+    finger = e.pointerId
+    try {
+      btn.setPointerCapture(e.pointerId)
+    } catch {}
+    start = performance.now()
+    btn.classList.add('holding')
+    raf = requestAnimationFrame(tick)
+  })
+  const release = (e) => {
+    if (!start || (e?.pointerId != null && finger != null && e.pointerId !== finger && e.type !== 'pointerdown')) return
+    start = 0
+    stop()
+    btn.classList.remove('wiggle')
+    void btn.offsetWidth
+    btn.classList.add('wiggle')
+    audio.blip(1.1)
+  }
+  holdCancels.push(() => start && release())
+  btn.addEventListener('pointerup', release)
+  btn.addEventListener('pointercancel', release)
+  btn.addEventListener('lostpointercapture', release)
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    if (e.detail === 0) act()
   })
 }
-$('home').addEventListener('click', (e) => {
-  e.stopPropagation()
+
+holdButton($('home'), () => {
   audio.click()
   toTitle()
 })
 
+// Sound and music start on with every visit: a mute made mid-play is not saved
 const soundBtn = $('sound')
 function setSound(on) {
   audio.setMuted(!on)
-  voice.setMuted(!on)
   soundBtn.textContent = on ? '🔊' : '🔇'
-  store.set('fish-pond-sound', on)
 }
-if (store.get('fish-pond-sound', true) === false) setSound(false)
-soundBtn.addEventListener('click', (e) => {
-  e.stopPropagation()
-  audio.unlock()
+holdButton(soundBtn, () => {
   setSound(audio.muted)
   audio.click()
 })
@@ -1796,29 +1375,25 @@ const musicBtn = $('music')
 function setMusic(on) {
   audio.setMusic(on)
   musicBtn.classList.toggle('off', !on)
-  store.set('fish-pond-music', on)
 }
-setMusic(store.get('fish-pond-music', true) !== false)
-musicBtn.addEventListener('click', (e) => {
-  e.stopPropagation()
-  audio.unlock()
+holdButton(musicBtn, () => {
   setMusic(!audio.musicOn)
   audio.click()
 })
 
 // --- Collection book ---------------------------------------------------------------
 
-const book = new Book({
-  el: $('book'),
-  audio,
-  voice,
-  creatures,
-  getBook: () => game.book,
-  // The sorting page gives older players a clue before the answer (book.js clue)
-  getTier: () => (game.state === 'play' ? game.tier : game.best),
-})
+const book = new Book({ el: $('book'), audio, creatures, getBook: () => game.book, getExtra: () => game.extra })
 const openBook = (e) => {
   e?.stopPropagation()
+  // A tap on 📖 straight after a tap on the water is mashing, not a wish to look at the book
+  if (e?.detail && game.state === 'play' && clock - lastTap < 0.45) {
+    const b = $('book-btn')
+    b.classList.remove('wiggle')
+    void b.offsetWidth
+    b.classList.add('wiggle')
+    return
+  }
   audio.unlock()
   audio.click()
   if (game.phase === 'show') finishShow()
@@ -1839,29 +1414,20 @@ scene.add(marker)
 const keyAim = new THREE.Vector3(1.5, 0, 2)
 let keysUsed = false
 
+/** When the last tap came: taps close together are mashing, not a fresh choice of where to fish. */
+let lastTap = -1
 function tapAt(x, y) {
   audio.unlock()
   if (game.state !== 'play' || book.open) return
   game.idleT = 0
+  const mashing = clock - lastTap < 0.45
+  lastTap = clock
   const ph = game.phase
   if (ph === 'bite') return reel()
   if (ph === 'show') {
-    // A tap close to the glow counts as looking closer; anywhere else carries on
-    if (lookScreen.on && Math.hypot(x - lookScreen.x, y - lookScreen.y) < 90) return lookCloser()
-    // Mid-count, a tap between the arms is a near miss, not "carry on". Taps well away from the
-    // count (twice), or anywhere while guessing (twice), mean the child wants to go on fishing.
-    const s = fish.show
-    if ((s.counting || s.guessing) && !s.looked) {
-      const near = (d) => {
-        const [dx, dy] = dotXY(d)
-        return !d.hidden && Math.hypot(dx - x, dy - y) < 110
-      }
-      if (s.counting && countNear(x, y)) return
-      const close = s.counting && dots.some(near)
-      if (!close && ++s.strays >= 2) finishShow()
-      return
-    }
-    if (s.t > 0.7) finishShow()
+    // A tap on the catch tickles it; a tap anywhere else sends it to the book
+    if (onShowCreature(x, y)) return tickle()
+    if (fish.show.t > 0.7) finishShow()
     return
   }
   ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1)
@@ -1884,13 +1450,16 @@ function tapAt(x, y) {
   // Tapping the sky casts as far as the line can go
   const target = p ? p.clone() : new THREE.Vector3(((x / innerWidth) * 2 - 1) * 4, 0, bounds.zMin)
   if (ph === 'wait') {
-    // A tap right by the bobber just wiggles it: wait for the "!"
-    tmp.copy(bob.pos).project(camera)
-    const sx = ((tmp.x + 1) / 2) * innerWidth
-    const sy = ((1 - tmp.y) / 2) * innerHeight
-    if (Math.hypot(sx - x, sy - y) < Math.max(70, innerWidth * 0.08) || PLACES[game.place].ice && world.nearestHole(target).distanceTo(castSpot) < 0.1) {
+    // While the line is out, quick taps (a little one mashing) just wiggle the bobber, so the fish still
+    // comes. Only a tap on another swimmer's body casts again, or any tap once the line has sat a while
+    // with nobody coming (and never in the middle of fast tapping). Once someone is nibbling, the bite is
+    // moments away: nothing re-casts.
+    const nibbling = fish.who && (fish.who.ghost ? Math.hypot(fish.who.pos.x - bob.pos.x, fish.who.pos.z - bob.pos.z) < 0.4 : fish.who.mode === 'nibble')
+    const other = chosen && chosen !== fish.who && game.phaseT > 0.6 && !mashing
+    if (nibbling || !(other || (!fish.who && game.phaseT > 1.5 && !mashing))) {
       bob.dip = 0.06
       effects.ripple(bob.pos, 0.5, 0.5)
+      audio.blip(1.3)
       return
     }
   }
@@ -1914,23 +1483,20 @@ addEventListener('keydown', (e) => {
     }
     return
   }
-  if (k === 'escape' && game.state === 'play') return toTitle()
+  // (Escape no longer leaves the pond: a hand resting on a keyboard must not end the trip; hold 🏠 instead)
   if (game.state === 'title' && (k === 'enter' || k === ' ')) {
     e.preventDefault()
     return start(game.place)
   }
   if (game.state !== 'play') return
   if (k === 'b') return openBook()
-  if (k === 'l') return lookCloser()
   if (k === ' ' || k === 'enter') {
     e.preventDefault()
     if (e.repeat) return
     const ph = game.phase
     if (ph === 'bite') return reel()
-    // Enter looks closer when there is something to look at; Space carries on
-    if (ph === 'show' && k === 'enter' && fish.show.look && !fish.show.looked) return lookCloser()
-    // Space carries on, even mid-count (Enter or L counts)
-    if (ph === 'show') return fish.show.t > 0.5 && finishShow()
+    // Enter tickles the catch; Space carries on
+    if (ph === 'show') return k === 'enter' ? tickle() : fish.show.t > 0.5 && finishShow()
     if (ph === 'idle' || (ph === 'wait' && keysUsed && keyAim.distanceTo(castSpot) > 1)) {
       if (!keysUsed) keyAim.copy(castTarget(new THREE.Vector3(rand(-3, 3), 0, rand(0, 4))))
       castTo(keyAim)
@@ -1980,14 +1546,9 @@ function loadShore(name) {
   return shoreLoads[name]
 }
 
+
 async function load() {
-  let done = 0
-  const step = () => ($('loading-text').textContent = `Filling the pond… ${++done}/3`)
-  const [c, w] = await Promise.allSettled([
-    loader.loadAsync('./models/creatures.glb').then((g) => (step(), g)),
-    loader.loadAsync('./models/world.glb').then((g) => (step(), g)),
-    loadShore(PLACES[game.place].shore).then(step),
-  ])
+  const [c, w] = await Promise.allSettled([loader.loadAsync('./models/creatures.glb'), loader.loadAsync('./models/world.glb'), loadShore(PLACES[game.place].shore)])
   if (c.status === 'fulfilled') creatures.attach(c.value)
   else console.warn('creatures.glb failed', c.reason)
   if (w.status === 'fulfilled') world.attach(w.value)
@@ -2012,8 +1573,6 @@ async function load() {
   book.build()
   updateHud()
   markPlace()
-  ensureList()
-  renderList()
   game.state = 'title'
   show('title')
 }
@@ -2036,10 +1595,9 @@ function frame(dt, draw = true) {
     if (game.state === 'play') {
       game.idleT = ph === 'idle' && !book.open ? game.idleT + dt : 0
       if (ph === 'cast' && !bob.fly && game.phaseT > 1) setPhase('idle')
-      if (game.riddleSaidAt && ph === 'idle' && !book.open && clock - game.riddleSaidAt > RIDDLE_QUIET) sayRiddle()
       if (ph === 'wait') updateWait(dt, t)
       else if (ph === 'bite') updateBite(dt)
-      else if (ph === 'catch') updateCatch(dt)
+      else if (ph === 'catch') updateCatch(dt, t)
       else if (ph === 'show') updateShow(dt, t)
       else if (ph === 'toBook') updateToBook(dt)
     }
@@ -2051,10 +1609,13 @@ function frame(dt, draw = true) {
         s.group.position.z -= Math.sin(s.heading) * s.nudge * 0.4
       }
       if (game.phase === 'bite' && s === fish.who) s.group.rotation.z = Math.sin(t * 9) * 0.08
+      // A shiny one leaves a trail of little sparkles as it swims
+      if (s.shiny && Math.random() < dt * 4) effects.sparkleAt(tmp.set(s.pos.x + rand(-0.4, 0.4), 0.15, s.pos.z + rand(-0.3, 0.3)), '#fff3a0', 1, 0.8, 0.28)
     }
+    updateHops(dt)
+    updatePatch(dt)
     updateBear(dt, t)
     updateBobber(dt, t)
-    updateHelp(dt)
     updatePickRing(dt)
   }
   updateView(dt)
@@ -2081,11 +1642,11 @@ load()
 // ?debug: poke at the game from the console, and step time in a hidden tab
 if (new URLSearchParams(location.search).has('debug')) {
   window.fishPond = {
-    game, fish, creatures, world, bob, camera, castTo, reel, tapAt, start, debug, newRiddle, setTier, pickAt, ensureList, renderList,
+    game, fish, creatures, world, bob, camera, book, castTo, reel, tapAt, start, tickle, debug, pickAt,
+    patch: () => patch,
     advance(seconds) {
       const n = Math.round(seconds * 30)
       for (let i = 0; i < n; i++) frame(1 / 30, i === n - 1)
     },
   }
-  window.__adventure = { mission: adventure, game }
 }

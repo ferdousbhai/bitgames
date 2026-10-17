@@ -1,26 +1,12 @@
-// Copy the maintained learning helpers into the original games without changing their game code,
-// then refresh every original's shipment manifest.
-import {copyFileSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';
+// Refresh every original's shipment manifest. The games share no helper code: since the 2026-10-16
+// fun pass they have no shared voice, missions or learning studios to copy in.
+import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
-import {basename,join} from 'node:path';
+import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {originalIds} from './catalogue.mjs';
 
-const studio=fileURLToPath(new URL('.',import.meta.url));
-const examples=join(studio,'..');
-
-const adventure=['js/adventure.js','adventure.css'];
-const studioDialog=['js/studio-dialog.js','studio-dialog.css'];
-const helpers={
-  'balloon-pop':adventure,
-  'bunny-hop':adventure,
-  'cake-stack':[...adventure,...studioDialog,'js/recipe-studio.js'],
-  'dragon-glide':adventure,
-  'fish-pond':adventure,
-  'star-catcher':adventure,
-  'paint-splash':['js/gallery.js','gallery.css',...studioDialog,'js/colour-studio.js','js/colour-model.js'],
-  'penguin-bowling':['js/prediction.js','prediction.css'],
-};
+const examples=fileURLToPath(new URL('..',import.meta.url));
 
 const unhashed=new Set(['bitgames.json','_headers','_redirects']);
 
@@ -42,9 +28,4 @@ function writeShipmentManifest(publicDir){
   writeFileSync(join(publicDir,'bitgames.json'),JSON.stringify({files},null,2)+'\n');
 }
 
-for(const id of originalIds){
-  // Every game speaks through the shared queued voice.
-  const files=['js/speech.js',...(helpers[id] || [])];
-  for(const file of files)copyFileSync(join(studio,'originals',basename(file)),join(examples,id,'public',file));
-}
 for(const id of originalIds)writeShipmentManifest(join(examples,id,'public'));

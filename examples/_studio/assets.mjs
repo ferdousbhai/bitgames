@@ -10,7 +10,6 @@ if (!ids.length || ids.some(id => !originalIds.includes(id))) {
 const additionalBuilders = {
   'dragon-glide': ['nest_blanket.py'],
   'memory-match': ['mat_texture.py'],
-  'paint-splash': ['colour_kit.py', 'tablecloth.py'],
 };
 // Validate the entire plan before rebuilding any game.
 const builders = ids.flatMap(id => (id === 'crash-racers'

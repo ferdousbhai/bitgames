@@ -164,21 +164,46 @@ export class Audio {
     }
   }
 
-  /** Colour studio: a paint drop plops in (each paint its own note), a square gets a dab, tools click. */
-  studio(kind, i = 0) {
-    if (kind === 'drip') {
-      this.tone({ freq: note(2 + i * 2, 392), type: 'sine', gain: 0.3, decay: 0.18, slide: -180 })
-      this.burst({ freq: 900, q: 1.2, gain: 0.2, decay: 0.12, type: 'lowpass', delay: 0.02 })
-    } else if (kind === 'dab') {
-      this.burst({ freq: 1800, q: 0.8, gain: 0.22, decay: 0.1 })
-      this.tone({ freq: note(i % 10, 523.25), type: 'triangle', gain: 0.12, decay: 0.16 })
-    } else if (kind === 'keep') {
-      this.tone({ freq: note(4, 523.25), type: 'triangle', gain: 0.14, decay: 0.15 })
-      this.tone({ freq: note(7, 523.25), type: 'triangle', gain: 0.14, decay: 0.25, delay: 0.1 })
-    } else if (kind === 'empty') {
-      this.burst({ freq: 600, q: 0.6, gain: 0.3, decay: 0.4, type: 'lowpass' })
-      this.tone({ freq: 500, type: 'sine', gain: 0.15, decay: 0.35, slide: -300 })
-    } else this.click()
+  /** A roller dips in a pot: a plop, each paint its own note. */
+  drip(i = 0) {
+    this.tone({ freq: note(2 + i * 2, 392), type: 'sine', gain: 0.3, decay: 0.18, slide: -180 })
+    this.burst({ freq: 900, q: 1.2, gain: 0.2, decay: 0.12, type: 'lowpass', delay: 0.02 })
+  }
+
+  /** A picture goes into the frame: two bright notes. */
+  keep() {
+    this.tone({ freq: note(4, 523.25), type: 'triangle', gain: 0.14, decay: 0.15 })
+    this.tone({ freq: note(7, 523.25), type: 'triangle', gain: 0.14, decay: 0.25, delay: 0.1 })
+  }
+
+  /** A tapped splat: a squelchy SPLAT with a springy boing as the animal hops. */
+  splat(near = 1) {
+    this.burst({ freq: 520, q: 0.9, gain: 0.34 * near, decay: 0.3, type: 'lowpass' })
+    this.tone({ freq: 300, type: 'sine', gain: 0.26 * near, decay: 0.22, slide: -200 })
+    this.tone({ freq: 240, type: 'triangle', gain: 0.1 * near, decay: 0.3, slide: 420, delay: 0.06 })
+  }
+
+  /** A paint ball thrown: a quick rising whee. */
+  toss() {
+    this.tone({ freq: 500, type: 'sine', gain: 0.12, decay: 0.22, slide: 700 })
+  }
+
+  /** A stamp printed: a soft, bouncy boop. */
+  stamp() {
+    this.tone({ freq: note(Math.floor(Math.random() * 5), 659.25), type: 'triangle', gain: 0.1, decay: 0.12, slide: -120 })
+  }
+
+  /** The giant bucket tips: a big glug and a rolling SPLOSH. */
+  giant(near = 1) {
+    this.tone({ freq: 160, type: 'sine', gain: 0.35 * near, decay: 0.6, slide: -90 })
+    for (let i = 0; i < 4; i++) this.burst({ freq: 600 - i * 80, q: 0.8, gain: 0.28 * near, decay: 0.4, type: 'lowpass', delay: i * 0.12 })
+    for (let i = 0; i < 5; i++) this.tone({ freq: note(2 + i), type: 'triangle', gain: 0.07 * near, decay: 0.25, delay: 0.3 + i * 0.08 })
+  }
+
+  /** A new colour appears where two paints met: a little sparkly twinkle that rises (`k` changes the key). */
+  discover(k = 0) {
+    ;[0, 2, 4, 7].forEach((s, i) => this.tone({ freq: note(s + k, 523.25), type: 'sine', gain: 0.11, decay: 0.4, delay: i * 0.07 }))
+    this.tone({ freq: note(9 + k, 523.25), type: 'triangle', gain: 0.06, decay: 0.6, delay: 0.3 })
   }
 
   /** The count in: soft sine notes, and a warm two-note chime to start. */

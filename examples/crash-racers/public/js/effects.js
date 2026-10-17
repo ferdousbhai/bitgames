@@ -149,7 +149,15 @@ export class Effects {
       grow: -0.6,
       billboard: true,
     })
-    this.pools = [this.sparks, this.smoke, this.dust, this.glass, this.splash, this.fire]
+    // Bright little gems: the rainbow's spray, a star popping, a friendly bump.
+    this.gems = new Pool(scene, {
+      count: 300,
+      geometry: new THREE.OctahedronGeometry(0.11),
+      material: new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false }),
+      gravity: 7,
+      drag: 1.2,
+    })
+    this.pools = [this.sparks, this.gems, this.smoke, this.dust, this.glass, this.splash, this.fire]
     this.skids = new SkidMarks(scene)
     this.shake = 0
   }
@@ -162,6 +170,11 @@ export class Effects {
       v.addScaledVector(normal, 2)
       this.sparks.spawn(point, v, { life: 0.25 + Math.random() * 0.45, size: 1 + Math.random(), color: Math.random() < 0.5 ? '#ffd35a' : '#ff8a1c' })
     }
+  }
+
+  /** One bright gem flying off from `point` (see the gems pool). */
+  sparkle(point, velocity, color = '#ffd35a') {
+    this.gems.spawn(point, velocity, { life: 0.7 + Math.random() * 0.5, size: 0.7 + Math.random() * 0.6, color, spin: 9 })
   }
 
   puff(point, velocity, { color = '#dddddd', size = 0.6, life = 1.4, kind = 'smoke' } = {}) {

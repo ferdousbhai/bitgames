@@ -11,269 +11,122 @@ html, body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 button { font: inherit; cursor: pointer; border: 0; color: inherit; }
-#adventure-choice .adventure-pictures { white-space: nowrap; }
-#adventure-choice .adventure-next { font-size: 20px; line-height: 1; }
-#adventure-goal { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 188px; top: calc(102px + env(safe-area-inset-top)); bottom: auto; }
 .hidden { display: none !important; }
 
-/* --- Start screen --- */
+/* --- Title: just the big play button (Kitty bobs beneath it) --- */
 .screen {
   position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 14px; text-align: center;
   padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
-  background: radial-gradient(ellipse at 50% 40%, rgba(27, 20, 70, 0.15), rgba(27, 20, 70, 0.55) 70%);
+  background: radial-gradient(ellipse at 50% 40%, rgba(27, 20, 70, 0.1), rgba(27, 20, 70, 0.45) 70%);
   transition: opacity .4s;
 }
 .screen.fade { opacity: 0; pointer-events: none; }
-.logo { font-size: clamp(40px, 11vw, 96px); font-weight: 900; letter-spacing: 2px; line-height: 1; white-space: nowrap; }
-.logo span { display: inline-block; text-shadow: 0 5px 0 rgba(0,0,0,0.35), 0 0 24px rgba(255,210,63,0.45); transform: rotate(-2deg); }
-.logo span:nth-child(even) { transform: translateY(-4px) rotate(2deg); }
-.logo span:nth-child(6n+1) { color: #ffd23f; } .logo span:nth-child(6n+2) { color: #ff8fc7; }
-.logo span:nth-child(6n+3) { color: #7cc6fe; } .logo span:nth-child(6n+4) { color: #8ef0c8; }
-.logo span:nth-child(6n+5) { color: #ffb36b; } .logo span:nth-child(6n) { color: #c9b6ff; }
-.tag { font-size: clamp(18px, 3.6vw, 26px); font-weight: 800; margin: 0; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+#start { justify-content: flex-start; padding-top: calc(22vh + env(safe-area-inset-top)); }
 .big-go {
-  margin-top: 6px; background: #ffd23f; color: #3a2a6a; font-size: clamp(30px, 6vw, 44px); font-weight: 900; padding: 14px 48px;
-  border-radius: 999px; box-shadow: 0 7px 0 #c79300, 0 0 40px rgba(255,210,63,0.5); transition: transform .1s;
+  width: clamp(120px, 26vmin, 190px); height: clamp(120px, 26vmin, 190px); border-radius: 50%;
+  background: #ffd23f; color: #3a2a6a; font-size: clamp(54px, 12vmin, 88px); line-height: 1; padding: 0 0 0 .12em;
+  box-shadow: 0 8px 0 #c79300, 0 0 50px rgba(255,210,63,0.55); transition: transform .12s, opacity .3s;
+  animation: breathe 2.8s ease-in-out infinite;
 }
-.big-go:disabled { opacity: .6; }
-.big-go:active { transform: translateY(5px); box-shadow: 0 2px 0 #c79300; }
-.hint { margin: 0; font-size: 20px; font-weight: 800; opacity: .9; }
-.hint.small { font-size: 15px; opacity: .75; }
+.big-go:disabled { opacity: .5; animation: none; }
+.big-go:active { transform: translateY(6px) scale(.96); box-shadow: 0 2px 0 #c79300; }
+/* A slow, small breath so the button reads as "press me" (no flashing) */
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
 
 /* --- HUD --- */
 #hud { position: fixed; inset: 0; pointer-events: none; }
-.hud-top {
-  position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
-  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-}
 .hud-right { z-index: 3;
   position: absolute; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right));
   display: flex; gap: 8px; align-items: center;
 }
-/* Solid, not backdrop-filter: a blur over the live canvas would be redone every frame */
-.pill { background: rgba(20, 12, 60, 0.6); border-radius: 18px; padding: 4px 14px; font-size: 20px; font-weight: 900; }
-.pill.big { font-size: 30px; color: #ffd23f; text-shadow: 0 3px 0 rgba(0,0,0,.35); }
 .round { pointer-events: auto; width: 46px; height: 46px; border-radius: 50%; background: rgba(20, 12, 60, 0.5); font-size: 22px; }
-/* Music off: the note is greyed and struck through */
-.round.off { opacity: .55; text-decoration: line-through; filter: grayscale(1); }
-
-/* The constellation panel: a layout box only. Its calm backdrop, stars and lines are drawn by
-   three.js (js/sky.js) underneath, so this box stays transparent and holds just the name. */
-#sky-panel {
-  position: relative; width: 150px; height: 118px;
-  display: flex; align-items: flex-end; justify-content: center;
+/* Home and sound in the middle of a trip need a short press-and-hold: a gold ring fills around the button */
+#home, #sound, #finale-home, #finale-sound, #again { position: relative; --hold: 0; }
+#home::after, #sound::after, #finale-home::after, #finale-sound::after, #again::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(#ffd23f calc(var(--hold) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
 }
-.sky-name {
-  font-size: 13px; font-weight: 900; color: #ffe9a8; padding-bottom: 5px; white-space: nowrap;
-  text-shadow: 0 2px 0 rgba(0,0,0,.45); opacity: 0; transition: opacity .8s;
-}
-.sky-name.show { opacity: 1; }
-/* The rule being counted, with the numbers in their order ("By fives · 15 → ?") */
-.sky-rule {
-  position: absolute; left: 4px; right: 4px; bottom: 0; padding-bottom: 5px; text-align: center;
-  font-size: 13px; font-weight: 900; color: #fff3c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-shadow: 0 2px 0 rgba(0,0,0,.45);
-}
-.sky-rule:empty { display: none; }
+#home.holding, #sound.holding, #finale-home.holding, #finale-sound.holding { transform: scale(1.1); }
+/* Fly again's ring is thicker and white, around the big gold button */
+#again::after { inset: -9px; background: conic-gradient(#ffffff calc(var(--hold) * 360deg), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px)); mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px)); }
+#again.holding { animation: none; transform: scale(1.06); }
+/* Fly again rests (dimmed, not answering) while the zoo friends arrive */
+#again.resting { opacity: .4; pointer-events: none; animation: none; }
+/* The trip controls sit in their own little bar, apart from the journey row */
+.hud-right { padding: 4px; border-radius: 999px; background: rgba(20, 12, 60, 0.35); }
 
 .journey {
-  position: absolute; left: 50%; transform: translateX(-50%); top: calc(64px + env(safe-area-inset-top));
-  display: flex; align-items: center; gap: 2px; padding: 4px 10px; border-radius: 999px; background: rgba(20, 12, 60, 0.45);
-  font-size: 20px; white-space: nowrap; max-width: calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right));
+  position: absolute; left: calc(10px + env(safe-area-inset-left)); top: calc(16px + env(safe-area-inset-top));
+  display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 999px; background: rgba(20, 12, 60, 0.45);
+  font-size: 20px; white-space: nowrap; max-width: calc(100vw - 150px - env(safe-area-inset-left) - env(safe-area-inset-right));
 }
-.journey .stop { opacity: .45; transition: opacity .3s, transform .3s; }
+.journey .stop { position: relative; opacity: .45; transition: opacity .3s, transform .3s; padding: 0 2px; }
 .journey .stop.done { opacity: 1; }
-.journey .stop.next { opacity: 1; transform: scale(1.25); margin: 0 3px; }
-.journey .track { position: relative; width: clamp(14px, 4vw, 34px); height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); }
-.journey .track b { position: absolute; inset: 0; border-radius: 3px; background: #ffd23f; transform: scaleX(0); transform-origin: left; }
-/* The track being flown is wider and keeps a margin, so the rocket rides inside it and never touches a stop */
-.journey .track.on { width: clamp(34px, 8vw, 54px); margin: 0 .3em; flex: none; }
-.journey .track .ship { position: absolute; top: 50%; margin-top: -0.55em; font-size: 16px; line-height: 1.1; }
-
-.banner {
-  position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(30px, 7vw, 60px); font-weight: 900;
-  /* A thick outline made of shadows (a wide text-stroke draws boxes inside some glyphs) */
-  text-shadow: 4px 0 #2a1a5e, -4px 0 #2a1a5e, 0 4px #2a1a5e, 0 -4px #2a1a5e, 3px 3px #2a1a5e, -3px 3px #2a1a5e, 3px -3px #2a1a5e, -3px -3px #2a1a5e, 0 7px 0 #2a1a5e, 0 0 30px rgba(255,210,63,.6); opacity: 0; transform: scale(.6); transition: opacity .3s, transform .3s;
-  padding: 0 calc(12px + env(safe-area-inset-right)) 0 calc(12px + env(safe-area-inset-left));
+/* The stop being flown to: a little bigger, with a gold ring that fills as the picture is caught */
+.journey .stop.goal { opacity: 1; transform: scale(1.25); margin: 0 .35em; --p: 0; }
+.journey .stop.goal::before {
+  content: ""; position: absolute; inset: -.28em; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(#ffd23f calc(var(--p) * 360deg), rgba(255,255,255,.18) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
 }
-.banner.show { opacity: 1; transform: scale(1); }
-.banner small { display: block; font-size: .5em; color: #ffd23f; margin-top: 4px; }
+.journey .line { width: clamp(8px, 2.6vw, 24px); height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); flex: none; }
+.journey .line.done { background: #ffd23f; }
+
+/* Where the picture being caught waits faintly, and where it wakes up and plays: a layout box only (drawn by js/sky.js) */
+.stage {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -54%);
+  width: min(92vw, 820px); height: min(50vh, 520px);
+}
 
 #popups { position: absolute; inset: 0; overflow: hidden; }
 .pop {
-  position: absolute; font-size: 30px; font-weight: 900; color: #ffe066; text-shadow: 3px 0 #2a1a5e, -3px 0 #2a1a5e, 0 3px #2a1a5e, 0 -3px #2a1a5e, 2px 2px #2a1a5e, -2px 2px #2a1a5e, 2px -2px #2a1a5e, -2px -2px #2a1a5e, 0 5px 0 #2a1a5e;
-  transform: translate(-50%, -50%); animation: rise .9s ease-out forwards; white-space: nowrap;
+  position: absolute; font-size: 34px; transform: translate(-50%, -50%); animation: rise .9s ease-out forwards; white-space: nowrap;
 }
-.pop.big { font-size: 40px; color: #ff9fd2; text-shadow: 4px 0 #2a1a5e, -4px 0 #2a1a5e, 0 4px #2a1a5e, 0 -4px #2a1a5e, 3px 3px #2a1a5e, -3px 3px #2a1a5e, 3px -3px #2a1a5e, -3px -3px #2a1a5e, 0 6px 0 #2a1a5e; }
 @keyframes rise { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); } 20% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -200%) scale(1); } }
 
-@media (max-width: 520px) {
-  .journey { font-size: 16px; top: calc(136px + env(safe-area-inset-top)); }
-  #adventure-goal { top: calc(174px + env(safe-area-inset-top)); }
-}
-
-@media (max-width: 400px) {
-  .logo { font-size: 28px; letter-spacing: 1px; }
-}
-
-@media (max-height: 380px) and (orientation: landscape) {
-  .screen { gap: 3px; padding: 4px 12px; }
-  .logo { font-size: 30px; letter-spacing: 1px; }
-  .tag { font-size: 14px; }
-  #adventure-choice { min-height: 44px; padding: 5px 9px; margin: 1px auto; }
-  .big-go { font-size: 24px; padding: 7px 26px; margin-top: 0; }
-  .hint { font-size: 12px; }
-  .hint.small { font-size: 11px; }
-  #adventure-goal { top: auto; bottom: calc(8px + env(safe-area-inset-bottom)); left: calc(10px + env(safe-area-inset-left)); transform: none; }
-}
-
-@media (min-width: 700px) and (min-height: 700px) {
-  #adventure-goal { top: calc(142px + env(safe-area-inset-top)); }
-}
-
-/* Sideways phones: one slim HUD row, so the short screen is all sky */
-@media (max-height: 500px) and (orientation: landscape) {
-  .journey { top: calc(10px + env(safe-area-inset-top)); font-size: 18px; max-width: calc(100vw - 360px); }
-  .journey .track { width: 12px; }
-  #sky-panel { width: 124px; height: 92px; }
-  .sky-name, .sky-rule { font-size: 12px; padding-bottom: 3px; }
-  .journey .track.on { width: 32px; }
-  .journey .track .ship { font-size: 14px; }
-  .banner { top: 26%; font-size: clamp(28px, 9vh, 44px); }
-}
-
-/* Tablets and big screens: bigger HUD and sound button */
-@media (min-width: 700px) and (min-height: 700px) {
-  .pill { font-size: 26px; padding: 6px 18px; border-radius: 24px; }
-  .pill.big { font-size: 40px; }
-  .round { width: 64px; height: 64px; font-size: 30px; }
-  .journey { font-size: 28px; top: calc(80px + env(safe-area-inset-top)); padding: 6px 14px; }
-  .journey .track { height: 8px; }
-  .journey .track .ship { font-size: 22px; }
-  .journey .track.on { width: 52px; }
-  #sky-panel { width: 250px; height: 190px; }
-  .journey .track { width: 26px; }
-  .sky-name, .sky-rule { font-size: 18px; padding-bottom: 7px; }
-  .pop { font-size: 38px; }
-  .pop.big { font-size: 50px; }
-  .hint.small { font-size: 18px; }
-}
-
-/* At a planet: two constellation cards to choose the next shape from */
-.choose {
-  position: absolute; left: 0; right: 0; top: 52%; transform: translateY(-50%);
-  display: flex; justify-content: center; gap: clamp(14px, 4vw, 40px);
-}
-.choose-cell {
-  pointer-events: auto; background: none; border-radius: 18px;
-  width: min(42vw, 240px); height: min(34vh, 240px);
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; padding: 0 6px 8px;
-  font-size: clamp(14px, 2.4vw, 19px); font-weight: 900; color: #ffe9a8; text-shadow: 0 2px 0 rgba(0,0,0,.5);
-  border: 2px solid rgba(201, 182, 255, .35);
-}
-/* Each card's way of counting: the choice is a shape and a challenge */
-.choose-cell b {
-  font-size: .92em; color: #2a1a5e; background: #fff3c4; border-radius: 999px; padding: 2px 10px;
-  text-shadow: none; white-space: nowrap; box-shadow: 0 0 0 2px #e9c45a;
-}
-.choose-cell:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
-.choose-cell:active { border-color: #ffd23f; }
-@media (max-height: 500px) and (orientation: landscape) {
-  .choose { top: 58%; }
-  .choose-cell { width: min(34vw, 200px); height: 44vh; font-size: 13px; }
-}
-
-/* At a planet: the big card where the child joins the dots (the shape is drawn by three.js) */
-.join {
-  position: absolute; inset: 0; pointer-events: auto; touch-action: none;
-  display: flex; align-items: center; justify-content: center;
-  padding: calc(84px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));
-}
-.join-card {
-  width: min(88vw, 600px); height: min(100%, 520px); border-radius: 22px;
-  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; position: relative;
-  font-size: clamp(18px, 3vw, 26px); font-weight: 900; color: #ffe9a8; text-shadow: 0 2px 0 rgba(0,0,0,.5);
-}
-/* The hidden number: three to pick from, in the card's bottom strip */
-.join-pick { display: flex; gap: clamp(10px, 3vw, 22px); pointer-events: auto; }
-.join-pick button {
-  min-width: clamp(54px, 9vw, 78px); height: clamp(40px, 7vh, 56px); border-radius: 999px; padding: 0 12px;
-  background: #fff3c4; color: #2a1a5e; font-size: clamp(20px, 3.4vw, 30px); font-weight: 900; text-shadow: none;
-  box-shadow: 0 4px 0 #c79300; transition: opacity .3s, transform .1s;
-}
-.join-pick button:active { transform: translateY(3px); box-shadow: 0 1px 0 #c79300; }
-.join-pick button:disabled { opacity: .3; box-shadow: none; cursor: default; }
-.join-pick button:focus-visible { outline: 3px solid #ffd23f; outline-offset: 3px; }
-@media (min-width: 700px) and (min-height: 700px) { .join { padding-top: calc(110px + env(safe-area-inset-top)); } }
-/* Narrow phones: the journey sits under the panel, so the card starts below it (and ends above Kitty's nose) */
-@media (max-width: 520px) and (orientation: portrait) { .join { padding-top: calc(176px + env(safe-area-inset-top)); padding-bottom: calc(166px + env(safe-area-inset-bottom)); } }
-@media (orientation: landscape) {
-  .join { padding: calc(70px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); }
-  .join-card { width: min(62vw, 640px); }
-}
-@media (max-height: 500px) and (orientation: landscape) {
-  .join { padding-top: calc(48px + env(safe-area-inset-top)); }
-  .join-card { font-size: 15px; padding-bottom: 4px; }
-}
-
-/* Gentle "drag me" hand when the rocket has not been moved for a while */
+/* A drawn "drag me" hand, only after Kitty has sat still and caught nothing for a while */
 #nudge {
   position: absolute; font-size: 54px; pointer-events: none; transform: translate(-50%, 0); opacity: 0; transition: opacity .4s;
   filter: drop-shadow(0 3px 2px rgba(0,0,0,.35));
 }
 #nudge.show { opacity: 1; }
-#nudge span { display: block; animation: swipe 2.6s ease-in-out infinite; }
+#nudge span { display: block; animation: swipe 2.2s ease-in-out infinite; }
 @keyframes swipe { 0%, 100% { transform: translateX(-50px) rotate(-8deg); } 50% { transform: translateX(50px) rotate(8deg); } }
-@media (min-width: 700px) and (min-height: 700px) { #nudge { font-size: 70px; } }
 
-/* A finished mission card fades away once the child has seen it complete */
-#adventure-goal { transition: opacity .8s; }
-#adventure-goal.resolved { opacity: 0; }
+/* --- Home: the sky zoo. The star creatures are drawn by js/sky.js inside #zoo; taps reach the canvas. --- */
+#finale { background: none; pointer-events: none; justify-content: space-between; }
+.zoo { flex: 1; width: 100%; }
+.finale-actions { display: flex; align-items: center; gap: 22px; pointer-events: auto; }
+.big-go.small-go { width: clamp(88px, 18vmin, 128px); height: clamp(88px, 18vmin, 128px); font-size: clamp(40px, 8vmin, 60px); }
+.finale-actions .round { background: rgba(255, 255, 255, .2); }
+
+@media (max-width: 520px) {
+  .journey { font-size: 15px; top: calc(18px + env(safe-area-inset-top)); padding: 3px 6px; }
+}
+
+/* Sideways phones: one slim HUD row, so the short screen is all sky */
+@media (max-height: 500px) and (orientation: landscape) {
+  .journey { top: calc(8px + env(safe-area-inset-top)); font-size: 16px; padding: 3px 8px; }
+  .hud-right { top: calc(6px + env(safe-area-inset-top)); gap: 6px; padding: 3px; }
+  .round { width: 40px; height: 40px; font-size: 19px; }
+  .stage { top: 58%; height: 50vh; transform: translate(-50%, -50%); }
+  #finale { padding-top: 4px; padding-bottom: 6px; gap: 4px; }
+}
+
+/* Tablets and big screens: bigger HUD, panel and buttons */
+@media (min-width: 700px) and (min-height: 700px) {
+  .round { width: 64px; height: 64px; font-size: 30px; }
+  .journey { font-size: 28px; top: calc(20px + env(safe-area-inset-top)); padding: 6px 14px; max-width: calc(100vw - 200px); }
+  .pop { font-size: 44px; }
+  #nudge { font-size: 70px; }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
-  #nudge span, .pop { animation: none; }
-  .banner, .screen, #adventure-goal, .sky-name { transition: none; }
-}
-
-/* --- Home: the night sky of every constellation built on the trip --- */
-#finale { background: none; gap: 10px; }
-.finale-title { margin: 0; font-size: clamp(24px, 5vw, 40px); font-weight: 900; text-shadow: 0 3px 0 rgba(0,0,0,.4); }
-.finale-sky {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
-  width: min(100%, 760px);
-}
-.finale-cell {
-  pointer-events: auto; background: none; border-radius: 18px;
-  width: min(44vw, 230px); height: min(24vh, 190px);
-  display: flex; align-items: flex-end; justify-content: center; padding: 0 4px 8px;
-  font-size: clamp(14px, 2.6vw, 20px); font-weight: 900; color: #ffe9a8; text-shadow: 0 2px 0 rgba(0,0,0,.5);
-  border: 2px solid rgba(201, 182, 255, .28);
-}
-.finale-cell.found { border-color: rgba(255, 233, 168, .6); }
-/* After a wrong tap the wanted card warms once, softly, then settles back (no pulse) */
-.finale-cell { transition: border-color .6s, box-shadow .6s, background-color .6s; }
-.finale-cell.wanted { border-color: #ffd23f; background-color: rgba(255, 210, 63, .12); box-shadow: 0 0 22px rgba(255, 210, 63, .45); }
-.finale-cell:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
-.finale-actions { display: flex; align-items: center; gap: 16px; }
-.big-go.small-go { font-size: clamp(22px, 4vw, 32px); padding: 10px 32px; }
-.finale-actions .round { pointer-events: auto; background: rgba(255, 255, 255, .2); }
-@media (orientation: landscape) {
-  .finale-sky { width: min(100%, 820px); }
-  .finale-cell { width: min(30vw, 250px); height: min(28vh, 200px); }
-}
-@media (max-height: 500px) and (orientation: landscape) {
-  #finale { gap: 4px; }
-  .finale-title { font-size: 20px; }
-  .finale-sky { gap: 6px; flex-wrap: nowrap; }
-  .finale-cell { width: 18vw; height: 52vh; font-size: 12px; padding-bottom: 4px; }
-  .big-go.small-go { font-size: 20px; padding: 6px 22px; }
-}
-.finale-count { margin: 0; font-size: clamp(18px, 3.4vw, 28px); font-weight: 900; color: #ffe9a8; text-shadow: 0 2px 0 rgba(0,0,0,.45); }
-
-/* Portrait tablets: the bigger constellation panel takes the top-left corner, so the journey
-   starts just right of it instead of sliding underneath */
-@media (min-width: 700px) and (min-height: 700px) and (max-width: 1000px) and (orientation: portrait) {
-  .journey { left: calc(272px + env(safe-area-inset-left)); transform: none; max-width: calc(100vw - 282px - env(safe-area-inset-left) - env(safe-area-inset-right)); }
-  .journey .track { width: 20px; }
+  #nudge span, .pop, .big-go { animation: none; }
+  .screen { transition: none; }
 }

@@ -86,6 +86,8 @@ function starGeometry() {
 }
 
 const SPARKLE = ['#ffd23f', '#ffffff', '#ff8fb1', '#7fd8ff', '#b8ff7a']
+const PETALS = ['#ffc2dc', '#ff9ec4', '#ffffff', '#ffe0ef']
+const LEAVES = ['#e8742b', '#d9481f', '#f2b134', '#b5651d']
 const CONFETTI = ['#ff5d6c', '#ffbe0b', '#3fa2ff', '#6ad35a', '#b388ff', '#ff8fd0', '#2ec4b6']
 const rand = (a, b) => a + Math.random() * (b - a)
 const pick = (list) => list[(Math.random() * list.length) | 0]
@@ -132,6 +134,51 @@ export class Effects {
       })
       p.pos.set(center.x + rand(-w, w), rand(2.2, 4), center.z + rand(-d, d))
       p.vel.set(rand(-0.3, 0.3), rand(-1.2, -0.4), rand(-0.3, 0.3))
+    }
+  }
+
+  /**
+   * Weather over the board (center, half-width, half-depth), one piece at a time, called a few
+   * times a second so it stays gentle: snow drifting down, bubbles wobbling up from the mat, petals
+   * or autumn leaves twirling down, fireflies blinking about.
+   */
+  weather(kind, center, w, d) {
+    const x = center.x + rand(-w, w)
+    const z = center.z + rand(-d, d)
+    if (kind === 'petals' || kind === 'leaves') {
+      const leaf = kind === 'leaves'
+      const p = this.confetti.spawn(pick(leaf ? LEAVES : PETALS), {
+        size: leaf ? rand(0.09, 0.13) : rand(0.06, 0.09), aspect: leaf ? 0.8 : 0.7, life: rand(4.5, 6.5),
+        gravity: 0, drag: 0, rot: Math.random() * 6, spin: rand(1, 2.5), sway: rand(0.5, 0.9), phase: Math.random() * 6,
+      })
+      p.pos.set(x, rand(2.6, 3.4), z)
+      p.vel.set(rand(-0.1, 0.1), rand(-0.6, -0.4), 0)
+    } else if (kind === 'fireflies') {
+      const p = this.stars.spawn(pick(['#fff27a', '#d8ff6a', '#ffe14d']), {
+        size: rand(0.035, 0.055), life: rand(2.5, 4), gravity: -0.05, drag: 0, sway: rand(0.3, 0.6), phase: Math.random() * 6, spin: rand(-1, 1),
+      })
+      p.pos.set(x, rand(0.3, 1.4), z)
+      p.vel.set(rand(-0.12, 0.12), rand(0.02, 0.12), rand(-0.12, 0.12))
+    } else {
+      const snow = kind === 'snow'
+      const p = this.puffs.spawn(snow ? '#ffffff' : '#bfeaff', {
+        size: snow ? rand(0.025, 0.045) : rand(0.03, 0.06), life: snow ? rand(4, 6) : rand(2.5, 4),
+        gravity: 0, drag: 0, sway: rand(0.2, 0.5), phase: Math.random() * 6,
+      })
+      p.pos.set(x, snow ? rand(2.5, 3.5) : 0.12, z)
+      p.vel.set(0, snow ? rand(-0.75, -0.5) : rand(0.35, 0.6), 0)
+    }
+  }
+
+  /** A little pop of party confetti from one spot (a party hat appearing). */
+  burst(pos, count = 16) {
+    for (let i = 0; i < count; i++) {
+      const p = this.confetti.spawn(pick(CONFETTI), {
+        size: rand(0.04, 0.06), aspect: 1.6, life: rand(0.9, 1.4), gravity: 3, drag: 1.5, rot: Math.random() * 6, spin: rand(4, 9),
+      })
+      const a = Math.random() * Math.PI * 2
+      p.pos.copy(pos)
+      p.vel.set(Math.cos(a) * rand(0.5, 1.2), rand(1.6, 2.6), Math.sin(a) * rand(0.5, 1.2))
     }
   }
 

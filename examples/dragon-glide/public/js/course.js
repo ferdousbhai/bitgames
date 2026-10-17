@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { makeGlowTexture } from './effects.js'
-import { decoyFor, numberTexture, treasureMesh } from './goals.js'
+import { treasureMesh } from './treasures.js'
 import { copy, tinted } from './models.js'
 import { WORLDS, WORLD_LENGTH, worldAt } from './worlds.js'
 
@@ -9,10 +9,10 @@ const { clamp } = THREE.MathUtils
 const pick = (list) => list[Math.floor(Math.random() * list.length)]
 
 export const GEMS = {
-  blue: { look: null, points: 1, colors: ['#7cdcff', '#bdeaff', '#ffffff'] },
-  pink: { look: { gem: { color: '#ff7eb9', emissive: '#ff2e88', emissiveIntensity: 0.35 } }, points: 1, colors: ['#ff8fc7', '#ffd1e8', '#ffffff'] },
-  gold: { look: { gem: { color: '#ffd23f', emissive: '#ffa000', emissiveIntensity: 0.45 } }, points: 1, colors: ['#ffe066', '#fff3a0', '#ffffff'] },
-  big: { look: { gem: { color: '#8ef0c8', emissive: '#2ec4b6', emissiveIntensity: 0.5 } }, points: 5, colors: ['#8ef0c8', '#ffffff', '#ffd23f'] },
+  blue: { look: null, colors: ['#7cdcff', '#bdeaff', '#ffffff'] },
+  pink: { look: { gem: { color: '#ff7eb9', emissive: '#ff2e88', emissiveIntensity: 0.35 } }, colors: ['#ff8fc7', '#ffd1e8', '#ffffff'] },
+  gold: { look: { gem: { color: '#ffd23f', emissive: '#ffa000', emissiveIntensity: 0.45 } }, colors: ['#ffe066', '#fff3a0', '#ffffff'] },
+  big: { look: { gem: { color: '#8ef0c8', emissive: '#2ec4b6', emissiveIntensity: 0.5 } }, colors: ['#8ef0c8', '#ffffff', '#ffd23f'] },
 }
 const LANTERN_COLORS = ['#ff6f59', '#ffb347', '#ff7eb9', '#7cc6fe', '#b28dff']
 
@@ -59,15 +59,9 @@ export class Course {
     this.gemGlow = new THREE.SpriteMaterial({ map: glow, color: '#ffffff', transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending })
     this.fireCore = new THREE.SpriteMaterial({ map: glow, color: '#fff3a0', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
     this.fireOuter = new THREE.SpriteMaterial({ map: makeGlowTexture(true), color: '#ff7b2e', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
-    this.world = 0 // the world Ember is in: only its goal rings and treasures show
-    this.ringGlow = new THREE.SpriteMaterial({ map: glow, color: '#fff3a0', transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending })
+    this.starGlow = new THREE.SpriteMaterial({ map: makeGlowTexture(true), color: '#c9d4ff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
+    this.powerGlow = new THREE.SpriteMaterial({ map: glow, color: '#ffe066', transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending })
     this.treasureGlow = new THREE.SpriteMaterial({ map: glow, color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending })
-    templates.hoop.traverse((o) => {
-      if (o.isMesh && o.material.name === 'hoop_cloud') this.hoopCloud ??= o.material
-    })
-    this.wants = () => true // main.js: does the basket still have room for this kind?
-    this.helps = (kind) => this.wants(kind) // main.js: the kind that help brings (one that keeps the basket's rule)
-    this.oops = () => false // main.js: does a wrong one ride along in the basket's oops corner (given back at the nest)?
     this.tmp = new THREE.Vector3()
     this.tmp2 = new THREE.Vector3()
   }
@@ -76,253 +70,51 @@ export class Course {
     for (const it of this.items) this.drop(it)
     for (const f of this.fireballs) this.scene.remove(f.obj)
     for (const f of this.flyers) this.scene.remove(f.obj)
+    for (const l of this.lines ?? []) this.dropLine(l)
+    this.lines = [] // constellation pictures, dropped once they are behind the camera
     this.items.length = this.fireballs.length = this.flyers.length = 0
     this.nextZ = startZ + 45
-    this.goals = new Map() // world -> this trip's goal (main.js sets it as the world begins)
-    this.slots = new Map() // world -> the goal places still to lay out
-    this.ringStep = new Map() // world -> how many numbers of its sequence have been flown
-    this.wrongRun = new Map() // world -> wrong rings in a row (two dim the wrong ring of the next pair)
-    this.holdWorld = -1 // the world whose spare rings or treasures are floating in
-    this.hintKinds = null // after two wrong treasures, only the wanted kinds keep their glow
-  }
-
-  // --- Each world's goal ------------------------------------------------------------
-
-  /** Where a world's numbered rings or treasure groups go: spread evenly between start and nest. */
-  slotsFor(wi) {
-    if (!this.slots.has(wi)) {
-      const n = this.goals.get(wi)?.slots ?? 0
-      // the first goal waits until the world's banner (and its goal picture) has gone, so nothing hides it
-      const from = 100
-      const to = WORLD_LENGTH - 150
-      this.slots.set(wi, Array.from({ length: n }, (_, i) => ({ at: from + ((to - from) * i) / Math.max(1, n - 1), i })))
-    }
-    return this.slots.get(wi)
+    this.powerGiven = new Map() // world -> rainbow stars laid out (two each: a third and two thirds along)
+    this.surprises = new Map() // world -> how many of its own surprises are laid out (see SURPRISE_AT)
+    this.arcs = new Map() // world -> how many of its sure treasure arcs are laid out (see TREASURE_AT)
   }
 
   /**
-   * A pair of numbered rings side by side (one a little higher, so they never overlap on an upright
-   * screen). One shows the number that comes next; the other a near miss. Nothing else is laid
-   * over them, so the choice is the child's alone. `drift` floats the pair toward a waiting Ember;
-   * `near` ({ x, y, close }, Ember's place) brings the right ring to a child who keeps missing: first to just
-   * above or below Ember, so one small move is still the child's, and only after a long wait (`close`) right onto Ember.
+   * A little arc of treasures to swoop through, in the world's own kinds: a smile, a hill or a slanted line.
+   * Each one caught sings a step higher than the last.
    */
-  fork(z, drift = 0, near = null) {
-    const L = this.lane
-    // held upright the lane is narrow, so the pair is a little smaller, centred and set more diagonally:
-    // both rings and both numbers stay on screen, apart, as they come close
-    const upright = L.x < 4
-    const size = upright ? 0.82 : 1
-    const dx = upright ? 2.15 : Math.min(L.x * 0.8, 3.4)
-    const dy = upright ? 1.55 : 0.8
-    const up = Math.random() < 0.5 ? 1 : -1
-    let right = Math.random() < 0.5 ? 0 : 1
-    let x0 = upright ? 0 : clamp(this.randX(0.15), -L.x + dx, L.x - dx)
-    // upright, the pair sits a little lower, so the upper ring's numeral stays clear of the corner buttons as it passes
-    let y0 = upright ? rand(3.1, 4.1) : rand(3.6, 5)
-    const off = helpOffset(near)
-    if (near) {
-      // the right ring where help puts it; the other one toward the middle, so it stays in view
-      const x = near.x + off.x
-      const side = x >= 0 ? 1 : -1
-      right = side < 0 ? 0 : 1
-      x0 = x - side * dx
-      y0 = clamp(near.y + off.y - side * up * dy, 2.5, 6.5)
-    }
-    // a pair helped after a long wait keeps following Ember as it comes, still one small move away (otherwise
-    // it stays where it was put), and holds still for the last stretch, so it never runs from a child who steers to it
-    const gate = { wi: this.wi, z: -(z + 6), right, done: false, decoys: {}, rings: [], home: near?.close ? off : null }
-    for (const side of [-1, 1]) {
-      const obj = new THREE.Group()
-      const ring = copy(this.t.hoop, { hoop_cloud: PALE_RING })
-      obj.add(ring)
-      obj.scale.setScalar(size)
-      const halo = new THREE.Sprite(this.ringGlow)
-      halo.scale.setScalar(6.5)
-      halo.position.z = -0.3
-      halo.visible = false
-      obj.add(halo)
-      // the number sits on top of its ring, so Ember never hides it while lining up
-      const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: numberTexture(1), transparent: true, depthWrite: false }))
-      label.scale.setScalar(2.7)
-      label.position.y = 2.3 + 1.25
-      label.renderOrder = 4
-      obj.add(label)
-      gate.rings.push(this.add('numring', obj, x0 + side * dx, y0 + side * up * dy, z + 6, { radius: 2.3 * size, size, wi: this.wi, gate, ring, halo, label, number: 0, drift }))
-    }
-    this.relabel(this.wi)
-    // a clear stretch behind the pair, so no gem trail shows through the rings while the child chooses
-    return 22
-  }
-
-  /**
-   * Numbers the pairs of world `wi` still ahead, nearest first, from the step that comes next.
-   * A missed or wrong pair is behind Ember now, so the next pair shows the same number: it waits.
-   * Pairs past the end of the sequence quietly go away. Only the nearest pair glows.
-   */
-  relabel(wi) {
-    const goal = this.goals.get(wi)
-    if (!goal) return
-    const step = this.ringStep.get(wi) ?? 0
-    const hint = (this.wrongRun.get(wi) ?? 0) >= 2
-    const gates = [...new Set(this.items.filter((it) => it.type === 'numring' && it.wi === wi && !it.gone && !it.gate.done).map((it) => it.gate))].sort((a, b) => b.z - a.z)
-    gates.forEach((gate, j) => {
-      const k = step + j
-      const off = k >= goal.seq.length
-      for (const it of gate.rings) {
-        it.off = off
-        it.obj.visible = !off
-        if (off) continue
-        const right = it === gate.rings[gate.right]
-        const number = right ? goal.seq[k] : (gate.decoys[k] ??= decoyFor(goal, k))
-        if (it.number !== number) {
-          it.number = number
-          it.label.material.map = numberTexture(number)
-        }
-        // the nearest pair glows gold, both rings alike; after two wrong rings the wrong one rests pale
-        const look = j === 0 && (right || !hint) ? 'gold' : 'pale'
-        it.halo.visible = look === 'gold'
-        it.label.material.opacity = look === 'gold' ? 1 : 0.45
-        // only the nearest pair shows its numbers, and drawn over Ember, so a centred upright pair reads early
-        // (a pair further on stays plain until this one is passed, so its numbers never sit on these)
-        it.label.visible = j === 0
-        it.label.material.depthTest = false
-        if (it.look !== look) {
-          it.look = look
-          it.ring.traverse((o) => {
-            if (o.isMesh && o.material.name === 'hoop_cloud') o.material = tinted(this.hoopCloud, look === 'gold' ? GOLD_RING : PALE_RING)
-          })
-        }
-      }
-    })
-  }
-
-  /** Ember passed a pair: through the next number, through the other one, or between them. */
-  passGate(gate, p, events, playing) {
-    gate.done = true
-    const wi = gate.wi
-    const right = gate.rings[gate.right]
-    const hit = gate.rings.find((r) => Math.hypot(p.x - r.x, p.y - r.y) < r.radius * 0.95)
-    for (const r of gate.rings) r.halo.visible = false
-    if (hit) hit.flash = 0.3
-    if (right.off || !playing) return this.relabel(wi)
-    const number = right.number
-    if (hit === right) {
-      this.ringStep.set(wi, (this.ringStep.get(wi) ?? 0) + 1)
-      this.wrongRun.set(wi, 0)
-    } else if (hit) this.wrongRun.set(wi, (this.wrongRun.get(wi) ?? 0) + 1)
-    this.relabel(wi)
-    // a miss: does another pair ahead now wait with the same number?
-    const waits = hit !== right && this.items.some((r) => r.type === 'numring' && r.wi === wi && !r.gate.done && !r.off)
-    events.push({ type: hit === right ? 'numRing' : hit ? 'numWrong' : 'numMiss', number, picked: hit?.number, waits, pos: (hit ?? right).obj.position.clone() })
-  }
-
-  /**
-   * A little group of treasures side by side: the child chooses which one to fly to.
-   * `near` (Ember's place) slides the group so a wanted treasure floats right up to Ember.
-   */
-  treasures(z, near = null) {
-    const kinds = [...this.goals.get(this.wi).kinds].sort(() => Math.random() - 0.5)
-    const n = kinds.length
-    const s = Math.min(this.lane.x * 0.78, n === 2 ? 2.6 : 2.8)
-    const y = rand(3.4, 5.4)
-    const group = { touched: false, passed: false, kinds }
-    const made = kinds.map((kind, i) => {
-      const x = n === 2 ? (i ? s : -s) : (i - 1) * s
-      // three in a little arch, so there is room to fly to the middle one alone
-      const dy = n === 3 ? (i === 1 ? 1.1 : -0.7) : rand(-0.5, 0.5)
-      return this.treasure(kind, x, y + dy, z + 4, group)
-    })
-    const wanted = near && (made.find((it) => this.helps(it.kind)) ?? made.find((it) => this.wants(it.kind)))
-    if (wanted) {
-      // put just beside Ember (one small move away); after a long wait it also keeps following Ember as it comes
-      const off = helpOffset(near)
-      if (near.close) {
-        group.lead = wanted
-        group.off = off
-      }
-      const mx = near.x + off.x - wanted.x
-      const my = near.y + off.y - wanted.y
-      for (const it of made) {
-        it.x += mx
-        it.y += my
-        it.obj.position.x = it.x
-      }
-    }
-    // a clear stretch after each group, so the choice is never crowded by a gem trail
-    return 18
-  }
-
-  /**
-   * Before the nest, while a goal is still open, Ember waits and spare pairs of rings or groups of
-   * treasures float in one after another, so a missed number or treasure always comes round again.
-   * `z` is Ember's distance. The first call clears what was laid out ahead, so nothing else is in the way.
-   */
-  spare(z, lane, wi, near = null) {
-    if (this.holdWorld !== wi) {
-      this.holdWorld = wi
-      for (const it of this.items) if (it.z < -z && it.z > -(wi + 1) * WORLD_LENGTH) it.gone = true
-    }
-    const rings = this.goals.get(wi).type === 'rings'
-    const waiting = rings
-      ? this.items.some((it) => it.type === 'numring' && it.wi === wi && !it.gone && !it.gate.done && !it.off)
-      : this.items.some((it) => it.type === 'treasure' && it.drift && !it.gone && !it.away && this.wants(it.kind) && it.z < -z - 1)
-    if (waiting) return false
-    this.w = WORLDS[wi]
-    this.wi = wi
-    this.lane = lane
-    if (rings) {
-      this.fork(z + 44, 9, near)
-      return true
-    }
-    const before = this.items.length
-    this.treasures(z + 44, near)
-    for (let i = before; i < this.items.length; i++) this.items[i].drift = 9
-    return true
-  }
-
-  /**
-   * Slides `group` together so that `lead` drifts toward Ember's x/y plus `off` (a spare helped after a long
-   * wait): just beside Ember, so the last small move is the child's. In the last stretch it holds still.
-   */
-  ease(group, lead, p, off, dt) {
-    if (p.z - lead.z < 14) return
-    const k = Math.min(1, dt * 1.6)
-    const dx = (p.x + off.x - lead.x) * k
-    const dy = (clamp(p.y + off.y, 2.2, 6.8) - lead.y) * k
-    for (const o of group) {
-      o.x += dx
-      o.y += dy
-      o.obj.position.x = o.x
-      o.obj.position.y = o.y
-    }
-  }
-
-  /**
-   * The world's goal is met but the counting mission still wants `n` cloud rings: unless one is already
-   * coming, they are laid just ahead of Ember (clearing that stretch), so the count ends without an empty cruise.
-   */
-  ringsAhead(z, n, x, y) {
-    if (this.items.some((it) => it.type === 'hoop' && !it.done && !it.gone && it.z < -z && it.z > -z - 70)) return
-    const from = z + 32
-    const to = from + (n - 1) * 15
-    for (const it of this.items) if (it.type !== 'hoop' && !it.away && !it.gone && it.z < -from + 8 && it.z > -to - 8) it.gone = true
-    x = clamp(x, -this.lane.x * 0.6, this.lane.x * 0.6)
-    y = clamp(y, 2.5, 6)
+  treasures(z) {
+    const kinds = this.w.treasures
+    const n = 4 + Math.floor(Math.random() * 3)
+    const span = Math.min(this.lane.x * 0.85, 3.6)
+    const y0 = rand(3.4, 5.6)
+    const bend = pick([1.6, -1.6, 0])
+    const tilt = rand(-1, 1)
+    const run = { n: 0 }
     for (let i = 0; i < n; i++) {
-      this.hoop(x, y, from + i * 15)
-      x = clamp(x + rand(-2.5, 2.5), -this.lane.x * 0.6, this.lane.x * 0.6)
-      y = clamp(y + rand(-1.5, 1.5), 2.5, 6)
+      const k = (i / (n - 1)) * 2 - 1
+      const y = clamp(y0 + bend * (1 - k * k) - bend / 2 + tilt * k, this.lane.yMin + 0.8, this.lane.yMax - 0.8)
+      this.treasure(kinds[i % kinds.length], k * span, y, z + i * 3.2, run)
     }
-    this.nextZ = Math.max(this.nextZ, to + 12)
+    return n * 3.2
   }
 
-  /** The basket is full: the world's other treasures float gently up and away. */
-  release(wi) {
-    for (const it of this.items) if ((it.type === 'treasure' || (it.type === 'bubble' && it.kind)) && it.wi === wi && !it.gone) it.away = true
+  /** The rainbow star: catch it and Ember trails a rainbow while gems fly to her. A short gem trail leads to it. */
+  power(z) {
+    const obj = new THREE.Group()
+    const s = copy(this.t.powerstar)
+    obj.add(s)
+    const glow = new THREE.Sprite(this.powerGlow)
+    glow.scale.setScalar(4)
+    obj.add(glow)
+    obj.scale.setScalar(1.2)
+    const x = this.randX(0.5)
+    for (let i = 0; i < 4; i++) this.gem(x * (i / 4), 4.5, z + i * 3)
+    this.add('power', obj, x, 4.5, z + 14, { r: 1.5, spin: s })
+    return 16
   }
 
-  treasure(kind, x, y, z, group = null) {
+  treasure(kind, x, y, z, run = null) {
     const obj = new THREE.Group()
     const m = treasureMesh(kind)
     m.scale.setScalar(0.95)
@@ -331,15 +123,7 @@ export class Course {
     halo.scale.setScalar(3)
     halo.position.z = -0.2
     obj.add(halo)
-    return this.add('treasure', obj, x, y, z, { kind, r: 0.95, spin: m, halo, wi: this.wi, group })
-  }
-
-  /** A group of treasures Ember flew past without choosing any, while the basket still had room. */
-  passGroup(it, events) {
-    const group = it.group
-    if (!group || group.passed) return
-    group.passed = true
-    if (!group.touched && group.kinds.some((k) => this.wants(k))) events.push({ type: 'treasureMiss' })
+    return this.add('treasure', obj, x, y, z, { kind, r: 1.05, spin: m, run })
   }
 
   // --- Building the course --------------------------------------------------------
@@ -357,47 +141,39 @@ export class Course {
         continue
       }
       const w = WORLDS[wi]
-      const goal = this.goals.get(wi)
-      // the next world's goal is chosen as Ember flies on (from how this world went): wait for it
-      if (!goal) return
       this.w = w
       this.wi = wi
       this.lane = lane
       let len
       const hard = Math.min(1, into / 300) // gentle at the start of each world
-      const slots = this.slotsFor(wi)
-      // once the basket is full, no more treasure groups are laid out in this world
-      if (slots.length && goal.type === 'gather' && !goal.kinds.some((k) => this.wants(k))) slots.length = 0
-      if (slots.length && slots[0].at <= into + 20) {
-        // the world's goal comes first: nothing else is laid over a numbered ring or a treasure group
-        slots.shift()
-        // and a clear run-up in front, so bubbles or lanterns never float across the choice
-        this.nextZ += 14
-        len = goal.type === 'rings' ? this.fork(this.nextZ) : this.treasures(this.nextZ)
-      } else if (goal.type === 'rings' && slots.length && slots[0].at - into < 60) {
-        // a numbered pair is coming soon: open sky until then, so no gem trail crowds in front of its numbers
-        // (a little past the slot's mark, so rounding can't leave it waiting here for ever)
-        this.nextZ = Math.max(this.nextZ + 1, start + slots[0].at - 19.5)
-        continue
+      const stars = this.powerGiven.get(wi) ?? 0
+      if (stars < 2 && into > WORLD_LENGTH * (stars ? 0.68 : 0.32)) {
+        this.powerGiven.set(wi, stars + 1)
+        len = this.power(this.nextZ)
+      } else if ((this.arcs.get(wi) ?? 0) < TREASURE_AT.length && into > WORLD_LENGTH * TREASURE_AT[this.arcs.get(wi) ?? 0]) {
+        // every world has at least a few treasure arcs, so the bag (and the nest) always gets some
+        this.arcs.set(wi, (this.arcs.get(wi) ?? 0) + 1)
+        len = this.treasures(this.nextZ)
+      } else if ((this.surprises.get(wi) ?? 0) < SURPRISE_AT.length && into > WORLD_LENGTH * SURPRISE_AT[this.surprises.get(wi) ?? 0]) {
+        // each world's own surprise, three times along it
+        this.surprises.set(wi, (this.surprises.get(wi) ?? 0) + 1)
+        len = this[w.surprise](this.nextZ)
       } else {
         const r = Math.random()
-        const pObstacle = 0.1 + hard * (0.14 + wi * 0.04)
+        const pObstacle = 0.08 + hard * (0.1 + wi * 0.03)
         const pLantern = w.lanterns * 0.3
-        // bubbles hold a treasure in a gathering world (a choice); in a numbered-ring world they'd only be a distraction
-        const pBubble = goal.type === 'rings' ? 0 : 0.13
-        // in a numbered-ring world the only rings are the numbered ones, so a plain ring never muddles the count
-        const pHoop = goal.type === 'rings' ? 0 : 0.26
-        // between numbered pairs the sky is mostly quiet: about half the stretches are open air, so the flight
-        // from one choice to the next is a calm glide, not a gem chase
-        if (goal.type === 'rings' && r >= pObstacle + pLantern && Math.random() < 0.5) len = 16
-        else if (r < pObstacle) len = this.obstacle(this.nextZ)
+        const pBubble = 0.13
+        const pHoop = 0.24
+        const pTreasure = 0.18
+        if (r < pObstacle) len = this.obstacle(this.nextZ)
         else if (r < pObstacle + pLantern) len = this.lanterns(this.nextZ)
         else if (r < pObstacle + pLantern + pBubble) len = this.bubbles(this.nextZ)
         else if (r < pObstacle + pLantern + pBubble + pHoop) len = this.hoops(this.nextZ)
-        // no gem trail just before a treasure group either, so nothing golden sits in front of the choice
-        else if (goal.type === 'gather' && slots.length && slots[0].at - into < 60) len = 10
+        else if (r < pObstacle + pLantern + pBubble + pHoop + pTreasure) len = this.treasures(this.nextZ)
         else len = pick([this.line, this.wave, this.spiral, this.line]).call(this, this.nextZ)
       }
+      // now and then the world's little critters drift beside that stretch: brush past them and they scatter
+      if (w.critter && Math.random() < 0.3) this.critters(this.nextZ, len)
       this.nextZ += len + rand(9, 15)
     }
   }
@@ -420,10 +196,16 @@ export class Course {
     return it
   }
 
+  dropLine(l) {
+    this.scene.remove(l.line)
+    l.line.geometry.dispose()
+    l.line.material.dispose()
+  }
+
   drop(it) {
     this.scene.remove(it.obj)
     if (it.mats) for (const m of it.mats) m.dispose()
-    if (it.label) it.label.material.dispose()
+    if (it.type === 'star') it.glow.material.dispose()
   }
 
   gem(x, y, z, kind = this.w.gem) {
@@ -435,7 +217,7 @@ export class Course {
     halo.scale.setScalar(2.2)
     obj.add(halo)
     obj.scale.setScalar(kind === 'big' ? 1.6 : 1)
-    return this.add('gem', obj, x, y, z, { kind, points: g.points, r: kind === 'big' ? 1.3 : 1.0, spin: m })
+    return this.add('gem', obj, x, y, z, { kind, r: kind === 'big' ? 1.3 : 1.0, spin: m })
   }
 
   /** A straight line of gems from one spot to another. */
@@ -478,19 +260,19 @@ export class Course {
     return n * 2.3
   }
 
-  hoop(x, y, z, scale = 1) {
-    const obj = copy(this.t.hoop, this.w.hoop)
-    obj.scale.setScalar(scale)
-    return this.add('hoop', obj, x, y, z, { radius: 2.3 * scale })
+  hoop(x, y, z, run = null, look = this.w.hoop) {
+    const obj = copy(this.t.hoop, look)
+    return this.add('hoop', obj, x, y, z, { radius: 2.3, run })
   }
 
-  /** Two to four cloud rings in a gentle curve, with gems showing the way between them. */
+  /** Two to four cloud rings in a gentle curve, with gems showing the way between them. Each ring in a run sings higher. */
   hoops(z) {
     const n = 2 + Math.floor(Math.random() * (this.wi > 0 ? 3 : 2))
     let x = this.randX(0.6), y = rand(2.5, 6)
     const gap = 17
+    const run = { n: 0 }
     for (let i = 0; i < n; i++) {
-      this.hoop(x, y, z + i * gap)
+      this.hoop(x, y, z + i * gap, run)
       if (i < n - 1) {
         const nx = clamp(x + rand(-3.5, 3.5), -this.lane.x * 0.75, this.lane.x * 0.75)
         const ny = clamp(y + rand(-2, 2), 2.5, 6.5)
@@ -505,39 +287,123 @@ export class Course {
     return (n - 1) * gap + 4
   }
 
+  // --- Each world's surprise (worlds.js `surprise`) ----------------------------------------
+
+  /** Meadow Isles: a long swoopy tunnel of rainbow rings that plays a whole scale. */
+  rainbowRings(z) {
+    const n = 6
+    const run = { n: 0 }
+    const amp = Math.min(this.lane.x * 0.6, 2.6)
+    const phase = Math.random() * Math.PI * 2
+    for (let i = 0; i < n; i++) {
+      const c = RAINBOW_RINGS[i]
+      this.hoop(Math.sin(phase + i * 0.8) * amp, 4.4 + Math.cos(phase + i * 0.8) * 1.4, z + i * 11, run, { hoop_cloud: { color: c, emissive: c, emissiveIntensity: 0.45 } })
+    }
+    return (n - 1) * 11 + 6
+  }
+
+  /** Candy Clouds: a few bouncy lollipops to boop (they boing Ember away, never a bump). */
+  lollies(z) {
+    const n = 3
+    for (let i = 0; i < n; i++) {
+      const side = i % 2 ? 1 : -1
+      this.lolly(side * rand(this.lane.x * 0.2, this.lane.x * 0.7), z + 6 + i * 12)
+    }
+    for (let i = 0; i < 6; i++) this.gem(Math.sin(i) * 1.5, 4.6, z + 4 + i * 5)
+    return n * 12 + 4
+  }
+
+  /** Sunset Castles: little rockets floating in a row. Touch one or puff fire at it and it whizzes up into fireworks. */
+  fireworks(z) {
+    const n = 3 + Math.floor(Math.random() * 2)
+    const x0 = this.randX(0.6)
+    const dx = rand(-1.4, 1.4)
+    for (let i = 0; i < n; i++) {
+      const color = pick(FIREWORK_COLORS)
+      const obj = new THREE.Group()
+      const body = new THREE.Mesh(ROCKET_BODY, rocketMat(color))
+      const nose = new THREE.Mesh(ROCKET_NOSE, rocketMat('#ffffff'))
+      nose.position.y = 0.75
+      obj.add(body, nose)
+      const glow = new THREE.Sprite(this.lanternGlow)
+      glow.scale.setScalar(2.4)
+      glow.position.y = -0.7
+      obj.add(glow)
+      obj.scale.setScalar(1.3)
+      this.add('firework', obj, clamp(x0 + dx * i, -this.lane.x, this.lane.x), rand(3, 6.5), z + i * 7, { r: 1.5, color, fireTarget: true })
+    }
+    return n * 7
+  }
+
+  /**
+   * Night Sky: dim stars in the shape of a heart, a big star or a little dragon-kite, all at one distance.
+   * Each one touched or puffed at lights up; light them all and lines join them into a glowing picture.
+   */
+  constellation(z) {
+    const shape = pick(CONSTELLATIONS)
+    const w = Math.min(this.lane.x * 0.85, 4)
+    const group = { stars: [], lit: 0, z: -(z + 8) }
+    for (const [sx, sy] of shape) {
+      const obj = new THREE.Group()
+      const star = treasureMesh('night')
+      star.scale.setScalar(0.5)
+      obj.add(star)
+      const glow = new THREE.Sprite(this.starGlow.clone())
+      glow.material.opacity = 0.35
+      glow.scale.setScalar(2.2)
+      obj.add(glow)
+      group.stars.push(this.add('star', obj, sx * w, 4.6 + sy * 2.4, z + 8, { r: 1.4, glow, star, group, fireTarget: true }))
+    }
+    group.shape = shape
+    return 24
+  }
+
+  /** Two to four critters (butterflies, or squeaky floating gumdrops) scattered along a stretch, off to the sides. */
+  critters(z, len) {
+    const n = 2 + Math.floor(Math.random() * 3)
+    for (let i = 0; i < n; i++) {
+      const x = (Math.random() < 0.5 ? -1 : 1) * rand(this.lane.x * 0.45, this.lane.x * 1.05)
+      const at = z + rand(0, Math.max(4, len))
+      if (this.w.critter === 'gumdrop') {
+        const obj = copy(this.t.gumdrop, { gumdrop: pick(['#ff5c8a', '#4cc9f0', '#ffd23f', '#8ef0c8', '#c9b6ff']) })
+        obj.scale.setScalar(0.9)
+        this.add('critter', obj, x, this.randY(), at, { kind: 'gumdrop', r: 1, s: 0.9, vx: 0, vy: 0, squash: 0 })
+      } else {
+        const obj = new THREE.Group()
+        const color = pick(['#ff8fc7', '#ffd23f', '#7cc6fe', '#c9b6ff'])
+        const wings = [-1, 1].map((side) => {
+          const pivot = new THREE.Group()
+          const w = new THREE.Mesh(WING_SHAPE, butterflyMat(color))
+          w.scale.x = side
+          pivot.add(w)
+          obj.add(pivot)
+          return pivot
+        })
+        const body = new THREE.Mesh(BUG_BODY, butterflyMat('#5a3d7a'))
+        body.rotation.x = Math.PI / 2
+        obj.add(body)
+        this.add('critter', obj, x, this.randY(), at, { kind: 'butterfly', r: 1, wings, vx: 0, vy: 0 })
+      }
+    }
+  }
+
   bubble(x, y, z, kind = null) {
     const obj = new THREE.Group()
     const b = new THREE.Mesh(this.bubbleGeo, this.bubbleMat)
     b.renderOrder = 3
     obj.add(b)
-    // in a gathering world a bubble holds one of the world's treasures: line up with the one the
-    // basket needs and puff fire at it (or fly into it). Otherwise it holds a gem.
+    // a bubble holds one of the world's treasures or a big gem: puff fire at it, or fly into it
     const g = kind ? treasureMesh(kind) : copy(this.t.gem, GEMS.big.look)
     g.scale.setScalar(kind ? 0.7 : 0.9)
     obj.add(g)
     obj.scale.setScalar(1.3)
-    return this.add('bubble', obj, x, y, z, { r: 1.5, bubble: b, spin: g, fireTarget: true, kind, wi: this.wi })
+    return this.add('bubble', obj, x, y, z, { r: 1.5, bubble: b, spin: g, fireTarget: true, kind })
   }
 
-  /**
-   * Floating bubbles. In a gathering world they come as a pair side by side, each with a different treasure
-   * (one the basket still needs, when it needs any): fire goes where Ember is lined up (see shoot), so the
-   * child chooses which one to pop, and a wrong one popped lands in the oops corner like a wrong one caught.
-   */
+  /** Two or three floating bubbles, each with a treasure or a big gem inside. */
   bubbles(z) {
-    const goal = this.goals.get(this.wi)
-    const wanted = goal?.type === 'gather' ? goal.kinds.filter((k) => this.wants(k)) : []
-    if (wanted.length) {
-      const good = pick(wanted)
-      const kinds = [good, pick(goal.kinds.filter((k) => k !== good))].sort(() => Math.random() - 0.5)
-      // far enough apart that Ember flying straight between them touches neither (2.9 > a bubble's reach)
-      const s = Math.min(this.lane.x * 0.92, 2.9)
-      const y = rand(3.4, 5.4)
-      kinds.forEach((k, i) => this.bubble(i ? s : -s, y + rand(-0.4, 0.4), z + 4, k))
-      return 16
-    }
     const n = 2 + Math.floor(Math.random() * 2)
-    for (let i = 0; i < n; i++) this.bubble(this.randX(), this.randY(), z + i * 9)
+    for (let i = 0; i < n; i++) this.bubble(this.randX(), this.randY(), z + i * 9, Math.random() < 0.6 ? pick(this.w.treasures) : null)
     return n * 9
   }
 
@@ -604,21 +470,26 @@ export class Course {
       tw.position.y = 0.3
       g.add(tw)
       const baseY = -4
-      this.add('tower', g, x, baseY, z + 6, { towerR: 1.25, towerTop: baseY + 0.3 + 7.3 * 1.15 })
+      // in the sunset castles each tower flies a pennant
+      const flag = this.wi === 2 ? pennant(g, 0.3 + 7.3 * 1.15) : null
+      this.add('tower', g, x, baseY, z + 6, { towerR: 1.25, towerTop: baseY + 0.3 + 7.3 * 1.15, flag })
       gx = -side * rand(L.x * 0.35, L.x * 0.8)
     } else {
-      // lollipop
-      const x = side * rand(L.x * 0.25, L.x * 0.7)
-      const lp = copy(this.t.lollipop, { lolly_a: pick(['#ff5c9a', '#4cc9f0', '#9b5de5', '#ff9f1c']) })
-      const s = 1.9
-      lp.scale.setScalar(s)
-      const baseY = -2.2
-      this.add('lolly', lp, x, baseY, z + 6, { candyY: baseY + 3.1 * s, candyR: 1.05 * s, stickTop: baseY + 2.1 * s })
+      this.lolly(side * rand(L.x * 0.25, L.x * 0.7), z + 6)
       gx = -side * rand(L.x * 0.35, L.x * 0.8)
     }
     const gy = rand(2.5, 5.5)
     for (let i = 0; i < 5; i++) this.gem(gx, gy, z + i * 3)
     return 16
+  }
+
+  /** A big bouncy lollipop growing up from below. */
+  lolly(x, z) {
+    const lp = copy(this.t.lollipop, { lolly_a: pick(['#ff5c9a', '#4cc9f0', '#9b5de5', '#ff9f1c']) })
+    const s = 1.9
+    lp.scale.setScalar(s)
+    const baseY = -2.2
+    return this.add('lolly', lp, x, baseY, z, { s, candyY: baseY + 3.1 * s, candyR: 1.05 * s, stickTop: baseY + 2.1 * s, squash: 0 })
   }
 
   // --- Fire! -------------------------------------------------------------------------
@@ -637,13 +508,12 @@ export class Course {
     let best = null
     let bestScore = Infinity
     for (const it of this.items) {
-      if (!it.fireTarget || it.done || it.away || it.targeted) continue
+      if (!it.fireTarget || it.done || it.targeted) continue
       const dz = from.z - it.obj.position.z
       if (dz < 3 || dz > 70) continue
       const dxy = Math.hypot(it.obj.position.x - from.x, it.obj.position.y - from.y)
-      // a treasure bubble is popped only when Ember is lined up with it (the pair is the child's choice);
-      // lanterns and gem bubbles are found more generously
-      if (dxy > (it.kind ? 1.8 + dz * 0.02 : 4 + dz * 0.12)) continue
+      // fire finds what is roughly ahead, generously, so a puff almost always lands
+      if (dxy > 4 + dz * 0.12) continue
       const score = dz + dxy * 4
       if (score < bestScore) {
         bestScore = score
@@ -660,7 +530,7 @@ export class Course {
    * Moves everything and checks it against the dragon at `p` (which moved from `prevZ`).
    * Returns a list of events for the game to celebrate.
    */
-  update(dt, p, prevZ, time, { invulnerable = false, playing = true, behindZ }) {
+  update(dt, p, prevZ, time, { magnet = false, invulnerable = false, playing = true, behindZ }) {
     const events = []
     this.bubbleMat.uniforms.uTime.value = time
     const R = 0.75 // Ember's size for bumps
@@ -680,19 +550,24 @@ export class Course {
       // (a lit lantern takes longer, so it still drifts up glowing, but it's gone before it reaches the
       // camera, where its big glow used to cover the banner and the counting party)
       if (SMALL.has(it.type) && o.position.z > p.z + 0.5) {
-        if (playing && it.group && it.wi === this.world) this.passGroup(it, events)
-        // ...by distance, and by time too: while Ember waits before the nest nothing moves past, so a treasure
-        // that drifted just beyond Ember would otherwise hang half-shrunk between Ember and the camera
+        // (by distance, and by time too, so nothing hangs half-shrunk between Ember and the camera)
         it.past = Math.max(0, (it.past ?? 1) - dt * 1.4)
-        const k = Math.min(it.past, Math.max(0, 1 - (o.position.z - p.z - 0.5) / (it.type === 'lantern' && it.done ? 6 : 3)))
+        const k = Math.min(it.past, Math.max(0, 1 - (o.position.z - p.z - 0.5) / (it.type === 'lantern' && it.done ? 2 : 1.2)))
         o.scale.setScalar((it.baseScale ??= o.scale.x) * k)
         if (k <= 0) it.gone = true
         continue
       }
+      // lanterns and bubbles about to slip past beside Ember shrink a little, so they never block the middle of the view
+      if ((it.type === 'lantern' || it.type === 'bubble') && !it.done) {
+        const ahead = p.z - o.position.z
+        const side = Math.hypot(o.position.x - p.x, o.position.y - p.y)
+        const k = ahead < 3 && side > 1.6 ? 0.45 + 0.55 * Math.max(0, ahead) / 3 : 1
+        o.scale.setScalar((it.baseScale ??= o.scale.x) * k)
+      }
       // rocks, windmills, towers and lollipops Ember has passed fade away, so they never hide
       // Ember (or fill the screen) on their way past the camera
       if (it.mats) {
-        const k = clamp(1 - (o.position.z - p.z + 0.5) / 3, 0, 1)
+        const k = clamp(1 - (o.position.z - p.z + 1) / 2, 0, 1)
         if (k !== it.fade) {
           it.fade = k
           for (const m of it.mats) m.opacity = k
@@ -705,83 +580,62 @@ export class Course {
           it.spin.rotation.y = Math.sin(it.t * 1.1) * 0.45
           o.position.y = it.y + Math.sin(it.t * 2.2) * 0.15
           if (!playing) break
-          if (o.position.distanceTo(p) < it.r + R) {
+          const d = o.position.distanceTo(p)
+          // the rainbow star's magnet: nearby gems swoop to Ember
+          if (magnet && d < 9) {
+            this.tmp.subVectors(p, o.position).multiplyScalar(Math.min(1, dt * 7))
+            it.x += this.tmp.x
+            it.y += this.tmp.y
+            o.position.x = it.x
+            o.position.z += this.tmp.z
+          }
+          if (d < it.r + R) {
             it.gone = true
-            events.push({ type: 'gem', pos: o.position.clone(), points: it.points, kind: it.kind })
+            events.push({ type: 'gem', pos: o.position.clone(), kind: it.kind })
           }
           break
         }
         case 'hoop': {
           // a slow sway only: nothing pulses in scale while Ember flies
           o.rotation.z = Math.sin(it.t * 0.8) * 0.08
-          // once Ember is through, the ring pops away before the camera reaches it, so its
-          // puffs never fill the whole screen
-          const away = it.done ? Math.max(0, 1 - Math.max(0, o.position.z - p.z - 1) / 3.5) : 1
-          o.scale.setScalar((it.radius / 2.3) * (it.done ? 1 + it.flash : 1) * away)
+          // once Ember is through, the ring shrinks away within a couple of steps, long before the camera
+          // reaches it, so its puffs never fill the screen
+          const away = it.done ? Math.max(0, 1 - Math.max(0, o.position.z - p.z) / 1.8) : 1
+          o.scale.setScalar((it.radius / 2.3) * away)
           o.visible = away > 0
-          if (it.done) it.flash = Math.max(0, it.flash - dt * 1.5)
           if (!playing || it.done) break
           if (prevZ > it.z && p.z <= it.z) {
             it.done = true
-            it.flash = 0.35
             const d = Math.hypot(p.x - it.x, p.y - it.y)
-            if (d < it.radius * 0.95) events.push({ type: 'hoop', pos: o.position.clone() })
-            else events.push({ type: 'hoopMiss', pos: o.position.clone() })
+            if (d < it.radius * 0.95) events.push({ type: 'hoop', pos: o.position.clone(), n: it.run ? it.run.n++ : 0 })
           }
-          break
-        }
-        case 'numring': {
-          const gate = it.gate
-          // spare pairs float toward a waiting Ember
-          if (it.drift) {
-            it.z += it.drift * dt
-            o.position.z = gate.z = it.z
-          }
-          if (gate.home && !gate.done && it === gate.rings[gate.right]) this.ease(gate.rings, it, p, gate.home, dt)
-          // Ember is past the pair (both rings share one z): which ring, if any, was flown through?
-          if (!gate.done && it.z >= p.z) this.passGate(gate, p, events, playing)
-          // the next world's rings wait unseen beyond the nest until Ember flies on
-          if (it.off || it.wi !== this.world) {
-            o.visible = false
-            break
-          }
-          o.rotation.z = Math.sin(it.t * 0.8) * 0.06
-          const away = gate.done ? Math.max(0, 1 - Math.max(0, o.position.z - p.z - 1) / 3.5) : 1
-          o.scale.setScalar(it.size * (1 + (it.flash || 0)) * away)
-          o.visible = away > 0
-          if (it.flash) it.flash = Math.max(0, it.flash - dt * 1.5)
           break
         }
         case 'treasure': {
           // a slow sway, never a spin, so the shape always reads
           it.spin.rotation.y = Math.sin(it.t * 1.1) * 0.45
-          o.visible = it.wi === this.world
-          if (!o.visible) break
-          // after two wrong treasures only the kinds still wanted keep their glow: a quiet hint
-          it.halo.visible = !this.hintKinds || this.hintKinds.has(it.kind)
-          if (it.away) {
-            // not taken (another kind, or the basket already has enough): it floats up and fades away
-            it.y += dt * 2.2
-            it.x += dt * (it.x >= 0 ? 1.5 : -1.5)
+          const d = o.position.distanceTo(p)
+          // a near miss still counts: treasures close by drift into Ember (from much further with the rainbow star)
+          if (playing && d < (magnet ? 9 : 3.2 + R)) {
+            this.tmp.subVectors(p, o.position).multiplyScalar(Math.min(1, dt * (magnet ? 7 : 5)))
+            it.x += this.tmp.x
+            it.y += this.tmp.y
             o.position.x = it.x
-            const k = (it.awayK = Math.max(0, (it.awayK ?? 1) - dt * 0.6))
-            o.scale.setScalar(k)
-            if (k <= 0) it.gone = true
+            o.position.z += this.tmp.z
           }
           o.position.y = it.y + Math.sin(it.t * 1.6) * 0.18
-          if (it.group?.lead === it && !it.group.touched) this.ease(this.items.filter((o) => o.group === it.group && !o.away && !o.gone), it, p, it.group.off, dt)
-          // spare treasures float toward Ember while Ember waits before the nest
-          if (it.drift) {
-            it.z += it.drift * dt
-            o.position.z = it.z
+          if (playing && o.position.distanceTo(p) < it.r + R) {
+            it.gone = true
+            events.push({ type: 'treasure', kind: it.kind, n: it.run ? it.run.n++ : 0, pos: o.position.clone() })
           }
-          if (playing && !it.away && o.position.distanceTo(p) < it.r + R) {
-            const taken = this.wants(it.kind)
-            const extra = !taken && this.oops(it.kind)
-            if (it.group) it.group.touched = true
-            if (taken || extra) it.gone = true
-            else it.away = true
-            events.push({ type: 'treasure', kind: it.kind, taken, extra, pos: o.position.clone() })
+          break
+        }
+        case 'power': {
+          it.spin.rotation.y = Math.sin(it.t * 2) * 0.5
+          it.spin.rotation.z = Math.sin(it.t * 1.3) * 0.2
+          if (playing && o.position.distanceTo(p) < it.r + R) {
+            it.gone = true
+            events.push({ type: 'power', pos: o.position.clone() })
           }
           break
         }
@@ -789,18 +643,8 @@ export class Course {
           // a treasure inside sways like the loose ones, so its shape always reads
           if (it.kind) it.spin.rotation.y = Math.sin(it.t * 1.1) * 0.45
           else it.spin.rotation.y += dt * 1.8
-          // no wobble: the bubble only floats slowly, like the loose treasures
-          if (it.away) {
-            // the basket is full: an unpopped treasure bubble drifts up and away, out of reach
-            it.y += dt * 2.2
-            const k = (it.awayK = Math.max(0, (it.awayK ?? 1) - dt * 0.6))
-            o.scale.setScalar(1.3 * k)
-            if (k <= 0) it.gone = true
-          }
           o.position.y = it.y + Math.sin(it.t * 1.5) * 0.3
-          // a treasure bubble pops only when Ember really touches it (its own size plus Ember's), so the
-          // gap between the two bubbles of a pair is always safe to fly through
-          if (playing && !it.away && o.position.distanceTo(p) < (it.kind ? it.r : it.r * 1.3) + R) this.pop(it, events)
+          if (playing && o.position.distanceTo(p) < it.r * 1.3 + R) this.pop(it, events)
           break
         }
         case 'lantern': {
@@ -834,22 +678,97 @@ export class Course {
           else if (p.y < it.towerTop && Math.hypot(dx, p.z - it.z) < it.towerR + R) this.bump(it, this.tmp2.set(it.x, p.y, it.z), events)
           break
         }
+        case 'critter': {
+          if (it.kind === 'butterfly') {
+            const f = Math.sin(it.t * (it.scared ? 26 : 13)) * 0.9
+            it.wings[0].rotation.y = f
+            it.wings[1].rotation.y = -f
+            o.rotation.z = Math.sin(it.t * 1.3) * 0.2
+          } else if (it.squash > 0) {
+            it.squash = Math.max(0, it.squash - dt * 1.8)
+            const w = Math.sin(it.squash * 16) * it.squash * 0.35
+            o.scale.set(it.s * (1 + w), it.s * (1 - w), it.s * (1 + w))
+          }
+          if (it.scared) {
+            // off it goes: a butterfly flutters up, a gumdrop bounces away tumbling
+            it.vy -= (it.kind === 'gumdrop' ? 6 : -1) * dt
+            it.x += it.vx * dt
+            it.y += it.vy * dt
+            if (it.kind === 'gumdrop') o.rotation.z += it.vx * dt * 0.8
+            if ((it.scared += dt) > 2.5) it.gone = true
+          } else {
+            it.x += Math.sin(it.t * 0.7) * dt * 0.4
+            if (playing && o.position.distanceTo(p) < 2.4 + R) {
+              it.scared = 0.01
+              const away = it.x >= p.x ? 1 : -1
+              it.vx = away * (it.kind === 'gumdrop' ? 5 : 3)
+              it.vy = it.kind === 'gumdrop' ? 5 : 2.5
+              it.squash = 1
+              events.push({ type: 'brush', kind: it.kind, pos: o.position.clone() })
+            }
+          }
+          o.position.x = it.x
+          o.position.y = it.y + (it.scared ? 0 : Math.sin(it.t * 1.9) * 0.3)
+          break
+        }
         case 'tower': {
+          // a castle's pennant waves in the wind, and flaps hard as Ember swooshes by
+          if (it.flag) {
+            if (!it.whip && Math.abs(p.z - it.z) < 5 && Math.abs(p.x - it.x) < 5) {
+              it.whip = 1
+              events.push({ type: 'flag', pos: o.position.clone() })
+            }
+            const k = (it.whip = Math.max(0, (it.whip || 0) - dt * 0.5))
+            it.flag.rotation.y = Math.sin(it.t * (3 + k * 12)) * (0.25 + k * 0.5)
+          }
           if (!playing || invulnerable || it.hit) break
           if (p.y < it.towerTop + 0.6 && Math.hypot(p.x - it.x, p.z - it.z) < it.towerR + R) this.bump(it, this.tmp2.set(it.x, p.y - 0.3, it.z), events)
           break
         }
         case 'lolly': {
           o.rotation.y = Math.sin(it.t * 0.8) * 0.15
-          if (!playing || invulnerable || it.hit) break
+          // a boop squashes the candy like jelly, then it wobbles back
+          if (it.squash > 0) {
+            it.squash = Math.max(0, it.squash - dt * 1.4)
+            const w = Math.sin(it.squash * 18) * it.squash * 0.28
+            o.scale.set(it.s * (1 + w), it.s * (1 - w), it.s * (1 + w))
+          }
+          if (!playing || it.hit) break
           const dz = Math.abs(p.z - it.z)
-          if (dz < 0.6 + R && Math.hypot(p.x - it.x, p.y - it.candyY) < it.candyR + 0.2) this.bump(it, this.tmp2.set(it.x, it.candyY, it.z), events)
-          else if (p.y < it.stickTop && Math.hypot(p.x - it.x, dz) < 0.25 + R) this.bump(it, this.tmp2.set(it.x, p.y, it.z), events)
+          if (dz < 0.6 + R && Math.hypot(p.x - it.x, p.y - it.candyY) < it.candyR + 0.2) this.boing(it, this.tmp2.set(it.x, it.candyY, it.z), events)
+          else if (p.y < it.stickTop && Math.hypot(p.x - it.x, dz) < 0.25 + R) this.boing(it, this.tmp2.set(it.x, p.y, it.z), events)
+          break
+        }
+        case 'firework': {
+          if (it.done) {
+            // whizz up with a sparkly tail, then burst
+            it.launch += dt
+            it.y += dt * (6 + it.launch * 14)
+            o.rotation.z = Math.sin(it.launch * 20) * 0.08
+            this.particles.emit(o.position.x, o.position.y - 0.8, o.position.z, { vy: -2, spread: 0.6, life: 0.4, size: 0.6, color: pick(FIRE_COLORS), drag: 2 })
+            if (it.launch > 0.75) {
+              it.gone = true
+              events.push({ type: 'boom', pos: o.position.clone(), color: it.color })
+            }
+          } else o.rotation.z = Math.sin(it.t * 1.3) * 0.1
+          o.position.y = it.y + (it.done ? 0 : Math.sin(it.t * 1.4) * 0.25)
+          if (playing && !it.done && o.position.distanceTo(p) < it.r + R) this.launch(it, events)
+          break
+        }
+        case 'star': {
+          // a dim star twinkles softly; a lit one shines
+          const g = it.group
+          it.glow.material.opacity = it.done ? 1 : 0.35 + Math.sin(it.t * 2) * 0.08
+          it.glow.scale.setScalar(it.done ? 3.4 + (it.pulse = Math.max(0, (it.pulse ?? 0) - dt * 2)) * 2 : 2.2)
+          it.star.rotation.z = Math.sin(it.t * 1.2) * 0.2
+          if (g.line) g.line.material.opacity = Math.min(0.9, g.line.material.opacity + dt * 1.2)
+          if (playing && !it.done && o.position.distanceTo(p) < it.r + R) this.lightStar(it, events)
           break
         }
       }
     }
     this.items.length = n
+    this.lines = this.lines.filter((l) => (l.z > behindZ ? (this.dropLine(l), false) : true))
 
     // Fireballs fly on, curving toward their target
     for (let i = this.fireballs.length - 1; i >= 0; i--) {
@@ -858,7 +777,7 @@ export class Course {
       f.t += dt
       const o = f.obj
       const tg = f.target
-      if (tg && !tg.done && !tg.gone && !tg.away) {
+      if (tg && !tg.done && !tg.gone) {
         this.tmp.subVectors(tg.obj.position, o.position)
         const dist = this.tmp.length()
         const speed = f.vel.length()
@@ -866,6 +785,8 @@ export class Course {
         f.vel.lerp(this.tmp, Math.min(1, dt * 7))
         if (dist < 1.6) {
           if (tg.type === 'bubble') this.pop(tg, events, true)
+          else if (tg.type === 'firework') this.launch(tg, events)
+          else if (tg.type === 'star') this.lightStar(tg, events)
           else this.light(tg, events, true)
           f.life = 0
         }
@@ -883,7 +804,7 @@ export class Course {
       }
     }
 
-    // Gems released from popped bubbles zoom to Ember
+    // What was inside a popped bubble zooms to Ember
     for (let i = this.flyers.length - 1; i >= 0; i--) {
       const f = this.flyers[i]
       f.t += dt * 2.6
@@ -904,18 +825,7 @@ export class Course {
     it.gone = true
     const at = it.obj.position
     events.push({ type: 'bubble', pos: at.clone(), byFire })
-    if (it.kind) {
-      // the treasure inside goes to the basket if it's wanted, or floats gently away if not. A wrong one rides
-      // along like a loose one, whether flown into or popped by fire (fire only pops the bubble Ember lines up with)
-      const taken = this.wants(it.kind)
-      const extra = !taken && this.oops(it.kind)
-      events.push({ type: 'treasure', kind: it.kind, taken, extra, bubble: true, pos: at.clone() })
-      if (!taken && !extra) {
-        this.wi = it.wi
-        this.treasure(it.kind, at.x, at.y, -at.z).away = true
-        return
-      }
-    }
+    if (it.kind) events.push({ type: 'treasure', kind: it.kind, n: 0, bubble: true, pos: at.clone() })
     const g = it.kind ? treasureMesh(it.kind) : copy(this.t.gem, GEMS.big.look)
     g.position.copy(at)
     this.scene.add(g)
@@ -932,6 +842,39 @@ export class Course {
     events.push({ type: 'lantern', pos: it.obj.position.clone(), byFire })
   }
 
+  launch(it, events) {
+    it.done = true
+    it.launch = 0
+    events.push({ type: 'whizz', pos: it.obj.position.clone() })
+  }
+
+  lightStar(it, events) {
+    it.done = true
+    it.pulse = 1
+    it.glow.material.color.set('#fff3a0')
+    it.star.material = treasureMesh('star').material
+    it.star.scale.setScalar(0.75)
+    const g = it.group
+    g.lit++
+    const all = g.lit === g.stars.length
+    events.push({ type: 'star', n: g.lit - 1, all, pos: it.obj.position.clone() })
+    if (!all) return
+    // every star is lit: lines join them into the picture
+    const pts = g.stars.map((s) => s.obj.position.clone())
+    pts.push(pts[0].clone())
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#fff3a0', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }))
+    this.scene.add(line)
+    g.line = line
+    this.lines.push({ line, z: g.z })
+  }
+
+  /** A lollipop booped: it squashes, and Ember boings off it. */
+  boing(it, at, events) {
+    it.hit = true
+    it.squash = 1
+    events.push({ type: 'boing', pos: at.clone() })
+  }
+
   bump(it, at, events) {
     it.hit = true
     it.wobble = 1
@@ -939,19 +882,55 @@ export class Course {
   }
 }
 
-const NO_OFFSET = { x: 0, y: 0 }
-/**
- * Where help brings the right ring or treasure: one small move from Ember (never onto Ember). Above Ember
- * where there is room, since from behind, something just below Ember sits hidden behind Ember as it comes;
- * otherwise beside Ember, toward the middle.
- */
-function helpOffset(near) {
-  if (!near) return NO_OFFSET
-  return near.y + 2.8 <= 7 ? { x: 0, y: 2.8 } : { x: near.x > 0 ? -2.8 : 2.8, y: -0.6 }
+const SMALL = new Set(['gem', 'bubble', 'lantern', 'power', 'treasure', 'firework', 'star', 'critter'])
+const WING_SHAPE = (() => {
+  const sh = new THREE.Shape()
+  sh.moveTo(0, 0)
+  sh.bezierCurveTo(0.2, 0.55, 0.75, 0.6, 0.62, 0.12)
+  sh.bezierCurveTo(0.8, -0.2, 0.4, -0.5, 0, -0.08)
+  return new THREE.ShapeGeometry(sh, 8)
+})()
+const BUG_BODY = new THREE.CapsuleGeometry(0.05, 0.36, 4, 8)
+const bugMats = {}
+const butterflyMat = (color) => (bugMats[color] ??= new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.25, side: THREE.DoubleSide, roughness: 0.6 }))
+const POLE = new THREE.CylinderGeometry(0.05, 0.05, 1.6, 6)
+const PENNANT = (() => {
+  const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.95, 0), new THREE.Vector3(0, 0, 0), new THREE.Vector3(2.2, 0.48, 0)])
+  g.computeVertexNormals()
+  return g
+})()
+const poleMat = new THREE.MeshStandardMaterial({ color: '#8a6a4a' })
+const pennantMats = Object.fromEntries(['#ff6b9d', '#ffd23f', '#7cc6fe'].map((c) => [c, new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide })]))
+/** A pole and a pennant on top of a tower at `top` (in the tower group); returns the pennant's pivot, to wave. */
+function pennant(group, top) {
+  const pole = new THREE.Mesh(POLE, poleMat)
+  pole.position.y = top + 0.8
+  group.add(pole)
+  const pivot = new THREE.Group()
+  pivot.position.y = top + 0.9
+  pivot.add(new THREE.Mesh(PENNANT, pennantMats[pick(['#ff6b9d', '#ffd23f', '#7cc6fe'])]))
+  group.add(pivot)
+  return pivot
 }
-const SMALL = new Set(['gem', 'bubble', 'lantern', 'power', 'treasure'])
-const GOLD_RING = { color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 0.55 }
-const PALE_RING = { color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 0.2 }
+/** Where along each world its own surprise comes (as a share of the world). */
+const SURPRISE_AT = [0.16, 0.5, 0.8]
+/** Where along each world a treasure arc always comes (more come by chance in between). */
+const TREASURE_AT = [0.1, 0.4, 0.66, 0.88]
+const RAINBOW_RINGS = ['#ff6b6b', '#ffa94d', '#ffe066', '#8ce99a', '#74c0fc', '#b197fc']
+const FIREWORK_COLORS = ['#ff6b9d', '#ffd23f', '#7cc6fe', '#8ef0c8', '#c9b6ff']
+const ROCKET_BODY = new THREE.CylinderGeometry(0.32, 0.36, 1.1, 12)
+const ROCKET_NOSE = new THREE.ConeGeometry(0.34, 0.5, 12)
+const rocketMats = {}
+const rocketMat = (color) => (rocketMats[color] ??= new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.3, roughness: 0.4 }))
+/** Constellation shapes, in units of the lane (x) and of 2.4 (y), drawn in order and closed. */
+const CONSTELLATIONS = [
+  // a heart
+  [[0, -0.9], [-0.8, 0.1], [-0.5, 0.75], [0, 0.35], [0.5, 0.75], [0.8, 0.1]],
+  // a big star (the points of a pentagram, in drawing order)
+  [[0, 0.95], [0.55, -0.8], [-0.9, 0.3], [0.9, 0.3], [-0.55, -0.8]],
+  // a diamond kite
+  [[0, 0.95], [0.7, 0.1], [0, -0.95], [-0.7, 0.1]],
+]
 const BIG = new Set(['rock', 'windmill', 'tower', 'lolly'])
 
 /** Gives each mesh of `obj` its own transparent copy of its material and returns them all. */

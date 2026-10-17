@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { MIXES, SEAT_PAINT } from './paint.js'
+import { POTS, SEAT_PAINT, potHex } from './paint.js'
 import { angleDiff, canvasTexture, clamp, damp, dampAngle } from './util.js'
 
 export const ANIMALS = {
@@ -40,7 +40,7 @@ export class Painter {
     Object.assign(this, { id, seat, animal, local, bot })
     /** The paint in this painter's roller: one of the red, yellow and blue bits. */
     this.paint = SEAT_PAINT[seat]
-    this.color = MIXES[this.paint].hex
+    this.color = potHex(this.paint)
     this.group = new THREE.Group()
     this.model = template.clone(true)
     this.group.add(this.model)
@@ -63,6 +63,9 @@ export class Painter {
     this.yaw = 0
     this.speed = 0
     this.phase = Math.random() * 6
+    /** Squash and stretch: a springy bounce (hops on a splat, a dip in a pot, a bump). */
+    this.boing = 0
+    this.boingV = 0
     this.rainbowUntil = 0
     this.rainbow = false
     this.stats = newStats()
@@ -71,11 +74,16 @@ export class Painter {
     this.last = { x: 0, z: 0 }
   }
 
-  /** Dips the roller in another pot (red, yellow or blue). */
+  /** A springy hop: the animal squashes down, then stretches up and wobbles back. */
+  hop(strength = 1) {
+    this.boingV -= 9 * strength
+  }
+
+  /** Dips the roller in another pot. */
   setPaint(bits) {
-    if (!MIXES[bits] || bits === this.paint) return false
+    if (!POTS.includes(bits) || bits === this.paint) return false
     this.paint = bits
-    this.color = MIXES[bits].hex
+    this.color = potHex(bits)
     return true
   }
 
@@ -146,10 +154,15 @@ export class Painter {
     if (this.roller) this.roller.rotation.x += moved / ROLLER_RADIUS
     this.phase += moved * 3.2
     const k = clamp(this.speed / MAX_SPEED, 0, 1)
+    // A damped spring for squash and stretch (volume kept: squashed wide, stretched thin).
+    this.boingV += (-this.boing * 220 - this.boingV * 11) * dt
+    this.boing += this.boingV * dt
+    const sq = clamp(this.boing, -0.35, 0.35)
     if (this.body) {
       this.body.rotation.z = Math.sin(this.phase) * 0.09 * k
-      this.body.position.y = Math.abs(Math.sin(this.phase)) * 0.07 * k
+      this.body.position.y = Math.abs(Math.sin(this.phase)) * 0.07 * k + Math.max(0, sq) * 0.5
       this.body.rotation.x = 0.06 * k
+      this.body.scale.set(1 - sq * 0.5, 1 + sq, 1 - sq * 0.5)
     }
     if (this.paintMat) {
       if (this.rainbow) this.paintMat.color.setHSL((now / 900) % 1, 0.85, 0.6)

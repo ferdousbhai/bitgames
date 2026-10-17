@@ -14,7 +14,6 @@
 </script>
 <link rel="stylesheet" href="./style.css" />
 <link rel="stylesheet" href="./ipad.css" />
-<link rel="stylesheet" href="./adventure.css" />
 </head>
 <body>
 <canvas id="view"></canvas>
@@ -22,24 +21,23 @@
 
 <div id="hud" class="hidden">
   <div class="hud-left">
-    <button id="home" class="round" title="Home (Esc)" aria-label="Home">🏠</button>
+    <button id="home" class="round" aria-label="Home">🏠</button>
   </div>
   <div class="trip" aria-hidden="true">
     <div class="trip-track"><div id="trip-fill" class="trip-fill"></div></div>
     <div id="trip-stops" class="trip-stops"></div>
     <div id="trip-dragon" class="trip-dragon"><span>🐉</span></div>
   </div>
-  <div id="goal" class="goal hidden" role="status"></div>
-  <div id="banner" class="banner"></div>
-  <div id="tip" class="tip"></div>
-  <button id="fire" class="fire" title="Fire (Space)" aria-label="Puff fire">🔥</button>
-  <div id="sort" class="sort hidden" aria-live="polite"></div>
-  <button id="fly-on" class="big-go fly-on hidden" title="Fly on (Space)">▶</button>
+  <div id="banner" class="banner" aria-hidden="true"></div>
+  <div id="bag" class="bag empty" aria-hidden="true"></div>
+  <div id="hand" class="hand" aria-hidden="true"><span>👆</span></div>
+  <button id="fire" class="fire" aria-label="Puff fire">🔥</button>
+  <button id="fly-on" class="big-go fly-on hidden">▶</button>
 </div>
 
 <div id="corner" class="corner hidden">
-  <button id="music" class="round" title="Music" aria-label="Music on or off">🎵</button>
-  <button id="sound" class="round" title="Sound (M)" aria-label="Sound on or off">🔊</button>
+  <button id="music" class="round" aria-label="Music on or off">🎵</button>
+  <button id="sound" class="round" aria-label="Sound on or off">🔊</button>
 </div>
 
 <div id="loading" class="screen">
@@ -50,24 +48,19 @@
 
 <div id="title" class="screen clear hidden">
   <div class="logo"><span>D</span><span>r</span><span>a</span><span>g</span><span>o</span><span>n</span> <span>G</span><span>l</span><span>i</span><span>d</span><span>e</span></div>
-  <p class="sub">Fly Ember home to the nest! 🪺</p>
   <div class="spacer"></div>
   <div class="menu-bottom">
     <div id="worlds" class="worlds"></div>
-    <button id="play" class="big-go">▶ Let's fly!</button>
-    <p class="hint">👆 Drag to fly · tap for 🔥</p>
+    <button id="play" class="big-go play" aria-label="Play">▶</button>
   </div>
 </div>
 
 <div id="results" class="screen clear hidden">
-  <div class="results-top">
-    <h1>Home sweet nest!</h1>
-    <div id="learned" class="learned" aria-label="The worlds you flew through"></div>
-  </div>
+  <div id="found" class="learned" aria-label="The treasures Ember found"></div>
   <div class="spacer"></div>
   <div class="menu-bottom">
     <div class="row">
-      <button id="again" class="big-go">🔁 Fly again</button>
+      <button id="again" class="big-go" aria-label="Fly again">🔁</button>
       <button id="to-title" class="big-go alt" aria-label="Home">🏠</button>
     </div>
   </div>
