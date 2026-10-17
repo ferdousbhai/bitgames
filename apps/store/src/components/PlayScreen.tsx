@@ -114,10 +114,17 @@ export function PlayScreen({
       if (event.pointerId === starter) cancel()
       if (pointers.size === 0) spoiled = false
     }
+    // Pressing the ✕ moves focus into the game's frame, which blurs this window
+    // too; only a real loss of focus (another tab or app) ends the hold.
+    let blurCheck = 0
     const blur = () => {
-      cancel()
-      pointers.clear()
-      spoiled = false
+      clearTimeout(blurCheck)
+      blurCheck = window.setTimeout(() => {
+        if (document.hasFocus()) return
+        cancel()
+        pointers.clear()
+        spoiled = false
+      })
     }
     document.addEventListener('pointerdown', down, true)
     document.addEventListener('pointerup', up, true)
@@ -129,6 +136,7 @@ export function PlayScreen({
       document.removeEventListener('pointerup', up, true)
       document.removeEventListener('pointercancel', up, true)
       window.removeEventListener('blur', blur)
+      clearTimeout(blurCheck)
     }
   }, [gameId])
 
