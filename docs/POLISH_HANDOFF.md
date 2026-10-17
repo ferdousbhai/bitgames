@@ -1,6 +1,6 @@
 # BitGames handoff
 
-Updated 2026-10-16. Work on `main`. Nothing from the 2026-10-16 fun pass is committed, published or seeded yet.
+Updated 2026-10-17. Work on `main`. The fun pass is committed (`d2c0bf7`), all twelve games are republished, and the store is seeded with the new versions.
 
 ## Direction (owner, 2026-10-16)
 
@@ -59,11 +59,9 @@ TMPDIR=/dev/shm EXAMPLES_ORIGIN=http://localhost:4213 EXAMPLES_CHROMIUM_EXECUTAB
 
 ## Remaining
 
-1. Bring Bunny Hop (round 14 under review) to 8.5 or higher. Lesson: when a passing game gets extra polish, a fresh review must confirm it still passes; round 10 made Bunny Hop worse.
-2. Run `pnpm examples:build` (manifests and catalogue), then `pnpm test`, `original-quality.mjs` and `mash.mjs` across all twelve games.
-3. Commit, publish (`node examples/publish.mjs <id>`) and seed the store. The owner approved this once every game passes.
-4. Store screens, changed but not yet browser-checked or deployed: `PlayScreen.tsx`'s corner ✕ now follows the hold rule (keyboard still opens it at once), and the "Who's playing?" choice in `GameFrame.tsx` shows big 👫/🧒 pictures. The grown-up pairing steps keep their words.
-5. Not yet verified: sound by ear, physical iPads, and real two-device multiplayer through the store. Family play is the real test.
+1. Store screens are changed but not committed or deployed. `PlayScreen.tsx`'s corner ✕ now follows the hold rule (keyboard still opens it at once), and the "Who's playing?" choice in `GameFrame.tsx` shows big 👫/🧒 pictures. They sit in the working tree beside separate unfinished store work (households, Google sign-in, talk, migration `0010_households.sql`) that isn't part of this pass, so they were left uncommitted. `GameFrame.tsx` mixes both.
+2. Passed games keep the reviewers' leftover ideas in `docs/polish/<game-id>.md`. They were deliberately not done after passing, because late mechanics changes made Bunny Hop and Cake Stack worse before.
+3. Not yet verified: sound by ear, physical iPads, and real two-device multiplayer through the store. Family play is the real test.
 
 ## Environment notes
 
