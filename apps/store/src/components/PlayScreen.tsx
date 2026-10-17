@@ -1,11 +1,12 @@
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { GameFrame } from '#/components/GameFrame'
 import { exitFullscreen } from '#/lib/fullscreen'
 import { toy } from '#/lib/ui'
 
 /**
- * A game filling the whole screen, edge to edge. The ✕ in the corner opens a
- * "what next?" sheet, like the end of a video: keep playing, stop, or tap
+ * A game filling the whole screen, edge to edge. Hold the corner ✕ for 0.7s
+ * with one pointer (shown by a filling ring), or activate it with the keyboard,
+ * to open a "what next?" sheet: keep playing, stop, or tap
  * another game to switch straight to it. The page behind stops scrolling, and
  * the screen stays fullscreen from one game to the next. Without a menu
  * (a creator's preview) the ✕ just stops.
@@ -47,6 +48,90 @@ export function PlayScreen({
     return () => window.removeEventListener('keydown', onKey)
   }, [menu])
 
+  const cornerRef = useRef<HTMLButtonElement>(null)
+  const cornerAction = useRef(() => {})
+  cornerAction.current = menuContent ? () => setMenu(true) : onStop
+  const [holdProgress, setHoldProgress] = useState(0)
+
+  useEffect(() => {
+    const pointers = new Set<number>()
+    let starter: number | null = null
+    let spoiled = false
+    let frame = 0
+    const cancel = () => {
+      starter = null
+      cancelAnimationFrame(frame)
+      setHoldProgress(0)
+    }
+    const down = (event: PointerEvent) => {
+      pointers.add(event.pointerId)
+      if (pointers.size !== 1) {
+        spoiled = true
+        cancel()
+        return
+      }
+      if (spoiled || !cornerRef.current?.contains(event.target as Node) || event.button !== 0) return
+      cancel()
+      starter = event.pointerId
+      const began = performance.now()
+      const tick = (now: number) => {
+        if (starter === null || spoiled) return
+        const progress = Math.min(1, (now - began) / 700)
+        setHoldProgress(progress)
+        if (progress < 1) {
+          frame = requestAnimationFrame(tick)
+          return
+        }
+        // Keep the guard through the lift, even if opening the sheet unmounts us.
+        const heldPointer = starter
+        const swallow = (click: MouseEvent) => {
+          click.preventDefault()
+          click.stopImmediatePropagation()
+          cleanup()
+        }
+        const lifted = (lift: PointerEvent) => {
+          if (lift.pointerId !== heldPointer) return
+          clearTimeout(expiry)
+          expiry = window.setTimeout(cleanup, 500)
+        }
+        const cleanup = () => {
+          clearTimeout(expiry)
+          document.removeEventListener('click', swallow, true)
+          document.removeEventListener('pointerup', lifted, true)
+          document.removeEventListener('pointercancel', lifted, true)
+        }
+        let expiry = window.setTimeout(cleanup, 30_000)
+        document.addEventListener('click', swallow, true)
+        document.addEventListener('pointerup', lifted, true)
+        document.addEventListener('pointercancel', lifted, true)
+        cancel()
+        cornerAction.current()
+      }
+      frame = requestAnimationFrame(tick)
+    }
+    const up = (event: PointerEvent) => {
+      pointers.delete(event.pointerId)
+      if (event.pointerId === starter) cancel()
+      if (pointers.size === 0) spoiled = false
+    }
+    const blur = () => {
+      cancel()
+      pointers.clear()
+      spoiled = false
+    }
+    document.addEventListener('pointerdown', down, true)
+    document.addEventListener('pointerup', up, true)
+    document.addEventListener('pointercancel', up, true)
+    window.addEventListener('blur', blur)
+    return () => {
+      cancel()
+      document.removeEventListener('pointerdown', down, true)
+      document.removeEventListener('pointerup', up, true)
+      document.removeEventListener('pointercancel', up, true)
+      window.removeEventListener('blur', blur)
+    }
+  }, [gameId])
+
   const cornerLabel = menuContent ? 'Stop or pick another game' : 'Stop playing'
   const safeArea = 'env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)'
   return (
@@ -55,14 +140,22 @@ export function PlayScreen({
       <GameFrame key={gameId} gameId={gameId} title={title} src={src} className="h-full w-full" />
       <button
         type="button"
-        onClick={menuContent ? () => setMenu(true) : onStop}
+        ref={cornerRef}
+        onClick={(event) => {
+          // Native keyboard/assistive activation has no pointer click count.
+          if (event.detail === 0) cornerAction.current()
+        }}
+        onContextMenu={(event) => event.preventDefault()}
         className="absolute flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-2xl font-bold text-white backdrop-blur hover:bg-black/65"
         // Top right, clear of the notch; games keep this corner free for it (see the guide).
-        style={{ top: 'max(10px, env(safe-area-inset-top))', right: 'max(10px, env(safe-area-inset-right))' }}
+        style={{ top: 'max(10px, env(safe-area-inset-top))', right: 'max(10px, env(safe-area-inset-right))', touchAction: 'none', userSelect: 'none' }}
         aria-label={cornerLabel}
         title={cornerLabel}
       >
-        ✕
+        <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="20" fill="none" stroke="currentColor" strokeWidth="3" pathLength="1" strokeDasharray="1" strokeDashoffset={1 - holdProgress} opacity={holdProgress > 0 ? 1 : 0} />
+        </svg>
+        <span aria-hidden="true">✕</span>
       </button>
       {menu && menuContent && (
         <div

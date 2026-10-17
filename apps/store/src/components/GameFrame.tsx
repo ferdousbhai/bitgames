@@ -444,13 +444,15 @@ function LobbyOverlay({
       <div className="flex min-h-full flex-col items-center justify-center gap-6 px-4 pt-16 pb-6">
         {lobby.step === 'choose' && (
           <>
-            <h2 className="text-center text-3xl font-bold sm:text-4xl">Who's playing? 🎮</h2>
+            <h2 className="text-center text-5xl" aria-label="Who's playing?">🎮</h2>
             <div className="flex flex-wrap justify-center gap-4">
-              <button type="button" onClick={onTogether} className={bigButton} style={toy('var(--color-berry)')}>
-                <span className="text-5xl">🏠</span>Play together
+              <button type="button" onClick={onTogether} aria-label="Play together" className={`${bigButton} min-w-36 gap-3 sm:min-w-44`} style={toy('var(--color-berry)')}>
+                <span aria-hidden="true" className="text-7xl leading-none sm:text-8xl">👫</span>
+                <span className="text-sm sm:text-base">Play together</span>
               </button>
-              <button type="button" onClick={onSolo} className={bigButton} style={toy('var(--color-mint)')}>
-                <span className="text-5xl">🙋</span>Just me
+              <button type="button" onClick={onSolo} aria-label="Just me" className={`${bigButton} min-w-36 gap-3 sm:min-w-44`} style={toy('var(--color-mint)')}>
+                <span aria-hidden="true" className="text-7xl leading-none sm:text-8xl">🧒</span>
+                <span className="text-sm sm:text-base">Just me</span>
               </button>
             </div>
           </>
