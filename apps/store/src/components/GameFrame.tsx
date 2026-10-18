@@ -1,6 +1,7 @@
 import { BRIDGE, isBridgeMessage, newPeerId, type GameToPage, type PageToGame, type Unbridged } from '@bitgames/game-sdk/bridge'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { gameFrameDocument } from '#/lib/game-frame'
+import { TalkHost } from './TalkHost'
 import { publicAddresses } from '#/lib/network'
 import { toy } from '#/lib/ui'
 import { type Listing, mergeListings } from '#/server/nearby'
@@ -394,6 +395,7 @@ export function GameFrame({ gameId, src, title, className }: { gameId: string; s
             </div>
           </div>
         )}
+        <TalkHost frame={frame} gameId={gameId} crowded={lobby.step === 'in-room'} />
         {lobby.step === 'in-room' && (
           <button
             type="button"

@@ -2,12 +2,11 @@
 
 Work on `main`, the canonical branch. All work previously on `master` is included in `main`.
 
-The catalogue is the twelve original games in `examples/`. The goal is to make each of them excellent, not to add more games. Read [docs/POLISH_HANDOFF.md](docs/POLISH_HANDOFF.md) before editing examples, and keep it current when handing off. `docs/archive/` and `docs/audit/` are history only. Never recreate or republish retired games.
+The catalogue is the twelve original games in `examples/`, plus games the owner releases from other repos (for example Talking Pals from the `games` repo). Make each of them excellent. Read [docs/POLISH_HANDOFF.md](docs/POLISH_HANDOFF.md) before editing examples, and keep it current when handing off. `docs/archive/` and `docs/audit/` are history only. Never recreate or republish retired games.
 
 Fun comes first (owner direction, 2026-10-16). The earlier education passes made the games boring, and the owner's kids stopped enjoying them. Each game must make sense to a non-reading 3–8-year-old within seconds, without any instruction:
 - no quizzes, missions or learning tasks
 - no instruction text on screen
-- no text-to-speech voice
 - pictures, big ▶ buttons and playful sound effects instead
 
 Lively, juicy play is welcome. Still avoid manipulative hooks: strobe flashing, reward spam, frantic timers and nagging.

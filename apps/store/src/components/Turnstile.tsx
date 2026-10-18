@@ -29,7 +29,18 @@ function loadScript() {
 }
 
 /** Cloudflare Turnstile bot check. Calls onToken with a token, or null when it expires or fails. */
-export function Turnstile({ action, onToken, resetKey }: { action: string; onToken: (token: string | null) => void; resetKey?: number }) {
+export function Turnstile({
+  action,
+  onToken,
+  resetKey,
+  appearance = 'always',
+}: {
+  action: string
+  onToken: (token: string | null) => void
+  resetKey?: number
+  /** 'interaction-only' stays hidden unless the check needs a tap. */
+  appearance?: 'always' | 'interaction-only'
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const callback = useRef(onToken)
   callback.current = onToken
@@ -43,6 +54,7 @@ export function Turnstile({ action, onToken, resetKey }: { action: string; onTok
         widgetId = window.turnstile.render(ref.current, {
           sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
           action,
+          appearance,
           callback: (token: string) => callback.current(token),
           'expired-callback': () => callback.current(null),
           'error-callback': () => callback.current(null),
@@ -53,7 +65,7 @@ export function Turnstile({ action, onToken, resetKey }: { action: string; onTok
       cancelled = true
       if (widgetId) window.turnstile?.remove(widgetId)
     }
-  }, [action, resetKey])
+  }, [action, resetKey, appearance])
 
   return <div ref={ref} />
 }

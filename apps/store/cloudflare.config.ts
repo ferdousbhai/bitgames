@@ -55,6 +55,12 @@ export default defineConfig({
 			REVIEW_LIMITER: perMinute("4107", 120),
 			// Each device on the "Play together" screen opens one list per network address.
 			NEARBY_LIMITER: perMinute("4108", 60),
+			// Talking characters: requests per network (the daily allowances are counted in D1).
+			TALK_LIMITER: perMinute("4109", 20),
+			// Talking characters: Workers AI (within its free daily allowance, see src/server/talk.ts),
+			// through the `bitgames` AI Gateway, which logs every request.
+			AI: bindings.ai(),
+			AI_GATEWAY_ID: bindings.text("bitgames"),
 		},
 	},
 });

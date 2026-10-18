@@ -7,6 +7,7 @@ import { serveGameAsset } from './server/game-assets'
 
 import { chosenAddress, nearbyKey } from './server/nearby'
 import { CODE_HEADER, GATE_HEADER } from './server/room'
+import { handleTalk, handleTalkPass, pruneTalkUsage } from './server/talk'
 
 export { GameRoom } from './server/room'
 import type { Nearby } from './server/nearby-room'
@@ -97,11 +98,18 @@ const entry = createServerEntry({
 export default {
   ...entry,
   fetch(request: Request, _env: Env, ctx: ExecutionContext) {
-    if (new URL(request.url).pathname.startsWith('/game-assets/')) return serveGameAsset(request, ctx)
+    const { pathname } = new URL(request.url)
+    if (pathname.startsWith('/game-assets/')) return serveGameAsset(request, ctx)
+    // Talking characters (src/server/talk.ts): only BitGames pages may ask.
+    if (pathname === '/api/talk' || pathname === '/api/talk/pass') {
+      if (!sameOrigin(request)) return Promise.resolve(new Response('Forbidden', { status: 403 }))
+      return pathname === '/api/talk' ? handleTalk(request, ctx) : handleTalkPass(request)
+    }
     return entry.fetch(request)
   },
   /** Every few minutes: re-check one published game's files (see recheckLive). */
   scheduled(_controller: ScheduledController, _env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(recheckLive())
+    ctx.waitUntil(pruneTalkUsage())
   },
 }

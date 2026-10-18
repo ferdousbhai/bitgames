@@ -77,11 +77,36 @@ room.send(msg, { to: id })                       // one player only
 Messages are any JSON value. Keep fast messages small (under about 1 KB). The lobby needs the BitGames page around the game, so test multiplayer at the game's link (/try/...) in two browser windows after shipping; opened on its own, joinRoom returns a solo room.
 Set together=true in the game info for multiplayer games.
 
+## Talking characters
+A game can let children talk with its characters. The game never gets the microphone or the network: BitGames shows a 🎤 button next to its ✕, listens with the device's speech recognition, and answers as the character with a small AI model. Characters remember what the child tells them (a short list of facts per game, kept on that device), so they pick up where they left off. Talking is free, within a daily allowance per device and for everyone; when it runs out (or an answer fails), the game gets an \`unanswered\` event with what the child said or did, and should answer with its own scripted lines. Answers arrive one sentence at a time, as text for the game to say (for example with \`speechSynthesis\`, pitched to suit the character) and animate.
+
+\`\`\`js
+import { connectTalk } from '${VENDOR_BASE}/bitgames/talk-1.js'
+
+const talk = await connectTalk({
+  about: 'A talking pet in a cosy room.',
+  characters: [{ id: 'tom', name: 'Tom', persona: 'A cheeky grey cat who loves jokes.' }],
+  actions: ['dance', 'yawn'],            // what a character may do while talking
+  moods: ['happy', 'sad', 'surprised'],  // how a line can look
+}, 'tom')                                 // the character on screen
+talk.available                            // false outside BitGames
+talk.on('say', ({ text, mood }) => {})    // say it; call talk.speaking(true/false) around it so the mic doesn't hear it
+talk.on('action', (name) => {})
+talk.on('state', (state) => {})           // 'off' | 'listening' | 'hearing' | 'thinking': show thinking while waiting
+talk.on('hearing', ({ text, final }) => {})
+talk.on('unanswered', ({ events, reason }) => {})  // no answer is coming: answer with your own lines (events: speech, touch, character)
+talk.send({ kind: 'touch', part: 'belly', gesture: 'tickle' })  // context for the next answer
+talk.send({ kind: 'character', id: 'luna' })                    // the new character says hello
+talk.listen()                             // asks BitGames to turn the microphone on
+\`\`\`
+
+React to touches on its own too, so the game works without talking. Keep the top-right strip clear for the 🎤 and ✕.
+
 ## Full screen
 Pressing Play on BitGames fills the whole screen (true fullscreen where the browser allows it), on tablets and phones in either orientation, and often on an iPad with only a touchscreen. Make the game fit that:
 - Fill the window: a canvas sized to \`innerWidth\` × \`innerHeight\`, re-sized on \`resize\` (which also fires when the device turns).
 - Use the viewport tag from the starter (\`viewport-fit=cover\`, no zooming), and keep HUD and buttons at least 16px from the edges with \`calc(16px + env(safe-area-inset-*))\`.
-- BitGames shows a ✕ button in the top-right corner, and in a family game a small 🏠 room-code button just left of it (it shows the room's animals for a few seconds, then shrinks). Keep a strip about 120×60px in the top-right corner free of buttons and important HUD.
+- BitGames shows a ✕ button in the top-right corner, and in a family game a small 🏠 room-code button just left of it (it shows the room's animals for a few seconds, then shrinks); a talking game gets a 🎤 button there too. Keep a strip about 120×60px in the top-right corner free of buttons and important HUD.
 - Show touch controls whenever there's a touchscreen (\`@media (any-pointer: coarse)\`), even if a mouse or keyboard is also connected. For held buttons (steer, gas), use touch events with \`preventDefault()\` (\`{ passive: false }\`): on an iPad, every browser is WebKit, and it cancels a held touch for its press-and-hold menu otherwise.
 
 ## Making 3D models in Blender

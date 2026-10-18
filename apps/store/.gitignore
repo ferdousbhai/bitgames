@@ -17,6 +17,7 @@ todos.json
 
 # cf build output and generated types (regenerate with pnpm cf-typegen)
 .cloudflare
+worker-configuration.d.ts
 
 # three.js copied from node_modules by scripts/vendor.ts
 public/vendor

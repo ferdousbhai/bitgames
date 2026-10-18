@@ -4,20 +4,7 @@ import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 import { createCreator, creatorGames, manageCredentials } from './creators'
 import { allowedByIp } from './rate-limit'
-
-const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
-
-async function passedTurnstile(token: string, ip: string): Promise<boolean> {
-  const body = new FormData()
-  body.append('secret', env.TURNSTILE_SECRET)
-  body.append('response', token)
-  body.append('remoteip', ip)
-  body.append('idempotency_key', crypto.randomUUID())
-  const response = await fetch(SITEVERIFY, { method: 'POST', body })
-  if (!response.ok) return false
-  const result = (await response.json()) as { success: boolean; action?: string }
-  return result.success && (result.action === undefined || result.action === 'creator-key')
-}
+import { passedTurnstile } from './turnstile'
 
 /** Issues a creator key after a Turnstile check. Shown once; only its hash is stored. */
 export const createCreatorKey = createServerFn({ method: 'POST' })
@@ -27,7 +14,7 @@ export const createCreatorKey = createServerFn({ method: 'POST' })
     if (!(await allowedByIp(env.KEY_LIMITER, ip))) {
       throw new Error('Too many keys from this network. Please wait a minute.')
     }
-    if (!(await passedTurnstile(data.turnstileToken, ip))) {
+    if (!(await passedTurnstile(data.turnstileToken, ip, 'creator-key'))) {
       throw new Error("We couldn't check that you're a person. Please try again.")
     }
     return createCreator()

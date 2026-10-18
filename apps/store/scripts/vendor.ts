@@ -2,6 +2,7 @@
  * Builds public/vendor/, the only code games may load besides their own files:
  * - three/: the latest three.js and its addons, copied from node_modules
  * - bitgames/multiplayer-1.js: the multiplayer SDK, bundled from packages/game-sdk
+ * - bitgames/talk-1.js: the talking-characters SDK, bundled from packages/game-sdk
  * Every game imports /vendor/three/, so upgrading `three` in package.json
  * upgrades all games at once.
  */
@@ -30,14 +31,16 @@ if (!existsSync(stamp) || readFileSync(stamp, 'utf8') !== version) {
   console.log(`vendored three@${version}`)
 }
 
-// Rebuilt every time: it's small, and it changes with the SDK source.
-await build({
-  entryPoints: [resolve(root, '..', '..', 'packages', 'game-sdk', 'src', 'multiplayer.ts')],
-  outfile: join(root, 'public', 'vendor', 'bitgames', 'multiplayer-1.js'),
-  bundle: true,
-  format: 'esm',
-  target: 'es2022',
-  minify: true,
-  legalComments: 'none',
-  logLevel: 'warning',
-})
+// Rebuilt every time: they're small, and they change with the SDK source.
+for (const [source, name] of [['multiplayer.ts', 'multiplayer-1.js'], ['talk.ts', 'talk-1.js']]) {
+  await build({
+    entryPoints: [resolve(root, '..', '..', 'packages', 'game-sdk', 'src', source)],
+    outfile: join(root, 'public', 'vendor', 'bitgames', name),
+    bundle: true,
+    format: 'esm',
+    target: 'es2022',
+    minify: true,
+    legalComments: 'none',
+    logLevel: 'warning',
+  })
+}

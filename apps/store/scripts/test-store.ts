@@ -39,10 +39,17 @@ export async function testStore() {
       } catch (error) { db.exec('ROLLBACK'); throw error }
     },
   }
-  const env = { DB, ADMIN_KEY: 'test-admin-key', REVIEW_LIMITER: { async limit() { return { success: true } } }, SUBMIT_LIMITER: { async limit() { return { success: true } } } }
+  const allow = { async limit() { return { success: true } } }
+  let aiRun = async (model: string, _inputs: unknown, _options: unknown): Promise<unknown> => { throw new Error(`Unexpected Workers AI call: ${model}`) }
+  const env = {
+    DB, ADMIN_KEY: 'test-admin-key', REVIEW_LIMITER: allow, SUBMIT_LIMITER: allow, TALK_LIMITER: allow, TURNSTILE_SECRET: 'test-turnstile-secret',
+    // Workers AI: tests answer with s.onAi(...); without one, any call fails the test.
+    AI: { run: (model: string, inputs: unknown, options: unknown) => aiRun(model, inputs, options) },
+    AI_GATEWAY_ID: 'bitgames',
+  }
   Object.defineProperty(globalThis, '__bitgamesTestEnv', { configurable: true, value: env })
   await build({
-    stdin: { contents: `export * from './src/server/games-store.ts'; export * from './src/server/review.ts'; export * from './src/server/mcp.ts'; export * from './src/server/mcp-http.ts'; export * from './src/server/review-api.ts'; export * from './src/server/game-assets.ts'; export * from './src/server/creators.ts'; export * from './src/server/preview-lookup.ts'; export * from './src/lib/site.ts'; export { download } from './src/server/versions.ts'`, resolveDir: root, sourcefile: 'test-entry.ts' },
+    stdin: { contents: `export * from './src/server/games-store.ts'; export * from './src/server/review.ts'; export * from './src/server/mcp.ts'; export * from './src/server/mcp-http.ts'; export * from './src/server/review-api.ts'; export * from './src/server/game-assets.ts'; export * from './src/server/creators.ts'; export * from './src/server/preview-lookup.ts'; export * from './src/lib/site.ts'; export { download } from './src/server/versions.ts'; export * from './src/server/talk.ts'; export * from './src/server/memory.ts'`, resolveDir: root, sourcefile: 'test-entry.ts' },
     outfile: join(dir, 'store.mjs'), bundle: true, platform: 'node', format: 'esm', tsconfig: join(root, 'tsconfig.json'),
     plugins: [{ name: 'test-env', setup(b) {
       b.onResolve({ filter: /^cloudflare:workers$/ }, () => ({ path: 'env', namespace: 'test' }))
@@ -50,7 +57,7 @@ export async function testStore() {
       b.onLoad({ filter: /.*/, namespace: 'test' }, ({ path }) => ({ contents: path === 'env' ? 'export const env = globalThis.__bitgamesTestEnv' : 'export function getRequestHeader() { throw new Error("Pass the request IP explicitly in standalone tests") }' }))
     } }],
   })
-  type API = typeof import('../src/server/games-store.ts') & typeof import('../src/server/review.ts') & typeof import('../src/server/mcp.ts') & typeof import('../src/server/mcp-http.ts') & typeof import('../src/server/review-api.ts') & typeof import('../src/server/game-assets.ts') & typeof import('../src/server/creators.ts') & typeof import('../src/server/preview-lookup.ts') & typeof import('../src/lib/site.ts') & typeof import('../src/server/versions.ts')
+  type API = typeof import('../src/server/games-store.ts') & typeof import('../src/server/review.ts') & typeof import('../src/server/mcp.ts') & typeof import('../src/server/mcp-http.ts') & typeof import('../src/server/review-api.ts') & typeof import('../src/server/game-assets.ts') & typeof import('../src/server/creators.ts') & typeof import('../src/server/preview-lookup.ts') & typeof import('../src/lib/site.ts') & typeof import('../src/server/versions.ts') & typeof import('../src/server/talk.ts') & typeof import('../src/server/memory.ts')
   const api: API = await import(join(dir, 'store.mjs'))
   const previousFetch = globalThis.fetch
   const files = urls.map((_, i) => ({ 'index.html': `<html><script src="./main.js"></script>Version ${i}</html>`, 'main.js': `console.log(${i})` }))
@@ -69,5 +76,5 @@ export async function testStore() {
   const credentials = await api.createCreator()
   const creatorId = (await api.authenticate(new Request('https://bitgames.store/mcp', { headers: { authorization: `Bearer ${credentials.key}` } })))!
   const game = await api.createGame(creatorId, info)
-  return { api, db, env, files, game, creatorId, credentials, fetcher, onFetch(fn: typeof onFetch) { onFetch = fn }, close() { globalThis.fetch = previousFetch; if (previousEqual) subtle.timingSafeEqual = previousEqual; else delete subtle.timingSafeEqual; db.close(); rmSync(dir, { recursive: true, force: true }) } }
+  return { api, db, env, files, game, creatorId, credentials, fetcher, onFetch(fn: typeof onFetch) { onFetch = fn }, onAi(fn: typeof aiRun) { aiRun = fn }, close() { globalThis.fetch = previousFetch; if (previousEqual) subtle.timingSafeEqual = previousEqual; else delete subtle.timingSafeEqual; db.close(); rmSync(dir, { recursive: true, force: true }) } }
 }
