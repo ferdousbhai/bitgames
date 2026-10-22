@@ -1,3 +1,4 @@
+import { secureDocument } from './server/security-headers'
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 import { env } from 'cloudflare:workers'
 import { recheckLive } from './server/games-store'
@@ -105,7 +106,7 @@ export default {
       if (!sameOrigin(request)) return Promise.resolve(new Response('Forbidden', { status: 403 }))
       return pathname === '/api/talk' ? handleTalk(request, ctx) : handleTalkPass(request)
     }
-    return entry.fetch(request)
+    return Promise.resolve(entry.fetch(request)).then(secureDocument)
   },
   /** Every few minutes: re-check one published game's files (see recheckLive). */
   scheduled(_controller: ScheduledController, _env: Env, ctx: ExecutionContext) {

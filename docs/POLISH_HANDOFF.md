@@ -67,3 +67,5 @@ TMPDIR=/dev/shm EXAMPLES_ORIGIN=http://localhost:4213 EXAMPLES_CHROMIUM_EXECUTAB
 
 - `/tmp` is a 32 GB RAM disk that other projects fill. Run Chromium with `TMPDIR=/dev/shm`.
 - Codex's sandbox hides the GPU, so Chromium falls back to SwiftShader (CPU). Run browser-testing Codex workers with `-s danger-full-access` (owner-approved) and check the renderer is `ANGLE (Mesa, AGX…)`.
+
+Security maintenance (2026-10-22): removed the retired workers.dev vendor origin from the store CSP and example policies. Games keep their immutable version URLs; libraries load from bitgames.store/vendor/.

@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const three=fileURLToPath(new URL('../../apps/store/node_modules/three/',import.meta.url));
 const types={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.glb':'model/gltf-binary','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml'};
-const vendorUrls=['https://bitgames.store/vendor/three/','https://bitgames-store.ferdousbd.workers.dev/vendor/three/'];
+const vendorUrls=['https://bitgames.store/vendor/three/'];
 
 // Map a request path to a file, or throw if it escapes its root.
 async function resolveFile(pathname){

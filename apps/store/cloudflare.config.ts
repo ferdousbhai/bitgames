@@ -8,10 +8,10 @@ const perMinute = (namespace: string, limit: number) => bindings.rateLimit({ nam
  */
 export default defineConfig({
 	worker: {
+		previewUrls: false,
 		name: "bitgames-store",
 		domains: ["bitgames.store"],
-		// Reviewed legacy games import /vendor/ from this Worker's original address.
-		workersDev: true,
+		workersDev: false,
 		compatibilityDate: "2026-09-30",
 		compatibilityFlags: [
 			"nodejs_compat",
@@ -27,10 +27,11 @@ export default defineConfig({
 		// Re-checks that approved game versions still serve the files that were reviewed.
 		triggers: [triggers.scheduled({ schedule: "*/10 * * * *" })],
 		observability: {
-			enabled: true,
-			traces: {
-				enabled: true,
-			},
+			redactQueryString: true,
+			// Private game links carry credentials in their path; error logs also carry request metadata.
+			enabled: false,
+			logs: { enabled: false, invocationLogs: false },
+			traces: { enabled: false },
 		},
 		env: {
 			// Admin key for /admin and /api/review.
